@@ -1,0 +1,231 @@
+{
+  "note": "English words still visible under the en-XA pseudolocale, i.e. text not yet routed through i18n (minus an allowlist of the product name, acronyms, fixture-seeded data, and logic notation). Advisory, not a gate: regenerate with `bun run i18n:baseline`. A shrinking list is progress; the hard gate is tests/i18n-pseudo.test.ts.",
+  "residue": {
+    "login": [
+      "Deutsch",
+      "English"
+    ],
+    "donate": [
+      "Deutsch",
+      "English",
+      "Fund",
+      "Rescue",
+      "Risk",
+      "Scholar",
+      "Scholars"
+    ],
+    "courses-index": [],
+    "course-detail-instructor": [
+      "briefing",
+      "draft"
+    ],
+    "course-detail-student": [
+      "briefing"
+    ],
+    "course-detail-notices": [
+      "briefing",
+      "draft"
+    ],
+    "enrollment": [],
+    "course-detail-empty": [
+      "course",
+      "Empty"
+    ],
+    "course-detail-archived": [
+      "course",
+      "Empty"
+    ],
+    "courses-index-archived": [
+      "course",
+      "Empty"
+    ],
+    "courses-index-newcomer": [],
+    "content-library": [],
+    "content-item": [],
+    "content-revision": [
+      "choice",
+      "multiple",
+      "name",
+      "page",
+      "points",
+      "proof",
+      "prop",
+      "table",
+      "theory",
+      "this",
+      "tree",
+      "truth"
+    ],
+    "content-revision-document": [
+      "page",
+      "proof",
+      "prop",
+      "Theory",
+      "this"
+    ],
+    "revision-editor": [
+      "choice",
+      "multiple",
+      "name",
+      "page",
+      "points",
+      "proof",
+      "prop",
+      "table",
+      "theory",
+      "this",
+      "tree",
+      "truth"
+    ],
+    "revision-editor-diagnostics": [
+      "choice",
+      "dialect",
+      "empty",
+      "enough",
+      "formulas",
+      "html",
+      "HTML",
+      "invalid",
+      "multiple",
+      "name",
+      "nonsense",
+      "Only",
+      "option",
+      "options",
+      "points",
+      "prop",
+      "rejected",
+      "table",
+      "theory",
+      "this",
+      "truth",
+      "unsafe",
+      "unsupported",
+      "variant",
+      "zero"
+    ],
+    "profile": [
+      "Deutsch",
+      "English"
+    ],
+    "assignment-instructor": [],
+    "assignment-student": [],
+    "assignment-student-briefing": [
+      "briefing",
+      "started"
+    ],
+    "assignment-student-notices": [
+      "briefing",
+      "started"
+    ],
+    "content-document": [
+      "page",
+      "proof",
+      "prop",
+      "Theory",
+      "this"
+    ],
+    "assignment-instructor-detail": [
+      "Initial",
+      "published",
+      "revision"
+    ],
+    "assignment-instructor-draft": [
+      "draft",
+      "published"
+    ],
+    "assignment-instructor-content": [
+      "page",
+      "proof",
+      "prop",
+      "Theory",
+      "this"
+    ],
+    "assignment-instructor-unreleased": [
+      "briefing",
+      "Initial",
+      "published",
+      "revision",
+      "started"
+    ],
+    "instructor-submissions-empty": [
+      "briefing"
+    ],
+    "instructor-attempts-empty": [
+      "briefing"
+    ],
+    "assignment-new": [],
+    "assignment-edit-draft": [
+      "draft",
+      "published"
+    ],
+    "assignment-edit-published": [],
+    "instructor-submissions": [],
+    "instructor-attempts": [],
+    "student-results": [],
+    "student-results-withheld": [],
+    "course-gradebook": [
+      "briefing"
+    ],
+    "assignment-gradebook": [],
+    "admin-dashboard": [],
+    "admin-users": [],
+    "admin-user-profile": [
+      "course",
+      "Empty"
+    ],
+    "admin-audit": [],
+    "admin-bootstrap": [],
+    "admin-lti": [
+      "auth",
+      "certs",
+      "https",
+      "token"
+    ],
+    "error-course": [],
+    "error-content": [],
+    "error-login": [
+      "Deutsch",
+      "English"
+    ],
+    "login-sent": [
+      "Deutsch",
+      "English"
+    ],
+    "error-form": [],
+    "error-assignment-form": [],
+    "error-content-create": [],
+    "error-course-create": [],
+    "error-admin-form": [],
+    "error-admin-lti-form": [],
+    "lti-error": [
+      "Deutsch",
+      "English",
+      "invalid",
+      "login"
+    ],
+    "lti-deep-link-select": [
+      "Deutsch",
+      "English"
+    ],
+    "lti-deep-link-return": [],
+    "lti-link-pending": [
+      "Deutsch",
+      "English",
+      "linked"
+    ],
+    "lti-link-confirm": [
+      "Deutsch",
+      "English",
+      "linked"
+    ],
+    "lti-link-confirmed": [
+      "Deutsch",
+      "English",
+      "linked"
+    ],
+    "course-detail-lti": [
+      "Week"
+    ]
+  }
+}

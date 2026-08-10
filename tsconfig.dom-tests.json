@@ -1,0 +1,15 @@
+{
+  // Tests that drive a client element in jsdom. They are browser code — DOM lib,
+  // no workers-types — plus `bun:test` and the jsdom types, which is why they
+  // cannot live in either of the other two programs: the worker program's
+  // `Element` is HTMLRewriter's and clashes with every DOM interface a widget
+  // uses, and `tsconfig.client.json` deliberately has no ambient types at all so
+  // that shipped browser code cannot reach for a Node or Bun global.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["bun-types"]
+  },
+  "include": ["tests/dom/**/*.ts"],
+  "exclude": []
+}

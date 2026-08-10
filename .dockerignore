@@ -1,0 +1,18 @@
+# The image copies what it needs by name, so this list is a second line rather
+# than the mechanism. What it is really for is the two directories that would
+# otherwise be copied *over* something the build just made: `node_modules` built
+# for the host's libc (libsql ships a native module per platform), and a `public/`
+# from a `bun run build:client` on the developer's machine.
+.git
+.direnv
+.wrangler
+node_modules
+public
+data
+
+# Local state and the developer's own files: nothing here belongs in an image.
+.dev.vars
+.envrc
+AGENTS.md
+design
+*.lec

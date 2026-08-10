@@ -1,0 +1,28 @@
+-- Which attempt a reset replaced, recorded rather than inferred.
+--
+-- Resetting a student's attempt is two writes — void the old one, open its
+-- replacement — and they have to happen together or not at all. That was
+-- enforced inside the second statement, which would only insert `WHERE EXISTS`
+-- a row the first statement had just voided at the very timestamp it was
+-- handed. It worked, but it made the pair a matched set of hand-written SQL:
+-- neither half could be expressed as an ordinary query, and the store had to
+-- reach past its query builder to the driver to run them as one batch.
+--
+-- The invariant moves into the schema instead. A reset is the only thing on
+-- the platform that ever voids an attempt, so "this attempt was voided" and
+-- "exactly one attempt superseded it" are the same fact; a unique column
+-- saying which attempt replaced which enforces it directly, and a second reset
+-- of the same attempt now fails on the constraint rather than on a guard
+-- clause. Both statements become ordinary queries, and the pair still commits
+-- atomically because the batch is still one transaction.
+--
+-- Null for an attempt a student opened, which is nearly all of them — SQLite
+-- lets a unique index hold any number of nulls, so no default and no backfill.
+-- Existing reset-born attempts keep their null: the fact was never recorded,
+-- and inventing it now would be a guess about which attempt came from which.
+--
+-- `ON DELETE SET NULL` because a superseded attempt disappearing (via its
+-- assignment's cascade) should not take its replacement with it; the
+-- replacement is the one holding the student's work.
+ALTER TABLE `attempts` ADD `supersedes_attempt_id` text REFERENCES attempts(id) ON DELETE SET NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX `attempts_supersedes_unique` ON `attempts` (`supersedes_attempt_id`);

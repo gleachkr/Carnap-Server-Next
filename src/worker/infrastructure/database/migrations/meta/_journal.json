@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1783261269567,
+      "tag": "0000_high_energizer",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1783272454986,
+      "tag": "0001_auth_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783278435603,
+      "tag": "0002_course_enrollment",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1783360127560,
+      "tag": "0003_sleepy_major_mapleleaf",
+      "breakpoints": true
+    }
+  ]
+}

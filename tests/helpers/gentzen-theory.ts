@@ -1,0 +1,222 @@
+/**
+ * The *Gentzen* system: a full multi-conclusion sequent calculus (classical LK)
+ * with first-order quantifiers and identity-free predicate signature P/Q, taken
+ * verbatim from gleachkr/Aufbau's `tests/proof_cases/gentzen.mm0` (the trailing
+ * `theorem` goals are dropped — each {@link ./gentzen-cases} appends its own).
+ *
+ * Sequents are `Γ ==> Δ` with **both** sides comma-separated ACUI contexts, so
+ * exchange and contraction are baked into the context and the only explicit
+ * structural rules are identity (`ax`), weakening (`weak_left`/`weak_right`),
+ * and `cut`. Every connective has a left and a right rule; the quantifier rules
+ * carry the witness/eigenvariable through the compiler's `@view`/`@recover`/
+ * `@freshen` annotations, so a proof can cite them with concrete sequents.
+ *
+ * This is the theory the tree-proof exercise type is exercised against — an LK
+ * derivation *is* a tree, so each {@link ./gentzen-cases} node carries a full
+ * sequent and `flattenProofTree` copies it through unchanged.
+ *
+ * Generated from the upstream file; regenerate with /tmp/gen-gentzen-theory.ts.
+ */
+export const GENTZEN_THEORY_MM0 = `delimiter $ ( ) , $;
+provable sort wff;
+sort ctx;
+--| @vars z w
+sort obj;
+
+term imp (a b: wff): wff;
+infixr imp: $→$ prec 25;
+infixr imp: $->$ prec 25;
+term and (a b: wff): wff;
+infixr and: $∧$ prec 30;
+infixr and: $/\\\\$ prec 30;
+term or (a b: wff): wff;
+infixr or: $∨$ prec 30;
+infixr or: $\\\\/$ prec 30;
+term not (a: wff): wff;
+prefix not: $¬$ prec 35;
+prefix not: $~$ prec 35;
+term all {x: obj} (p: wff x): wff;
+prefix all: $∀$ prec 41;
+prefix all: $A.$ prec 41;
+term ex {x: obj} (p: wff x): wff;
+prefix ex: $∃$ prec 41;
+prefix ex: $E.$ prec 41;
+term P (t: obj): wff;
+prefix P: $P$ prec 50;
+term Q (t: obj): wff;
+prefix Q: $Q$ prec 50;
+term sb (t: obj) {x: obj} (p: wff x): wff;
+
+term iff (a b: wff): wff;
+infixr iff: $↔$ prec 20;
+infixr iff: $<->$ prec 20;
+term ctx_eq (g h: ctx): wff;
+term emp: ctx;
+notation emp: ctx = ($_$:max);
+
+--| @acui ctx_assoc ctx_comm emp ctx_idem
+term join (g h: ctx): ctx;
+infixl join: $,$ prec 5;
+term hyp (a: wff): ctx;
+coercion hyp: wff > ctx;
+term seq (g d: ctx): wff;
+infixl seq: $==>$ prec 0;
+
+-- Contexts are ACUI collections of formulas. This bakes in exchange and
+-- contraction, so the only explicit structural rules below are identity,
+-- weakening, and cut.
+
+--| @relation wff iff iff_refl iff_trans iff_sym iff_mp
+axiom iff_refl (a: wff): $ a ↔ a $;
+axiom iff_trans (a b c: wff):
+  $ a ↔ b $ > $ b ↔ c $ > $ a ↔ c $;
+axiom iff_sym (a b: wff): $ a ↔ b $ > $ b ↔ a $;
+axiom iff_mp (a b: wff): $ a ↔ b $ > $ a $ > $ b $;
+
+--| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
+axiom ctx_refl (g: ctx): $ ctx_eq g g $;
+axiom ctx_trans (g h i: ctx):
+  $ ctx_eq g h $ > $ ctx_eq h i $ > $ ctx_eq g i $;
+axiom ctx_sym (g h: ctx): $ ctx_eq g h $ > $ ctx_eq h g $;
+axiom ctx_assoc (g h i: ctx):
+  $ ctx_eq ((g , h) , i) (g , (h , i)) $;
+axiom ctx_comm (g h: ctx): $ ctx_eq (g , h) (h , g) $;
+axiom ctx_idem (g: ctx): $ ctx_eq (g , g) g $;
+axiom ctx_unit (g: ctx): $ ctx_eq (emp , g) g $;
+
+--| @congr
+axiom join_congr (g1 g2 h1 h2: ctx):
+  $ ctx_eq g1 g2 $ > $ ctx_eq h1 h2 $ >
+  $ ctx_eq (g1 , h1) (g2 , h2) $;
+
+--| @congr
+axiom hyp_congr (a b: wff): $ a ↔ b $ > $ ctx_eq (hyp a) (hyp b) $;
+
+--| @congr
+axiom seq_congr (g1 g2 d1 d2: ctx):
+  $ ctx_eq g1 g2 $ > $ ctx_eq d1 d2 $ > $ (g1 ==> d1) ↔ (g2 ==> d2) $;
+
+--| @congr
+axiom imp_congr (a b c d: wff):
+  $ a ↔ b $ > $ c ↔ d $ > $ (a → c) ↔ (b → d) $;
+
+--| @congr
+axiom and_congr (a b c d: wff):
+  $ a ↔ b $ > $ c ↔ d $ > $ (a ∧ c) ↔ (b ∧ d) $;
+
+--| @congr
+axiom or_congr (a b c d: wff):
+  $ a ↔ b $ > $ c ↔ d $ > $ (a ∨ c) ↔ (b ∨ d) $;
+
+--| @congr
+axiom not_congr (a b: wff): $ a ↔ b $ > $ ¬ a ↔ ¬ b $;
+
+--| @congr
+axiom all_congr {x: obj} (p q: wff x): $ p ↔ q $ > $ ∀ x p ↔ ∀ x q $;
+
+--| @congr
+axiom ex_congr {x: obj} (p q: wff x): $ p ↔ q $ > $ ∃ x p ↔ ∃ x q $;
+
+--| @rewrite
+axiom sb_P (t: obj) {x: obj}: $ sb t x (P x) ↔ P t $;
+
+--| @rewrite
+axiom sb_P_other {x y: obj} (t: obj x): $ sb t x (P y) ↔ P y $;
+
+--| @rewrite
+axiom sb_Q (t: obj) {x: obj}: $ sb t x (Q x) ↔ Q t $;
+
+--| @rewrite
+axiom sb_Q_other {x y: obj} (t: obj x): $ sb t x (Q y) ↔ Q y $;
+
+--| @rewrite
+axiom sb_imp (t: obj) {x: obj} (p q: wff x):
+  $ sb t x (p → q) ↔ (sb t x p → sb t x q) $;
+
+--| @rewrite
+axiom sb_and (t: obj) {x: obj} (p q: wff x):
+  $ sb t x (p ∧ q) ↔ (sb t x p ∧ sb t x q) $;
+
+--| @rewrite
+axiom sb_or (t: obj) {x: obj} (p q: wff x):
+  $ sb t x (p ∨ q) ↔ (sb t x p ∨ sb t x q) $;
+
+--| @rewrite
+axiom sb_not (t: obj) {x: obj} (p: wff x):
+  $ sb t x (¬ p) ↔ ¬ sb t x p $;
+
+--| @rewrite
+axiom sb_all {x y: obj} (t: obj x) (p: wff x y):
+  $ sb t x (∀ y p) ↔ ∀ y (sb t x p) $;
+
+--| @rewrite
+axiom sb_ex {x y: obj} (t: obj x) (p: wff x y):
+  $ sb t x (∃ y p) ↔ ∃ y (sb t x p) $;
+
+--| @alpha x y
+axiom all_alpha {x y: obj} (p: wff x y):
+  $ ∀ x p ↔ ∀ y (sb y x p) $;
+
+--| @alpha x y
+axiom ex_alpha {x y: obj} (p: wff x y):
+  $ ∃ x p ↔ ∃ y (sb y x p) $;
+
+axiom ax (a: wff): $ a ==> a $;
+
+axiom weak_left (g d: ctx) (a: wff): $ g ==> d $ > $ g , a ==> d $;
+
+axiom weak_right (g d: ctx) (a: wff): $ g ==> d $ > $ g ==> d , a $;
+
+axiom cut (g h d e: ctx) (a: wff):
+  $ g ==> d , a $ > $ h , a ==> e $ > $ g , h ==> d , e $;
+
+axiom imp_left (g h d e: ctx) (a b: wff):
+  $ g ==> d , a $ > $ h , b ==> e $ > $ g , h , (a → b) ==> d , e $;
+
+axiom imp_right (g d: ctx) (a b: wff):
+  $ g , a ==> d , b $ > $ g ==> d , (a → b) $;
+
+axiom and_left (g d: ctx) (a b: wff):
+  $ g , a , b ==> d $ > $ g , (a ∧ b) ==> d $;
+
+axiom and_right (g d: ctx) (a b: wff):
+  $ g ==> d , a $ > $ g ==> d , b $ > $ g ==> d , (a ∧ b) $;
+
+axiom or_left (g h d e: ctx) (a b: wff):
+  $ g , a ==> d $ > $ h , b ==> e $ > $ g , h , (a ∨ b) ==> d , e $;
+
+axiom or_right (g d: ctx) (a b: wff):
+  $ g ==> d , a , b $ > $ g ==> d , (a ∨ b) $;
+
+axiom not_left (g d: ctx) (a: wff):
+  $ g ==> d , a $ > $ g , ¬ a ==> d $;
+
+axiom not_right (g d: ctx) (a: wff):
+  $ g , a ==> d $ > $ g ==> d , ¬ a $;
+
+-- all_left and ex_right are the witness-carrying rules. @view/@recover let
+-- the demo infer the witness term from normalized sequents.
+--| @view (g d: ctx) {x: obj} (t: obj x) (p: wff x) (q: wff): $ g , q ==> d $ > $ g , ∀ x p ==> d $
+--| @recover t q p x
+--| @freshen g x
+--| @freshen d x
+axiom all_left (g d: ctx) {x: obj} (t: obj x) (p: wff x):
+  $ g , sb t x p ==> d $ > $ g , ∀ x p ==> d $;
+
+--| @freshen g x
+--| @freshen d x
+axiom all_right (g d: ctx) {x: obj} (p: wff x):
+  $ g ==> d , p $ > $ g ==> d , ∀ x p $;
+
+--| @freshen g x
+--| @freshen d x
+axiom ex_left (g d: ctx) {x: obj} (p: wff x):
+  $ g , p ==> d $ > $ g , ∃ x p ==> d $;
+
+--| @view (g d: ctx) {x: obj} (t: obj x) (p: wff x) (q: wff): $ g ==> d , q $ > $ g ==> d , ∃ x p $
+--| @recover t q p x
+--| @freshen g x
+--| @freshen d x
+axiom ex_right (g d: ctx) {x: obj} (t: obj x) (p: wff x):
+  $ g ==> d , sb t x p $ > $ g ==> d , ∃ x p $;
+`;

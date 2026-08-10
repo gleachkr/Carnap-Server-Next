@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "allowJs": false,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "Bundler",
+    // Nothing here is built by tsc — `bun build` bundles, and both `check`
+    // invocations only typecheck. Without this a bare `tsc` litters the tree
+    // with .js next to every source, where a bundler may resolve to the stale
+    // copy instead of the .ts it shadows.
+    "noEmit": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022",
+    "types": ["@cloudflare/workers-types", "bun-types"],
+    "verbatimModuleSyntax": true
+  },
+  "include": [
+    "drizzle.config.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts"
+  ],
+  // Browser code wants the DOM lib instead of workers-types; it has its own
+  // tsconfig.client.json, and `bun run check` runs both. A test that drives a
+  // client element is browser code too — checked there, and kept out of here,
+  // because in this program `Element` is HTMLRewriter's and the DOM types a
+  // widget uses do not line up with it.
+  "exclude": ["src/client", "tests/dom"]
+}

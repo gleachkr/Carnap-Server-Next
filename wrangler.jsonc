@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aufbau-server",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2025-01-01",
+  // Built client bundles (bun run build:client). Requests matching a file in
+  // here are served statically; everything else falls through to the worker.
+  "assets": {
+    "directory": "./public"
+  },
+  "triggers": {
+    // The grade-passback outbox sweep. Most sends happen seconds after the
+    // score changes (kicked from the request); this catches retries and
+    // anything the kick missed.
+    "crons": ["*/5 * * * *"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aufbau-server-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "src/worker/infrastructure/d1/migrations"
+    }
+  ],
+  "vars": {
+    "AUFBAU_ENV": "local"
+  },
+  "env": {
+    "preview": {
+      "vars": {
+        "AUFBAU_ENV": "preview"
+      }
+    },
+    "production": {
+      "vars": {
+        "AUFBAU_ENV": "production"
+      }
+    }
+  }
+}

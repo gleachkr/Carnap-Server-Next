@@ -1,0 +1,4 @@
+{
+  "findings": [],
+  "note": "Known Tier 2 (browser) accessibility violations, accepted-for-now. `bun run a11y:audit` fails on any finding absent here. Regenerate with `node scripts/a11y-audit.mjs --update`; a shrinking list is progress."
+}

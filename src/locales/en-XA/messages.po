@@ -1,0 +1,4137 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-07-27 07:29-0400\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: en-XA\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#: src/worker/web/assignments.tsx
+msgid "—/{worth} (not released)"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "“{name}” is a free variable; every formula must be a sentence."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "“{operator}” cannot be chained; add parentheses to group it."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "“{token}” is not a line number or a subproof range like “a-b”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "“{value}” is not something “{field}” can contain."
+msgstr ""
+
+#: src/worker/web/content.tsx
+#: src/worker/web/ui-strings.ts
+msgid "{code} line {line}: {message}"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "{column}, row {row}: {value}"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "{column}: {value}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{count, plural, one {# attempt used} other {# attempts used}}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{count, plural, one {# attempt} other {# attempts}}"
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "{date}: {details}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{exercise} — {reason}"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "{field} of {argument}"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "{field}: its truth value"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "{field}: the tuples in its extension"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "{field}: which element it names"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "{id} — {status}"
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "{label} — cannot be read"
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "{label} is required."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "{label} must be a valid URL."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "{label} must be an http(s) URL."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{minutes} min"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{minutes} min limit"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "{score}/{maxScore} · {evaluator}"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "{state} · {type}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{title} content"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "{title} copy"
+msgstr ""
+
+#: src/worker/routes/content.ts
+#: src/worker/web/revisions.ts
+msgid "{title}, {date}"
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "{title}, {date}: {details}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "{used} of {allowed}"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A “-- label:” comment must sit at the end of the proof line it marks, not on its own line."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "A cited subproof must begin and end at the same indentation level."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "A cited subproof must not reach back out to a shallower line."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A constraint exercise has only givens after its constraint line."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A constraint exercise needs a '- constraints : formulas' list item, e.g. '- ExEy~x = y : AxAyF(x,y)'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A constraint exercise needs at least one constraint before the ':'."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "A course must keep at least one active instructor."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "A domain may have at most {max} elements."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A given cell must be T, F, or '.'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A given is written '| Field : value'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A given row needs {expected} '|'-separated segments (reference plus one per formula); found {found}."
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "A launch from your institution's LMS asked to connect to your Carnap account. If this was you, use this link to approve it:"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "A login link has been created."
+msgstr ""
+
+#: src/worker/application/auth.ts
+#: src/worker/routes/auth.ts
+#: src/worker/routes/web.ts
+msgid "A login token is required."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A model exercise requires at least one formula."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A multiple-choice exercise requires at least two options."
+msgstr ""
+
+#: src/worker/application/attempts.ts
+msgid "A new attempt cannot be started for this assignment."
+msgstr ""
+
+#: src/worker/web/layout.tsx
+msgid "A platform for teaching and practicing formal logic."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "A platform with this issuer and client ID is already registered."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A Prawitz proof has no “#n” hypothesis leaves — write each premise as its own assumption line."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal."
+msgstr ""
+
+#: src/worker/application/gradebook.ts
+msgid "A reading records no scores, so it has no gradebook."
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "A reading records no work to grade."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A short-answer exercise needs at least one accepted answer."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A short-answer exercise requires answer or answers."
+msgstr ""
+
+#: src/worker/application/submissions.ts
+msgid "A submission cannot be accepted for this attempt."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A theory named “{name}” is already declared."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A truth table may use at most {max} atoms; found {found}."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A truth table may use at most {max} atoms; this one uses {found}."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A truth-table exercise requires at least one formula."
+msgstr ""
+
+#: src/worker/middleware/auth.ts
+msgid "A valid CSRF token is required."
+msgstr ""
+
+#: src/worker/application/auth.ts
+#: src/worker/routes/auth.ts
+msgid "A valid email address is required."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity exercise has only a given grid after its sequent line."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity exercise has only givens after its sequent line."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity exercise needs a sequent with the ':|-:' turnstile, e.g. 'AxEyR(x,y) :|-: ExAyR(y,x)'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity exercise needs a sequent with the ':|-:' turnstile, e.g. 'P, P -> Q :|-: Q'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity sequent must contain exactly one ':|-:' turnstile."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity sequent needs at least one conclusion after the ':|-:' turnstile."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A validity sequent needs at least one premise before the ':|-:' turnstile."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+msgid "Access token URL"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Accommodation limits"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Accommodation not saved"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Accommodation saved."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Accommodations"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Accommodations for {name}"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Account"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Account access"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Accounts linked"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Action"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/courses.tsx
+msgid "Actions"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+#: src/worker/web/admin.tsx
+#: src/worker/web/courses.tsx
+#: src/worker/web/labels.ts
+msgid "Active"
+msgstr ""
+
+#. Disambiguating id; only the word Active is shown. An attempt still in progress.
+#: src/worker/web/labels.ts
+msgid "Active (attempt)"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Active courses"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Activities in your LMS that launched into this course but are not yet connected to an assignment. Link them so those launches land directly on the right assignment."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Actor"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add a hypothesis above the line"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Add a manual evaluation"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add a premise above the line"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Add assumption above"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Add assumption above (h)"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Add deployment"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add hypothesis"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Add manual evaluation"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Add membership"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add premise"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Add premise above"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Add premise above (p)"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Add staff"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Added"
+msgstr ""
+
+#: src/worker/web/breadcrumbs.ts
+#: src/worker/web/layout.tsx
+msgid "Admin"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Admin audit log"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "All ({count})"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "All cells correct."
+msgstr ""
+
+#: src/worker/routes/gradebook.ts
+msgid "All grades"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "All of your courses are archived."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "An assumption can't have premises."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "An assumption carries a single discharge label; “{payload}” reads as a list."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "An aufbau-mm0 block needs MM0 source in its body."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "An email address is required."
+msgstr ""
+
+#: src/worker/web/donate.tsx
+msgid "An international network of universities and colleges that protects scholars facing threats and advocates for academic freedom worldwide."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "An LMS launch from {platform} wants to connect to the Carnap account for {email}. If this was you, confirm the link below; if not, close this page and nothing will be linked."
+msgstr ""
+
+#: src/worker/exercises/free-response/read-only-view.ts
+#: src/worker/exercises/short-answer/read-only-view.ts
+#: src/worker/web/assignment-detail.tsx
+msgid "Answer"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Answer could not be submitted"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Answer submitted."
+msgstr ""
+
+#: src/worker/exercises/actions.ts
+msgid "Answers are not recorded here."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Apply rule below"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Apply rule below (b)"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Approve score"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Approve the autograded score as final"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Archive course"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Archived"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Archived courses ({count})"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Archiving moves this course out of the active list without deleting anything. You can unarchive it later."
+msgstr ""
+
+#: src/worker/web/donate.tsx
+msgid "Arranges and funds fellowships for threatened and displaced scholars at host universities around the world, so they can keep researching and teaching in safety."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Arrow keys move between cells. Space or Enter changes one."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "As soon as work is checked"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Assessment mode must be none, practice, or graded."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+#: src/worker/routes/gradebook.ts
+#: src/worker/web/courses.tsx
+#: src/worker/web/lti.tsx
+msgid "Assignment"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment content correction published."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Assignment description must be 4000 characters or less."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Assignment draft"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Assignment grades"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Assignment late policy"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Assignment management"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment not created"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment not deleted"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment not published"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment not unpublished"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment not updated"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment override saved."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment published."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Assignment record"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Assignment timestamps must be ISO UTC timestamps."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Assignment title must be between 1 and 200 characters."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment unpublished."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Assignment updated."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/courses.tsx
+msgid "Assignments"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "At the time below"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Attempt {ordinal}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Attempt {ordinal}: {status}"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Attempt could not start"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Attempt ledger"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Attempt not reset"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Attempt reset; the old attempt remains in the audit trail."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Attempt started."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Attempts"
+msgstr ""
+
+#: src/worker/application/attempts.ts
+msgid "Attempts can only be started for graded assignments."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Audit events"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/assessment.ts
+msgid "Aufbau Fitch proof"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/assessment.ts
+msgid "Aufbau Prawitz proof"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof/assessment.ts
+msgid "Aufbau proof"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/assessment.ts
+msgid "Aufbau tree proof"
+msgstr ""
+
+#: src/worker/application/errors.ts
+msgid "Authentication is required."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+msgid "Authentication request URL"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Auto-graded"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Autograded score approved."
+msgstr ""
+
+#. Lowercase, mid-line: the tail of a line like 12/15 · automatic. The score came from the autograder.
+#: src/worker/web/labels.ts
+msgid "automatic"
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "Availability"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Available from"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Available from override"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Available from, optional"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Available until"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Available until override"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Available until, optional"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Available-from must be before available-until."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Available-until extension minutes"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Back to the content item"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Before you start"
+msgstr ""
+
+#. An unfilled truth-table cell, spoken as part of the cell's accessible name: “Q, row 3: blank”. Lowercase, mid-sentence.
+#: src/worker/exercises/truth-table/strings.ts
+msgid "blank"
+msgstr ""
+
+#: src/worker/routes/admin.ts
+msgid "Bootstrap failed"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Bootstrap site administrator"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Bootstrap token, if configured"
+msgstr ""
+
+#: src/worker/web/layout.tsx
+msgid "Breadcrumb"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Campus Moodle"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/content.tsx
+msgid "Cancel"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Cancel counterexample"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Capability"
+msgstr ""
+
+#: src/worker/routes/admin.ts
+msgid "Capability not granted"
+msgstr ""
+
+#: src/worker/routes/admin.ts
+msgid "Capability not revoked"
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "Carnap cannot send the account-link confirmation email in this environment. Contact your Carnap administrator."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Carnap could not reach the LMS."
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "Carnap has no signing key configured, so content selection cannot complete. Contact your Carnap administrator."
+msgstr ""
+
+#: src/worker/web/layout.tsx
+msgid "Carnap home"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Carnap Markdown"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Carnap Markdown file"
+msgstr ""
+
+#: src/worker/web/layout.tsx
+msgid "Carnap needs JavaScript enabled to display and complete exercises. Please turn it on for this site."
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Carnap tool endpoints"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Change"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Change saved."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Check"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Check your email"
+msgstr ""
+
+#: src/worker/exercises/actions.ts
+msgid "Checking"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Choose a row, then fill it in."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Choose a value for every argument."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Choose an assignment"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Choose an assignment…"
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+msgid "Client ID"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Clone course"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/courses.tsx
+msgid "Close"
+msgstr ""
+
+#: src/worker/exercises/help-strings.ts
+msgid "Close help"
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "Closed {when}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Closes"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Closes {when}"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Co-instructor"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Compiled content"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Confirm account link"
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "Confirm your Carnap account link"
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "Connect LMS identity"
+msgstr ""
+
+#: src/worker/web/breadcrumbs.ts
+#: src/worker/web/layout.tsx
+msgid "Content"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Content author"
+msgstr ""
+
+#: src/worker/routes/content.ts
+msgid "Content item created."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Content item title"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Content library"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Content not available"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Content record"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/content.tsx
+msgid "Content revision"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Content revision to publish"
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "Content source must be between 1 and 200000 characters."
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "Content title must be between 1 and 200 characters."
+msgstr ""
+
+#: src/worker/routes/content.ts
+msgid "Content unavailable"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Content update"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Content updates and excused exercises for this assignment."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Continue to your LMS"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Continue with this local confirmation link"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Continue with this local login link"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Copied"
+msgstr ""
+
+#: src/worker/web/components.tsx
+msgid "Copy"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Copy failed"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Copy these values from the LMS after it issues a client ID for the tool. Launches also require registering the LMS deployment ID on the platform."
+msgstr ""
+
+#: src/worker/exercises/actions.ts
+#: src/worker/exercises/multiple-choice/assessment.ts
+msgid "Correct"
+msgstr ""
+
+#: src/worker/exercises/multiple-choice/read-only-view.ts
+msgid "Correct — your answer"
+msgstr ""
+
+#. Disambiguating id; only the word Correct is shown. The verdict on a single cell of a marked truth table.
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Correct (truth-table cell)"
+msgstr ""
+
+#: src/worker/exercises/multiple-choice/read-only-view.ts
+msgid "Correct answer"
+msgstr ""
+
+#: src/worker/exercises/truth-table/assessment.ts
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Correct cells: {count} of {total}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Correction note"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Correction notes must be 2000 characters or fewer."
+msgstr ""
+
+#: src/worker/exercises/actions.ts
+msgid "Could not check"
+msgstr ""
+
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "Could not load the proof engine."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Could not parse “{line}”. Each starter line must read '<label>: $ <formula> $ by <rule> [<refs>]'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Could not parse formula “{formula}”: {detail}"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Could not read the value of {field}."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+#: src/worker/routes/gradebook.ts
+#: src/worker/web/admin.tsx
+#: src/worker/web/courses.tsx
+msgid "Course"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "course {courseId}"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course archived."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course cloned."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course created."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Course creator"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Course default"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Course gradebook"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Course memberships"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course not archived"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course not cloned"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course not unarchived"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course not updated"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Course owner"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Course record"
+msgstr ""
+
+#: src/worker/application/admin.ts
+#: src/worker/application/courses.ts
+msgid "Course role is not supported."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Course roles and membership states. Promote a member to staff or adjust their access from the manage control. The course owner is marked with a crown."
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Course scores across published assignments."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Course status"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Course status, membership, and timezone."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Course timezone must be 100 characters or less."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Course timezone must be a valid IANA timezone name."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Course title"
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Course title must be between 1 and 200 characters."
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "Course total"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course unarchived."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course unavailable"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Course updated."
+msgstr ""
+
+#: src/worker/web/breadcrumbs.ts
+#: src/worker/web/courses.tsx
+#: src/worker/web/layout.tsx
+msgid "Courses"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Courses that have been archived. They keep all your work — open one to look back over it."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Courses where you have an active or historical membership. Use the row below the table to create a new course."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Courses where you have an active or historical membership. You do not have permission to create new courses."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Courses you have archived. They keep all their data and can be returned to the active list at any time."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Create a content revision before creating an assignment."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Create a draft before publishing it to students."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Create and revoke links students can use to join this course."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Create assignment"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Create content item"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Create course"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Create draft assignment"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Create enrollment link"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Create revision"
+msgstr ""
+
+#: src/worker/web/content.tsx
+#: src/worker/web/courses.tsx
+msgid "Created"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "CSV of the current grades"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "CSV of the current scores"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "CSV of the whole course's grades"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Delete (Del)"
+msgstr ""
+
+#. Disambiguating id; only the word Delete is shown. Removes one line of the proof tree.
+#. Disambiguating id; only the word Delete is shown. Removes one node of the proof.
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Delete (proof line)"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Delete draft"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Delete the line and everything above it"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Delivery failed."
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Deployment added."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+msgid "Deployment ID"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Deployment ID from the LMS"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Deployment name"
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Deployment not added"
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Deployment not removed"
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Deployment removed."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Description"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Detail"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Details"
+msgstr ""
+
+#: src/worker/application/content/authoring-registry.ts
+msgid "Directive {directiveName} is not supported."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Directive {name} is not supported here."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Directive {name} is not supported."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Directive attributes must use standard directive syntax."
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Disable platform"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Disabled"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Discharge label"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Discharged labels"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Display order"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Display order must be a non-negative integer."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Domain"
+msgstr ""
+
+#: src/worker/web/layout.tsx
+msgid "Donate to charity →"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Download CSV"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Draft"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Draft and published assignment records for this course."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Draft assignment created."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Draft assignment deleted."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Draft settings"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Dropped"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Due"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Due {when}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Due at override"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Due at, optional"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Due extension minutes"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Due time cannot be after available-until."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Edit"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Edit assignment"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Edit course"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Edit override"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Edit settings"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Edit the assumption's label"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Edit the line's formula"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Edit the line's rule"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Edit the override for {name}"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Edit the rule's discharge marks"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/auth.tsx
+#: src/worker/web/gradebook.tsx
+#: src/worker/web/labels.ts
+#: src/worker/web/profile.tsx
+msgid "Email"
+msgstr ""
+
+#: src/worker/application/auth.ts
+msgid "Email sign-in cannot be removed from an account."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Email status"
+msgstr ""
+
+#: src/worker/application/content/assessment-support.ts
+msgid "Empty response"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Enable platform"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Enrollment link created. Copy it now — for security it is not stored and cannot be shown again."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Enrollment link expiration must be an ISO timestamp."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Enrollment link expiration must be in the future."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Enrollment link not created"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Enrollment link not revoked"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Enrollment link revoked."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Enrollment links"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Error code {code} · request {requestId}"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Evaluation not saved"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Every course you are enrolled in has been archived."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "Every proof line needs a justification: '<formula> :<rule> <refs>'."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Every recorded submission has been reviewed."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Excuse exercise"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Excuse not saved"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Excuse reason"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Excused exercise"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Excusing exercises is only available for graded assignments."
+msgstr ""
+
+#: src/worker/exercises/group.ts
+#: src/worker/web/gradebook.tsx
+msgid "Exercise"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Exercise {id}"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Exercise excused."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Exercise ID {id} is used more than once."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Exercise IDs must be between 1 and 200 characters."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Exercise IDs must start with a letter and use letters, numbers, underscores, or hyphens."
+msgstr ""
+
+#: src/worker/application/content/registry.ts
+msgid "Exercise kind {kind} is not supported."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Exercise points must be a positive number no greater than 1000."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Exercise to excuse"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected '->' (conditional)."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected ')'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected '/\\' (conjunction)."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected '\\/' (disjunction)."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected '<->' (biconditional)."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected “{bracket}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected “{operator}” after this term."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected a formula but found “{token}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected a formula."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected a term but found “{token}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Expected a variable after the quantifier."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Expired"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/courses.tsx
+msgid "Expires"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Expires at, optional"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Export CSV"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Extra attempts"
+msgstr ""
+
+#. A truth-table cell's value, spoken as part of the cell's accessible name: “Q, row 3: false”. Lowercase, mid-sentence.
+#: src/worker/exercises/truth-table/strings.ts
+msgid "false"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "False"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Feedback"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Filter submissions"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Find counterexample"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Find user"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Find users by email or name before changing platform state."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "First seen"
+msgstr ""
+
+#: src/worker/exercises/group.ts
+msgid "Fitch proof"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "Fitch proof editor"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Fold this block"
+msgstr ""
+
+#. Disambiguating id; only the word Formula is shown. Names a proof line's formula text field.
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Formula (proof line)"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Formula {index} needs {expected} cell tokens; found {found}."
+msgstr ""
+
+#: src/worker/exercises/group.ts
+msgid "Free-response question"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Give the time when grades become visible, or choose another option."
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Go to the login page"
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Go to your courses"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/assessment.ts
+msgid "Goal"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "goal declares cleanly ✓"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Grace minutes"
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "Grade delivery not retried"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Grade delivery re-queued."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Grade visibility must be immediate, manual, or scheduled."
+msgstr ""
+
+#: src/worker/application/gradebook.ts
+msgid "Gradebook scores only exist for graded assignments."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Graded"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Graded assignment"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Grades"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Grades Carnap could not deliver to your LMS. Retry once the problem described below is resolved; grades in Carnap itself are unaffected."
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Grades for this assignment have not been released yet."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Grades hidden from students."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Grades not updated"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Grades released to students."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Grades visible"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Grades visible at"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Grant capability"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Granted"
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "Hidden"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Hide grades"
+msgstr ""
+
+#: src/worker/application/submissions.ts
+msgid "Idempotency keys must be 200 characters or fewer."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Identities"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "If no site administrator exists, you can bootstrap this account."
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "If you did not expect this, ignore this email and nothing will be linked."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Immutable snapshots that published assignments point to."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Immutable source and compiled output for this revision."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "In the starter, assumption line “{line}” can't have premises."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "In the starter, the assumptions discharged by mark “{label}” on line “{line}” must share one formula."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "In the starter, the discharge mark “{label}” on line “{line}” doesn't match any assumption above it."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "In this model {field} has more than one value for {argument}."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "In this model {field} has no value for {argument}."
+msgstr ""
+
+#: src/worker/exercises/multiple-choice/read-only-view.ts
+msgid "Incorrect — your answer"
+msgstr ""
+
+#. Disambiguating id; only the word Incorrect is shown. The verdict on a single cell of a marked truth table.
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Incorrect (truth-table cell)"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Initial revision"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Initiate login URL"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Inspect and reset student attempts"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Instructor"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Instructor comment"
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Instructors cannot deactivate their own instructor membership."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Invited"
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+msgid "Issuer"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Issuer {issuer} · client ID {clientId}"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Item links must look like item:<content-item-id>."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Join course"
+msgstr ""
+
+#: src/worker/exercises/help-strings.ts
+msgid "Keyboard"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Language"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Last attempt"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Late policy is only available for graded assignments."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Late policy kind is not supported."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Late policy not saved"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Late policy percentages must be between 0 and 100."
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Late policy saved."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Launch failed"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Leave a field blank to keep the assignment default for this student."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Leave the field and go back to the line"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Line “{label}” cites “{reference}”, which is not a line above it."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Line “{label}” is cited more than once, so this proof is a graph, not a tree. The tree editor needs each line used by at most one other line; duplicate the shared derivation into each branch."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Line “{label}” is part of a citation cycle."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Link"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Link accounts"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Linked"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Linked LMS access"
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "Listed"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "LMS"
+msgstr ""
+
+#: src/worker/web/labels.ts
+#: src/worker/web/profile.tsx
+msgid "LMS (LTI)"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "LMS activity"
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "LMS activity link not saved"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "LMS activity linked to the assignment."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "LMS activity links"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "LMS grade sync problems"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "LMS integration"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Log in"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Log out"
+msgstr ""
+
+#: src/worker/routes/web.ts
+msgid "Login email delivery is not configured for this environment."
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+#: src/worker/web/admin-lti.tsx
+msgid "LTI platforms"
+msgstr ""
+
+#: src/worker/web/layout.tsx
+msgid "Main navigation"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Manage accommodations for {name}"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Manage LTI platforms"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Manage membership for {name}"
+msgstr ""
+
+#. Lowercase, mid-line: the tail of a line like 12/15 · manual. A person set the score.
+#: src/worker/web/labels.ts
+msgid "manual"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Manual evaluation added."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Manual grading work"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Match my browser"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Max attempts"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Max attempts must be an integer between 1 and 100."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Max attempts override"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Max percent penalty"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Max score"
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "Max score must be zero or greater."
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Member since"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Members"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Membership for {name}"
+msgstr ""
+
+#: src/worker/routes/admin.ts
+msgid "Membership not changed"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Membership not updated"
+msgstr ""
+
+#: src/worker/application/admin.ts
+#: src/worker/application/courses.ts
+msgid "Membership status is not supported."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Membership updated."
+msgstr ""
+
+#: src/worker/exercises/group.ts
+#: src/worker/exercises/model/assessment.ts
+msgid "Model"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "More than one line is uncited ({labels}); a proof tree must end at a single root."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Move between lines"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Move between lines, leaving the ticks alone"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Multiple-choice mode must be single or multiple."
+msgstr ""
+
+#: src/worker/exercises/group.ts
+msgid "Multiple-choice question"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Multiple-select exercises must have at least one correct option."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+#: src/worker/web/admin.tsx
+#: src/worker/web/gradebook.tsx
+#: src/worker/web/profile.tsx
+msgid "Name"
+msgstr ""
+
+#: src/worker/application/auth.ts
+msgid "Name must be 200 characters or less."
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+#: src/worker/web/auth.tsx
+msgid "Name, optional"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Needs review"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Needs review ({count})"
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "new assignment"
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "New assignment title"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "New assumption"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "New assumption (a)"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "New content item"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "New course title"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "New revision"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Newest submissions and manual grading"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "No accommodation is recorded for this member."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "No account exists for that email address."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "No active platform capabilities."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "No admin audit events yet."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No answer review is available."
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "No assignments are available."
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "No assignments have been created yet."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No attempts have been opened."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No aufbau-mm0 theory named “{name}” is declared before this proof."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No corrections have been published for this assignment."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "No course memberships."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "No courses exist yet."
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "No deployments registered yet. Launches are rejected until the deployment ID shown by the LMS is added here."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "No details given"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No due date"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "No enrollment links have been created yet."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "No external identities."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No late penalty"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No line is left uncited, so there is no root to prove the goal (the lines cite each other in a cycle)."
+msgstr ""
+
+#: src/worker/exercises/multiple-choice/assessment.ts
+msgid "No option selected"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "No revisions have been created yet."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No students are enrolled in this course yet."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "No submission in this attempt."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No submissions have been recorded."
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "No submissions were recorded in this attempt."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "No users matched."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "None"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Not a valid counterexample yet."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Not a valid counterexample."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Not all conclusions are false in this model. Take another look at: {formulas}."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Not all conclusions are true in this model. Take another look at: {formulas}."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Not all formulas are false in this model. Take another look at: {formulas}."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Not all formulas are true in this model. Take another look at: {formulas}."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Not all of this problem's constraints hold in this model. Take another look at: {formulas}."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "Not all premises are true in this model. Take another look at: {formulas}."
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Not allowed"
+msgstr ""
+
+#: src/worker/exercises/actions.ts
+msgid "Not correct yet"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Not correct yet, so nothing was recorded. Try again."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Not correct yet."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Not graded"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "not recorded"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Not set"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "not verified"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Not yet graded"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Nothing to preview yet"
+msgstr ""
+
+#: src/worker/application/grade-passback.ts
+msgid "Only a failed grade sync can be retried."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "Only course instructors can choose Carnap content from the LMS."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Only draft assignments can be changed in place."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only draft assignments can be deleted."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only draft assignments can be edited."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only draft assignments can be published."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Only formula list items or a given grid may appear after the first formula."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Only formula list items or givens may appear after the first formula."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only graded assignments have releasable grades."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "Only LTI 1.3 launches are supported."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Only option lines may appear after the first option."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only published assignments can be repointed."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only published assignments can be unpublished."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only published assignments can have excused exercises."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only published assignments can have their settings edited."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Only published assignments can release grades."
+msgstr ""
+
+#. Disambiguating id; only the word Open is shown. An assignment available now, with no closing date.
+#: src/worker/web/assignments.tsx
+msgid "Open (assignment availability)"
+msgstr ""
+
+#: src/worker/web/components.tsx
+msgid "Open content in its own tab"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Open the content item"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Open this help"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Opened"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Opens {when}"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Operational counts for the local installation."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Option ID {id} is used more than once in this exercise."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Option IDs must start with a letter and use letters, numbers, underscores, or hyphens."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Option labels cannot be empty."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Ordinal"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Override"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Override for {name}"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Override not saved"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Override set, no fields differ"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Overrides are only available for graded assignments."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Owner"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Ownership and revision counts for this content item."
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Page not found"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Parentheses may only enclose a sentence joined by a two-place connective."
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Paste these Carnap endpoints into the LMS when registering the external tool."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Per-student overrides and the late policy for this assignment."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Percent once after due"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Percent penalty"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Percent per day late"
+msgstr ""
+
+#. Example address in the add-staff field. Translate the local part; the example.edu domain is reserved for documentation.
+#: src/worker/web/courses.tsx
+msgid "person@example.edu"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Pick one row where every formula is false, then fill it in."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Pick one row where every formula is true, then fill it in."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Pick one row where every premise is true and every conclusion is true, then fill it in."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Pick one row where every premise is true and the conclusion is false, then fill it in."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Pick one row where every premise is true and the conclusions disagree, then fill it in."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Pick one row where the formulas disagree, then fill it in."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Platform administration"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Platform capabilities"
+msgstr ""
+
+#: src/worker/application/admin.ts
+msgid "Platform capability is not supported."
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Platform disabled."
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Platform enabled."
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Platform not disabled"
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Platform not enabled"
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Platform not registered"
+msgstr ""
+
+#: src/worker/routes/admin-lti.ts
+msgid "Platform registered."
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Platform roles"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Platform summary"
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Please log in"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Policy and grading controls"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Practice"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Practice activity"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Practice results"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Practice scores"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Practice scores are recorded, and do not count toward the course total."
+msgstr ""
+
+#: src/worker/exercises/group.ts
+msgid "Prawitz proof"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Prawitz proof workspace"
+msgstr ""
+
+#. Chip under a selected proof tree; {order} is its 1-based position in the premise order.
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Premise {order}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Presentation"
+msgstr ""
+
+#: src/worker/routes/content.ts
+#: src/worker/web/content.tsx
+msgid "Preview"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Problem"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Problem here."
+msgstr ""
+
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "Problem in the proof."
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Profile"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Promote a member to course staff by raising their role. Suspending or dropping a member keeps their record but removes their active access."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/assessment.ts
+#: src/worker/exercises/aufbau-proof-tree/assessment.ts
+#: src/worker/exercises/aufbau-proof/assessment.ts
+#: src/worker/exercises/group.ts
+msgid "Proof"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof/strings.ts
+msgid "Proof editor"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+#: src/worker/exercises/group.ts
+msgid "Proof tree"
+msgstr ""
+
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "Prove"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Provider"
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+#: src/worker/web/admin-lti.tsx
+msgid "Public keyset URL"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Publication type"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Publish a correction below that points this assignment at a different revision, or open the content item and save its source again to compile a fresh one."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Publish assignment"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Publish correction"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Published"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Published assignment corrections"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Published assignments available to you in this course."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Published assignments can only be repointed to a revision of the same content item."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Published settings"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Raw HTML is not allowed in carnap-markdown-v1."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Reactivate user"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Reading"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Reading / resource"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reason, optional"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Recent administrative actions with request IDs."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Recent audit activity"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Redirection (launch) URL"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Redo"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Redo (Ctrl-Y)"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "Reference “{token}” is inside a subproof that has already closed."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "Reference “{token}” is not an earlier proof step."
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Reference: {requestId}"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Register a platform"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+msgid "Register platform"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Register the LMS platforms and deployments allowed to launch into Carnap."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Release grades"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Release now"
+msgstr ""
+
+#: src/worker/web/admin-lti.tsx
+#: src/worker/web/profile.tsx
+msgid "Remove"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Removed user"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Request"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset"
+msgstr ""
+
+#: src/worker/application/content/assessment-support.ts
+msgid "Response"
+msgstr ""
+
+#: src/worker/exercises/model/assessment.ts
+#: src/worker/exercises/truth-table/assessment.ts
+msgid "Result"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Results"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Retry"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Return without selecting"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Returning to your LMS"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Reusable content records owned by your account."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Reusable content records owned by your account. You do not have permission to write content."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Review attempts"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Review submissions"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Review the details, then start your attempt. The questions appear once you begin."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Reviewed"
+msgstr ""
+
+#: src/worker/routes/content.ts
+msgid "Revision created."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Revision details"
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "Revision details must be 500 characters or fewer."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Revision not created"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Revision record"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Revision source"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Revisions"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/courses.tsx
+msgid "Revoke"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Revoked"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/courses.tsx
+msgid "Role"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Role & status"
+msgstr ""
+
+#: src/worker/web/components.tsx
+msgid "Rubric"
+msgstr ""
+
+#. Disambiguating id; only the word Rule is shown. Names a proof line's inference-rule text field.
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Rule (proof line)"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Save"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Save accommodation"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+#: src/worker/web/assignment-detail.tsx
+msgid "Save assignment"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+#: src/worker/web/profile.tsx
+msgid "Save changes"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Save late policy"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Save override"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+#: src/worker/web/assignment-detail.tsx
+msgid "Save settings"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Schedule"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Scheduling and presentation can be changed after publishing. Content and grading type stay fixed."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Score"
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "Score must be zero or greater."
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Score not released yet"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Scores"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Scores across every graded assignment"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Scores, export, and submission review"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Scores, status, and export controls for this assignment."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Search"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Select"
+msgstr ""
+
+#. Disambiguating id; only the word Select is shown. Chip that adds a proof tree to the premise selection.
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Select (proof tree)"
+msgstr ""
+
+#: src/worker/exercises/multiple-choice/assessment.ts
+msgid "Selected"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Send login link"
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Sending your selection back to the LMS…"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Set an override for {name}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Set override"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Settings not updated"
+msgstr ""
+
+#: src/worker/exercises/group.ts
+msgid "Short-answer question"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Show in student assignment lists"
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "Sign in"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Sign-in"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Single-select exercises must have exactly one correct option."
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Site administrator"
+msgstr ""
+
+#: src/worker/application/admin.ts
+msgid "Site administrators cannot suspend their own account."
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Something went wrong"
+msgstr ""
+
+#: src/worker/middleware/errors.ts
+msgid "Something went wrong on our end. Please try again."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Source"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Staff member added."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Staff member email"
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "Staff member not added"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Staff role"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Start attempt"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Starter line “{line}” must be a full sequent — its formula has no “{symbol}”."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "starter verifies ✓"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "State"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+#: src/worker/web/courses.tsx
+#: src/worker/web/lti.tsx
+msgid "Status"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/courses.tsx
+#: src/worker/web/labels.ts
+msgid "Student"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Subject"
+msgstr ""
+
+#: src/worker/routes/assignments.ts
+msgid "Submission not approved"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Submissions"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Submissions are still open. Releasing grades now lets students keep working with feedback the others did not have."
+msgstr ""
+
+#: src/worker/exercises/actions.ts
+msgid "Submit answer"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Submitted"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Submitted {when}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Submitted at {when} · {score}/{maxScore}."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Submitted at {when}."
+msgstr ""
+
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "Submitted proof"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Submitting…"
+msgstr ""
+
+#: src/worker/web/donate.tsx
+msgid "Support"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Support operator"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Suspend user"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+#: src/worker/web/labels.ts
+msgid "Suspended"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "syntax error"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Targets"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Teaching assistant"
+msgstr ""
+
+#: src/worker/application/auth.ts
+msgid "That language is not available."
+msgstr ""
+
+#: src/worker/routes/web.ts
+msgid "That login link has expired or has already been used. Enter your email address below and we will send you a new one."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "That row is correct."
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "That source is identical to an existing revision of this item."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "That's a valid counterexample."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The {attribute} attribute must be a glyph of 1 to {max} characters."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The {name} attribute is required."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The {name} attribute must be true or false."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "The action was not accepted."
+msgstr ""
+
+#: src/worker/application/admin.ts
+msgid "The active platform capability was not found."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "The activity you are adding in your LMS will open the assignment you choose here."
+msgstr ""
+
+#: src/worker/application/submissions.ts
+msgid "The answer is invalid."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The assignment was not found in this course."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+#: src/worker/application/attempts.ts
+#: src/worker/application/gradebook.ts
+#: src/worker/application/manual-grading.ts
+#: src/worker/application/submissions.ts
+msgid "The assignment was not found."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "The assumptions discharged together here must share one formula."
+msgstr ""
+
+#: src/worker/application/attempts.ts
+#: src/worker/application/submissions.ts
+msgid "The attempt was not found."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The Carnap account this link targets is disabled."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The check and feedback attributes say the same thing; keep feedback and drop check."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The check attribute must be cells, terse, or off."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The check attribute must be on or off."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+#: src/worker/application/content.ts
+msgid "The content item was not found."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+#: src/worker/application/content.ts
+#: src/worker/application/gradebook.ts
+#: src/worker/application/submissions.ts
+msgid "The content revision was not found."
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "The content source could not be compiled."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The counterexample-to attribute must be validity, tautology, equivalence, inconsistency, or contradiction."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "The course membership was not found."
+msgstr ""
+
+#: src/worker/application/admin.ts
+#: src/worker/application/courses.ts
+msgid "The course was not found."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "The domain cannot be empty."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "The domain must be a comma-separated list of numbers."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "The enrollment link is invalid or expired."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "The enrollment link was not found."
+msgstr ""
+
+#: src/worker/application/submissions.ts
+msgid "The exercise was not found in this assignment."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "The extension of {field} is not contained in the domain."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The feedback attribute must be full, terse, or none."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The fill attribute must be all, connectives, or main."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal header must be followed by a '----' underline, then the proof body."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal header must state the goal formula inside '$ … $'."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward."
+msgstr ""
+
+#: src/worker/application/grade-passback.ts
+msgid "The grade sync record was not found."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The grading attribute must be all-or-nothing or partial."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "The justification after ':' must name a rule."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The label “{label}” is defined more than once."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The launch did not identify a course."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The launch did not identify a user."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The launch did not identify its LMS deployment."
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "The launch from the LMS was incomplete."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The linked assignment is no longer graded."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The linked assignment no longer exists."
+msgstr ""
+
+#: src/worker/application/auth.ts
+msgid "The linked identity was not found on your account."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS activity has no gradebook column (no AGS line item)."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS activity is no longer linked to an assignment."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The LMS activity link was not found."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS connection is disabled."
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "The LMS declined the launch ({oidcError}). Try launching again from the LMS."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The LMS does not accept activity links from this selection, which is the only content Carnap provides."
+msgstr ""
+
+#: src/worker/routes/web.ts
+msgid "The LMS link was removed."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS refused Carnap's request for an access token."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS registration for this activity no longer exists."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS rejected the score."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The LMS returned an unreadable access token."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "The LMS sent a content selection request without a return address."
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "The login request from the LMS was incomplete."
+msgstr ""
+
+#: src/worker/application/auth.ts
+msgid "The login token is invalid or expired."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "The LTI deployment was not found."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "The LTI platform was not found."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "The mark beside the Submit button shows whether the proof checks; hover it to read the problem."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "The most recent administrative audit events."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "the proof engine could not read this starter"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "the proof engine could not read this theory or goal"
+msgstr ""
+
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "The proof engine couldn't read this proof — check for unexpected characters."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The reference segment needs {expected} tokens (one per atom); found {found}."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "The saved form of this revision does not match what the compiler produces, so the content cannot be shown or answered."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "The source doesn't compile."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The starter proof has no lines."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "The student is no longer linked to this LMS."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The style directive does not support the {attribute} attribute."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The style src must be an https URL or a site-relative path."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "The submission was not accepted."
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "The submission was not found."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system attribute must name a notation system this server knows: {systems}."
+msgstr ""
+
+#: src/worker/application/admin.ts
+#: src/worker/application/auth.ts
+#: src/worker/application/courses.ts
+msgid "The user was not found."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The variant attribute must be simple, validity, or constraint."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The variant attribute must be simple, validity, or partial."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof/theory-panel.ts
+msgid "Theory"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "There is already a given for “{field}”."
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "There is no autograded score to approve on this submission."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "There is no root line."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "There's an error somewhere."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "These options leave no cells for the student to fill."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "These values are currently recorded for this member."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This “-- label:” comment names no label."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "This assignment is not accepting new attempts."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This confirmation link is invalid or has expired. Launch from your LMS again to receive a new one."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "This content could not be read"
+msgstr ""
+
+#: src/worker/application/content/artifact.ts
+msgid "This content could not be read. Its saved form does not match what the compiler produces — saving the source again should repair it."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "This content is not available in this course."
+msgstr ""
+
+#: src/worker/application/lti.ts
+#: src/worker/routes/lti.ts
+msgid "This content selection has expired or was already completed. Start again from your LMS."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "This course has no assignments yet. Create one in Carnap first, then choose content from your LMS again."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This course has not been set up in Carnap yet. Ask your instructor to open it from the LMS first."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "This course is archived. Unarchive it to return it to the active list."
+msgstr ""
+
+#: src/worker/application/lti-admin.ts
+msgid "This deployment is already registered for the platform."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "This discharge mark doesn't match any assumption above it."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "This domain gives {field} too many arguments to fill in."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "This exercise couldn't load. Please reload the page."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "This exercise form has no known answer fields."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This exercise has no field called “{field}”."
+msgstr ""
+
+#: src/worker/web/content-document.tsx
+#: src/worker/web/ui-strings.ts
+msgid "This exercise needs JavaScript enabled to load. Please turn it on for this site."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This formula could not be typeset: {detail}"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This given assigns {pinned} to a cell whose computed value is {expected}."
+msgstr ""
+
+#: src/worker/application/gradebook.ts
+msgid "This grade has not been released."
+msgstr ""
+
+#: src/worker/application/submissions.ts
+msgid "This item does not record work."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This kind of LMS message is not supported."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This launch came from an unexpected LMS."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This launch could not be verified."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This launch could not be verified. Return to your course and launch again."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This launch has expired or was already used. Return to your course and launch again."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This launch has expired. Return to your course and launch again."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This launch was not issued for Carnap."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "This line's indentation does not match any open subproof level."
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "This link expires {duration} after it was sent."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This LMS connection is not available."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This LMS deployment is not registered with Carnap. Ask your Carnap administrator to register deployment \"{deploymentId}\"."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "This LMS is not registered with Carnap."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "This model does everything the exercise asks."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "This row is a counterexample, but it isn't filled in correctly."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "This row is filled in correctly, but it doesn't satisfy the given conditions."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "This row isn't a counterexample."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "This row isn't filled in correctly yet."
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "This value cannot be read."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Tick or untick the line"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Time"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Time limit"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Time limit in minutes, optional"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Time limit minutes override"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Time limit must be an integer between 1 and 10080 minutes."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Time-limit multiplier"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Timezone"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+#: src/worker/web/content.tsx
+#: src/worker/web/courses.tsx
+msgid "Title"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Title of new course"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "To apply a rule, tick the dot under each premise in the order the rule takes them, then Apply rule below. The ticked trees become the premises of one new line."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "To discharge an assumption, give it a label and write the same label on the rule that discharges it. Both boxes appear on a line once it is selected."
+msgstr ""
+
+#: src/worker/web/errors.tsx
+msgid "Too many requests"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Total"
+msgstr ""
+
+#. A truth-table cell's value, spoken as part of the cell's accessible name: “Q, row 3: true”. Lowercase, mid-sentence.
+#: src/worker/exercises/truth-table/strings.ts
+msgid "true"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
+msgid "True"
+msgstr ""
+
+#: src/worker/exercises/group.ts
+#: src/worker/exercises/truth-table/assessment.ts
+msgid "Truth table"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Turnstile"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
+msgid "Type"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Unarchive"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Unarchive course"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Undo"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Undo (Ctrl-Z)"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unexpected “{token}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unexpected character “{character}”."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Unexpected delivery failure."
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Unfold this block"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown attribute “{name}”. This directive accepts: {accepted}."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown model option “{option}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown proof option “{option}”. Supported options are 'auto' and 'complete'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown truth-table option “{option}”."
+msgstr ""
+
+#: src/worker/web/users.tsx
+msgid "Unknown user {id}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Unlimited attempts"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Unpublish"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Unpublish is blocked once a student has an attempt; reset attempts first."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Unverified"
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Unverified — this address came from an LMS launch; signing in by email once will verify it."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Update membership"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Updated"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Upload revision"
+msgstr ""
+
+#: src/worker/exercises/help-strings.ts
+msgid "Usage and keyboard shortcuts"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Use the exercise controls above to submit answers."
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "Use this link to sign in to Carnap:"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Use your email address to receive a one-time login link."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/courses.tsx
+msgid "User"
+msgstr ""
+
+#: src/worker/web/users.tsx
+msgid "User ID {id}"
+msgstr ""
+
+#: src/worker/routes/admin.ts
+msgid "User not reactivated"
+msgstr ""
+
+#: src/worker/routes/admin.ts
+msgid "User not suspended"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "User record"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "User search"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Users"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Using the Prawitz proof editor"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Using the proof tree editor"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Valid counterexample."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+#: src/worker/application/courses.ts
+msgid "Value must be a non-negative integer."
+msgstr ""
+
+#: src/worker/application/courses.ts
+msgid "Value must be greater than zero."
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "Verified {when}"
+msgstr ""
+
+#: src/worker/web/admin.tsx
+msgid "View full audit log"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
+msgid "Voided"
+msgstr ""
+
+#: src/worker/middleware/errors.ts
+msgid "We could not find that page. The link may be out of date, or the page may have been deleted."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/content.tsx
+msgid "What changed, optional"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "When"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "When I release them"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Write"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Write Carnap Markdown — the preview follows along — then save an immutable revision."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "You are about to join a course with an enrollment link."
+msgstr ""
+
+#: src/worker/application/errors.ts
+msgid "You are not allowed to do that."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "You are not enrolled in any courses yet."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "You do not own any content items."
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "You have been logged out."
+msgstr ""
+
+#: src/worker/routes/courses.ts
+msgid "You have joined the course."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "You have not created any content items yet."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "You have not created any courses yet."
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "You have not submitted any work for this assignment."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "You have used all of your attempts on this assignment. Ask your instructor if you need another."
+msgstr ""
+
+#: src/worker/web/lti.tsx
+msgid "Your {platform} identity is now connected to the Carnap account for {email}. Return to your LMS and launch again to sign in."
+msgstr ""
+
+#: src/worker/web/profile.tsx
+msgid "Your account details and preferences."
+msgstr ""
+
+#: src/worker/exercises/multiple-choice/read-only-view.ts
+msgid "Your answer"
+msgstr ""
+
+#: src/worker/web/gradebook.tsx
+msgid "Your answers, the expected results, and instructor comments."
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "Your Carnap account is disabled."
+msgstr ""
+
+#: src/worker/infrastructure/email/resend.ts
+msgid "Your Carnap login link"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Your content"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Your courses"
+msgstr ""
+
+#: src/worker/application/lti.ts
+msgid "Your enrollment in this course is not active."
+msgstr ""
+
+#: src/worker/routes/web.ts
+msgid "Your profile has been saved."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Your role"
+msgstr ""
+
+#: src/worker/routes/lti.ts
+msgid "Your session has expired. Start the content selection again from your LMS."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Your status"
+msgstr ""

@@ -1,0 +1,5 @@
+[test]
+# Global teardown. The database harness shares one miniflare instance across
+# the whole test process, and its workerd is not killed when bun exits — so
+# without a process-scoped `afterAll` it survives every run and accumulates.
+preload = ["./tests/setup.ts"]

@@ -1,0 +1,8 @@
+design/
+*.lec
+.direnv/
+node_modules/
+.wrangler/
+public/
+AGENTS.md
+.dev.vars
