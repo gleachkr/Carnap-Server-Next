@@ -113,7 +113,7 @@ class CDP {
 /** Passwordless local login: POST /login, pull the dev confirm link. */
 async function loginConfirmPath() {
   const response = await fetch(`${BASE}/login`, {
-    body: new URLSearchParams({ email: EMAIL, name: "A11y Audit" }),
+    body: new URLSearchParams({ email: EMAIL }),
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     method: "POST",
     redirect: "manual",

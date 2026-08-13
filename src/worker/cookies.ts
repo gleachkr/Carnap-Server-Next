@@ -5,6 +5,8 @@ import type { AppBindings } from "./http";
 
 export const LOCALE_COOKIE_NAME = "carnap_locale";
 
+export const PROFILE_PROMPT_COOKIE_NAME = "carnap_profile_prompt";
+
 /**
  * A year. The cookie carries a stated preference, not session state: someone who
  * chose German last term should still get German, and a signed-in user's stored
@@ -79,5 +81,32 @@ export function clearLocaleCookie(context: Context<AppBindings>): void {
     path: "/",
     sameSite: secure ? "None" : "Lax",
     secure,
+  });
+}
+
+/** Whether this browser has waved off the incomplete-profile prompt. */
+export function hasProfilePromptDismissed(
+  context: Context<AppBindings>,
+): boolean {
+  return getCookie(context, PROFILE_PROMPT_COOKIE_NAME) !== undefined;
+}
+
+/**
+ * Put the incomplete-profile prompt away until the browser is closed.
+ *
+ * No `maxAge`, so this is a session cookie by design rather than by omission:
+ * "not now" is an answer about this sitting, not a standing refusal, and the
+ * thing it defers — an account whose work shows up under a bare email address
+ * in the gradebook — is worth asking about again next time. `Lax` and not
+ * `None`: nothing cross-site has any business dismissing it.
+ */
+export function setProfilePromptDismissedCookie(
+  context: Context<AppBindings>,
+): void {
+  setCookie(context, PROFILE_PROMPT_COOKIE_NAME, "dismissed", {
+    httpOnly: true,
+    path: "/",
+    sameSite: "Lax",
+    secure: cookieSecure(context),
   });
 }

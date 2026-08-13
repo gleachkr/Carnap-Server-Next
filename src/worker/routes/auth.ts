@@ -15,7 +15,6 @@ import { clearSessionCookies, setSessionCookies } from "./session-cookies";
 
 interface StartLoginBody {
   readonly email?: unknown;
-  readonly name?: unknown;
 }
 
 interface ConfirmLoginBody {
@@ -66,18 +65,9 @@ authRoutes.post("/login/start", async (context) => {
     );
   }
 
-  if (
-    body.name !== undefined &&
-    body.name !== null &&
-    typeof body.name !== "string"
-  ) {
-    throw badRequest("invalid_name", "Name must be a string.");
-  }
-
   const started = await authService(context).startNativeLogin({
     email: body.email,
     ipAddress: clientIpAddress(context),
-    name: typeof body.name === "string" ? body.name : null,
   });
   const includeLoginToken = context.env.CARNAP_ENV === "local";
 

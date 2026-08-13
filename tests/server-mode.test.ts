@@ -51,7 +51,7 @@ describe("serving without a D1 binding", () => {
 
       const start = await app.request(
         "/auth/login/start",
-        json({ email: "ada@example.test", name: "Ada" }),
+        json({ email: "ada@example.test" }),
         SERVER_ENV,
       );
 
@@ -80,7 +80,7 @@ describe("serving without a D1 binding", () => {
 
       expect(me.status).toBe(200);
       await expect(me.json()).resolves.toMatchObject({
-        actor: { email: "ada@example.test", name: "Ada" },
+        actor: { email: "ada@example.test", name: null },
       });
     } finally {
       await storage.dispose();

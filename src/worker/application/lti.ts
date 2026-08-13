@@ -11,7 +11,7 @@ import type { CourseRole } from "../domain/courses";
 import { createAppId } from "../domain/ids";
 import type { LtiPlatform, LtiResourceLink } from "../domain/lti";
 import { addSeconds, type Timestamp, timestampNow } from "../domain/time";
-import type { User } from "../domain/users";
+import { NAME_MAX_LENGTH, normalizeName, type User } from "../domain/users";
 import { deferred } from "../i18n/deferred";
 import type { SupportedLocale } from "../i18n/locales";
 import { matchSupportedLocale } from "../i18n/locales";
@@ -676,6 +676,12 @@ export class LtiService {
       nowDate,
     );
 
+    // The launch that opened this challenge may have carried a name, and the
+    // account it just attached to may have none — the commonest case being an
+    // account that reached Carnap by email before its LMS ever launched into
+    // it. Same rule as a launch: fill a blank, overwrite nothing.
+    await this.adoptAssertedName(user, challenge.name, nowDate);
+
     // The approval token went to the account's address, so clicking it is
     // also proof of that mailbox.
     await this.options.stores.users.markEmailVerified(challenge.userId, now);
@@ -1210,7 +1216,10 @@ export class LtiService {
         throw new Error("LTI identity points at a missing user.");
       }
 
-      return { kind: "user", user };
+      return {
+        kind: "user",
+        user: await this.adoptAssertedName(user, launch.name, nowDate),
+      };
     }
 
     if (launch.email !== null) {
@@ -1260,7 +1269,10 @@ export class LtiService {
           throw new Error("LTI identity points at a missing user.");
         }
 
-        return { kind: "user", user: racedUser };
+        return {
+          kind: "user",
+          user: await this.adoptAssertedName(racedUser, launch.name, nowDate),
+        };
       }
 
       const racedByEmail =
@@ -1278,6 +1290,54 @@ export class LtiService {
     await this.createIdentity(user.id, subject, nowDate);
 
     return { kind: "user", user };
+  }
+
+  /**
+   * Give an account with no name the one the platform asserts.
+   *
+   * The name a launch carries used to reach the row only at creation, which
+   * left two populations permanently anonymous: accounts made by a launch from
+   * a platform that was not sharing names at the time, and accounts that
+   * existed before their LMS identity was linked to them. Both show up in every
+   * roster and gradebook as a bare email address — often a placeholder one —
+   * and neither can be repaired by relaunching. The prompt that would ask them
+   * to fix it themselves is no help either: it does not render on the
+   * chrome-free pages a launch lands on.
+   *
+   * Filling only a blank is what makes this safe to run on every launch. It is
+   * not the hole that taking the name off the login form closed — a launch is a
+   * signed assertion from a registered platform, not an anonymous form post —
+   * but a name the account holder chose is still theirs, and a platform that
+   * disagrees with it does not get to win.
+   */
+  private async adoptAssertedName(
+    user: User,
+    asserted: string | null,
+    nowDate: Date,
+  ): Promise<User> {
+    const name = normalizeName(asserted);
+
+    // Over the limit is left on the floor rather than truncated: a stored name
+    // the profile form would reject is one the owner cannot save the page past
+    // until they edit a name they never wrote.
+    //
+    // The stored name is read through the same normalizer rather than through
+    // `hasName`, whose narrowing would leave `user` typed `never` below.
+    if (
+      name === null ||
+      normalizeName(user.name) !== null ||
+      name.length > NAME_MAX_LENGTH
+    ) {
+      return user;
+    }
+
+    const updated = await this.options.stores.users.updateProfile(
+      user.id,
+      { locale: user.locale, name },
+      timestampNow(nowDate),
+    );
+
+    return updated ?? user;
   }
 
   private async beginLinkChallenge(

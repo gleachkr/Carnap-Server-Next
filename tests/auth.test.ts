@@ -105,13 +105,12 @@ function findSetCookie(response: Response, name: string): string {
 async function login(
   env: Env,
   email = "Ada@Example.test",
-  name = "Ada Lovelace",
 ): Promise<LoginResult> {
   const app = createTestApp();
   const startResponse = await appRequest(
     app,
     "/auth/login/start",
-    jsonRequest({ email, name }),
+    jsonRequest({ email }),
     env,
   );
   const startBody = (await startResponse.json()) as StartLoginResponse;
@@ -147,7 +146,9 @@ describe("native authentication", () => {
       const result = await login(env);
 
       expect(result.body.actor.email).toBe("ada@example.test");
-      expect(result.body.actor.name).toBe("Ada Lovelace");
+      // Nameless: signing in proves an address and nothing else. The name is
+      // the account owner's to give on the profile form once they are in.
+      expect(result.body.actor.name).toBeNull();
       expect(result.sessionCookie).toContain("HttpOnly");
       expect(result.sessionCookie).toContain("Max-Age=1209600");
       expect(result.sessionCookie).toContain("Path=/");

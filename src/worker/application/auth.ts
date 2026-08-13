@@ -2,7 +2,12 @@ import type { PlatformCapabilityGrant } from "../domain/admin";
 import type { AuthSession } from "../domain/auth";
 import { createAppId } from "../domain/ids";
 import { addSeconds, type Timestamp, timestampNow } from "../domain/time";
-import type { ExternalIdentity, User } from "../domain/users";
+import {
+  type ExternalIdentity,
+  NAME_MAX_LENGTH,
+  normalizeName,
+  type User,
+} from "../domain/users";
 import { deferred } from "../i18n/deferred";
 import { isSelectableLocale } from "../i18n/locales";
 import type { Translator } from "../i18n/translator";
@@ -15,7 +20,6 @@ export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 export const LOGIN_TTL_SECONDS = 60 * 10;
 
 const EMAIL_MAX_LENGTH = 254;
-const NAME_MAX_LENGTH = 200;
 const TOKEN_BYTE_COUNT = 32;
 
 export interface AuthenticatedActor {
@@ -74,7 +78,6 @@ export const allowAllLoginRateLimiter: LoginRateLimiter = {
 
 export interface StartNativeLoginInput {
   readonly email: string;
-  readonly name?: string | null;
   readonly ipAddress?: string | null;
 }
 
@@ -127,16 +130,6 @@ export interface AuthServiceOptions {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
-}
-
-function normalizeName(name: string | null | undefined): string | null {
-  if (name === null || name === undefined) {
-    return null;
-  }
-
-  const trimmed = name.trim();
-
-  return trimmed.length === 0 ? null : trimmed;
 }
 
 function assertEmail(email: string): void {
@@ -202,10 +195,8 @@ export class AuthService {
     input: StartNativeLoginInput,
   ): Promise<StartedNativeLogin> {
     const email = normalizeEmail(input.email);
-    const name = normalizeName(input.name);
 
     assertEmail(email);
-    assertName(name);
 
     await this.loginRateLimiter.check({
       email,
@@ -221,7 +212,16 @@ export class AuthService {
     await this.options.stores.auth.createNativeLoginChallenge({
       id: createAppId(nowDate.getTime()),
       email,
-      name,
+      // Nothing supplies a name here any more: asking for one on the login form
+      // meant an anonymous request chose the name a new account was created
+      // under, and returning users met a field that was silently ignored. A
+      // name is now only ever written by its owner, signed in, on /profile.
+      //
+      // The column and the plumbing below stay because a link already in
+      // someone's inbox when this shipped still carries one, and it should go
+      // on working for the fifteen minutes it has left. Once #173 squashes the
+      // migrations to a baseline, the column can go with it.
+      name: null,
       tokenHash,
       createdAt,
       expiresAt,

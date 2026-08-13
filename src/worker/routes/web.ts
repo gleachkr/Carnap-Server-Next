@@ -9,7 +9,11 @@ import {
 } from "../application/auth";
 import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
-import { clearLocaleCookie, setLocaleCookie } from "../cookies";
+import {
+  clearLocaleCookie,
+  setLocaleCookie,
+  setProfilePromptDismissedCookie,
+} from "../cookies";
 import { type AppBindings, clientIpAddress } from "../http";
 // The catalogs come in with `i18nFor`, so the locale predicates come from the
 // same module rather than half from here and half from the leaf.
@@ -179,14 +183,12 @@ webRoutes.get("/login", (context) => {
 webRoutes.post("/login", async (context) => {
   const form = await context.req.raw.formData();
   const email = fieldValue(form.get("email"));
-  const name = fieldValue(form.get("name"));
   const next = safeNext(fieldValue(form.get("next"))) ?? null;
 
   try {
     const started = await authService(context).startNativeLogin({
       email,
       ipAddress: clientIpAddress(context),
-      name,
     });
     const delivery = await deliverLoginEmail(context, started, next);
 
@@ -199,7 +201,6 @@ webRoutes.post("/login", async (context) => {
       return renderLoginError(context, {
         email,
         message: error.localize(context.get("i18n")),
-        name,
         next: next ?? "",
         status: error.status,
       });
@@ -256,7 +257,6 @@ webRoutes.get("/login/confirm", async (context) => {
               "That login link has expired or has already been used. Enter your email address below and we will send you a new one.",
             )
           : error.localize(i18n),
-      name: "",
       next: next ?? "",
       status: error.status,
     });
@@ -343,6 +343,26 @@ webRoutes.post("/profile", async (context) => {
 
     throw error;
   }
+});
+
+/**
+ * Put the incomplete-profile prompt away for this browsing session.
+ *
+ * It lands back on the page the reader was on rather than on /profile: they
+ * have just said they do not want to go there. `safeNext` is what keeps that
+ * an in-site path — the field is posted, so it is as forgeable as any other.
+ */
+webRoutes.post("/profile/prompt/dismiss", async (context) => {
+  requireAuthenticated(context);
+
+  const form = await context.req.raw.formData();
+  const next = safeNext(fieldValue(form.get("next")));
+
+  setProfilePromptDismissedCookie(context);
+
+  // `context.redirect`, not the `redirect` helper, which would build a fresh
+  // Response and drop the cookie staged above with it.
+  return context.redirect(next ?? "/courses", 303);
 });
 
 webRoutes.post("/profile/identities/remove", async (context) => {

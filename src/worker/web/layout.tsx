@@ -5,6 +5,7 @@ import type { Child, FC } from "hono/jsx";
 import { canAuthorContent } from "../application/authorization";
 import type { AppBindings } from "../http";
 import { I18nProvider, useI18n } from "./i18n-context";
+import { ProfilePrompt } from "./profile-prompt";
 import { SHELL_SCRIPT_ASSET } from "./script-assets";
 import { CHROME_STYLE_SHEET, CONTENT_STYLE_SHEET } from "./style-assets";
 import {
@@ -79,6 +80,12 @@ interface LayoutProps {
   readonly breadcrumb: readonly Crumb[];
   readonly children: Child;
   readonly chromeless: boolean;
+  /**
+   * The incomplete-profile strip, or null when there is nothing to ask for.
+   * Built by `renderShell` because it needs the request — the layout itself
+   * takes only what it renders.
+   */
+  readonly prompt: Child | null;
   readonly showTitle: boolean;
   readonly title: string;
 }
@@ -89,6 +96,7 @@ const Layout: FC<LayoutProps> = ({
   breadcrumb,
   children,
   chromeless,
+  prompt,
   showTitle,
   title,
 }) => {
@@ -187,6 +195,10 @@ const Layout: FC<LayoutProps> = ({
           </header>
         )}
         <main class="page-shell">
+          {/* Inside the landmark rather than above it: a strip between the
+              header and `main` is content belonging to no region, which is
+              both an axe finding and a genuine navigation dead spot. */}
+          {prompt}
           {showTitle && !chromeless ? (
             <nav aria-label={i18n.t("Breadcrumb")} class="breadcrumb">
               {breadcrumb.map((crumb) => (
@@ -247,13 +259,18 @@ export function renderShell(
   options: ShellOptions,
   children: Child,
 ): Response {
+  const chromeless = options.chromeless ?? false;
   const node = (
     <I18nProvider i18n={context.get("i18n")}>
       <Layout
         actions={options.actions ?? []}
         actor={context.get("actor")}
         breadcrumb={options.breadcrumb ?? []}
-        chromeless={options.chromeless ?? false}
+        chromeless={chromeless}
+        // Not on a chromeless page: those are launches framed by someone
+        // else's application, where our own housekeeping is an interruption
+        // in the middle of their assignment.
+        prompt={chromeless ? null : <ProfilePrompt context={context} />}
         showTitle={options.showTitle ?? true}
         title={options.title}
       >

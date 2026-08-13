@@ -102,12 +102,26 @@ function crossSiteCookieHeader(response: Response): string {
  */
 const SECURE_ORIGIN = "https://localhost";
 
+/**
+ * Sign in and give the account a name, which takes two requests because those
+ * are two things: signing in proves an address, and the name is saved on the
+ * profile form afterwards. The tests below need a stored name to start from —
+ * their subject is what a *rejected* save leaves behind.
+ */
 async function signIn(env: Env): Promise<Session> {
+  const session = await signInWithoutName(env);
+
+  await saveProfile(env, session, { locale: "" });
+
+  return session;
+}
+
+async function signInWithoutName(env: Env): Promise<Session> {
   const started = await appRequest(
     createTestApp(),
     "/auth/login/start",
     {
-      body: JSON.stringify({ email: "ada@example.test", name: "Ada" }),
+      body: JSON.stringify({ email: "ada@example.test" }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
     },

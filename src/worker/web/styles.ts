@@ -1033,10 +1033,78 @@ export const CHROME_STYLES = `
     width: 100%;
   }
 
-  /* Pages without a breadcrumb keep the roomier top spacing. */
-  .page-shell > .page-content:first-child {
+  /* Pages without a breadcrumb keep the roomier top spacing. The second
+     selector is the same rule for a page the profile prompt has pushed down:
+     without it, the strip's presence would silently take that spacing away. */
+  .page-shell > .page-content:first-child,
+  .profile-prompt + .page-content {
     margin-top: 2rem;
   }
+
+  /* Asks a signed-in reader for what their account is still missing. Drawn as
+     a notice rather than as a banner across the window, because it belongs to
+     the content column and not to the app chrome: it is a request, and one the
+     reader may decline. */
+  .profile-prompt {
+    align-items: center;
+    background: var(--blue-soft);
+    border: 1px solid color-mix(in srgb, var(--blue) 22%, transparent);
+    border-radius: 4px;
+    color: var(--blue-strong);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.92rem;
+    gap: 0.75rem 1.25rem;
+    justify-content: space-between;
+    margin-bottom: 1.75rem;
+    padding: 0.7rem 1rem;
+  }
+
+  /* Enough to keep the sentence from being squeezed to one word per line when
+     the two controls are on the same row, and — being a minimum rather than a
+     width — what makes the row break in two before that can happen. */
+  .profile-prompt p {
+    flex: 1 1 18rem;
+    margin: 0;
+  }
+
+  .profile-prompt-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+
+  /* This form is a wrapper around one button, not a stack of fields, so it
+     wants neither of the two things an ordinary form gives its submit. Flex,
+     because a block form would put its inline-level button on a baseline and
+     inherit the line box's leading; and no top margin, because the 1.1rem that
+     separates a submit from the labels above it has nothing above it here.
+
+     That margin is what the misalignment actually was: it made the form 61px
+     tall around a 43px button and left the button sitting 9px below the link
+     beside it — which centring the row could not correct, since the box being
+     centred was the right height and the button inside it was not. */
+  .profile-prompt-actions form {
+    display: flex;
+    margin: 0;
+  }
+
+  .profile-prompt-actions form button {
+    margin-top: 0;
+  }
+
+  /* The strip is already a tinted panel, so the quieter control drops its own
+     fill and reads against that instead of stacking a second surface on it. */
+  .profile-prompt-actions .ghost {
+    border-color: color-mix(in srgb, var(--blue) 30%, transparent);
+    color: var(--blue-strong);
+  }
+
+  .profile-prompt-actions .ghost:hover {
+    background: color-mix(in srgb, var(--blue) 12%, transparent);
+  }
+
 
   .breadcrumb {
     align-items: baseline;

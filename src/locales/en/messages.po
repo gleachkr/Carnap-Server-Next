@@ -908,6 +908,10 @@ msgstr "Co-instructor"
 msgid "Compiled content"
 msgstr "Compiled content"
 
+#: src/worker/web/profile-prompt.tsx
+msgid "Complete your profile"
+msgstr "Complete your profile"
+
 #: src/worker/web/lti.tsx
 msgid "Confirm account link"
 msgstr "Confirm account link"
@@ -1509,6 +1513,10 @@ msgstr "Enrollment link revoked."
 #: src/worker/web/courses.tsx
 msgid "Enrollment links"
 msgstr "Enrollment links"
+
+#: src/worker/web/auth.tsx
+msgid "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one."
+msgstr "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one."
 
 #: src/worker/web/lti.tsx
 msgid "Error code {code} · request {requestId}"
@@ -2173,7 +2181,6 @@ msgid "Name must be 200 characters or less."
 msgstr "Name must be 200 characters or less."
 
 #: src/worker/web/admin-lti.tsx
-#: src/worker/web/auth.tsx
 msgid "Name, optional"
 msgstr "Name, optional"
 
@@ -2379,6 +2386,10 @@ msgstr "Not correct yet."
 #: src/worker/web/ui-strings.ts
 msgid "Not graded"
 msgstr "Not graded"
+
+#: src/worker/web/profile-prompt.tsx
+msgid "Not now"
+msgstr "Not now"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "not recorded"
@@ -3952,10 +3963,6 @@ msgstr "Use the exercise controls above to submit answers."
 msgid "Use this link to sign in to Carnap:"
 msgstr "Use this link to sign in to Carnap:"
 
-#: src/worker/web/auth.tsx
-msgid "Use your email address to receive a one-time login link."
-msgstr "Use your email address to receive a one-time login link."
-
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/courses.tsx
 msgid "User"
@@ -4135,3 +4142,7 @@ msgstr "Your session has expired. Start the content selection again from your LM
 #: src/worker/web/courses.tsx
 msgid "Your status"
 msgstr "Your status"
+
+#: src/worker/web/profile-prompt.tsx
+msgid "Your work shows up under your email address until you add your name."
+msgstr "Your work shows up under your email address until you add your name."

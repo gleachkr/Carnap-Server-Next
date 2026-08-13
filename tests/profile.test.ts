@@ -68,15 +68,21 @@ function cookieHeader(response: Response): string {
     .join("; ");
 }
 
+/**
+ * Sign in, and save a name unless the caller wants the account left as a new
+ * one really is: nameless. The two steps are two requests because the login
+ * flow no longer accepts a name — it is the account owner's to set, signed in,
+ * on this very form.
+ */
 async function login(
   env: Env,
   email = "Ada@Example.test",
-  name = "Ada Lovelace",
+  name: string | null = "Ada Lovelace",
 ): Promise<LoginResult> {
   const startResponse = await appRequest(
     createTestApp(),
     "/auth/login/start",
-    jsonRequest({ email, name }),
+    jsonRequest({ email }),
     env,
   );
   const startBody = (await startResponse.json()) as StartLoginResponse;
@@ -90,11 +96,19 @@ async function login(
 
   expect(confirmResponse.status).toBe(200);
 
-  return {
+  const session = {
     actorId: body.actor.id,
     cookieHeader: cookieHeader(confirmResponse),
     csrfToken: body.csrfToken,
   };
+
+  if (name !== null) {
+    expect(
+      (await saveProfile(env, session, { locale: "", name })).status,
+    ).toBe(303);
+  }
+
+  return session;
 }
 
 function removeIdentity(
@@ -355,6 +369,162 @@ describe("profile page", () => {
       await expect(
         stores.users.getExternalIdentity("lti", "platform-x:lms-user-x"),
       ).resolves.not.toBeNull();
+    });
+  });
+});
+
+/**
+ * The other half of taking the name off the login form: what the login form
+ * stopped asking for, this asks for once the person is signed in and can answer
+ * for themselves.
+ */
+describe("incomplete profile prompt", () => {
+  const PROMPT = "Your work shows up under your email address";
+
+  function page(
+    env: Env,
+    session: LoginResult,
+    path = "/courses",
+  ): Promise<Response> {
+    return appRequest(
+      createTestApp(),
+      path,
+      { headers: { Accept: "text/html", Cookie: session.cookieHeader } },
+      env,
+    );
+  }
+
+  test("asks a nameless account for a name, and stops once it has one", async () => {
+    await withStorage(async (_storage, env) => {
+      const session = await login(env, "Ada@Example.test", null);
+      const before = await page(env, session);
+
+      expect(before.status).toBe(200);
+
+      const html = await before.text();
+
+      expect(html).toContain(PROMPT);
+      expect(html).toContain('action="/profile/prompt/dismiss"');
+      // Inside the main landmark rather than loose between the header and it.
+      expect(html).toContain(
+        '<main class="page-shell"><div class="profile-prompt">',
+      );
+
+      expect(
+        (await saveProfile(env, session, { locale: "", name: "Ada" })).status,
+      ).toBe(303);
+
+      expect(await (await page(env, session)).text()).not.toContain(PROMPT);
+    });
+  });
+
+  // It offers to take you to the name field, so on the page holding that field
+  // it would be pointing at itself.
+  test("stays off the profile page", async () => {
+    await withStorage(async (_storage, env) => {
+      const session = await login(env, "Ada@Example.test", null);
+
+      expect(
+        await (await page(env, session, "/profile")).text(),
+      ).not.toContain(PROMPT);
+      expect(await (await page(env, session)).text()).toContain(PROMPT);
+    });
+  });
+
+  test("a blank name is no name at all", async () => {
+    await withStorage(async (_storage, env) => {
+      const session = await login(env, "Ada@Example.test", "   ");
+
+      expect(await (await page(env, session)).text()).toContain(PROMPT);
+    });
+  });
+
+  test("dismissing it puts it away and returns to the page asking", async () => {
+    await withStorage(async (_storage, env) => {
+      const session = await login(env, "Ada@Example.test", null);
+      const dismissed = await appRequest(
+        createTestApp(),
+        "/profile/prompt/dismiss",
+        {
+          body: new URLSearchParams({ next: "/courses?page=2" }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Cookie: session.cookieHeader,
+            "X-CSRF-Token": session.csrfToken,
+          },
+          method: "POST",
+        },
+        env,
+      );
+      const cookie = dismissed.headers.get("set-cookie") ?? "";
+
+      expect(dismissed.status).toBe(303);
+      expect(dismissed.headers.get("Location")).toBe("/courses?page=2");
+      // For this browsing session only: an account still showing up as an email
+      // address in the gradebook is worth asking about again next time.
+      expect(cookie).toContain("carnap_profile_prompt=dismissed");
+      expect(cookie).not.toContain("Max-Age");
+
+      const withCookie = await appRequest(
+        createTestApp(),
+        "/courses",
+        {
+          headers: {
+            Accept: "text/html",
+            Cookie: `${session.cookieHeader}; carnap_profile_prompt=dismissed`,
+          },
+        },
+        env,
+      );
+
+      expect(await withCookie.text()).not.toContain(PROMPT);
+    });
+  });
+
+  test("an off-site next is refused", async () => {
+    await withStorage(async (_storage, env) => {
+      const session = await login(env, "Ada@Example.test", null);
+      const dismissed = await appRequest(
+        createTestApp(),
+        "/profile/prompt/dismiss",
+        {
+          body: new URLSearchParams({ next: "//evil.example" }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Cookie: session.cookieHeader,
+            "X-CSRF-Token": session.csrfToken,
+          },
+          method: "POST",
+        },
+        env,
+      );
+
+      expect(dismissed.status).toBe(303);
+      expect(dismissed.headers.get("Location")).toBe("/courses");
+    });
+  });
+
+  test("requires a CSRF token to dismiss", async () => {
+    await withStorage(async (_storage, env) => {
+      const session = await login(env, "Ada@Example.test", null);
+      const dismissed = await appRequest(
+        createTestApp(),
+        "/profile/prompt/dismiss",
+        {
+          body: new URLSearchParams({ next: "/courses" }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Cookie: session.cookieHeader,
+          },
+          method: "POST",
+        },
+        env,
+      );
+
+      expect(dismissed.status).toBe(403);
+      expect(dismissed.headers.get("set-cookie") ?? "").not.toContain(
+        "carnap_profile_prompt",
+      );
     });
   });
 });

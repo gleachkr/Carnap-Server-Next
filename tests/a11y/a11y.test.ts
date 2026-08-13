@@ -30,12 +30,18 @@ const baselineFingerprints = new Set(
 // Memoized: both tests below want the same audit of the same fixture set, and
 // seeding the fixtures is the expensive half of the run.
 let cachedFindings: Promise<Finding[]> | null = null;
+let cachedFixtures: ReturnType<typeof collectFixtures> | null = null;
+
+function fixtures(): ReturnType<typeof collectFixtures> {
+  cachedFixtures ??= collectFixtures();
+
+  return cachedFixtures;
+}
 
 function collectFindings(): Promise<Finding[]> {
   cachedFindings ??= (async () => {
-    const fixtures = await collectFixtures();
     const findings: Finding[] = [];
-    for (const fixture of fixtures) {
+    for (const fixture of await fixtures()) {
       findings.push(...(await runAxe(fixture.html, fixture.name)));
     }
     return findings;
@@ -89,6 +95,24 @@ test("no new WCAG 2.2 AA structural violations beyond the baseline", async () =>
   }
 
   expect(regressions).toHaveLength(0);
+});
+
+/**
+ * A floor on what the sweep above actually looked at.
+ *
+ * The incomplete-profile prompt is in the audited set only because every
+ * fixture account is made by a login and nothing else, which leaves all of them
+ * nameless. That is a property of the fixture helper rather than a decision, so
+ * the day someone gives those users names the strip would leave the audit with
+ * nothing failing and no sign it had gone. It carries a link, a form and a
+ * button, on every signed-in page: worth knowing it is still being read.
+ */
+test("the audited fixtures include the incomplete-profile prompt", async () => {
+  const withPrompt = (await fixtures()).filter((fixture) =>
+    fixture.html.includes('class="profile-prompt"'),
+  );
+
+  expect(withPrompt.length).toBeGreaterThan(0);
 });
 
 test("baseline has no stale entries (fixed issues still listed)", async () => {

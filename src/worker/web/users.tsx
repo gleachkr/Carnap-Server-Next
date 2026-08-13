@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { FC } from "hono/jsx";
-import type { User } from "../domain/users";
+import { hasName, type User } from "../domain/users";
 import type { AppBindings } from "../http";
 import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
@@ -30,10 +30,6 @@ export async function resolveUsers(
 
 function shortId(id: string): string {
   return id.length <= 12 ? id : id.slice(0, 8);
-}
-
-function hasName(user: User | null): user is User {
-  return user !== null && (user.name?.trim().length ?? 0) > 0;
 }
 
 /** The best single-line label for a user: name, else email, else a hint. */

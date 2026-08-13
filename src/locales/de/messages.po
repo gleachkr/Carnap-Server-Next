@@ -908,6 +908,10 @@ msgstr "Mitlehrende Person"
 msgid "Compiled content"
 msgstr "Kompilierter Inhalt"
 
+#: src/worker/web/profile-prompt.tsx
+msgid "Complete your profile"
+msgstr "Profil vervollständigen"
+
 #: src/worker/web/lti.tsx
 msgid "Confirm account link"
 msgstr "Kontoverknüpfung bestätigen"
@@ -1509,6 +1513,10 @@ msgstr "Einschreibelink widerrufen."
 #: src/worker/web/courses.tsx
 msgid "Enrollment links"
 msgstr "Einschreibelinks"
+
+#: src/worker/web/auth.tsx
+msgid "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one."
+msgstr "Geben Sie Ihre E-Mail-Adresse ein, und wir senden Ihnen einen einmaligen Anmeldelink. Wenn Sie noch kein Konto haben, wird beim Öffnen des Links eines erstellt."
 
 #: src/worker/web/lti.tsx
 msgid "Error code {code} · request {requestId}"
@@ -2173,7 +2181,6 @@ msgid "Name must be 200 characters or less."
 msgstr "Der Name darf höchstens 200 Zeichen lang sein."
 
 #: src/worker/web/admin-lti.tsx
-#: src/worker/web/auth.tsx
 msgid "Name, optional"
 msgstr "Name, optional"
 
@@ -2379,6 +2386,10 @@ msgstr "Noch nicht richtig."
 #: src/worker/web/ui-strings.ts
 msgid "Not graded"
 msgstr "Nicht bewertet"
+
+#: src/worker/web/profile-prompt.tsx
+msgid "Not now"
+msgstr "Jetzt nicht"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "not recorded"
@@ -3952,10 +3963,6 @@ msgstr "Nutzen Sie die Bedienelemente der Übungen oben, um Antworten abzugeben.
 msgid "Use this link to sign in to Carnap:"
 msgstr "Melden Sie sich über diesen Link bei Carnap an:"
 
-#: src/worker/web/auth.tsx
-msgid "Use your email address to receive a one-time login link."
-msgstr "Geben Sie Ihre E-Mail-Adresse ein, um einen Einmal-Anmeldelink zu erhalten."
-
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/courses.tsx
 msgid "User"
@@ -4135,3 +4142,7 @@ msgstr "Ihre Sitzung ist abgelaufen. Starten Sie die Inhaltsauswahl erneut aus I
 #: src/worker/web/courses.tsx
 msgid "Your status"
 msgstr "Ihr Status"
+
+#: src/worker/web/profile-prompt.tsx
+msgid "Your work shows up under your email address until you add your name."
+msgstr "Ihre Arbeiten erscheinen unter Ihrer E-Mail-Adresse, bis Sie Ihren Namen hinzufügen."

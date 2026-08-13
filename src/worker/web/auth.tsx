@@ -7,11 +7,20 @@ import { renderShell, useI18n } from "./layout";
 
 type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 
+/**
+ * Signing in and signing up are one form, because they are one operation: the
+ * address either has an account or is about to. Nothing else is asked for here
+ * — a name used to be, and it was the wrong place for it twice over. An
+ * unauthenticated request got to choose the name a new account was created
+ * under, and a returning user met a field that was quietly discarded, since the
+ * name only ever applied at creation. What is missing from an account is asked
+ * for once the person is signed in and can answer for themselves (see
+ * `ProfilePrompt`).
+ */
 const LoginForm: FC<{
   readonly email?: string;
-  readonly name?: string;
   readonly next?: string;
-}> = ({ email, name, next }) => {
+}> = ({ email, next }) => {
   const i18n = useI18n();
 
   return (
@@ -21,11 +30,6 @@ const LoginForm: FC<{
         {i18n.t("Email")}
         <br />
         <input name="email" required type="email" value={email ?? ""} />
-      </label>
-      <label>
-        {i18n.t("Name, optional")}
-        <br />
-        <input name="name" value={name ?? ""} />
       </label>
       <button type="submit">{i18n.t("Send login link")}</button>
     </form>
@@ -45,9 +49,12 @@ export function renderLoginPage(
       {model.loggedOut ? (
         <Notice>{i18n.t("You have been logged out.")}</Notice>
       ) : null}
+      {/* One sentence for both cases, deliberately: the page must read the
+          same to someone who has an account and someone who does not, or the
+          copy would say what the response is careful not to. */}
       <Sheet
         description={i18n.t(
-          "Use your email address to receive a one-time login link.",
+          "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one.",
         )}
         title={i18n.t("Account access")}
       >
@@ -62,7 +69,6 @@ export function renderLoginError(
   model: {
     readonly email: string;
     readonly message: string;
-    readonly name: string;
     readonly next: string;
     readonly status: Status;
   },
@@ -74,7 +80,7 @@ export function renderLoginError(
     { showTitle: false, status: model.status, title: i18n.t("Log in") },
     <Sheet title={i18n.t("Account access")}>
       <ErrorSummary>{model.message}</ErrorSummary>
-      <LoginForm email={model.email} name={model.name} next={model.next} />
+      <LoginForm email={model.email} next={model.next} />
     </Sheet>,
   );
 }

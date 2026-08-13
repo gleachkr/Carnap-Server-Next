@@ -309,6 +309,76 @@ describe("LTI 1.3 core launches", () => {
     });
   });
 
+  // A platform that shares no name leaves the account showing as a bare
+  // (often placeholder) address everywhere, and the prompt that would ask the
+  // owner to fix it never reaches them: a launch lands on chrome-free pages.
+  // So a later launch that does carry a name fills the blank.
+  test("a later launch names an account the first launch left blank", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { email: null, name: null });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.name).toBeNull();
+
+      await instructorLaunch(app, env, {
+        email: null,
+        name: "Ida Instructor",
+      });
+
+      expect((await stores.users.getById(userId))?.name).toBe(
+        "Ida Instructor",
+      );
+    });
+  });
+
+  test("a launch does not overwrite a name its owner chose", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { email: null, name: null });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      await stores.users.updateProfile(
+        userId,
+        { locale: null, name: "Ada, Countess of Lovelace" },
+        NOW,
+      );
+      await instructorLaunch(app, env, { email: null, name: "A. Lovelace" });
+
+      expect((await stores.users.getById(userId))?.name).toBe(
+        "Ada, Countess of Lovelace",
+      );
+    });
+  });
+
+  // Storing a name the profile form would refuse would leave the owner unable
+  // to save that page at all until they edited a name they never wrote.
+  test("an asserted name over the length limit is left on the floor", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { email: null, name: null });
+      await instructorLaunch(app, env, {
+        email: null,
+        name: "x".repeat(201),
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.name).toBeNull();
+    });
+  });
+
   test("an asserted email that matches an existing account requires link confirmation", async () => {
     await withLtiApp(async (app, env, stores, fixture) => {
       const existing = await stores.users.create({
@@ -403,6 +473,41 @@ describe("LTI 1.3 core launches", () => {
       const linked = await stores.users.getById(existing.id);
 
       expect(linked?.emailVerifiedAt).not.toBeNull();
+    });
+  });
+
+  // The commonest way to end up nameless with an LMS that knows your name:
+  // reach Carnap by email first, and link the launch to that account after.
+  test("approving a link names the account it attaches to", async () => {
+    await withLtiApp(async (app, env, stores) => {
+      const existing = await stores.users.create({
+        id: "user-nameless",
+        email: "instructor@example.test",
+        name: null,
+        createdAt: NOW,
+      });
+      const pending = await instructorLaunch(app, env);
+      const body = await pending.response.text();
+      const match = body.match(
+        /href="[^"]*\/lti\/link\/confirm\?token=([^"&]+)/,
+      );
+
+      if (match?.[1] === undefined) {
+        throw new Error("Expected a local confirmation link on the page.");
+      }
+
+      expect((await stores.users.getById(existing.id))?.name).toBeNull();
+
+      const confirm = await app.request(
+        "/lti/link/confirm",
+        formRequest({ token: match[1] }),
+        env,
+      );
+
+      expect(confirm.status).toBe(200);
+      expect((await stores.users.getById(existing.id))?.name).toBe(
+        "Ida Instructor",
+      );
     });
   });
 

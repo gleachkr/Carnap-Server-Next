@@ -149,7 +149,7 @@ async function webLogin(env: Env, email: string): Promise<LoginCookies> {
   const start = await appRequest(
     createTestApp(),
     "/login",
-    formRequest({ email, name: "Test User" }),
+    formRequest({ email }),
     env,
   );
   const confirmPath = extractLoginPath(await start.text());
@@ -927,6 +927,55 @@ describe("native web workflow", () => {
       expect(await icon.text()).toContain("<svg");
       expect(legacy.status).toBe(302);
       expect(legacy.headers.get("Location")).toBe("/favicon.svg");
+    });
+  });
+
+  // Asking for a name here let an unauthenticated request choose the name a new
+  // account was created under, and told every returning user their name mattered
+  // when it was discarded — it only ever applied at creation. The address is now
+  // the whole form.
+  test("the login form asks for an address and nothing else", async () => {
+    await withStorage(async (_storage, env) => {
+      const page = await appRequest(
+        createTestApp(),
+        "/login",
+        { headers: htmlHeaders() },
+        env,
+      );
+      const html = await page.text();
+
+      expect(page.status).toBe(200);
+      expect(html).toContain('<input name="email" required="" type="email"');
+      expect(html).not.toContain('name="name"');
+    });
+  });
+
+  test("a name posted to the login route does not reach the account", async () => {
+    await withStorage(async (storage, env) => {
+      const start = await appRequest(
+        createTestApp(),
+        "/login",
+        formRequest({
+          email: "mallory@example.test",
+          name: "<xsl:value-of select=\"php:function('exec','id')\"/>",
+        }),
+        env,
+      );
+      const confirm = await appRequest(
+        createTestApp(),
+        extractLoginPath(await start.text()),
+        { headers: htmlHeaders() },
+        env,
+      );
+
+      expect(confirm.status).toBe(303);
+
+      const user = await storage.stores.users.getByEmail(
+        "mallory@example.test",
+      );
+
+      expect(user).not.toBeNull();
+      expect(user?.name).toBeNull();
     });
   });
 

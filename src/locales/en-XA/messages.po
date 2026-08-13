@@ -908,6 +908,10 @@ msgstr ""
 msgid "Compiled content"
 msgstr ""
 
+#: src/worker/web/profile-prompt.tsx
+msgid "Complete your profile"
+msgstr ""
+
 #: src/worker/web/lti.tsx
 msgid "Confirm account link"
 msgstr ""
@@ -1508,6 +1512,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Enrollment links"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one."
 msgstr ""
 
 #: src/worker/web/lti.tsx
@@ -2173,7 +2181,6 @@ msgid "Name must be 200 characters or less."
 msgstr ""
 
 #: src/worker/web/admin-lti.tsx
-#: src/worker/web/auth.tsx
 msgid "Name, optional"
 msgstr ""
 
@@ -2378,6 +2385,10 @@ msgstr ""
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/ui-strings.ts
 msgid "Not graded"
+msgstr ""
+
+#: src/worker/web/profile-prompt.tsx
+msgid "Not now"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -3952,10 +3963,6 @@ msgstr ""
 msgid "Use this link to sign in to Carnap:"
 msgstr ""
 
-#: src/worker/web/auth.tsx
-msgid "Use your email address to receive a one-time login link."
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/courses.tsx
 msgid "User"
@@ -4134,4 +4141,8 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Your status"
+msgstr ""
+
+#: src/worker/web/profile-prompt.tsx
+msgid "Your work shows up under your email address until you add your name."
 msgstr ""
