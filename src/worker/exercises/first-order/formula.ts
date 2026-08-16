@@ -1,10 +1,11 @@
 /**
- * First-order syntax for the model exercise type: one tokenizer and one
- * recursive-descent parser, both driven by a {@link FirstOrderDialect}.
+ * First-order syntax for the exercise types that read formulas — the model and
+ * the translation: one tokenizer and one recursive-descent parser, both driven
+ * by a {@link FirstOrderDialect}.
  *
  * DOM-free and imported by BOTH the worker (to compile an exercise and grade
- * authoritatively) and the client element (for the local Check), so it must not
- * reach for any platform globals.
+ * authoritatively) and the client elements (for the local Check), so it must
+ * not reach for any platform globals.
  *
  * The grammar mirrors Carnap's `coreSubformulaParser`
  * (`Carnap/src/Carnap/Languages/PureFirstOrder/Parser.hs:377`), which is worth
@@ -18,14 +19,14 @@
  *     association — not because conjunction binds tighter, which it does not.
  *
  * Errors follow the same contract as the propositional parser next door
- * (`../../truth-table/logic/formula.ts`): an unfilled English template plus its
+ * (`../truth-table/logic/formula.ts`): an unfilled English template plus its
  * values, addressed to whoever wrote the formula. Neither this module nor the
  * compiler has a translator; the revision editor words the pair together in the
  * viewer's language.
  */
 
-import type { DiagnosticMessageId } from "../../../application/content/diagnostic-strings";
-import type { TranslatableMessage } from "../../../i18n/translator";
+import type { DiagnosticMessageId } from "../../application/content/diagnostic-strings";
+import type { TranslatableMessage } from "../../i18n/translator";
 import type {
   BinaryConnective,
   FirstOrderDialect,

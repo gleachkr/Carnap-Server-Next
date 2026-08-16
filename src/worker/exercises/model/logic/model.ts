@@ -12,8 +12,8 @@
  * here is dialect-specific: a formula is a formula once parsed.
  */
 
+import type { Formula, Term } from "../../first-order";
 import { tupleKey } from "./fields";
-import type { Formula, Term } from "./formula";
 import { symbolKey } from "./signature";
 
 export interface FiniteModel {

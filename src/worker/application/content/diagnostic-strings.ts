@@ -314,7 +314,7 @@ export function buildDiagnosticStrings(i18n: Translator) {
       placeholders("field", "value"),
     ),
 
-    // The first-order parser the model type uses (`model/logic/formula.ts`).
+    // The shared first-order parser (`exercises/first-order/formula.ts`).
     // It shares "Expected a formula.", "Expected a formula but found …",
     // "Unexpected character …" and "Unexpected …" with the propositional parser
     // above; these are the sentences only a first-order dialect can produce.

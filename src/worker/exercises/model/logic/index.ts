@@ -1,10 +1,35 @@
 /**
- * The model type's logic core: first-order syntax, finite models, and the check.
+ * The model type's logic core: finite models and the check. The first-order
+ * syntax the formulas are written in lives one level up in
+ * `exercises/first-order/` (it serves the translation type too) and is
+ * re-exported here so the model's own modules read from one barrel.
  *
  * Every module here is DOM-free and free of any i18n import, because the client
  * element imports the same code the worker grades with.
  */
 
+export type {
+  Associativity,
+  BinaryConnective,
+  ConnectiveSpellings,
+  DisplayNotation,
+  FirstOrderDialect,
+  Formula,
+  ParseError,
+  ParseResult,
+  PrecedenceLevel,
+  Term,
+} from "../../first-order";
+export {
+  DEFAULT_DIALECT_ID,
+  dialectById,
+  FIRST_ORDER_DIALECTS,
+  FORALLX_CALGARY_2019,
+  formulaToDisplay,
+  formulaToString,
+  parseFormula,
+  termToString,
+} from "../../first-order";
 export type {
   ModelInput,
   ModelProblem,
@@ -14,20 +39,6 @@ export type {
   ModelVerdict,
 } from "./check";
 export { checkModel, judgeModel, readModel } from "./check";
-export type {
-  Associativity,
-  BinaryConnective,
-  ConnectiveSpellings,
-  DisplayNotation,
-  FirstOrderDialect,
-  PrecedenceLevel,
-} from "./dialect";
-export {
-  DEFAULT_DIALECT_ID,
-  dialectById,
-  FIRST_ORDER_DIALECTS,
-  FORALLX_CALGARY_2019,
-} from "./dialect";
 export type { FieldParse, FunctionRow } from "./fields";
 export {
   formatFunctionTable,
@@ -41,13 +52,6 @@ export {
   tupleKey,
   tuplesOver,
 } from "./fields";
-export type { Formula, ParseError, ParseResult, Term } from "./formula";
-export {
-  formulaToDisplay,
-  formulaToString,
-  parseFormula,
-  termToString,
-} from "./formula";
 export type { FiniteModel } from "./model";
 export { evaluateTerm, satisfies } from "./model";
 export type { ModelField, ModelFieldKind } from "./signature";

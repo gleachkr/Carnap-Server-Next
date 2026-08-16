@@ -12,6 +12,7 @@
  * diagnostics), so wording stays with the callers.
  */
 
+import type { Formula } from "../../first-order";
 import type { FunctionRow } from "./fields";
 import {
   MAX_DOMAIN_SIZE,
@@ -22,7 +23,6 @@ import {
   tupleKey,
   tuplesOver,
 } from "./fields";
-import type { Formula } from "./formula";
 import type { FiniteModel } from "./model";
 import { satisfies } from "./model";
 import type { ModelField } from "./signature";

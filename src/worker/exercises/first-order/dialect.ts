@@ -1,5 +1,6 @@
 /**
- * First-order notation systems for the model exercise type.
+ * First-order notation systems for the exercise types that read formulas —
+ * the model and the translation.
  *
  * The original Carnap parses first-order formulas through fourteen
  * textbook-specific parsers, each a `FirstOrderParserOptions` record
@@ -9,7 +10,7 @@
  * shapes the system refuses. {@link parseFormula} is one parser driven by it.
  *
  * DOM-free and dependency-free — the worker imports it to compile and grade,
- * and the client element imports it to check a model locally.
+ * and the client elements import it to check work locally.
  *
  * Only `forallx-calgary-2019` ships. `system=` is nonetheless validated at
  * authoring time against {@link FIRST_ORDER_DIALECTS}, so content authored now

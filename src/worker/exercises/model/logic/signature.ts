@@ -12,7 +12,7 @@
  * predicates and get two separate fields.
  */
 
-import type { Formula, Term } from "./formula";
+import type { Formula, Term } from "../../first-order";
 
 export type ModelFieldKind =
   | "domain"

@@ -12,7 +12,8 @@ Three variants ship: **simple** (a model in which the sentences come out true),
 **constraint** (`constraints : sentences`, where the constraints must hold too).
 
 Notation is **forallx: Calgary, 2019 and later**. Other systems plug in as
-entries in `logic/dialect.ts`; only this one ships.
+entries in the shared syntax core's [`../first-order/dialect.ts`](../first-order/dialect.ts);
+only this one ships.
 
 ## Authoring syntax
 
@@ -251,7 +252,7 @@ Scoring is all-or-nothing: there is no fraction of a countermodel.
 
 ## Roadmap
 
-- **More dialects.** `logic/dialect.ts` is a table; the pre-2019 forallx
+- **More dialects.** `../first-order/dialect.ts` is a table; the pre-2019 forallx
   (juxtaposed `Fx`, no function symbols) and Carnap's default `firstOrder` are
   the obvious next entries. A dialect that permits open formulas additionally
   needs the universal-closure step in the evaluator.

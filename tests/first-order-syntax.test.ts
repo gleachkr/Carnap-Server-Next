@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import type { FirstOrderDialect } from "../src/worker/exercises/model/logic/dialect";
+import type { FirstOrderDialect } from "../src/worker/exercises/first-order/dialect";
 import {
   DEFAULT_DIALECT_ID,
   dialectById,
   FORALLX_CALGARY_2019,
   operatorSpellings,
-} from "../src/worker/exercises/model/logic/dialect";
-import type { Formula } from "../src/worker/exercises/model/logic/formula";
+} from "../src/worker/exercises/first-order/dialect";
+import type { Formula } from "../src/worker/exercises/first-order/formula";
 import {
   formulaToDisplay,
   formulaToString,
   parseFormula,
-} from "../src/worker/exercises/model/logic/formula";
+} from "../src/worker/exercises/first-order/formula";
 
 const CALGARY = FORALLX_CALGARY_2019;
 
