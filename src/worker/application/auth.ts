@@ -12,7 +12,12 @@ import { deferred } from "../i18n/deferred";
 import { isSelectableLocale } from "../i18n/locales";
 import type { Translator } from "../i18n/translator";
 import { AppHttpError, badRequest, forbidden } from "./errors";
+import {
+  createStoredLoginRateLimiter,
+  type LoginRateLimiter,
+} from "./login-rate-limit";
 import type { AppStores } from "./stores";
+import { createAuthToken, hashAuthToken } from "./tokens";
 
 export const SESSION_COOKIE_NAME = "carnap_session";
 export const CSRF_COOKIE_NAME = "carnap_csrf";
@@ -20,7 +25,6 @@ export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14;
 export const LOGIN_TTL_SECONDS = 60 * 10;
 
 const EMAIL_MAX_LENGTH = 254;
-const TOKEN_BYTE_COUNT = 32;
 
 export interface AuthenticatedActor {
   readonly capabilities: readonly PlatformCapabilityGrant[];
@@ -33,11 +37,6 @@ export interface AuthenticatedActor {
   readonly isCourseStaff: boolean;
   readonly user: User;
   readonly session: AuthSession;
-}
-
-export interface LoginRateLimitInput {
-  readonly email: string;
-  readonly ipAddress: string | null;
 }
 
 export interface SendLoginEmailInput {
@@ -67,14 +66,6 @@ export interface SendLoginEmailInput {
 export interface LoginEmailSender {
   send(input: SendLoginEmailInput): Promise<void>;
 }
-
-export interface LoginRateLimiter {
-  check(input: LoginRateLimitInput): Promise<void>;
-}
-
-export const allowAllLoginRateLimiter: LoginRateLimiter = {
-  async check(_input) {},
-};
 
 export interface StartNativeLoginInput {
   readonly email: string;
@@ -124,6 +115,12 @@ export interface ActorResolution {
 
 export interface AuthServiceOptions {
   readonly stores: AppStores;
+  /**
+   * Override the login throttle. Omitting it does *not* mean "unthrottled": the
+   * default is the real limiter over `stores`, so no construction site can
+   * forget one. (It used to mean exactly that, and every one of the four sites
+   * had — leaving `POST /login` an open mail relay for anyone who found it.)
+   */
   readonly loginRateLimiter?: LoginRateLimiter;
   readonly now?: () => Date;
 }
@@ -154,41 +151,17 @@ function assertName(name: string | null): void {
   }
 }
 
-function base64Url(bytes: ArrayBuffer | Uint8Array): string {
-  const view = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-  let binary = "";
-
-  for (const byte of view) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
-}
-
-export function createAuthToken(prefix: string): string {
-  const bytes = new Uint8Array(TOKEN_BYTE_COUNT);
-
-  crypto.getRandomValues(bytes);
-
-  return `${prefix}_${base64Url(bytes)}`;
-}
-
-export async function hashAuthToken(token: string): Promise<string> {
-  const data = new TextEncoder().encode(token);
-  const digest = await crypto.subtle.digest("SHA-256", data);
-
-  return base64Url(digest);
-}
-
 export class AuthService {
   private readonly loginRateLimiter: LoginRateLimiter;
 
   constructor(private readonly options: AuthServiceOptions) {
     this.loginRateLimiter =
-      options.loginRateLimiter ?? allowAllLoginRateLimiter;
+      options.loginRateLimiter ??
+      createStoredLoginRateLimiter(
+        options.now === undefined
+          ? { auth: options.stores.auth }
+          : { auth: options.stores.auth, now: options.now },
+      );
   }
 
   async startNativeLogin(

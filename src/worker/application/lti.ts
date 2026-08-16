@@ -21,18 +21,13 @@ import {
   type Translator,
   translateMessage,
 } from "../i18n/translator";
-import {
-  type AuthenticatedActor,
-  type AuthService,
-  createAuthToken,
-  hashAuthToken,
-  type MintedSession,
-} from "./auth";
+import type { AuthenticatedActor, AuthService, MintedSession } from "./auth";
 import { requireInstructor } from "./authorization";
 import { contentArtifactFromRevision } from "./content/artifact";
 import { badRequest, forbidden } from "./errors";
 import { planGradeJob } from "./grade-passback";
 import type { AppStores } from "./stores";
+import { createAuthToken, hashAuthToken } from "./tokens";
 
 export const LTI_LOGIN_TTL_SECONDS = 60 * 10;
 export const LTI_LINK_TTL_SECONDS = 60 * 60 * 24;

@@ -270,6 +270,47 @@ export function describeStorageContract(
       });
     });
 
+    test("login rate limit hits count per bucket and prune by age", async () => {
+      await withStorage(async ({ stores }) => {
+        const older = "2026-01-02T03:00:00.000Z";
+
+        await stores.auth.recordLoginRateLimitHits(
+          [
+            { id: "hit-1", bucket: "email:a", createdAt: older },
+            { id: "hit-2", bucket: "email:a", createdAt: NOW },
+            { id: "hit-3", bucket: "ip:x", createdAt: NOW },
+          ],
+          older,
+        );
+
+        // A grouped count, which is the one query shape in here that a driver
+        // could plausibly disagree about: buckets with no hits are absent
+        // rather than zero, and hits before `since` do not count.
+        await expect(
+          stores.auth.countLoginRateLimitHits(
+            ["email:a", "ip:x", "ip:y"],
+            NOW,
+          ),
+        ).resolves.toEqual({ "email:a": 1, "ip:x": 1 });
+        await expect(
+          stores.auth.countLoginRateLimitHits(["email:a"], older),
+        ).resolves.toEqual({ "email:a": 2 });
+        await expect(
+          stores.auth.countLoginRateLimitHits([], older),
+        ).resolves.toEqual({});
+
+        // The prune rides along with the next write, so the older hit goes.
+        await stores.auth.recordLoginRateLimitHits(
+          [{ id: "hit-4", bucket: "email:a", createdAt: LATER }],
+          NOW,
+        );
+
+        await expect(
+          stores.auth.countLoginRateLimitHits(["email:a"], older),
+        ).resolves.toEqual({ "email:a": 2 });
+      });
+    });
+
     test("platform capabilities and audit events can be stored", async () => {
       await withStorage(async ({ stores }) => {
         const admin = await createUser(stores, "admin-1");

@@ -47,6 +47,28 @@ export const nativeLoginChallenges = sqliteTable(
   ],
 );
 
+/**
+ * The login throttle's counter: one row per login email sent, keyed by a
+ * scope-tagged hash of the address or the client IP rather than by either in
+ * the clear. See `0024_login_rate_limit.sql` for why it is hashed, and
+ * `application/login-rate-limit.ts` for the windows it is counted over.
+ */
+export const loginRateLimitHits = sqliteTable(
+  "login_rate_limit_hits",
+  {
+    id: text("id").primaryKey(),
+    bucket: text("bucket").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    index("login_rate_limit_hits_bucket_idx").on(
+      table.bucket,
+      table.createdAt,
+    ),
+    index("login_rate_limit_hits_created_at_idx").on(table.createdAt),
+  ],
+);
+
 export const authSessions = sqliteTable(
   "auth_sessions",
   {

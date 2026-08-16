@@ -1,6 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
-import { hashAuthToken } from "../src/worker/application/auth";
+import { hashAuthToken } from "../src/worker/application/tokens";
 import type { Env } from "../src/worker/env";
 import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";

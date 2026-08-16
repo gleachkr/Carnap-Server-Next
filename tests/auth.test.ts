@@ -4,6 +4,11 @@ import {
   requireAuthenticated,
   requireInstructor,
 } from "../src/worker/application/authorization";
+import {
+  createStoredLoginRateLimiter,
+  LOGIN_RATE_LIMIT_PER_EMAIL,
+  LOGIN_RATE_LIMIT_PER_IP,
+} from "../src/worker/application/login-rate-limit";
 import type { AppStores } from "../src/worker/application/stores";
 import type { Env } from "../src/worker/env";
 import { storesForContext } from "../src/worker/stores";
@@ -275,6 +280,168 @@ describe("native authentication", () => {
 
       expect(response.status).toBe(403);
       expect(body.error.code).toBe("disabled_user");
+    });
+  });
+});
+
+/**
+ * The login throttle, exercised through the route rather than the limiter, so
+ * that "no construction site forgot to pass one" is part of what is asserted.
+ * Every assertion here is about mail volume: the harm being prevented is an
+ * instance made to send login links to addresses nobody at the keyboard owns.
+ */
+describe("login rate limiting", () => {
+  async function startLogin(
+    env: Env,
+    email: string,
+    ipAddress?: string,
+  ): Promise<Response> {
+    const request = jsonRequest({ email });
+
+    return appRequest(
+      createTestApp(),
+      "/auth/login/start",
+      ipAddress === undefined
+        ? request
+        : {
+            ...request,
+            headers: {
+              ...(request.headers as Record<string, string>),
+              "CF-Connecting-IP": ipAddress,
+            },
+          },
+      env,
+    );
+  }
+
+  test("one address may only be mailed so many links in a window", async () => {
+    await withStorage(async (_storage, env) => {
+      const statuses: number[] = [];
+
+      for (
+        let attempt = 0;
+        attempt < LOGIN_RATE_LIMIT_PER_EMAIL + 1;
+        attempt++
+      ) {
+        statuses.push((await startLogin(env, "ada@example.test")).status);
+      }
+
+      expect(statuses.slice(0, LOGIN_RATE_LIMIT_PER_EMAIL)).toEqual(
+        Array.from({ length: LOGIN_RATE_LIMIT_PER_EMAIL }, () => 202),
+      );
+      expect(statuses.at(-1)).toBe(429);
+    });
+  });
+
+  test("the refusal names itself and does not depend on how the address is spelled", async () => {
+    await withStorage(async (_storage, env) => {
+      for (let attempt = 0; attempt < LOGIN_RATE_LIMIT_PER_EMAIL; attempt++) {
+        await startLogin(env, "ada@example.test");
+      }
+
+      // Same mailbox, different capitals and whitespace: the limiter counts
+      // the normalized address, or it would be trivially sidestepped.
+      const response = await startLogin(env, "  Ada@Example.test ");
+      const body = (await response.json()) as ErrorEnvelope;
+
+      expect(response.status).toBe(429);
+      expect(body.error.code).toBe("login_rate_limited");
+    });
+  });
+
+  test("a throttled address does not throttle everyone else", async () => {
+    await withStorage(async (_storage, env) => {
+      for (
+        let attempt = 0;
+        attempt < LOGIN_RATE_LIMIT_PER_EMAIL + 1;
+        attempt++
+      ) {
+        await startLogin(env, "ada@example.test");
+      }
+
+      const other = await startLogin(env, "grace@example.test");
+
+      expect(other.status).toBe(202);
+    });
+  });
+
+  test("one client address may only cause so many links, across mailboxes", async () => {
+    await withStorage(async (_storage, env) => {
+      const statuses: number[] = [];
+
+      // A distinct address each time, so only the IP budget can be what runs
+      // out — this is the mail-bombing case the per-address limit misses.
+      for (
+        let attempt = 0;
+        attempt < LOGIN_RATE_LIMIT_PER_IP + 1;
+        attempt++
+      ) {
+        statuses.push(
+          (
+            await startLogin(
+              env,
+              `student${attempt}@example.test`,
+              "203.0.113.7",
+            )
+          ).status,
+        );
+      }
+
+      expect(statuses.at(-2)).toBe(202);
+      expect(statuses.at(-1)).toBe(429);
+
+      // The budget is the caller's, not the world's.
+      const elsewhere = await startLogin(
+        env,
+        "grace@example.test",
+        "198.51.100.9",
+      );
+
+      expect(elsewhere.status).toBe(202);
+    });
+  });
+
+  test("hits age out of the window, and the table is pruned as they do", async () => {
+    await withStorage(async (storage) => {
+      const auth = storage.stores.auth;
+      const clock = { now: new Date("2026-01-02T03:04:05.000Z") };
+      const limiter = createStoredLoginRateLimiter({
+        auth,
+        now: () => clock.now,
+        windowSeconds: 60,
+      });
+      const input = { email: "ada@example.test", ipAddress: null };
+
+      for (let attempt = 0; attempt < LOGIN_RATE_LIMIT_PER_EMAIL; attempt++) {
+        await limiter.check(input);
+      }
+
+      await expect(limiter.check(input)).rejects.toThrow();
+
+      clock.now = new Date("2026-01-02T03:05:06.000Z");
+
+      // A minute later every earlier hit is outside the window, so the request
+      // goes through — and the rows that no longer count are gone, rather than
+      // accumulating for as long as the instance runs.
+      await limiter.check(input);
+
+      const remaining = await storage.db
+        .prepare("SELECT COUNT(*) AS hits FROM login_rate_limit_hits")
+        .first<{ hits: number }>();
+
+      expect(remaining?.hits).toBe(1);
+    });
+  });
+
+  test("nothing is charged to an address whose request was refused outright", async () => {
+    await withStorage(async (storage, env) => {
+      const response = await startLogin(env, "not-an-address");
+      const hits = await storage.db
+        .prepare("SELECT COUNT(*) AS hits FROM login_rate_limit_hits")
+        .first<{ hits: number }>();
+
+      expect(response.status).toBe(400);
+      expect(hits?.hits).toBe(0);
     });
   });
 });

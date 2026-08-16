@@ -6,9 +6,11 @@ import {
   eq,
   getTableColumns,
   gt,
+  gte,
   inArray,
   isNull,
   like,
+  lt,
   lte,
   ne,
   or,
@@ -54,6 +56,7 @@ import type {
   LtiStore,
   PlatformCapabilityStore,
   PublishAssignmentInput,
+  RecordLoginRateLimitHitInput,
   RepointPublishedAssignmentInput,
   ResetAttemptInput,
   RevokeEnrollmentLinkInput,
@@ -134,6 +137,7 @@ import {
   courses,
   evaluations,
   externalIdentities,
+  loginRateLimitHits,
   ltiContexts,
   ltiDeepLinkRequests,
   ltiDeployments,
@@ -725,6 +729,50 @@ class SqliteAuthStore implements AuthStore {
         )
         .returning(),
     );
+  }
+
+  async countLoginRateLimitHits(
+    buckets: readonly string[],
+    since: string,
+  ): Promise<Record<string, number>> {
+    if (buckets.length === 0) {
+      return {};
+    }
+
+    const rows = await this.db
+      .select({ bucket: loginRateLimitHits.bucket, hits: count() })
+      .from(loginRateLimitHits)
+      .where(
+        and(
+          inArray(loginRateLimitHits.bucket, [...buckets]),
+          gte(loginRateLimitHits.createdAt, since),
+        ),
+      )
+      .groupBy(loginRateLimitHits.bucket);
+
+    return Object.fromEntries(rows.map((row) => [row.bucket, row.hits]));
+  }
+
+  async recordLoginRateLimitHits(
+    hits: readonly RecordLoginRateLimitHitInput[],
+    expiredBefore: string,
+  ): Promise<void> {
+    const prune = this.db
+      .delete(loginRateLimitHits)
+      .where(lt(loginRateLimitHits.createdAt, expiredBefore));
+
+    if (hits.length === 0) {
+      await prune;
+
+      return;
+    }
+
+    // One batch, so a request that is charged for its hits is also the request
+    // that pays for the pruning — neither half can land without the other.
+    await this.db.batch([
+      this.db.insert(loginRateLimitHits).values([...hits]),
+      prune,
+    ]);
   }
 }
 

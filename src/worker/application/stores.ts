@@ -126,6 +126,13 @@ export interface CreateAuthSessionInput {
   readonly expiresAt: Timestamp;
 }
 
+export interface RecordLoginRateLimitHitInput {
+  readonly id: AppId;
+  /** A scope tag plus a hash, never a raw address — see `loginRateLimitHits`. */
+  readonly bucket: string;
+  readonly createdAt: Timestamp;
+}
+
 export interface AuthStore {
   createNativeLoginChallenge(
     input: CreateNativeLoginChallengeInput,
@@ -143,6 +150,24 @@ export interface AuthStore {
     tokenHash: string,
     revokedAt: Timestamp,
   ): Promise<AuthSession | null>;
+  /**
+   * How many hits each of `buckets` has taken at or after `since`. Buckets with
+   * none are absent from the result rather than present at zero.
+   */
+  countLoginRateLimitHits(
+    buckets: readonly string[],
+    since: Timestamp,
+  ): Promise<Record<string, number>>;
+  /**
+   * Charge one hit to each bucket, and drop every hit that fell out of the
+   * window. The prune rides along with the write because this is the only
+   * traffic the table has: there is no scheduled job to hang it off, and doing
+   * it here means the counter is pruned exactly as often as it grows.
+   */
+  recordLoginRateLimitHits(
+    hits: readonly RecordLoginRateLimitHitInput[],
+    expiredBefore: Timestamp,
+  ): Promise<void>;
 }
 
 export interface CreateCourseInput {

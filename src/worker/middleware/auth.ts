@@ -4,10 +4,10 @@ import { getCookie } from "hono/cookie";
 import {
   AuthService,
   CSRF_COOKIE_NAME,
-  hashAuthToken,
   SESSION_COOKIE_NAME,
 } from "../application/auth";
 import { AppHttpError } from "../application/errors";
+import { hashAuthToken } from "../application/tokens";
 import type { AppBindings } from "../http";
 import { deferred } from "../i18n/deferred";
 import { optionalStoresForContext } from "../stores";

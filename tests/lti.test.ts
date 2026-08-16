@@ -6,9 +6,10 @@ import {
   jwtVerify,
 } from "jose";
 
-import { AuthService, hashAuthToken } from "../src/worker/application/auth";
+import { AuthService } from "../src/worker/application/auth";
 import { LtiService } from "../src/worker/application/lti";
 import type { AppStores } from "../src/worker/application/stores";
+import { hashAuthToken } from "../src/worker/application/tokens";
 import type { Env } from "../src/worker/env";
 import type { WorkerApp } from "../src/worker/http";
 import {

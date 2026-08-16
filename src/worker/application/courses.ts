@@ -9,7 +9,6 @@ import { createAppId } from "../domain/ids";
 import { addSeconds, isTimestamp, timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
 import type { AuthenticatedActor } from "./auth";
-import { createAuthToken, hashAuthToken } from "./auth";
 import {
   requireCourseRole,
   requireInstructor,
@@ -17,6 +16,7 @@ import {
 } from "./authorization";
 import { AppHttpError, badRequest, forbidden } from "./errors";
 import type { AppStores } from "./stores";
+import { createAuthToken, hashAuthToken } from "./tokens";
 
 export const ENROLLMENT_LINK_TTL_SECONDS = 60 * 60 * 24 * 14;
 

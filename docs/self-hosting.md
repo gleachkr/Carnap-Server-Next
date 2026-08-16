@@ -122,13 +122,45 @@ an interface — `LoginEmailSender` in `src/worker/application/auth.ts`, with th
 one implementation in `src/worker/infrastructure/email/resend.ts` — so a second
 one is a contained piece of work rather than a change to the login flow.
 
+### The login throttle
+
+Asking for a link is an unauthenticated request that makes your instance send
+mail, so it is rationed. Two rolling counts over fifteen minutes, both in the
+database, no configuration:
+
+- **five links per email address.** The one before it is still valid for ten
+  minutes, so nobody legitimately needs a sixth. This is what stops someone
+  typing a stranger's address into your form until their inbox is full.
+- **forty links per client IP.** Deliberately loose, because a lecture hall
+  behind one NAT is a normal shape for this traffic and locking a class out is
+  a worse failure than letting a script through. It is the address limit that
+  protects any particular mailbox.
+
+Over either, the form answers 429 and no mail goes out. Nothing is charged for
+a request that was refused for other reasons, and hits are counted only when a
+link is actually sent — so a throttled requester who waits gets back in as their
+earlier hits age out.
+
+The counter stores a SHA-256 of the address or IP, never either in the clear,
+and prunes itself on every check. Throttling by IP does not leave you holding a
+log of who tried to sign in from where.
+
+The numbers live in `src/worker/application/login-rate-limit.ts` (Carnap's own
+table, not Cloudflare's rate-limiting binding, so that a self-hosted instance is
+defended by the same code as the deployed one). If your instance needs different
+ones — a very large campus, or a private instance where the address limit is all
+you want — they are constants at the top of that file.
+
 ## Behind a reverse proxy
 
 Terminate TLS in front and pass everything through. Two headers matter:
 
-- **`X-Forwarded-For`** is read for the audit trail on sessions and logins. On
-  Cloudflare that job is done by `CF-Connecting-IP`, which is preferred when
-  present; the fallback takes the first entry of `X-Forwarded-For`.
+- **`X-Forwarded-For`** is read for the audit trail on sessions and logins, and
+  is the per-IP half of [the login throttle](#the-login-throttle). On Cloudflare
+  that job is done by `CF-Connecting-IP`, which is preferred when present; the
+  fallback takes the first entry of `X-Forwarded-For`. A proxy that forwards
+  neither makes every request look like it came from nowhere in particular,
+  which leaves the throttle resting on the per-address limit alone.
 - **`X-Request-Id`**, if you set one, is carried through logs and error
   responses. One is generated when it is absent.
 

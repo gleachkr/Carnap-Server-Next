@@ -3909,6 +3909,10 @@ msgstr "To discharge an assumption, give it a label and write the same label on 
 msgid "Too many requests"
 msgstr "Too many requests"
 
+#: src/worker/application/login-rate-limit.ts
+msgid "Too many sign-in links have been requested. Check your inbox — a link sent in the last few minutes still works — or try again shortly."
+msgstr "Too many sign-in links have been requested. Check your inbox — a link sent in the last few minutes still works — or try again shortly."
+
 #: src/worker/web/gradebook.tsx
 msgid "Total"
 msgstr "Total"

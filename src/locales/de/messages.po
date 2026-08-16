@@ -3909,6 +3909,10 @@ msgstr "Um eine Annahme zu entlasten, geben Sie ihr eine Marke und schreiben die
 msgid "Too many requests"
 msgstr "Zu viele Anfragen"
 
+#: src/worker/application/login-rate-limit.ts
+msgid "Too many sign-in links have been requested. Check your inbox — a link sent in the last few minutes still works — or try again shortly."
+msgstr ""
+
 #: src/worker/web/gradebook.tsx
 msgid "Total"
 msgstr "Gesamt"
