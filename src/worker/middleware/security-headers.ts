@@ -205,6 +205,28 @@ const SECURITY_HEADERS: readonly (readonly [string, string])[] = [
 ];
 
 /**
+ * A year, and nothing else: no `includeSubDomains`, no `preload`.
+ *
+ * The bare directive says the one thing we know to be true — that *this* host
+ * is https-only — and a self-hoster cannot be hurt by it. The other two are
+ * assertions about hosts this code has never seen. `includeSubDomains` would
+ * bind every subdomain of wherever someone deployed us, which for an instance
+ * at `logic.example.edu` is a promise about a namespace its operator may not
+ * own. `preload` is worse: it is baked into browser binaries and effectively
+ * irreversible. An operator who wants either can add it at their proxy, where
+ * they know what else lives on the domain.
+ *
+ * Sent only over https, because that is the only place it means anything — the
+ * spec has browsers ignore it on a plain-http response, so emitting it there
+ * would be noise that also implies the local dev server is making a promise it
+ * is not.
+ */
+const HSTS_HEADER = {
+  name: "Strict-Transport-Security",
+  value: "max-age=31536000",
+} as const;
+
+/**
  * Set the headers on the way out rather than on the way in, which is what makes
  * this cover every response rather than most of them. Handlers that build their
  * answer through the context (`c.html`, `c.json`) would pick up headers staged
@@ -225,5 +247,9 @@ export function securityHeadersMiddleware() {
     // After `next()`, which is what lets a handler have widened `form-action`
     // by the time the policy is assembled.
     context.res.headers.set(CSP_HEADER_NAME, cspForResponse(context));
+
+    if (new URL(context.req.url).protocol === "https:") {
+      context.res.headers.set(HSTS_HEADER.name, HSTS_HEADER.value);
+    }
   });
 }

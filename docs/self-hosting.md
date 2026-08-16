@@ -175,6 +175,13 @@ HTTPS is not optional. Outside `CARNAP_ENV=local` the session cookie is marked
 `Secure`, so over plain HTTP the browser accepts it and then never sends it
 back — sign-in appears to succeed and the next page is signed out again.
 
+Over HTTPS, Carnap sends `Strict-Transport-Security: max-age=31536000` — a year,
+and nothing more. `includeSubDomains` and `preload` are yours to add at the
+proxy if you want them, because they are claims about a namespace this
+application knows nothing about: the first binds every subdomain of wherever you
+deployed, and the second is compiled into browsers and is not practically
+reversible.
+
 **Run one instance.** A SQLite file is single-node, and the grade-passback sweep
 assumes a single ticking clock. Carnap is not built to scale horizontally, and
 for a department's course load it does not need to be.

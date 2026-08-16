@@ -157,4 +157,22 @@ describe("security headers", () => {
     expect(policy).not.toBeNull();
     expect(policy).not.toContain("frame-ancestors");
   });
+
+  /**
+   * HSTS is about the scheme, so the scheme is what decides it: a browser
+   * ignores the header on a plain-http response, and the local dev server is
+   * plain http. Both directions matter — a missing header on https is an
+   * instance not asking for the protection, and a present one on http is a
+   * promise nothing here can keep.
+   */
+  test("https gets HSTS and http does not", async () => {
+    const app = createTestApp();
+    const secure = await appRequest(app, "https://carnap.test/login");
+    const plain = await appRequest(app, "/login");
+
+    expect(secure.headers.get("Strict-Transport-Security")).toBe(
+      "max-age=31536000",
+    );
+    expect(plain.headers.get("Strict-Transport-Security")).toBeNull();
+  });
 });
