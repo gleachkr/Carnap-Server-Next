@@ -26,6 +26,8 @@ import { compileMultipleChoice } from "../../exercises/multiple-choice/authoring
 import { MULTIPLE_CHOICE_KIND } from "../../exercises/multiple-choice/types";
 import { compileShortAnswer } from "../../exercises/short-answer/authoring";
 import { SHORT_ANSWER_KIND } from "../../exercises/short-answer/types";
+import { compileTranslation } from "../../exercises/translation/authoring";
+import { TRANSLATION_KIND } from "../../exercises/translation/types";
 import { compileTruthTable } from "../../exercises/truth-table/authoring";
 import { TRUTH_TABLE_KIND } from "../../exercises/truth-table/types";
 import { createDefaultAuthoringExerciseRegistry } from "./authoring-registry";
@@ -539,7 +541,13 @@ export async function compileCarnapMarkdown(
                             diagnostics,
                             renderOptions,
                           )
-                        : null;
+                        : exerciseKind === TRANSLATION_KIND
+                          ? await compileTranslation(
+                              block,
+                              diagnostics,
+                              renderOptions,
+                            )
+                          : null;
 
     if (compiled === null) {
       continue;

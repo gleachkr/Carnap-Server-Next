@@ -18,10 +18,16 @@ msgid "—/{worth} (not released)"
 msgstr "—/{worth} (nicht freigegeben)"
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only."
+msgstr "„{formula}“ ist nicht aussagenlogisch; eine prop-Übersetzung verwendet nur Satzbuchstaben und Junktoren."
+
+#: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr "„{name}“ ist eine freie Variable; jede Formel muss ein Satz sein."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "“{operator}” cannot be chained; add parentheses to group it."
 msgstr "„{operator}“ kann nicht verkettet werden; setzen Sie Klammern, um die Gruppierung anzugeben."
 
@@ -245,6 +251,10 @@ msgstr "Für diesen Versuch kann keine Abgabe akzeptiert werden."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A theory named “{name}” is already declared."
 msgstr "Eine Theorie namens „{name}“ ist bereits deklariert."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A translation exercise requires at least one solution formula."
+msgstr "Eine Übersetzungsaufgabe braucht mindestens eine Lösungsformel."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A truth table may use at most {max} atoms; found {found}."
@@ -480,6 +490,7 @@ msgstr "Ein LMS-Start von {platform} möchte sich mit dem Carnap-Konto für {ema
 
 #: src/worker/exercises/free-response/read-only-view.ts
 #: src/worker/exercises/short-answer/read-only-view.ts
+#: src/worker/exercises/translation/assessment.ts
 #: src/worker/web/assignment-detail.tsx
 msgid "Answer"
 msgstr "Antwort"
@@ -841,6 +852,7 @@ msgid "Change saved."
 msgstr "Änderung gespeichert."
 
 #: src/worker/exercises/model/strings.ts
+#: src/worker/exercises/translation/strings.ts
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Check"
 msgstr "Prüfen"
@@ -1625,26 +1637,32 @@ msgid "Expected '<->' (biconditional)."
 msgstr "'<->' (Bisubjunktion) erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected “{bracket}”."
 msgstr "„{bracket}“ erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected “{operator}” after this term."
 msgstr "„{operator}“ nach diesem Term erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a formula but found “{token}”."
 msgstr "Formel erwartet, aber „{token}“ gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a formula."
 msgstr "Formel erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a term but found “{token}”."
 msgstr "Term erwartet, aber „{token}“ gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a variable after the quantifier."
 msgstr "Variable nach dem Quantor erwartet."
 
@@ -2475,6 +2493,10 @@ msgstr "Nur bei veröffentlichten Aufgaben können die Einstellungen bearbeitet 
 msgid "Only published assignments can release grades."
 msgstr "Nur bei veröffentlichten Aufgaben können Noten freigegeben werden."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Only solution list items may appear after the first solution."
+msgstr "Nach der ersten Lösung dürfen nur weitere Lösungs-Listenpunkte folgen."
+
 #. Disambiguating id; only the word Open is shown. An assignment available now, with no closing date.
 #: src/worker/web/assignments.tsx
 msgid "Open (assignment availability)"
@@ -2555,6 +2577,7 @@ msgid "Page not found"
 msgstr "Seite nicht gefunden"
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Parentheses may only enclose a sentence joined by a two-place connective."
 msgstr "Klammern dürfen nur einen Satz einschließen, dessen Hauptjunktor zweistellig ist."
 
@@ -2803,6 +2826,10 @@ msgstr "Lektüre"
 #: src/worker/web/labels.ts
 msgid "Reading / resource"
 msgstr "Lektüre / Material"
+
+#: src/worker/exercises/translation/strings.ts
+msgid "Reads as {formula}"
+msgstr "Gelesen als {formula}"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Reason, optional"
@@ -3383,6 +3410,10 @@ msgstr "Der Einschreibelink ist ungültig oder abgelaufen."
 msgid "The enrollment link was not found."
 msgstr "Der Einschreibelink wurde nicht gefunden."
 
+#: src/worker/exercises/translation/strings.ts
+msgid "The equivalence checker could not load. Your work is safe; check again in a moment."
+msgstr "Der Äquivalenzprüfer konnte nicht geladen werden. Ihre Arbeit ist sicher; prüfen Sie gleich noch einmal."
+
 #: src/worker/application/submissions.ts
 msgid "The exercise was not found in this assignment."
 msgstr "Die Übung wurde in dieser Aufgabe nicht gefunden."
@@ -3527,6 +3558,10 @@ msgstr "Die Markierung neben der Schaltfläche „Antwort abgeben“ zeigt, ob d
 msgid "The most recent administrative audit events."
 msgstr "Die neuesten administrativen Prüfereignisse."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The PNF test applies only to first-order translations."
+msgstr "Der PNF-Test gilt nur für prädikatenlogische Übersetzungen."
+
 #: src/worker/web/ui-strings.ts
 msgid "the proof engine could not read this starter"
 msgstr "die Beweis-Engine konnte diese Vorlage nicht lesen"
@@ -3586,6 +3621,10 @@ msgid "The user was not found."
 msgstr "Das Konto wurde nicht gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The variant attribute must be prop, first-order, or exact."
+msgstr "Das variant-Attribut muss prop, first-order oder exact sein."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The variant attribute must be simple, validity, or constraint."
 msgstr "Das Attribut variant muss simple, validity oder constraint sein."
 
@@ -3624,6 +3663,10 @@ msgstr "Diese Werte sind derzeit für dieses Mitglied hinterlegt."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "This “-- label:” comment names no label."
 msgstr "Dieser „-- label:“-Kommentar nennt keine Marke."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This answer does not parse, so it cannot be submitted on an exam."
+msgstr "Diese Antwort ist nicht wohlgeformt und kann daher in einer Prüfung nicht abgegeben werden."
 
 #: src/worker/web/assignment-detail.tsx
 msgid "This assignment is not accepting new attempts."
@@ -3670,6 +3713,10 @@ msgstr "Dieses Deployment ist für diese Plattform bereits registriert."
 msgid "This discharge mark doesn't match any assumption above it."
 msgstr "Diese Entlastungsmarke passt zu keiner Annahme darüber."
 
+#: src/worker/exercises/translation/strings.ts
+msgid "This does not exactly match the intended answer."
+msgstr "Das stimmt nicht genau mit der gesuchten Antwort überein."
+
 #: src/worker/exercises/model/strings.ts
 msgid "This domain gives {field} too many arguments to fill in."
 msgstr "Bei diesem Individuenbereich hat {field} zu viele Argumente zum Ausfüllen."
@@ -3690,6 +3737,10 @@ msgstr "Diese Aufgabe hat kein Feld namens „{field}“."
 #: src/worker/web/ui-strings.ts
 msgid "This exercise needs JavaScript enabled to load. Please turn it on for this site."
 msgstr "Diese Übung benötigt aktiviertes JavaScript. Bitte aktivieren Sie es für diese Seite."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This exercise wants a propositional sentence: sentence letters and connectives only."
+msgstr "Diese Aufgabe verlangt einen aussagenlogischen Satz: nur Satzbuchstaben und Junktoren."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "This formula could not be typeset: {detail}"
@@ -3755,6 +3806,10 @@ msgstr "Dieses LMS-Deployment ist nicht bei Carnap registriert. Bitten Sie Ihren
 msgid "This LMS is not registered with Carnap."
 msgstr "Dieses LMS ist nicht bei Carnap registriert."
 
+#: src/worker/exercises/translation/strings.ts
+msgid "This matches the intended answer."
+msgstr "Das stimmt mit der gesuchten Antwort überein."
+
 #: src/worker/exercises/model/strings.ts
 msgid "This model does everything the exercise asks."
 msgstr "Dieses Modell erfüllt alles, was die Aufgabe verlangt."
@@ -3774,6 +3829,26 @@ msgstr "Diese Zeile ist kein Gegenbeispiel."
 #: src/worker/exercises/truth-table/strings.ts
 msgid "This row isn't filled in correctly yet."
 msgstr "Diese Zeile ist noch nicht richtig ausgefüllt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This submission is not in Conjunctive Normal Form."
+msgstr "Diese Abgabe ist nicht in konjunktiver Normalform."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This submission is not in Disjunctive Normal Form."
+msgstr "Diese Abgabe ist nicht in disjunktiver Normalform."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This submission is not in Prenex Normal Form."
+msgstr "Diese Abgabe ist nicht in pränexer Normalform."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This translation is logically equivalent to the intended answer."
+msgstr "Diese Übersetzung ist logisch äquivalent zur gesuchten Antwort."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This translation is not equivalent to the intended answer."
+msgstr "Diese Übersetzung ist nicht äquivalent zur gesuchten Antwort."
 
 #: src/worker/exercises/model/strings.ts
 msgid "This value cannot be read."
@@ -3838,6 +3913,10 @@ msgstr "Zu viele Anfragen"
 msgid "Total"
 msgstr "Gesamt"
 
+#: src/worker/exercises/translation/assessment.ts
+msgid "Translation"
+msgstr "Übersetzung"
+
 #. A truth-table cell's value, spoken as part of the cell's accessible name: “Q, row 3: true”. Lowercase, mid-sentence.
 #: src/worker/exercises/truth-table/strings.ts
 msgid "true"
@@ -3884,10 +3963,12 @@ msgid "Undo (Ctrl-Z)"
 msgstr "Rückgängig (Strg-Z)"
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Unexpected “{token}”."
 msgstr "Unerwartetes „{token}“."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Unexpected character “{character}”."
 msgstr "Unerwartetes Zeichen „{character}“."
 
@@ -3910,6 +3991,14 @@ msgstr "Unbekannte Modell-Option „{option}“."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Unknown proof option “{option}”. Supported options are 'auto' and 'complete'."
 msgstr "Unbekannte Beweisoption „{option}“. Unterstützt werden 'auto' und 'complete'."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown translation option “{option}”."
+msgstr "Unbekannte Übersetzungs-Option „{option}“."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown translation test “{test}”."
+msgstr "Unbekannter Übersetzungs-Test „{test}“."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Unknown truth-table option “{option}”."
@@ -4067,6 +4156,38 @@ msgstr "Sie sind noch in keinem Kurs eingeschrieben."
 msgid "You do not own any content items."
 msgstr "Sie besitzen keine Inhaltsdatensätze."
 
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} atomic sentences, but should have {max} at most."
+msgstr "Sie haben {count} atomare Sätze, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} biconditionals, but should have {max} at most."
+msgstr "Sie haben {count} Bikonditionale, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} conditionals, but should have {max} at most."
+msgstr "Sie haben {count} Konditionale, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} conjunctions, but should have {max} at most."
+msgstr "Sie haben {count} Konjunktionen, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} connectives, but should have {max} at most."
+msgstr "Sie haben {count} Junktoren, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} disjunctions, but should have {max} at most."
+msgstr "Sie haben {count} Disjunktionen, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} falsity constants, but should have {max} at most."
+msgstr "Sie haben {count} Falsum-Konstanten, höchstens {max} sind erlaubt."
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} negations, but should have {max} at most."
+msgstr "Sie haben {count} Negationen, höchstens {max} sind erlaubt."
+
 #: src/worker/web/auth.tsx
 msgid "You have been logged out."
 msgstr "Sie wurden abgemeldet."
@@ -4142,6 +4263,10 @@ msgstr "Ihre Sitzung ist abgelaufen. Starten Sie die Inhaltsauswahl erneut aus I
 #: src/worker/web/courses.tsx
 msgid "Your status"
 msgstr "Ihr Status"
+
+#: src/worker/exercises/translation/strings.ts
+msgid "Your translation"
+msgstr "Ihre Übersetzung"
 
 #: src/worker/web/profile-prompt.tsx
 msgid "Your work shows up under your email address until you add your name."

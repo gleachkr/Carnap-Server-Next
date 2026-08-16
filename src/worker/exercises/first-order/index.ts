@@ -27,5 +27,6 @@ export {
   formulaToDisplay,
   formulaToString,
   parseFormula,
+  splitFormulaList,
   termToString,
 } from "./formula";

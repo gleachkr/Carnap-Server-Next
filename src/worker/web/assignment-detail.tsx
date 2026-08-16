@@ -98,6 +98,13 @@ import {
 } from "../exercises/model/types";
 import { renderMultipleChoiceElement } from "../exercises/multiple-choice/read-only-view";
 import { exerciseStrings } from "../exercises/strings";
+import { renderTranslationElement } from "../exercises/translation/read-only-view";
+import {
+  isTranslationPublicData,
+  TRANSLATION_ANSWER_KIND,
+  TRANSLATION_KIND,
+  TRANSLATION_SCHEMA_VERSION,
+} from "../exercises/translation/types";
 import { isTruthTablePublicData } from "../exercises/truth-table/grading";
 import { renderTruthTableElement } from "../exercises/truth-table/read-only-view";
 import type { AppBindings } from "../http";
@@ -984,6 +991,59 @@ function modelSubmissionForm(
   );
 }
 
+function translationSubmissionForm(
+  submission: InlineSubmissionContext,
+  node: Extract<ContentNode, { readonly kind: "exercise" }>,
+  title: string | null,
+): Child | null {
+  if (
+    node.exerciseKind !== TRANSLATION_KIND ||
+    !isTranslationPublicData(node.publicData)
+  ) {
+    return null;
+  }
+
+  const publicData = node.publicData;
+
+  return (
+    <ExerciseFormShell
+      node={node}
+      renderActions={false}
+      submission={submission}
+    >
+      <input
+        name="answerKind"
+        type="hidden"
+        value={TRANSLATION_ANSWER_KIND}
+      />
+      <input
+        name="schemaVersion"
+        type="hidden"
+        value={TRANSLATION_SCHEMA_VERSION}
+      />
+      {/* Same arrangement as the model above: the element's chrome lives in a
+          Declarative Shadow Root, the prompt is slotted from light DOM, and
+          Check and submit share the light-DOM action bar the element fills on
+          upgrade. */}
+      {raw(
+        renderTranslationElement(
+          publicData,
+          {
+            component: node.render.component,
+            componentVersion: node.render.componentVersion,
+            contentRevisionId: submission.contentRevisionId,
+            exerciseId: node.exerciseId,
+            exerciseKind: node.exerciseKind,
+            i18n: submission.context.get("i18n"),
+            title,
+          },
+          exerciseActions(submission, node),
+        ),
+      )}
+    </ExerciseFormShell>
+  );
+}
+
 function aufbauProofSubmissionForm(
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
@@ -1209,6 +1269,7 @@ function submissionFormNode(
     multipleChoiceSubmissionForm(submission, node, title) ??
     truthTableSubmissionForm(submission, node, title) ??
     modelSubmissionForm(submission, node, title) ??
+    translationSubmissionForm(submission, node, title) ??
     aufbauProofSubmissionForm(submission, node, title) ??
     aufbauProofTreeSubmissionForm(submission, node, title) ??
     aufbauProofFitchSubmissionForm(submission, node, title) ??

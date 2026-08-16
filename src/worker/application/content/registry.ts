@@ -20,6 +20,7 @@ import { FreeResponseExerciseType } from "../../exercises/free-response/assessme
 import { ModelExerciseType } from "../../exercises/model/assessment";
 import { MultipleChoiceExerciseType } from "../../exercises/multiple-choice/assessment";
 import { ShortAnswerExerciseType } from "../../exercises/short-answer/assessment";
+import { TranslationExerciseType } from "../../exercises/translation/assessment";
 import { TruthTableExerciseType } from "../../exercises/truth-table/assessment";
 import { deferred } from "../../i18n/deferred";
 import { badRequest } from "../errors";
@@ -60,6 +61,13 @@ export {
   SHORT_ANSWER_KIND,
   SHORT_ANSWER_SCHEMA_VERSION,
 } from "../../exercises/short-answer/types";
+export { TranslationExerciseType as TranslationExerciseHandler } from "../../exercises/translation/assessment";
+export {
+  TRANSLATION_ANSWER_KIND,
+  TRANSLATION_COMPONENT_METADATA,
+  TRANSLATION_KIND,
+  TRANSLATION_SCHEMA_VERSION,
+} from "../../exercises/translation/types";
 export { TruthTableExerciseType as TruthTableExerciseHandler } from "../../exercises/truth-table/assessment";
 export {
   TRUTH_TABLE_ANSWER_KIND,
@@ -184,6 +192,7 @@ export function createDefaultExerciseKindRegistry(): AssessmentExerciseRegistry 
   registry.register(new AufbauProofTreeExerciseType());
   registry.register(new AufbauProofFitchExerciseType());
   registry.register(new AufbauProofPrawitzExerciseType());
+  registry.register(new TranslationExerciseType());
 
   return registry;
 }

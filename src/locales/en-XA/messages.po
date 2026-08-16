@@ -18,10 +18,16 @@ msgid "—/{worth} (not released)"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "“{operator}” cannot be chained; add parentheses to group it."
 msgstr ""
 
@@ -244,6 +250,10 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A theory named “{name}” is already declared."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A translation exercise requires at least one solution formula."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -480,6 +490,7 @@ msgstr ""
 
 #: src/worker/exercises/free-response/read-only-view.ts
 #: src/worker/exercises/short-answer/read-only-view.ts
+#: src/worker/exercises/translation/assessment.ts
 #: src/worker/web/assignment-detail.tsx
 msgid "Answer"
 msgstr ""
@@ -841,6 +852,7 @@ msgid "Change saved."
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts
+#: src/worker/exercises/translation/strings.ts
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Check"
 msgstr ""
@@ -1625,26 +1637,32 @@ msgid "Expected '<->' (biconditional)."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected “{bracket}”."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected “{operator}” after this term."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a formula but found “{token}”."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a formula."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a term but found “{token}”."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Expected a variable after the quantifier."
 msgstr ""
 
@@ -2475,6 +2493,10 @@ msgstr ""
 msgid "Only published assignments can release grades."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Only solution list items may appear after the first solution."
+msgstr ""
+
 #. Disambiguating id; only the word Open is shown. An assignment available now, with no closing date.
 #: src/worker/web/assignments.tsx
 msgid "Open (assignment availability)"
@@ -2555,6 +2577,7 @@ msgid "Page not found"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Parentheses may only enclose a sentence joined by a two-place connective."
 msgstr ""
 
@@ -2802,6 +2825,10 @@ msgstr ""
 
 #: src/worker/web/labels.ts
 msgid "Reading / resource"
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "Reads as {formula}"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -3383,6 +3410,10 @@ msgstr ""
 msgid "The enrollment link was not found."
 msgstr ""
 
+#: src/worker/exercises/translation/strings.ts
+msgid "The equivalence checker could not load. Your work is safe; check again in a moment."
+msgstr ""
+
 #: src/worker/application/submissions.ts
 msgid "The exercise was not found in this assignment."
 msgstr ""
@@ -3527,6 +3558,10 @@ msgstr ""
 msgid "The most recent administrative audit events."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The PNF test applies only to first-order translations."
+msgstr ""
+
 #: src/worker/web/ui-strings.ts
 msgid "the proof engine could not read this starter"
 msgstr ""
@@ -3586,6 +3621,10 @@ msgid "The user was not found."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The variant attribute must be prop, first-order, or exact."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The variant attribute must be simple, validity, or constraint."
 msgstr ""
 
@@ -3623,6 +3662,10 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "This “-- label:” comment names no label."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This answer does not parse, so it cannot be submitted on an exam."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -3670,6 +3713,10 @@ msgstr ""
 msgid "This discharge mark doesn't match any assumption above it."
 msgstr ""
 
+#: src/worker/exercises/translation/strings.ts
+msgid "This does not exactly match the intended answer."
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "This domain gives {field} too many arguments to fill in."
 msgstr ""
@@ -3689,6 +3736,10 @@ msgstr ""
 #: src/worker/web/content-document.tsx
 #: src/worker/web/ui-strings.ts
 msgid "This exercise needs JavaScript enabled to load. Please turn it on for this site."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This exercise wants a propositional sentence: sentence letters and connectives only."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -3755,6 +3806,10 @@ msgstr ""
 msgid "This LMS is not registered with Carnap."
 msgstr ""
 
+#: src/worker/exercises/translation/strings.ts
+msgid "This matches the intended answer."
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "This model does everything the exercise asks."
 msgstr ""
@@ -3773,6 +3828,26 @@ msgstr ""
 
 #: src/worker/exercises/truth-table/strings.ts
 msgid "This row isn't filled in correctly yet."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This submission is not in Conjunctive Normal Form."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This submission is not in Disjunctive Normal Form."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This submission is not in Prenex Normal Form."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This translation is logically equivalent to the intended answer."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "This translation is not equivalent to the intended answer."
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts
@@ -3838,6 +3913,10 @@ msgstr ""
 msgid "Total"
 msgstr ""
 
+#: src/worker/exercises/translation/assessment.ts
+msgid "Translation"
+msgstr ""
+
 #. A truth-table cell's value, spoken as part of the cell's accessible name: “Q, row 3: true”. Lowercase, mid-sentence.
 #: src/worker/exercises/truth-table/strings.ts
 msgid "true"
@@ -3884,10 +3963,12 @@ msgid "Undo (Ctrl-Z)"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Unexpected “{token}”."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/exercises/translation/strings.ts
 msgid "Unexpected character “{character}”."
 msgstr ""
 
@@ -3909,6 +3990,14 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Unknown proof option “{option}”. Supported options are 'auto' and 'complete'."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown translation option “{option}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Unknown translation test “{test}”."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -4067,6 +4156,38 @@ msgstr ""
 msgid "You do not own any content items."
 msgstr ""
 
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} atomic sentences, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} biconditionals, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} conditionals, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} conjunctions, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} connectives, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} disjunctions, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} falsity constants, but should have {max} at most."
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "You have {count} negations, but should have {max} at most."
+msgstr ""
+
 #: src/worker/web/auth.tsx
 msgid "You have been logged out."
 msgstr ""
@@ -4141,6 +4262,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Your status"
+msgstr ""
+
+#: src/worker/exercises/translation/strings.ts
+msgid "Your translation"
 msgstr ""
 
 #: src/worker/web/profile-prompt.tsx

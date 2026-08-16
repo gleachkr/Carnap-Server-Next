@@ -28,6 +28,7 @@ export {
   formulaToDisplay,
   formulaToString,
   parseFormula,
+  splitFormulaList,
   termToString,
 } from "../../first-order";
 export type {

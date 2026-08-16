@@ -29,6 +29,7 @@ import {
   parseFunctionTable,
   parseNatural,
   parseTupleList,
+  splitFormulaList,
 } from "./logic";
 import type {
   ModelCheckMode,
@@ -267,40 +268,6 @@ function parseTarget(
   return variant === "validity" ? "all-false" : "all-true";
 }
 
-/**
- * Parse a comma-separated list of formulas into canonical source.
- *
- * Commas separate formulas *and* a predicate's arguments, so the split has to
- * respect brackets — `R(a,b), F(c)` is two formulas, not three fragments. The
- * propositional profile can get away with a plain split; this cannot.
- *
- * Only `()` and `[]` nest. `<` and `>` are operator characters here (`<->`, and
- * `>` for the conditional), not brackets — the angle-bracket tuples belong to
- * field values, which are never formulas.
- */
-function splitFormulas(source: string): string[] {
-  const pieces: string[] = [];
-  let depth = 0;
-  let start = 0;
-
-  for (let index = 0; index < source.length; index += 1) {
-    const char = source[index];
-
-    if (char === "(" || char === "[") {
-      depth += 1;
-    } else if (char === ")" || char === "]") {
-      depth -= 1;
-    } else if (char === "," && depth <= 0) {
-      pieces.push(source.slice(start, index));
-      start = index + 1;
-    }
-  }
-
-  pieces.push(source.slice(start));
-
-  return pieces;
-}
-
 function parseFormulaList(
   source: string,
   dialect: FirstOrderDialect,
@@ -309,7 +276,7 @@ function parseFormulaList(
 ): string[] {
   const formulas: string[] = [];
 
-  for (const piece of splitFormulas(source)) {
+  for (const piece of splitFormulaList(source)) {
     const trimmed = piece.trim();
 
     if (trimmed.length === 0) {

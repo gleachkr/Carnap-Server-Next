@@ -9,6 +9,8 @@ import { buildAufbauProofTreeStrings } from "./aufbau-proof-tree/strings";
 import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "./aufbau-proof-tree/types";
 import { buildModelStrings } from "./model/strings";
 import { MODEL_COMPONENT_METADATA } from "./model/types";
+import { buildTranslationStrings } from "./translation/strings";
+import { TRANSLATION_COMPONENT_METADATA } from "./translation/types";
 import { buildTruthTableStrings } from "./truth-table/strings";
 import { TRUTH_TABLE_COMPONENT_METADATA } from "./truth-table/types";
 
@@ -30,6 +32,7 @@ const BUILDERS: Readonly<
     buildAufbauProofPrawitzStrings,
   [AUFBAU_PROOF_TREE_COMPONENT_METADATA.assetId]: buildAufbauProofTreeStrings,
   [MODEL_COMPONENT_METADATA.assetId]: buildModelStrings,
+  [TRANSLATION_COMPONENT_METADATA.assetId]: buildTranslationStrings,
   [TRUTH_TABLE_COMPONENT_METADATA.assetId]: buildTruthTableStrings,
 };
 

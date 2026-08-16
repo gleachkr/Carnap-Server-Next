@@ -22,12 +22,19 @@ import { loadLspServer } from "@aufbau/lsp";
 import type { LoadedVerifier } from "@aufbau/verifier";
 import { loadVerifier } from "@aufbau/verifier";
 
+import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import type { Formula } from "../src/worker/exercises/first-order";
 import {
   FORALLX_CALGARY_2019,
   parseFormula,
 } from "../src/worker/exercises/first-order";
+import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
 import { buildEquivalenceCheck } from "../src/worker/exercises/translation/logic/mm0";
+import {
+  TRANSLATION_ANSWER_KIND,
+  TRANSLATION_SCHEMA_VERSION,
+} from "../src/worker/exercises/translation/types";
 
 function wasmBytes(packagePath: string): Uint8Array {
   return readFileSync(
@@ -333,6 +340,79 @@ describe("emission", () => {
         sources.placeholder.character + "auto?".length,
       ),
     ).toBe("auto?");
+  });
+});
+
+describe("the exercise type grades a searched certificate", () => {
+  async function manifestItem(source: string): Promise<ExerciseManifestItem> {
+    const compiled = await compileCarnapMarkdown(source);
+    if (!compiled.ok) {
+      throw new Error("compile failed");
+    }
+    const item = compiled.artifact.manifest[0];
+    if (item === undefined) {
+      throw new Error("no manifest item");
+    }
+    return item;
+  }
+
+  async function grade(
+    item: ExerciseManifestItem,
+    text: string,
+    mmb: Uint8Array | null,
+  ): Promise<string> {
+    const type = new TranslationExerciseType();
+    const normalized = type.normalizeAnswer(
+      {
+        data: {
+          text,
+          ...(mmb === null
+            ? {}
+            : { mmb: Buffer.from(mmb).toString("base64"), solutionIndex: 0 }),
+        } as never,
+        kind: TRANSLATION_ANSWER_KIND,
+        schemaVersion: TRANSLATION_SCHEMA_VERSION,
+      },
+      item,
+    );
+    if (!normalized.ok) {
+      throw new Error("normalization failed");
+    }
+    const evaluation = await type.evaluate(
+      normalized.answer,
+      item,
+      {} as never,
+    );
+    return evaluation.status;
+  }
+
+  test("a certificate found by the search verifies and scores", async () => {
+    const item =
+      await manifestItem(`::::translation{#t1 variant="first-order"}
+Everything is fine.
+
+- AxF(x)
+::::`);
+
+    // The stored solution is canonical source; the certificate must target it.
+    const mmb = findCertificate("~Ex~F(x)", "AxF(x)");
+    expect(mmb).not.toBeNull();
+    expect(await grade(item, "~Ex~F(x)", mmb)).toBe("correct");
+  });
+
+  test("a certificate for a different statement does not transfer", async () => {
+    const item =
+      await manifestItem(`::::translation{#t1 variant="first-order"}
+Everything is fine.
+
+- AxF(x)
+::::`);
+
+    // Proves ~Ex~F(x) ↔ AxF(x); submitted with text AyG(y), whose rebuilt
+    // mm0 states a different theorem entirely.
+    const mmb = findCertificate("~Ex~F(x)", "AxF(x)");
+    expect(mmb).not.toBeNull();
+    expect(await grade(item, "AyG(y)", mmb)).toBe("incorrect");
   });
 });
 

@@ -26,6 +26,8 @@ import { MULTIPLE_CHOICE_COMPONENT_METADATA } from "../../exercises/multiple-cho
 import { renderShortAnswer } from "../../exercises/short-answer/read-only-view";
 import { SHORT_ANSWER_COMPONENT_METADATA } from "../../exercises/short-answer/types";
 import { exerciseStrings } from "../../exercises/strings";
+import { renderTranslation } from "../../exercises/translation/read-only-view";
+import { TRANSLATION_COMPONENT_METADATA } from "../../exercises/translation/types";
 import { renderTruthTable } from "../../exercises/truth-table/read-only-view";
 import { TRUTH_TABLE_COMPONENT_METADATA } from "../../exercises/truth-table/types";
 import type { Translator } from "../../i18n/translator";
@@ -169,6 +171,14 @@ export function createDefaultComponentRegistry(): ComponentRegistry {
       capabilities,
     },
     render: renderAufbauProofPrawitz,
+  });
+
+  registry.register({
+    metadata: {
+      ...TRANSLATION_COMPONENT_METADATA,
+      capabilities,
+    },
+    render: renderTranslation,
   });
 
   return registry;

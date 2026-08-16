@@ -648,6 +648,38 @@ class Parser {
   }
 }
 
+/**
+ * Split a comma-separated list of formulas, respecting brackets.
+ *
+ * Commas separate formulas *and* a predicate's arguments, so a plain split
+ * would read `R(a,b), F(c)` as three fragments. Only `()` and `[]` nest: `<`
+ * and `>` are operator characters in these dialects (`<->`, `>`), not
+ * brackets. Both the model's formula lists and a translation's alternate
+ * solutions are written this way.
+ */
+export function splitFormulaList(source: string): string[] {
+  const pieces: string[] = [];
+  let depth = 0;
+  let start = 0;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+
+    if (char === "(" || char === "[") {
+      depth += 1;
+    } else if (char === ")" || char === "]") {
+      depth -= 1;
+    } else if (char === "," && depth <= 0) {
+      pieces.push(source.slice(start, index));
+      start = index + 1;
+    }
+  }
+
+  pieces.push(source.slice(start));
+
+  return pieces;
+}
+
 /** Parse one first-order formula, collecting the first syntax error if any. */
 export function parseFormula(
   source: string,

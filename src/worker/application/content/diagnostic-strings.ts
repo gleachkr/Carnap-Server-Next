@@ -314,6 +314,34 @@ export function buildDiagnosticStrings(i18n: Translator) {
       placeholders("field", "value"),
     ),
 
+    // The translation directive (`translation/authoring.ts`). It shares the
+    // system sentence and the formula-parse sentence with the model above.
+    "A translation exercise requires at least one solution formula.": i18n.t(
+      "A translation exercise requires at least one solution formula.",
+    ),
+    "Only solution list items may appear after the first solution.": i18n.t(
+      "Only solution list items may appear after the first solution.",
+    ),
+    "The PNF test applies only to first-order translations.": i18n.t(
+      "The PNF test applies only to first-order translations.",
+    ),
+    "The variant attribute must be prop, first-order, or exact.": i18n.t(
+      "The variant attribute must be prop, first-order, or exact.",
+    ),
+    "Unknown translation option “{option}”.": i18n.t(
+      "Unknown translation option “{option}”.",
+      placeholders("option"),
+    ),
+    "Unknown translation test “{test}”.": i18n.t(
+      "Unknown translation test “{test}”.",
+      placeholders("test"),
+    ),
+    "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only.":
+      i18n.t(
+        "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only.",
+        placeholders("formula"),
+      ),
+
     // The shared first-order parser (`exercises/first-order/formula.ts`).
     // It shares "Expected a formula.", "Expected a formula but found …",
     // "Unexpected character …" and "Unexpected …" with the propositional parser

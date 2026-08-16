@@ -52,6 +52,12 @@ import {
   SHORT_ANSWER_SCHEMA_VERSION,
 } from "../../exercises/short-answer/types";
 import {
+  TRANSLATION_ANSWER_KIND,
+  TRANSLATION_COMPONENT_METADATA,
+  TRANSLATION_KIND,
+  TRANSLATION_SCHEMA_VERSION,
+} from "../../exercises/translation/types";
+import {
   TRUTH_TABLE_ANSWER_KIND,
   TRUTH_TABLE_COMPONENT_METADATA,
   TRUTH_TABLE_KIND,
@@ -222,6 +228,14 @@ export function createDefaultAuthoringExerciseRegistry(): AuthoringExerciseRegis
     directiveName: "aufbau-proof-prawitz",
     exerciseKind: AUFBAU_PROOF_PRAWITZ_KIND,
     schemaVersion: AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
+  });
+  registerAuthoringType(registry, {
+    answerKind: TRANSLATION_ANSWER_KIND,
+    capabilities: automaticCapabilities,
+    component: TRANSLATION_COMPONENT_METADATA,
+    directiveName: "translation",
+    exerciseKind: TRANSLATION_KIND,
+    schemaVersion: TRANSLATION_SCHEMA_VERSION,
   });
 
   return registry;
