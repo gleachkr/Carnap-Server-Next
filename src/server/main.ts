@@ -11,10 +11,7 @@ import { openLibSqlStorage } from "../worker/infrastructure/database/libsql";
 import { applyPendingMigrations } from "../worker/infrastructure/database/migrate";
 import { NOSNIFF_HEADER } from "../worker/middleware/security-headers";
 import { runGradePassback } from "../worker/passback";
-import {
-  FONT_CACHE_CONTROL,
-  FONT_ROUTE_PREFIX,
-} from "../worker/web/math-font";
+import { FONT_CACHE_CONTROL, FONT_ROUTE_PREFIX } from "../worker/web/fonts";
 
 /**
  * Carnap as an ordinary long-running server, for anyone hosting their own.

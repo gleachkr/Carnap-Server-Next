@@ -33,7 +33,7 @@ COPY scripts ./scripts
 COPY src ./src
 
 # Writes `public/`: the editor and viewer bundles, the exercise components, the
-# proof compiler's WASM, and the math font. On Cloudflare this is what Workers
+# proof compiler's WASM, and the fonts. On Cloudflare this is what Workers
 # Assets serves; here it is what `serveStatic` serves.
 RUN bun run build:client
 

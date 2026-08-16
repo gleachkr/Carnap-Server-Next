@@ -1,6 +1,7 @@
 import { THEORY_PANEL_STYLES } from "../exercises/aufbau-proof/theory-panel";
 import { EXERCISE_GROUP_STYLES } from "../exercises/group";
 import { MATH_FONT_HREF } from "./math-font";
+import { UI_FONT_FACES } from "./ui-fonts";
 
 /**
  * Styles come in two layers. CONTENT_STYLES carries everything that styles
@@ -15,6 +16,12 @@ import { MATH_FONT_HREF } from "./math-font";
  * turns each into a hashed URL — nothing here is embedded in a page.
  */
 export const CONTENT_STYLES = `
+  /* The interface families, served from this origin rather than fetched from
+     Google's — see ./ui-fonts, which is also where the reasons are. They sit in
+     this layer and not in the chrome one because a content document loads only
+     this layer, and the widgets inside its shadow roots ask for Fira Code. */
+${UI_FONT_FACES}
+
   /*
    * Every color in the application is one of these, and nothing outside this
    * block picks a color of its own: a rule elsewhere that wants a tint reaches

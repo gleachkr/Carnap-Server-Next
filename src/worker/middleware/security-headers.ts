@@ -9,7 +9,7 @@ import type { AppBindings } from "../http";
  * Cloudflare's assets binding ahead of the worker — and by `serveStatic` ahead
  * of the app on the Bun host — so the middleware cannot reach them. The same
  * rule is therefore stated twice more, in the `public/_headers` written by
- * `scripts/copy-math-font.ts` and in `src/server/main.ts`, both from this
+ * `scripts/copy-fonts.ts` and in `src/server/main.ts`, both from this
  * constant so the three spellings cannot drift.
  */
 export const NOSNIFF_HEADER = {
@@ -139,10 +139,11 @@ const CSP_HEADER_NAME = "Content-Security-Policy";
  * file. Anything we serve as data that a browser decides to read as script is
  * inside that trust; refusing to sniff is what keeps the two apart.
  *
- * `Referrer-Policy` keeps paths off the wire. A `Referer` sent to Google Fonts
- * or to an LMS otherwise names the assignment, the course, and the content
- * revision the reader was on. `strict-origin-when-cross-origin` is the modern
- * browser default; stating it is for the ones where it is not.
+ * `Referrer-Policy` keeps paths off the wire. A `Referer` sent to an LMS, or to
+ * whatever host an author's image or stylesheet sits on, otherwise names the
+ * assignment, the course, and the content revision the reader was on.
+ * `strict-origin-when-cross-origin` is the modern browser default; stating it
+ * is for the ones where it is not.
  *
  * `Permissions-Policy` denies camera, microphone and geolocation outright,
  * including to ourselves. Carnap asks for none of them, and the interesting

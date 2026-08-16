@@ -1021,9 +1021,10 @@ depending on one needs that host reachable.
 
 ### Resetting the defaults
 
-`:::style{reset}` additionally drops the default content stylesheet and font
-links from the document, leaving bare browser styles under your CSS — full
-control for slides or posters. Exercises in a reset document render unstyled
+`:::style{reset}` additionally drops the default content stylesheet from the
+document, leaving bare browser styles under your CSS — full control for slides
+or posters. The interface fonts go with it, since the platform declares them in
+that stylesheet; name your own, or `@font-face` them from your sheet. Exercises in a reset document render unstyled
 unless your stylesheet styles them. An empty `:::style{reset}` block clears
 the defaults without adding any CSS. `reset` and `src` are the only supported
 attributes; anything else fails with `invalid_style_attributes`.

@@ -21,6 +21,13 @@ that stays true.
 Either a container runtime (Podman or Docker) or [Bun](https://bun.sh) ≥ 1.3.
 Nothing else: no database server, no Redis, no build step at boot.
 
+No CDN, either. The interface fonts, the math font, the proof engines and every
+script are served from your own origin, so an instance on a closed network
+renders exactly as one on the open web and no reader's browser is made to
+announce itself to a third party. The exceptions are things you or an author
+ask for: the email provider that sends login links, an LMS's endpoints if you
+set up LTI, and whatever images or stylesheets a lesson embeds from elsewhere.
+
 ## Quick start: a container
 
 ```sh

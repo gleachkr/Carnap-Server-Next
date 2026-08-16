@@ -258,16 +258,6 @@ export function contentDocumentHtml(model: ContentDocumentModel): string {
           <title>{model.title}</title>
           {model.cssReset === true ? null : (
             <>
-              <link rel="preconnect" href="https://fonts.googleapis.com" />
-              <link
-                rel="preconnect"
-                href="https://fonts.gstatic.com"
-                crossorigin="anonymous"
-              />
-              <link
-                href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600&family=Fira+Code:wght@400;500&family=Inter:wght@400..700&display=swap"
-                rel="stylesheet"
-              />
               {model.baseStyleHrefs === undefined ? (
                 <style>{raw(CONTENT_STYLES)}</style>
               ) : (

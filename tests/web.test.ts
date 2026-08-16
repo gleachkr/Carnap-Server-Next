@@ -996,6 +996,13 @@ describe("native web workflow", () => {
       expect(html).toContain(`<link href="${CHROME_STYLE_SHEET.href}"`);
       expect(html).not.toContain("<style>");
 
+      // And nothing in the head reaches for another origin. The fonts came from
+      // Google until one of their URLs was withdrawn under a stylesheet readers
+      // had already cached; they are ours now (`web/ui-fonts.ts`), and a
+      // `preconnect` creeping back in would undo that quietly.
+      expect(html).not.toContain("fonts.googleapis.com");
+      expect(html).not.toContain("fonts.gstatic.com");
+
       const sheet = await appRequest(
         createTestApp(),
         CONTENT_STYLE_SHEET.href,
