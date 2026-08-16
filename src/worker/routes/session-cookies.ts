@@ -41,8 +41,16 @@ export function setSessionCookies(
     sameSite,
     secure,
   });
+  // `httpOnly` even though this is the CSRF half, because nothing client-side
+  // reads it: the token reaches a form as a server-rendered hidden input
+  // (`web/components.tsx`), and the scripts that submit through `fetch` take it
+  // from that input rather than from `document.cookie`
+  // (`web/assignment-scripts.ts`). The cookie's job is to be *sent*, which
+  // `httpOnly` does not affect — `middleware/auth.ts` compares it to the
+  // submitted token server-side. A double-submit scheme where the page reads
+  // the cookie would need this open; ours never did.
   setCookie(context, CSRF_COOKIE_NAME, csrfToken, {
-    httpOnly: false,
+    httpOnly: true,
     maxAge: SESSION_TTL_SECONDS,
     path: "/",
     sameSite,

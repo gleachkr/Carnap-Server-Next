@@ -159,7 +159,10 @@ describe("native authentication", () => {
       expect(result.sessionCookie).toContain("Path=/");
       expect(result.sessionCookie).toContain("SameSite=Lax");
       expect(result.sessionCookie).not.toContain("Secure");
-      expect(result.csrfCookie).not.toContain("HttpOnly");
+      // Both cookies, not just the session one: no page script reads the CSRF
+      // token from `document.cookie` — it is rendered into each form — so
+      // leaving it readable would be exposure with no consumer.
+      expect(result.csrfCookie).toContain("HttpOnly");
       expect(result.csrfCookie).toContain("SameSite=Lax");
     });
   });
