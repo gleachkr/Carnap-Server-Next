@@ -1662,6 +1662,15 @@ describe("LTI Deep Linking", () => {
 
       expect(respondHtml).toContain(`action="${DL_RETURN_URL}"`);
 
+      // The form posts off-origin, so this is the one response whose
+      // `form-action` may name somewhere else — and it must name that origin
+      // and no more. Without this the page renders, the browser refuses the
+      // post, and the instructor is left on a page that says it is returning
+      // them to their LMS.
+      expect(respond.headers.get("Content-Security-Policy")).toContain(
+        `form-action 'self' ${TEST_ISSUER}`,
+      );
+
       const jwtMatch = respondHtml.match(
         /name="JWT" type="hidden" value="([^"]+)"/,
       );

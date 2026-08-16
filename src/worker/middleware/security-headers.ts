@@ -1,3 +1,4 @@
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 
 import type { AppBindings } from "../http";
@@ -37,22 +38,25 @@ export const NOSNIFF_HEADER = {
  * privacy question rather than a foothold, and an author who can already inline
  * CSS can do anything a linked sheet could.
  *
- * Two directives are absent on purpose, each because stating it would break
- * something the product does:
+ * One directive is absent on purpose: `frame-ancestors`, because an LTI launch
+ * is rendered inside the LMS's iframe and that origin is per-installation.
+ * This is the same reason there is no `X-Frame-Options` above. It leaves every
+ * page framable by anyone, which is a real gap rather than a comfortable one —
+ * closing it means recording the launching platform's origin on the session,
+ * which is its own piece of work.
  *
- * - `form-action`, because the LTI deep-link return posts a form to the LMS's
- *   origin (`web/lti.tsx`), and that origin is per-platform and not known here.
- * - `frame-ancestors`, because an LTI launch is rendered inside the LMS's
- *   iframe. This is the same reason there is no `X-Frame-Options` above.
+ * `form-action` is *not* in that position, though it was until a scan asked
+ * why. It is added per response by {@link cspForResponse}, because the one
+ * place that needs a foreign origin — the LTI deep-link return, which posts to
+ * the LMS (`web/lti.tsx`) — knows which origin that is.
  */
 const CONTENT_SECURITY_POLICY = [
   // The floor, for the fetch directives that have one: `media-src`,
   // `worker-src`, `manifest-src` and the rest collapse to this rather than
   // needing a line each. Note that `form-action` is *not* among them — it, like
-  // `base-uri` and `frame-ancestors`, falls back to nothing, so leaving it out
-  // below leaves form submission unrestricted rather than confined to `'self'`.
-  // That is what keeps the LTI deep-link return working, and it is why omitting
-  // the directive is a decision rather than an oversight.
+  // `base-uri` and `frame-ancestors`, falls back to nothing, so a policy that
+  // omits it leaves form submission unrestricted rather than confined to
+  // `'self'`. Hence the separate directive below.
   "default-src 'self'",
   // `wasm-unsafe-eval` is the Aufbau compiler: compiling WebAssembly counts as
   // evaluation, and without this the proof exercises cannot check anything in
@@ -109,7 +113,51 @@ const CONTENT_SECURITY_POLICY = [
   // covered by this — a `srcdoc` frame inherits its parent's policy instead of
   // being fetched under one.
   "frame-src 'self'",
-].join("; ");
+];
+
+/**
+ * Let this response's forms post to one further origin.
+ *
+ * Called from the view that emits the cross-origin form rather than from the
+ * route around it, so the permission and the `action=` it exists for are the
+ * same edit — a second such form added later gets a policy that refuses it,
+ * loudly and in the browser, instead of a policy that already said yes.
+ *
+ * A URL we cannot parse adds nothing: an unparseable `action` is a broken form
+ * whatever the policy says, and widening the header on the strength of a string
+ * we could not read would be the wrong way to fail.
+ */
+export function allowFormActionTo(
+  context: Context<AppBindings>,
+  url: string,
+): void {
+  try {
+    context.set("formActionOrigin", new URL(url).origin);
+  } catch {
+    return;
+  }
+}
+
+/**
+ * The policy for one response: the constant above, plus the `form-action` that
+ * has to be decided per response.
+ *
+ * `'self'` is the answer almost everywhere, and it is worth more than it looks:
+ * it is what stops a form injected into a page from posting a session-
+ * authenticated request to somewhere else entirely. It sits outside the
+ * constant because the LTI deep-link return genuinely posts off-origin, and the
+ * choice is between naming that origin on that one response and leaving every
+ * response unrestricted.
+ */
+function cspForResponse(context: Context<AppBindings>): string {
+  const origin = context.get("formActionOrigin");
+  const formAction =
+    origin === undefined
+      ? "form-action 'self'"
+      : `form-action 'self' ${origin}`;
+
+  return [...CONTENT_SECURITY_POLICY, formAction].join("; ");
+}
 
 /**
  * Enforcing. The policy shipped report-only first and was then walked through a
@@ -154,7 +202,6 @@ const SECURITY_HEADERS: readonly (readonly [string, string])[] = [
   [NOSNIFF_HEADER.name, NOSNIFF_HEADER.value],
   ["Referrer-Policy", "strict-origin-when-cross-origin"],
   ["Permissions-Policy", "camera=(), microphone=(), geolocation=()"],
-  [CSP_HEADER_NAME, CONTENT_SECURITY_POLICY],
 ];
 
 /**
@@ -174,5 +221,9 @@ export function securityHeadersMiddleware() {
     for (const [name, value] of SECURITY_HEADERS) {
       context.res.headers.set(name, value);
     }
+
+    // After `next()`, which is what lets a handler have widened `form-action`
+    // by the time the policy is assembled.
+    context.res.headers.set(CSP_HEADER_NAME, cspForResponse(context));
   });
 }

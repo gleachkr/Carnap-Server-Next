@@ -13,6 +13,13 @@ export interface AppVariables {
   readonly actor: AuthenticatedActor | null;
   readonly authFailure: "disabled_user" | null;
   /**
+   * An origin this response's forms may post to, beyond our own. Unset on all
+   * but the handful of responses that carry a cross-origin form; see
+   * `allowFormActionTo` in `middleware/security-headers.ts`, which is the only
+   * thing that should write it.
+   */
+  readonly formActionOrigin?: string;
+  /**
    * The viewer's translator for this request. Views reach it through
    * `useI18n()`; anything outside a render (a service, a module shared with a
    * browser bundle) takes it as a `Translator` parameter named `i18n`.

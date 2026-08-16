@@ -19,6 +19,7 @@ const EXPECTED_POLICY = [
   "object-src 'none'",
   "base-uri 'none'",
   "frame-src 'self'",
+  "form-action 'self'",
 ].join("; ");
 
 const EXPECTED = {
@@ -143,18 +144,17 @@ describe("security headers", () => {
   });
 
   /**
-   * Both of these would break something the product does, so their absence is
-   * the assertion: `form-action` because the LTI deep-link return posts to the
-   * LMS's own origin, `frame-ancestors` because a launch is framed by the LMS.
+   * Still absent, and the absence is still the assertion: a launch is rendered
+   * inside the LMS's iframe, and the framer's origin is per-installation rather
+   * than something this policy can name. Task #217 is to record it on the
+   * session and state the directive; until then, saying it here would be saying
+   * `'none'`, which breaks every launch.
    */
-  test.each([
-    "form-action",
-    "frame-ancestors",
-  ])("the policy states no %s", async (directive) => {
+  test("the policy states no frame-ancestors", async () => {
     const response = await appRequest(createTestApp(), "/login");
     const policy = response.headers.get("Content-Security-Policy");
 
     expect(policy).not.toBeNull();
-    expect(policy).not.toContain(directive);
+    expect(policy).not.toContain("frame-ancestors");
   });
 });

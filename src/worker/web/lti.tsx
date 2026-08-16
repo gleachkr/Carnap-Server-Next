@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type { AppErrorStatus } from "../application/errors";
 import type { Assignment } from "../domain/assignments";
 import type { AppBindings } from "../http";
+import { allowFormActionTo } from "../middleware/security-headers";
 import { ErrorSummary, Notice, Sheet, TableScroll } from "./components";
 import { assessmentModeLabel, assignmentStateLabel } from "./labels";
 import { renderShell } from "./layout";
@@ -205,6 +206,11 @@ export function renderLtiDeepLinkReturn(
 ): Response {
   const i18n = context.get("i18n");
   const title = i18n.t("Returning to your LMS");
+
+  // The one form in Carnap that posts off-origin, and so the one response whose
+  // `form-action` has to name somewhere else. `returnUrl` is the platform's own
+  // `deep_link_return_url`, stored at launch.
+  allowFormActionTo(context, model.returnUrl);
 
   return renderShell(
     context,
