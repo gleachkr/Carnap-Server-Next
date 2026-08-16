@@ -124,6 +124,8 @@ export interface CreateAuthSessionInput {
   readonly csrfTokenHash: string;
   readonly createdAt: Timestamp;
   readonly expiresAt: Timestamp;
+  /** See `AuthSession.frameAncestorOrigin`. Absent is the ordinary case. */
+  readonly frameAncestorOrigin?: string | null;
 }
 
 export interface RecordLoginRateLimitHitInput {

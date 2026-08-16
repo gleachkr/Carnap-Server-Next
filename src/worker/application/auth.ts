@@ -250,8 +250,18 @@ export class AuthService {
   /**
    * Create an application session for a user whose identity has already been
    * proven — by a consumed native login challenge or a validated LTI launch.
+   *
+   * `frameAncestorOrigin` defaults to null, which is the answer for every
+   * sign-in that is not a launch: the session is framable by nobody but us.
+   * It is a property of the session rather than of the user because the same
+   * person can hold both kinds at once — an instructor signed in directly in
+   * one tab and launched into the LMS in another — and the LMS's permission
+   * belongs only to the second.
    */
-  async mintSession(user: User): Promise<MintedSession> {
+  async mintSession(
+    user: User,
+    frameAncestorOrigin: string | null = null,
+  ): Promise<MintedSession> {
     if (user.disabledAt !== null) {
       throw forbidden("disabled_user");
     }
@@ -266,6 +276,7 @@ export class AuthService {
       csrfTokenHash: await hashAuthToken(csrfToken),
       createdAt: now,
       expiresAt: addSeconds(nowDate, SESSION_TTL_SECONDS),
+      frameAncestorOrigin,
     });
 
     return {

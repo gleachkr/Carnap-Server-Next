@@ -38,25 +38,20 @@ export const NOSNIFF_HEADER = {
  * privacy question rather than a foothold, and an author who can already inline
  * CSS can do anything a linked sheet could.
  *
- * One directive is absent on purpose: `frame-ancestors`, because an LTI launch
- * is rendered inside the LMS's iframe and that origin is per-installation.
- * This is the same reason there is no `X-Frame-Options` above. It leaves every
- * page framable by anyone, which is a real gap rather than a comfortable one —
- * closing it means recording the launching platform's origin on the session,
- * which is its own piece of work.
- *
- * `form-action` is *not* in that position, though it was until a scan asked
- * why. It is added per response by {@link cspForResponse}, because the one
- * place that needs a foreign origin — the LTI deep-link return, which posts to
- * the LMS (`web/lti.tsx`) — knows which origin that is.
+ * Two directives are missing from this list because they cannot be constants:
+ * `form-action` and `frame-ancestors` are both stated per response by
+ * {@link cspForResponse}, each because exactly one thing we do needs a foreign
+ * origin named — posting the deep-link selection back to the LMS, and being
+ * framed by the LMS during a launch — and neither knows that origin until a
+ * request is in hand.
  */
 const CONTENT_SECURITY_POLICY = [
   // The floor, for the fetch directives that have one: `media-src`,
   // `worker-src`, `manifest-src` and the rest collapse to this rather than
-  // needing a line each. Note that `form-action` is *not* among them — it, like
-  // `base-uri` and `frame-ancestors`, falls back to nothing, so a policy that
-  // omits it leaves form submission unrestricted rather than confined to
-  // `'self'`. Hence the separate directive below.
+  // needing a line each. Note that `form-action` and `frame-ancestors` are
+  // *not* among them — they, like `base-uri`, fall back to nothing, so a policy
+  // that omits one leaves that capability unrestricted rather than confined to
+  // `'self'`. Hence the two assembled per response.
   "default-src 'self'",
   // `wasm-unsafe-eval` is the Aufbau compiler: compiling WebAssembly counts as
   // evaluation, and without this the proof exercises cannot check anything in
@@ -139,24 +134,79 @@ export function allowFormActionTo(
 }
 
 /**
- * The policy for one response: the constant above, plus the `form-action` that
- * has to be decided per response.
+ * Let this response be framed by one further origin.
  *
- * `'self'` is the answer almost everywhere, and it is worth more than it looks:
- * it is what stops a form injected into a page from posting a session-
- * authenticated request to somewhere else entirely. It sits outside the
- * constant because the LTI deep-link return genuinely posts off-origin, and the
- * choice is between naming that origin on that one response and leaving every
- * response unrestricted.
+ * The session normally answers this question — a launch records the LMS origin
+ * on it, and every page that session goes on to load is covered without anyone
+ * having to think about it. The exception is the launch response *itself*: the
+ * deep-link picker, the account-link prompt and the launch failure page are all
+ * rendered as the direct answer to the launch POST, so the session cookie they
+ * establish has not come back to us yet and there is no actor to read. Without
+ * this, the first thing an LMS sees of a launch is a blank iframe.
+ */
+export function allowFrameAncestor(
+  context: Context<AppBindings>,
+  origin: string | null,
+): void {
+  if (origin !== null) {
+    context.set("frameAncestorOrigin", origin);
+  }
+}
+
+/**
+ * The one foreign origin that may frame this response, or null for nobody.
+ *
+ * The per-response override wins over the session because it is the more
+ * specific statement: it is set by the launch handler that is at that moment
+ * answering a request from the LMS, and it is what covers the responses that
+ * precede the session.
+ */
+function frameAncestorFor(context: Context<AppBindings>): string | null {
+  return (
+    context.get("frameAncestorOrigin") ??
+    context.get("actor")?.session.frameAncestorOrigin ??
+    null
+  );
+}
+
+/**
+ * The policy for one response: the constant above, plus the two directives that
+ * have to be decided per response.
+ *
+ * `form-action 'self'` is what stops a form injected into a page from posting a
+ * session-authenticated request somewhere else entirely.
+ *
+ * `frame-ancestors 'self'` is the answer to clickjacking, and `'self'` rather
+ * than `'none'` because our own pages do frame each other — `ContentFrame`
+ * embeds the content document. It is worth being clear about what it defends
+ * against, since it is the only control here that a server-side check could not
+ * replace: in a clickjacking attack the click is *genuine*. It happens on our
+ * page, under our origin, carrying our own CSRF token and the reader's real
+ * cookie, because the attacker never forged a request — they made an invisible
+ * frame of ours sit under a button the reader meant to press. Every check we
+ * run server-side passes, and passes correctly. Only the browser can see that
+ * the page is being displayed inside a document we did not serve.
+ *
+ * `SameSite=Lax` already covers most of this by leaving an ordinary framed
+ * session signed out — but a launch sets the session cookie `SameSite=None`
+ * (`routes/session-cookies.ts`), because it must survive the LMS's iframe, and
+ * `None` means *any* iframe. So the readers this protects are exactly the
+ * readers the missing directive used to be excused by.
  */
 function cspForResponse(context: Context<AppBindings>): string {
-  const origin = context.get("formActionOrigin");
+  const formActionOrigin = context.get("formActionOrigin");
   const formAction =
-    origin === undefined
+    formActionOrigin === undefined
       ? "form-action 'self'"
-      : `form-action 'self' ${origin}`;
+      : `form-action 'self' ${formActionOrigin}`;
 
-  return [...CONTENT_SECURITY_POLICY, formAction].join("; ");
+  const ancestor = frameAncestorFor(context);
+  const frameAncestors =
+    ancestor === null
+      ? "frame-ancestors 'self'"
+      : `frame-ancestors 'self' ${ancestor}`;
+
+  return [...CONTENT_SECURITY_POLICY, formAction, frameAncestors].join("; ");
 }
 
 /**

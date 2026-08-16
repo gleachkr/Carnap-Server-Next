@@ -728,6 +728,7 @@ describe("LTI 1.3 core launches", () => {
         sub: "lms-racer-1",
       });
       const outcome = await service.handleLaunch({
+        frameAncestorOrigin: null,
         idToken,
         state: redirectUrl.searchParams.get("state") ?? "",
       });
@@ -2083,6 +2084,134 @@ describe("LTI Deep Linking", () => {
       });
 
       expect(redirectPath(foreign.response)).toBe(`/courses/${courseId}`);
+    });
+  });
+});
+
+/**
+ * The one place Carnap consents to being inside somebody else's page, and so
+ * the only place `frame-ancestors` names an origin that is not ours. The
+ * directive was left out of the policy entirely until task #217 because the
+ * LMS's origin is per-installation; these are what let it be stated instead.
+ */
+describe("who may frame a launch", () => {
+  const LMS_ORIGIN = "https://moodle.example.test";
+
+  function frameAncestors(response: Response): string | undefined {
+    return (response.headers.get("Content-Security-Policy") ?? "")
+      .split("; ")
+      .find((directive) => directive.startsWith("frame-ancestors"));
+  }
+
+  test("the page a launch lands on may be framed by the LMS", async () => {
+    await withLtiApp(async (app, env) => {
+      const launch = await instructorLaunch(app, env, {
+        headers: { Origin: LMS_ORIGIN },
+      });
+      const landing = await app.request(
+        redirectPath(launch.response),
+        { headers: { Cookie: launch.cookieHeader ?? "" } },
+        env,
+      );
+
+      expect(landing.status).toBe(200);
+      expect(frameAncestors(landing)).toBe(
+        `frame-ancestors 'self' ${LMS_ORIGIN}`,
+      );
+    });
+  });
+
+  /**
+   * The launch response is the hard case and the one a session cannot cover:
+   * the picker is rendered *as* the answer to the launch POST, so the cookie it
+   * sets has not come back to us and there is no actor to read the permission
+   * off. Getting this wrong shows up as a blank modal in Moodle with the reason
+   * only in a console nobody has open.
+   */
+  test("the deep-link picker says so on the response that carries it", async () => {
+    await withLtiApp(async (app, env) => {
+      const { privateJwkJson } = await testToolKeyPair();
+      const picker = await deepLinkingLaunch(
+        app,
+        { ...env, LTI_TOOL_PRIVATE_KEY: privateJwkJson },
+        { headers: { Origin: LMS_ORIGIN } },
+      );
+
+      expect(picker.response.status).toBe(200);
+      expect(frameAncestors(picker.response)).toBe(
+        `frame-ancestors 'self' ${LMS_ORIGIN}`,
+      );
+    });
+  });
+
+  test("a failed launch is still legible inside the frame", async () => {
+    await withLtiApp(async (app, env) => {
+      const forged = await performLaunch(app, env, {
+        headers: { Origin: LMS_ORIGIN },
+        state: "lst_forged-state-value",
+      });
+
+      expect(forged.response.status).toBe(400);
+      expect(frameAncestors(forged.response)).toBe(
+        `frame-ancestors 'self' ${LMS_ORIGIN}`,
+      );
+    });
+  });
+
+  /**
+   * A sandboxed frame serializes its origin as the literal `null`, so recording
+   * it would not name one framer — it would admit every opaque origin there is,
+   * including the attacker's own sandboxed iframe. Knowing nothing is the safe
+   * reading.
+   */
+  test("an opaque origin buys no permission at all", async () => {
+    await withLtiApp(async (app, env) => {
+      const launch = await instructorLaunch(app, env, {
+        headers: { Origin: "null" },
+      });
+      const landing = await app.request(
+        redirectPath(launch.response),
+        { headers: { Cookie: launch.cookieHeader ?? "" } },
+        env,
+      );
+
+      expect(frameAncestors(landing)).toBe("frame-ancestors 'self'");
+    });
+  });
+
+  /**
+   * The permission belongs to the session, not to the person: the same
+   * instructor signed in directly is not framable by their LMS, which is what
+   * keeps a launch from quietly widening every other tab they have open.
+   */
+  test("an ordinary session of the same user is framable by nobody", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { headers: { Origin: LMS_ORIGIN } });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+      const user = await stores.users.getById(userId);
+
+      if (user === null) {
+        throw new Error("Expected the launched user to exist.");
+      }
+
+      const minted = await new AuthService({ stores }).mintSession(user);
+      const page = await app.request(
+        "/courses",
+        {
+          headers: {
+            Cookie: `carnap_session=${minted.sessionToken}`,
+          },
+        },
+        env,
+      );
+
+      expect(page.status).toBe(200);
+      expect(frameAncestors(page)).toBe("frame-ancestors 'self'");
     });
   });
 });

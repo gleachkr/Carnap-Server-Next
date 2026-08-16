@@ -19,6 +19,7 @@ import { deferred } from "../i18n/deferred";
 import { ltiLinkEmailSenderFromEnv } from "../infrastructure/email/resend";
 import { loadLtiToolKey } from "../infrastructure/lti/tool-key";
 import { applyLocale } from "../middleware/locale";
+import { allowFrameAncestor } from "../middleware/security-headers";
 import { kickGradePassback } from "../passback";
 import { storesForContext } from "../stores";
 import { renderFormError } from "../web/errors";
@@ -102,10 +103,59 @@ function initiationFromParams(params: URLSearchParams): LoginInitiation {
   };
 }
 
+/** The origin of an absolute URL, or null if it is not one we can read. */
+function originOf(value: string | undefined): string | null {
+  if (value === undefined) {
+    return null;
+  }
+
+  try {
+    const { origin } = new URL(value);
+
+    // A sandboxed or otherwise opaque origin serializes as the literal `null`,
+    // which is a value in a `frame-ancestors` list rather than an absence — and
+    // one that would match any opaque origin, including an attacker's own
+    // sandboxed frame. Treat it as knowing nothing.
+    return origin === "null" ? null : origin;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The browser origin this launch was navigated from: the origin that is about
+ * to frame us, and so the only foreign origin our `frame-ancestors` names.
+ *
+ * Taken from the request rather than from the platform registration, because
+ * this is the browser's question and only the browser has answered it. A
+ * platform's `issuer` looks like the same fact and is not: on the hosted LMSes
+ * it is a vendor constant — every Canvas in the world issues
+ * `https://canvas.instructure.com` — so trusting it would name an origin that
+ * frames nobody while missing the school's own, which is the one that does.
+ *
+ * `Origin` is what a browser sends on the cross-origin form POST that carries a
+ * launch, so the launch proper is covered. `Referer` is the fallback for the
+ * OIDC initiation, which may arrive as a GET navigation and so without an
+ * `Origin` at all; there it only affects whether a failure page is legible
+ * inside the frame. Null when we can read neither, which forfeits a framed
+ * launch — the honest outcome, since the alternative is guessing at who may
+ * frame us.
+ */
+function launchFrameAncestor(context: Context<AppBindings>): string | null {
+  return (
+    originOf(context.req.header("Origin")) ??
+    originOf(context.req.header("Referer"))
+  );
+}
+
 async function handleLoginInitiation(
   context: Context<AppBindings>,
   initiation: LoginInitiation,
 ): Promise<Response> {
+  // Nothing here renders in the frame but a failure page; the launch that
+  // follows records the durable answer on its session.
+  allowFrameAncestor(context, launchFrameAncestor(context));
+
   try {
     if (initiation.issuer === null || initiation.loginHint === null) {
       throw new LtiLaunchError(
@@ -177,6 +227,14 @@ function adoptLaunchLocale(
 }
 
 ltiRoutes.post("/launch", async (context) => {
+  // Read before anything can throw, and applied to this response as well as
+  // stored on the session: the picker, the link prompt and the failure page are
+  // all rendered right here, in the LMS's iframe, by a browser that has not yet
+  // sent us back the cookie that would otherwise answer the question.
+  const frameAncestorOrigin = launchFrameAncestor(context);
+
+  allowFrameAncestor(context, frameAncestorOrigin);
+
   try {
     const form = await context.req.raw.formData();
     const state = fieldValue(form.get("state"));
@@ -204,6 +262,7 @@ ltiRoutes.post("/launch", async (context) => {
     }
 
     const outcome = await ltiServiceForContext(context).handleLaunch({
+      frameAncestorOrigin,
       idToken,
       state,
     });

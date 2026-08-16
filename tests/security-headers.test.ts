@@ -20,6 +20,7 @@ const EXPECTED_POLICY = [
   "base-uri 'none'",
   "frame-src 'self'",
   "form-action 'self'",
+  "frame-ancestors 'self'",
 ].join("; ");
 
 const EXPECTED = {
@@ -91,10 +92,11 @@ describe("security headers", () => {
   });
 
   /**
-   * Deliberately absent: an LTI launch is rendered inside the LMS's iframe, and
-   * `X-Frame-Options` has no origin list — `SAMEORIGIN` would break every
-   * launch. Framing is `frame-ancestors`' job, and that directive is left out
-   * of the policy for the same reason.
+   * Deliberately absent, and it stays absent now that `frame-ancestors` says
+   * the same thing properly: `X-Frame-Options` has no origin list, so
+   * `SAMEORIGIN` would refuse every LTI launch, and a browser that understands
+   * both ignores `frame-ancestors` in favour of neither — they are separate
+   * checks, and the strictest wins.
    */
   test("nothing sets X-Frame-Options", async () => {
     const response = await appRequest(createTestApp(), "/login");
@@ -144,18 +146,20 @@ describe("security headers", () => {
   });
 
   /**
-   * Still absent, and the absence is still the assertion: a launch is rendered
-   * inside the LMS's iframe, and the framer's origin is per-installation rather
-   * than something this policy can name. Task #217 is to record it on the
-   * session and state the directive; until then, saying it here would be saying
-   * `'none'`, which breaks every launch.
+   * The clickjacking defence, and the only control here a server-side check
+   * could not stand in for: a clickjacked request is genuine — our page, our
+   * origin, our CSRF token, the reader's own cookie — so every check we run
+   * passes. Only the browser knows the page is inside somebody else's document.
+   *
+   * `'self'` rather than `'none'` because our own pages frame each other:
+   * `ContentFrame` embeds the content document. An LTI session widens this by
+   * exactly one origin, which is `tests/lti.test.ts`' business.
    */
-  test("the policy states no frame-ancestors", async () => {
+  test("an ordinary page may be framed by us and nobody else", async () => {
     const response = await appRequest(createTestApp(), "/login");
-    const policy = response.headers.get("Content-Security-Policy");
+    const policy = response.headers.get("Content-Security-Policy") ?? "";
 
-    expect(policy).not.toBeNull();
-    expect(policy).not.toContain("frame-ancestors");
+    expect(policy.split("; ")).toContain("frame-ancestors 'self'");
   });
 
   /**

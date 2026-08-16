@@ -1,0 +1,14 @@
+-- The one origin, besides our own, that may frame the pages this session sees.
+--
+-- Null for every ordinary sign-in, and that is the meaningful value: a session
+-- with nothing here is framable only by us, which is what `frame-ancestors`
+-- says for it. An LTI launch fills it with the LMS's browser origin, because
+-- the whole point of a launch is to be rendered inside that LMS's iframe, and
+-- a policy of `'self'` would refuse the thing the session exists to do.
+--
+-- On the session rather than on the platform registration, because it is the
+-- browser's view that matters here and only the launch has seen it: a
+-- platform's `issuer` is an identifier, and on the hosted LMSes it is a vendor
+-- constant (`https://canvas.instructure.com`) shared by every school on it,
+-- naming an origin that never frames anybody.
+ALTER TABLE `auth_sessions` ADD `frame_ancestor_origin` text;

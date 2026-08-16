@@ -153,6 +153,14 @@ export interface BeginLtiLoginInput {
 export interface HandleLtiLaunchInput {
   readonly state: string;
   readonly idToken: string;
+  /**
+   * The browser origin the launch arrived from, which is the origin that will
+   * be framing us, recorded on the session this launch mints. Required rather
+   * than optional: a caller that forgot it would mint a session no LMS may
+   * frame, and the launch would fail as a blank iframe with the reason only in
+   * the reader's console. See `routes/lti.ts`, which derives it.
+   */
+  readonly frameAncestorOrigin: string | null;
 }
 
 /**
@@ -522,6 +530,7 @@ export class LtiService {
         role,
         user,
         nowDate,
+        input.frameAncestorOrigin,
       );
     }
 
@@ -533,7 +542,10 @@ export class LtiService {
       user.id,
       nowDate,
     );
-    const session = await this.options.auth.mintSession(user);
+    const session = await this.options.auth.mintSession(
+      user,
+      input.frameAncestorOrigin,
+    );
 
     return { kind: "session", locale: launch.locale, redirectPath, session };
   }
@@ -553,6 +565,7 @@ export class LtiService {
     role: CourseRole,
     user: User,
     nowDate: Date,
+    frameAncestorOrigin: string | null,
   ): Promise<LtiLaunchOutcome> {
     if (role !== "instructor" && role !== "co_instructor") {
       throw new LtiLaunchError(
@@ -607,7 +620,10 @@ export class LtiService {
       expiresAt: addSeconds(nowDate, LTI_DEEP_LINK_TTL_SECONDS),
     });
 
-    const session = await this.options.auth.mintSession(user);
+    const session = await this.options.auth.mintSession(
+      user,
+      frameAncestorOrigin,
+    );
 
     return {
       kind: "deep-linking",

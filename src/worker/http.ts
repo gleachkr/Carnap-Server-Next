@@ -20,6 +20,14 @@ export interface AppVariables {
    */
   readonly formActionOrigin?: string;
   /**
+   * An origin that may frame this response, beyond our own — set only on the
+   * responses an LTI launch renders before its session cookie has come back to
+   * us. Every later page in that session takes the answer from the session
+   * itself. See `allowFrameAncestor` in `middleware/security-headers.ts`, which
+   * is the only thing that should write it.
+   */
+  readonly frameAncestorOrigin?: string;
+  /**
    * The viewer's translator for this request. Views reach it through
    * `useI18n()`; anything outside a render (a service, a module shared with a
    * browser bundle) takes it as a `Translator` parameter named `i18n`.

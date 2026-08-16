@@ -81,6 +81,8 @@ export const authSessions = sqliteTable(
     expiresAt: text("expires_at").notNull(),
     revokedAt: text("revoked_at"),
     lastSeenAt: text("last_seen_at"),
+    /** See `0025_session_frame_ancestor.sql`; null means "only us". */
+    frameAncestorOrigin: text("frame_ancestor_origin"),
   },
   (table) => [
     index("auth_sessions_user_id_idx").on(table.userId),

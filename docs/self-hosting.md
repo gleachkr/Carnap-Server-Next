@@ -182,6 +182,14 @@ application knows nothing about: the first binds every subdomain of wherever you
 deployed, and the second is compiled into browsers and is not practically
 reversible.
 
+**Do not add `X-Frame-Options` at the proxy.** Carnap already refuses to be
+framed, through `frame-ancestors` in its Content-Security-Policy, and does it in
+the one way that leaves LTI working: an ordinary page may be framed only by
+Carnap itself, and a session created by a launch may additionally be framed by
+the LMS that launched it. `X-Frame-Options` cannot express that second part — it
+has no origin list — so a proxy that adds `SAMEORIGIN` will break every embedded
+launch while protecting nothing that is not already protected.
+
 **Run one instance.** A SQLite file is single-node, and the grade-passback sweep
 assumes a single ticking clock. Carnap is not built to scale horizontally, and
 for a department's course load it does not need to be.

@@ -19,4 +19,11 @@ export interface AuthSession {
   readonly expiresAt: Timestamp;
   readonly revokedAt: Timestamp | null;
   readonly lastSeenAt: Timestamp | null;
+  /**
+   * The one foreign origin allowed to frame what this session sees, or null for
+   * the ordinary case of nobody but us. Only an LTI launch sets it, to the LMS
+   * origin the launch arrived from; it is read by the security-headers
+   * middleware and by nothing else.
+   */
+  readonly frameAncestorOrigin: string | null;
 }
