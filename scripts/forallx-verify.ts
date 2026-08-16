@@ -32,7 +32,7 @@ for (const testCase of FORALLX_CASES) {
   const mm0 = `${FORALLX_THEORY_MM0}\n${testCase.theoremDecl}`;
   const translation = fitchToAuf(testCase.fitch, testCase.goalName, "ax", "⊢");
 
-  if (translation.diagnostics.length > 0) {
+  if (translation.diagnostics.length > 0 && testCase.shouldFail !== true) {
     console.log(`✗ ${testCase.goalName}`);
     console.log(
       `    structural: ${translation.diagnostics
@@ -43,13 +43,29 @@ for (const testCase of FORALLX_CASES) {
   }
 
   const result = compiler.compile(mm0, translation.proofText);
+  const verdict =
+    result.ok === true && result.mmbBytes !== undefined
+      ? await verifyMmb(mm0, result.mmbBytes)
+      : { errored: false, ok: false };
+
+  // A `shouldFail` case is a proviso violation: passing means being *refused*,
+  // at either the compiler or the verifier.
+  if (testCase.shouldFail === true) {
+    if (verdict.ok) {
+      console.log(`✗ ${testCase.goalName}  accepted an invalid proof`);
+      continue;
+    }
+    console.log(`✓ ${testCase.goalName}  (refused, as it should be)`);
+    passed += 1;
+    continue;
+  }
+
   if (result.ok !== true || result.mmbBytes === undefined) {
     console.log(`✗ ${testCase.goalName}`);
     console.log(`    compile: ${JSON.stringify(result.diagnostics)}`);
     continue;
   }
 
-  const verdict = await verifyMmb(mm0, result.mmbBytes);
   if (!verdict.ok) {
     console.log(`✗ ${testCase.goalName}  verify: ${JSON.stringify(verdict)}`);
     continue;

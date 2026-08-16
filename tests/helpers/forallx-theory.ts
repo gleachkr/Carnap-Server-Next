@@ -32,6 +32,15 @@
  * undischarged assumption". The verifier re-checks that dependency against the
  * MMB, so the constraint is enforced by the trust boundary, not by the compiler.
  *
+ * **A rule's dependency list is the whole proviso, so read it twice.** Both ∃E
+ * rules once declared contexts that were allowed to mention the eigenvariable
+ * (`ex_elim_sub` had `(g h i: ctx x u)`, `ex_elim` had `(g h i: ctx x)`), which
+ * left the proviso binding only the conclusion. That is enough to prove
+ * `∃x G(x) , F(u) ⊢ ∃x (G(x) ∧ F(x))` — invalid on D = {1,2}, G = {2}, F = {1},
+ * u = 1 — and the MMB passed `verifyMmb`, so it was through the trust boundary,
+ * not merely past the compiler. `forallx-cases.ts` pins both paths shut with the
+ * `smuggle` / `smugglex` refusal cases.
+ *
  * The compiler's elaboration annotations let a proof cite these rules with
  * concrete formulas and have the witness / eigenvariable *inferred* rather than
  * annotated inline: `@view`/`@recover` recover the witness `t` (∀E, ∃I) or the
@@ -261,16 +270,16 @@ axiom all_elim {x: tm} (g h: ctx x) (t: tm x) (p: wff x):
 axiom ex_intro {x: tm} (g h: ctx x) (t: tm x) (p: wff x):
   $ g ⊢ [x/t] p $ > $ g , h ⊢ ∃ x p $;
 
---| @view {x u: tm} (g h i: ctx x u) (p: wff x) (q c: wff): $ g ⊢ ∃ x p $ > $ h , q ⊢ c $ > $ g , h , i ⊢ c $
+--| @view {x u: tm} (g h i: ctx x) (p: wff x) (q c: wff): $ g ⊢ ∃ x p $ > $ h , q ⊢ c $ > $ g , h , i ⊢ c $
 --| @recover u q p x
 --| @freshen c x
 --| @freshen c u
-axiom ex_elim_sub {x u: tm} (g h i: ctx x u) (p: wff x) (c: wff):
+axiom ex_elim_sub {x u: tm} (g h i: ctx x) (p: wff x) (c: wff):
   $ g ⊢ ∃ x p $ > $ h , [x/u] p ⊢ c $ > $ g , h , i ⊢ c $;
 
 --| @freshen c x
 --| @fallback ex_elim_sub
-axiom ex_elim {x: tm} (g h i: ctx x) (p: wff x) (c: wff):
+axiom ex_elim {x: tm} (g h i: ctx) (p: wff x) (c: wff):
   $ g ⊢ ∃ x p $ > $ h , p ⊢ c $ > $ g , h , i ⊢ c $;`;
 
 /** The `:::aufbau-mm0{name="forallx"}` block wrapping {@link FORALLX_THEORY_MM0}. */

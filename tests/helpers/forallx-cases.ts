@@ -1,7 +1,8 @@
 /**
  * One worked Fitch proof per primitive rule of the forallx: Calgary theory —
  * the TFL connectives plus the first-order fragment (identity =I/=E and the four
- * quantifier rules ∀I/∀E/∃I/∃E). Shared by the manual verifier script (which
+ * quantifier rules ∀I/∀E/∃I/∃E), plus two `shouldFail` cases that pin an
+ * eigenvariable proviso shut. Shared by the manual verifier script (which
  * compiles + verifies them against the real engine) and the test suite (which
  * asserts the translation and, for a few, verifies a precomputed certificate).
  */
@@ -13,6 +14,19 @@ export interface ForallxCase {
   readonly goalName: string;
   /** The starter Fitch proof text. */
   readonly fitch: string;
+  /**
+   * Set when the case exists to prove the theory *refuses* something. The two
+   * such cases pin a soundness fix. Both ∃E rules used to let their contexts
+   * depend on the eigenvariable — `ex_elim_sub` declared `(g h i: ctx x u)` and
+   * `ex_elim` declared `(g h i: ctx x)` — so the proviso bound only the
+   * conclusion, not the undischarged assumptions. Either one alone proves
+   * `∃x G(x) , F(u) ⊢ ∃x (G(x) ∧ F(x))`, which is invalid (D = {1,2}, G = {2},
+   * F = {1}, u = 1), and the certificate passed the *verifier*, not just the
+   * compiler. `smuggle` goes through the `_sub` rule and `smugglex` — same
+   * proof with the eigenvariable spelled like the ∃ binder — through the plain
+   * one, so neither path can regress unnoticed.
+   */
+  readonly shouldFail?: true;
 }
 
 export const FORALLX_CASES: readonly ForallxCase[] = [
@@ -211,5 +225,35 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
       "F x         :ax",
       "F y         :eq_replace 1 2",
     ].join("\n"),
+  },
+  {
+    fitch: [
+      "∃ x (G x)                   :ax",
+      "F u                         :ax",
+      "    G u                     :ax",
+      "    G u ∧ F u               :and_intro 3 2",
+      "    ∃ x (G x ∧ F x)         :ex_intro 4",
+      "∃ x (G x ∧ F x)             :ex_elim 1 3-5",
+    ].join("\n"),
+    goalName: "smuggle",
+    name: "∃E smuggling its eigenvariable out of an undischarged assumption (must be refused)",
+    shouldFail: true,
+    theoremDecl:
+      "theorem smuggle {x u: tm}: $ ∃ x (G x) , F u ⊢ ∃ x (G x ∧ F x) $;",
+  },
+  {
+    fitch: [
+      "∃ x (G x)                   :ax",
+      "F x                         :ax",
+      "    G x                     :ax",
+      "    G x ∧ F x               :and_intro 3 2",
+      "    ∃ x (G x ∧ F x)         :ex_intro 4",
+      "∃ x (G x ∧ F x)             :ex_elim 1 3-5",
+    ].join("\n"),
+    goalName: "smugglex",
+    name: "the same smuggle with the eigenvariable named like the ∃ binder — the plain ex_elim path (must be refused)",
+    shouldFail: true,
+    theoremDecl:
+      "theorem smugglex {x: tm}: $ ∃ x (G x) , F x ⊢ ∃ x (G x ∧ F x) $;",
   },
 ];
