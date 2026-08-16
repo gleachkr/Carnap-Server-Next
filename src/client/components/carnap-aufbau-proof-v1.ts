@@ -27,9 +27,9 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/strings";
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
+import { loadProofCompiler } from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 
-const COMPILER_WASM_URL = "/assets/aufbau-compiler.wasm";
 const DEBOUNCE_MS = 400;
 
 // The header the assembled proof carries above the editable body: the goal name,
@@ -68,20 +68,7 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
-
-// One compiler instance per page load, shared across every proof element and
-// lazily instantiated so the ~4.5 MB wasm loads only when a proof is edited.
-let compilerPromise: Promise<LoadedCompiler> | null = null;
-
-function loadCompilerOnce(): Promise<LoadedCompiler> {
-  if (compilerPromise === null) {
-    compilerPromise = import("@aufbau/compiler").then((module) =>
-      module.loadCompiler({ wasmUrl: COMPILER_WASM_URL }),
-    );
-  }
-  return compilerPromise;
-}
+import type { CompileResult } from "@aufbau/compiler";
 
 function isProofPublicData(value: unknown): value is AufbauProofPublicData {
   return (
@@ -335,9 +322,8 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
 
     let compiler: { compile(mm0: string, proof: string): CompileResult };
     try {
-      compiler = await loadCompilerOnce();
+      compiler = await loadProofCompiler();
     } catch {
-      compilerPromise = null;
       if (token === this.compileToken) {
         this.setMark("error", this.t("Could not load the proof engine."));
       }

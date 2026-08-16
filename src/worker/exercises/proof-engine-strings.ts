@@ -12,9 +12,11 @@ import type { Translator } from "../i18n/translator";
  * widget's own `strings.ts` spreads this into its map, so the ids stay identical
  * across the three and the catalog holds one entry apiece.
  *
- * Note what is *not* here: the compiler's own diagnostics. `@aufbau/compiler`
- * exposes no locale option, so its prose reaches the student's editor gutter in
- * English regardless. These are our wrappers around it.
+ * Note what is *not* here: the compiler's own diagnostics. Those are translated
+ * upstream, not by us — `@aufbau/compiler` carries its own catalogs and picks
+ * one from the locale `client/proof-compiler.ts` hands it, so a language Aufbau
+ * has not translated reaches the student's editor gutter in English however
+ * complete our own catalog is. These are our wrappers around it.
  */
 export function buildProofEngineStrings(i18n: Translator) {
   return {

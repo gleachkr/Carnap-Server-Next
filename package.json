@@ -9,7 +9,7 @@
     "a11y:audit:report": "bun scripts/a11y-audit.mjs --report",
     "a11y:baseline": "bun scripts/a11y-report.ts --update",
     "a11y:report": "bun scripts/a11y-report.ts",
-    "build:client": "rm -rf public/assets && bun build src/client/editor-preview.ts src/client/source-view.ts --outdir public/assets --target browser --minify && bun build src/client/components/carnap-*.ts src/client/components/carnap-*.tsx --outdir public/assets/components --target browser --minify --splitting --format esm && cp node_modules/@aufbau/compiler/compiler.wasm public/assets/aufbau-compiler.wasm && bun scripts/copy-math-font.ts",
+    "build:client": "rm -rf public/assets && bun build src/client/editor-preview.ts src/client/source-view.ts --outdir public/assets --target browser --minify && bun build src/client/components/carnap-*.ts src/client/components/carnap-*.tsx --outdir public/assets/components --target browser --minify --splitting --format esm && cp node_modules/@aufbau/compiler/compiler.wasm public/assets/aufbau-compiler.wasm && mkdir -p public/assets/aufbau-lsp && cp node_modules/@aufbau/lsp/index.js node_modules/@aufbau/lsp/worker.js node_modules/@aufbau/lsp/lsp.wasm public/assets/aufbau-lsp/ && bun scripts/copy-math-font.ts",
     "check": "tsc --noEmit && tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.dom-tests.json --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply carnap-server-local --local",
@@ -32,8 +32,9 @@
     "validate": "bun run build:client && bun test && bun run check && bun run lint:check"
   },
   "dependencies": {
-    "@aufbau/compiler": "0.0.2",
-    "@aufbau/verifier": "0.0.2",
+    "@aufbau/compiler": "0.0.6",
+    "@aufbau/lsp": "0.0.6",
+    "@aufbau/verifier": "0.0.6",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.12.4",
     "@codemirror/lint": "^6.9.7",

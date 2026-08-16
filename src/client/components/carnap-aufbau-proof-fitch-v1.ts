@@ -22,7 +22,7 @@
  * `lineSpans` to the Fitch line that produced them.
  */
 
-import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
+import type { CompileResult } from "@aufbau/compiler";
 import {
   defaultKeymap,
   deleteCharBackwardStrict,
@@ -49,9 +49,9 @@ import {
   fitchToAuf,
 } from "../../worker/exercises/aufbau-proof-fitch/translate";
 import type { AufbauProofFitchPublicData } from "../../worker/exercises/aufbau-proof-fitch/types";
+import { loadProofCompiler } from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 
-const COMPILER_WASM_URL = "/assets/aufbau-compiler.wasm";
 const DEBOUNCE_MS = 400;
 
 /** Left gutter (CSS px) before the outermost scope-line; the bars themselves
@@ -101,19 +101,6 @@ function byteToCharIndex(text: string, byteOffset: number): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
-}
-
-// One compiler instance per page load, shared across every proof element and
-// lazily instantiated so the ~4.5 MB wasm loads only when a proof is edited.
-let compilerPromise: Promise<LoadedCompiler> | null = null;
-
-function loadCompilerOnce(): Promise<LoadedCompiler> {
-  if (compilerPromise === null) {
-    compilerPromise = import("@aufbau/compiler").then((module) =>
-      module.loadCompiler({ wasmUrl: COMPILER_WASM_URL }),
-    );
-  }
-  return compilerPromise;
 }
 
 function isFitchPublicData(
@@ -638,9 +625,8 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
 
     let compiler: { compile(mm0: string, proof: string): CompileResult };
     try {
-      compiler = await loadCompilerOnce();
+      compiler = await loadProofCompiler();
     } catch {
-      compilerPromise = null;
       if (token === this.compileToken) {
         this.setMark("error", this.t("Could not load the proof engine."));
       }

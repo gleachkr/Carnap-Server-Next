@@ -46,33 +46,15 @@ import {
   payloadTranslator,
 } from "../worker/web/ui-strings";
 import { createMarkdownEditor, showDiagnostics } from "./markdown-editor";
+import { loadProofCompiler } from "./proof-compiler";
 import { warnBeforeDiscarding } from "./unsaved-changes";
 
 const DEBOUNCE_MS = 250;
-const COMPILER_WASM_URL = "/assets/aufbau-compiler.wasm";
 
 // The engine's diagnostic for a well-formed theory + goal with no proof body —
 // benign at authoring time (the student supplies the proof), so a tree exercise
 // whose only complaint is this counts as "declares cleanly".
 const EMPTY_PROOF_MESSAGE = "proof block is empty";
-
-// The Aufbau compiler is loaded lazily (its ~4.5 MB wasm) and only when the
-// document actually contains a proof exercise, then reused across recompiles.
-let proofCompilerPromise: Promise<{
-  compile(
-    mm0: string,
-    proof: string,
-  ): { ok?: boolean; diagnostics?: unknown };
-}> | null = null;
-
-function loadProofCompiler() {
-  if (proofCompilerPromise === null) {
-    proofCompilerPromise = import("@aufbau/compiler").then((module) =>
-      module.loadCompiler({ wasmUrl: COMPILER_WASM_URL }),
-    );
-  }
-  return proofCompilerPromise;
-}
 
 function firstDiagnostic(result: { diagnostics?: unknown }): string | null {
   const diagnostics = result.diagnostics;

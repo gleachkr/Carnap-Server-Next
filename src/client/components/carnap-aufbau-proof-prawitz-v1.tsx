@@ -48,6 +48,7 @@ import type {
   PrawitzProofNode,
 } from "../../worker/exercises/aufbau-proof-prawitz/types";
 import type { CorrectnessMarkState } from "../../worker/exercises/correctness-mark";
+import { loadProofCompiler } from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 import {
   createHelpDialog,
@@ -70,7 +71,6 @@ declare module "preact" {
   }
 }
 
-const COMPILER_WASM_URL = "/assets/aufbau-compiler.wasm";
 const DEBOUNCE_MS = 400;
 const HISTORY_LIMIT = 100;
 
@@ -1647,9 +1647,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
 
     let compiler: LoadedCompiler;
     try {
-      compiler = await loadCompilerOnce();
+      compiler = await loadProofCompiler();
     } catch {
-      compilerPromise = null;
       if (token === this.compileToken) {
         this.setStatus({
           mark: "error",
@@ -1769,19 +1768,6 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     }
     return errors;
   }
-}
-
-// One compiler instance per page load, shared across every proof element and
-// lazily instantiated so the ~4.5 MB wasm loads only when a proof is edited.
-let compilerPromise: Promise<LoadedCompiler> | null = null;
-
-function loadCompilerOnce(): Promise<LoadedCompiler> {
-  if (compilerPromise === null) {
-    compilerPromise = import("@aufbau/compiler").then((module) =>
-      module.loadCompiler({ wasmUrl: COMPILER_WASM_URL }),
-    );
-  }
-  return compilerPromise;
 }
 
 register("carnap-aufbau-proof-prawitz", AufbauProofPrawitz);

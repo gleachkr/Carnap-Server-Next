@@ -19,5 +19,11 @@ declare module "@aufbau/compiler" {
     readonly wasmUrl?: string;
     readonly wasmBytes?: ArrayBuffer;
     readonly module?: WebAssembly.Module;
+    /**
+     * BCP-47 tag deciding what language the engine's own diagnostics come out
+     * in, applied once to this instance. A tag it has no catalog for is ignored
+     * and leaves it in English. See `client/proof-compiler.ts`, the one caller.
+     */
+    readonly locale?: string;
   }): Promise<LoadedCompiler>;
 }

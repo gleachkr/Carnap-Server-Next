@@ -10,6 +10,11 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["bun-types"]
   },
-  "include": ["tests/dom/**/*.ts"],
+  // The client's ambient declarations as well as the tests: a test reaches its
+  // subject by import, which drags the client module in but not the `declare
+  // module` files it depends on — those are only ever *included*, never
+  // imported. Without them an untyped npm package (`@aufbau/compiler`) is an
+  // implicit `any` here and a typed module over there, in the same source file.
+  "include": ["src/client/**/*.d.ts", "tests/dom/**/*.ts"],
   "exclude": []
 }

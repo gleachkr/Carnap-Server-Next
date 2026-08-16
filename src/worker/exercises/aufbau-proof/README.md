@@ -16,9 +16,11 @@ CodeMirror text editor.
   in each **`aufbau-proof`**, a goal `theorem`. The compiler **freezes** the
   theory plus the goal declaration into `publicData.mm0`.
 - The **client** ([`carnap-aufbau-proof-v1.ts`](../../../client/components/carnap-aufbau-proof-v1.ts))
-  loads `@aufbau/compiler` lazily (its ~4.5 MB wasm), compiles
-  `mm0 + (goal header + student body)` on each edit, and writes
-  `{ proofText, mmb }` (the base64 certificate) into `answerData`.
+  compiles `mm0 + (goal header + student body)` on each edit and writes
+  `{ proofText, mmb }` (the base64 certificate) into `answerData`. It gets the
+  engine from [`proof-compiler.ts`](../../../client/proof-compiler.ts), which
+  loads `@aufbau/compiler` lazily (its ~5 MB wasm) once for the whole page and in
+  the reader's language — all four proof types share that one instance.
 - The **worker** ([`assessment.ts`](./assessment.ts) → [`verifier.ts`](./verifier.ts))
   decodes the MMB and `verifyPair`s it against the *frozen* mm0 — never the
   student's proofText. `ok` ⇔ the declared goal is proved. All-or-nothing.
@@ -85,6 +87,7 @@ this repo's. See `docs/proof.md` in `gleachkr/Aufbau`.
 | [`assessment.ts`](./assessment.ts) | normalize + evaluate (verify) + review |
 | [`read-only-view.ts`](./read-only-view.ts) | inert DSD chrome + review render |
 | [`carnap-aufbau-proof-v1.ts`](../../../client/components/carnap-aufbau-proof-v1.ts) | the editor element |
+| [`proof-compiler.ts`](../../../client/proof-compiler.ts) | the page's one `@aufbau/compiler`, and its locale |
 
 The theory panel is emitted as a plain markdown content node by the top-level
 compiler (like `:::style`), which also collects theories and dispatches proof
