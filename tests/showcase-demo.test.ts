@@ -22,6 +22,7 @@ const EXPECTED_KINDS = [
   "short-answer@1",
   "truth-table@1",
   "model@1",
+  "translation@1",
   "aufbau-proof@1",
   "aufbau-proof-tree@1",
   "aufbau-proof-fitch@1",
@@ -50,6 +51,9 @@ describe("showcase demo lesson", () => {
       "tt_row",
       "md_both",
       "md_invalid",
+      "tr_and",
+      "tr_fine",
+      "tr_exact",
       "pf_lines",
       "pf_tree",
       "pf_fitch",
@@ -86,7 +90,7 @@ describe("showcase demo lesson", () => {
     const exercises = compiled.artifact.document.nodes.filter(
       (node) => node.kind === "exercise",
     );
-    expect(exercises).toHaveLength(15);
+    expect(exercises).toHaveLength(18);
   });
 
   test("the closing Fitch exercise is left for the student to finish", async () => {

@@ -636,6 +636,81 @@ The full reference — every option, the notation rules, the field languages, th
 answer shape, and the roadmap — lives next to the code in
 `src/worker/exercises/model/README.md`.
 
+## Translation directive
+
+Use `translation` for a **symbolization** exercise in the tradition of Carnap's
+`Translate`: the prose poses a natural-language sentence, and the student types
+a formula for it. The answer counts as correct when it is **logically
+equivalent** to one of the author's solutions (and, for `variant="exact"`, only
+when it *is* one of them). Notation is the same forallx: Calgary system the
+model directive documents above, typed and displayed the same way.
+
+Solutions are markdown list items — one admissible symbolization per bullet, or
+Carnap's comma-separated alternates within one — and prose before the first
+bullet is the prompt.
+
+```md
+::::translation{id="fine" variant="first-order" points="2"}
+Everything is fine.
+
+- AxF(x)
+::::
+```
+
+An equivalent answer in different clothes — `~Ex~F(x)` here — checks and grades
+correct. Checking is live, as in the proof types: the widget reads the typed
+ASCII back in logical symbols as the student types, the correctness mark tracks
+on a pause, and **Enter** checks immediately (there is no Check button). Under
+the hood the check is the Aufbau engine's `auto?` proof search, run over a
+one-sided sequent calculus, producing an equivalence *certificate* which Submit
+records and the server independently re-verifies — the same
+client-compiles/server-verifies boundary the proof directives use.
+
+Two consequences of that design are worth knowing when setting assignments:
+
+- **The solutions are visible to a determined student.** The browser proves
+  equivalence *to a solution*, so the solutions ship with the exercise — as
+  they did in the original Carnap. `feedback`/`exam` control what is said and
+  recorded, not what a devtools user can find.
+- **Equivalence is judged by proof search under a budget**, not by a decision
+  procedure. The search covers the textbook catalogue (commutations, De Morgan,
+  conditional and biconditional interchange, distribution, quantifier passage
+  and permutation, alpha-variants, prenexing in either direction) and refuses
+  genuine non-equivalences by exhausting its space; but search is bounded, so a
+  far-fetched equivalence can in principle time out and be marked wrong — the
+  same trade the original Carnap made. The escape hatch is the bullet list:
+  naming the shapes you will accept as separate solutions always works.
+
+`variant` selects Carnap's three classes: `prop` (the default — sentence
+letters and connectives only, and a first-order solution or answer is
+rejected), `first-order`, and `exact` (syntactic comparison after parsing; for
+"what is the missing premise" exercises, where an equivalent formula is not an
+answer).
+
+`tests` imposes extra conditions on the submission, with Carnap's names:
+`CNF`, `DNF`, `PNF` (first-order only), and the counters `maxCon:N`,
+`maxNeg:N` (alias `maxNot:N`), `maxAnd:N`, `maxOr:N`, `maxIf:N`, `maxIff:N`,
+`maxFalse:N`, `maxAtom:N`. An answer must be equivalent **and** pass every
+test, so `tests="CNF"` with a non-CNF solution is a legitimate exercise.
+
+```md
+::::translation{id="prenex" variant="first-order" tests="PNF maxNeg:0"}
+Nothing is not bananas.
+
+- ~Ex~B(x)
+::::
+```
+
+`starter` prefills the input box (Carnap's partial solution — it may be prose),
+and `options` takes `nocheck` (this type's spelling of `feedback="none"`) and
+`checksyntax` (refuse to submit text that does not parse). The common `id`,
+`title`, `points`, `exam`, and `feedback` attributes apply as everywhere, and
+`system` names the notation system (only `forallx-calgary-2019` today).
+
+The full reference — the check's architecture, the rewrite theory and its
+known gaps, the answer shape — lives next to the code in
+`src/worker/exercises/translation/README.md`.
+
 ## Aufbau-proof directive
 
 Use `aufbau-proof` for a proof the student writes and the **Aufbau engine**

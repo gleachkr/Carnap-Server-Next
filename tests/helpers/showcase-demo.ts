@@ -290,7 +290,63 @@ conclusion fails.
 AxEyR(x,y) :|-: ExAyR(y,x)
 :::
 
-## 10. A proof, as proof lines
+## 10. Translation
+
+Symbolization, the skill the proof types assume. The prompt is an English
+sentence; the answer is a formula, judged up to **logical equivalence** — so
+\`Q /\\ P\` is as right as \`P /\\ Q\`, and either order of a De Morgan
+equivalent is as right as the key. As you type, the line under the box reads
+your ASCII back in logical symbols; press **Enter** to check, or just pause —
+the mark keeps up on its own.
+
+\`\`\`md
+:::translation{id="tr_and" title="Dancing and singing" points="1"}
+*People danced and songs were sung.* Symbolize this with \`P\` for "people
+danced" and \`Q\` for "songs were sung".
+
+- P /\\ Q
+:::
+\`\`\`
+
+:::translation{id="tr_and" title="Dancing and singing" points="1"}
+*People danced and songs were sung.* Symbolize this with \`P\` for "people
+danced" and \`Q\` for "songs were sung".
+
+- P /\\ Q
+:::
+
+## 11. A first-order translation
+
+The same directive with \`variant="first-order"\` takes the quantifiers. Under
+the hood this check is the same engine the proof types run: the browser finds
+an equivalence *proof* between your formula and a solution and the server
+re-verifies it — try \`~Ex~F(x)\` here and watch it count as \`AxF(x)\`.
+
+\`\`\`md
+:::translation{id="tr_fine" title="Everything is fine" variant="first-order" points="2"}
+*Everything is fine.* Use \`F(x)\` for "x is fine".
+
+- AxF(x)
+:::
+\`\`\`
+
+:::translation{id="tr_fine" title="Everything is fine" variant="first-order" points="2"}
+*Everything is fine.* Use \`F(x)\` for "x is fine".
+
+- AxF(x)
+:::
+
+And when only one formula will do — a missing premise, say — \`variant="exact"\`
+turns the equivalence off:
+
+:::translation{id="tr_exact" title="The missing premise" variant="exact" points="1" starter="To finish a modus ponens with P -> Q you also need..."}
+To infer \`Q\` from \`P → Q\` by modus ponens, what else must you have? (Here
+\`~~P\` will not do: name the premise itself.)
+
+- P
+:::
+
+## 12. A proof, as proof lines
 
 Now the engine-checked proof types. All three share one machine: the browser
 compiles the student's proof to a certificate as they type — the ✓ appears when
@@ -325,7 +381,7 @@ l3: $ ∀ x (F x ∧ G x) ⊢ F x $ by and_elim_l [l2]
 l4: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x) $ by all_intro [l3]
 :::
 
-## 11. The same proof, as a tree
+## 13. The same proof, as a tree
 
 \`aufbau-proof-tree\` gives a tree editor instead. The goal sits at the foot; the
 student builds premises upward and names the rule under each inference bar.
@@ -358,7 +414,7 @@ l3: $ ∀ x (F x → G x) , F y ⊢ F y → G y $ by all_elim [l1]
 l4: $ ∀ x (F x → G x) , F y ⊢ G y $ by imp_elim [l3, l2]
 :::
 
-## 12. The same proof, Fitch style
+## 14. The same proof, Fitch style
 
 \`aufbau-proof-fitch\` is the shape from the book: one formula per line, a
 justification after a colon, and **indentation for subproofs** — the scope lines
@@ -400,7 +456,7 @@ theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $
 ∃ x (G x)          :ex_elim 1 3-6
 :::
 
-## 13. Your turn
+## 15. Your turn
 
 The last one is not done for you. Assume \`¬ P\` for contradiction, derive \`⊥\`
 with \`neg_elim\`, and close the subproof with \`ip\`, citing its range.
@@ -423,7 +479,7 @@ theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
 ¬ ¬ P    :ax
 :::
 
-## 14. The same exercise, told nothing
+## 16. The same exercise, told nothing
 
 Every exercise takes a \`feedback\` attribute saying how much the student is told
 about whether the work is right. This one is the exercise above with
@@ -456,7 +512,7 @@ theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $
 ¬ ¬ P    :ax
 :::
 
-## 15. Submit as the only feedback
+## 17. Submit as the only feedback
 
 \`exam\` decides whether wrong work is *kept*, and it is a separate question from
 whether the student is told anything. Writing both — \`exam="false"\` so a wrong
