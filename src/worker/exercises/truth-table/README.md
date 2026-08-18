@@ -80,12 +80,14 @@ authored on it comes out sealed on an assignment whose grades are withheld.
 
 ### Counterexample shortcut
 
-Instead of filling the whole table, the student can press **Find counterexample**
-and designate a single row that disproves the claim — Carnap's counterexample
-mechanism. The button appears unless the shortcut is disabled
-(`nocounterexample` / `check`-independent). Filling the whole table is always a
-valid path too; the shortcut just saves keystrokes on large "not-a-tautology"
-problems.
+A claim about one row: **this row disproves it**. The student fills the table in
+the ordinary way and presses **Find counterexample**, which reveals a column of
+row radios; marking a row submits that row as the counterexample, and Check and
+Submit then grade it alone. The button appears unless the shortcut is disabled
+(`nocounterexample` / `check`-independent). Filling the whole table and
+submitting it as a table is always a valid path too; the shortcut just says
+which row the student is standing on, and spares them the rest of a large
+"not-a-tautology" problem.
 
 `counterexample-to` sets the **property** a counterexample row must show,
 evaluating each formula's main connective on it (Carnap's synonyms are folded):
@@ -108,11 +110,15 @@ How the property is applied depends on the variant:
 The property also defines the correct value of a validity table's turnstile
 column, so it matters even when `nocounterexample` hides the button.
 
-The UI is **in-place**: entering the mode clears the grid; editing a row selects
-it (highlighted, the rest recede); Check / Submit grade only that row. A
+The UI is **in-place and non-destructive**: pressing the button reveals a leading
+column of row radios and touches nothing else, every cell stays editable, and the
+marked row is highlighted; Check / Submit then grade that row alone. Leaving the
+mode drops the designation and the table goes back to being submitted whole. A
 counterexample is accepted only when the row is filled in correctly **and**
 satisfies the target, and it is scored all-or-nothing even under `grading="partial"`
-(it is a single claim, not a fraction of cells).
+(it is a single claim, not a fraction of cells). On review, the designated row
+carries the marks and the rest of the table is echoed back as the student left
+it — ungraded, but theirs.
 
 ### Validity variant
 
@@ -137,9 +143,9 @@ turnstile column is always student-filled, and it is graded as one more cell per
 row — so `fill`, `grading`, and `check` behave exactly as they do for Simple.
 
 A validity table also offers the single-row **counterexample** shortcut (see
-above): press **Find counterexample** and fill the one row where the premises all
-hold and the conclusions have the counterexample property — marking its `⊢` cell
-`F`. By default that property is `tautology` (conclusions all false, the ordinary
+above): press **Find counterexample** and mark the row where the premises all
+hold and the conclusions have the counterexample property, filled in with its `⊢`
+cell `F`. By default that property is `tautology` (conclusions all false, the ordinary
 invalidity counterexample), but `counterexample-to` can set it to `equivalence`
 or `inconsistency`, which also redefines the turnstile column accordingly.
 `nocounterexample` turns the button off (the turnstile column still uses the
@@ -285,11 +291,12 @@ exercise is its own barrier.
 | Ctrl+Home / Ctrl+End | the grid's first / last open cell |
 | Space / Enter | cycles the focused cell (the cells are buttons; nothing extra is wired) |
 
-Movement never counts as an edit, which matters in counterexample mode:
-designating a row *clears the grid*, so arrowing through the rows to read them
-has to stay free of that. The table carries an `aria-describedby` note naming
-these keys — visually hidden, because a sighted reader infers a grid's
-navigation from its shape and a screen-reader user cannot.
+The counterexample radios are not cells: they are left to the browser, which
+walks a radio group with the same arrow keys, so pressing ↑/↓ in that column
+picks a row — which is all that column is for. The table carries an
+`aria-describedby` note naming these keys — visually hidden, because a sighted
+reader infers a grid's navigation from its shape and a screen-reader user
+cannot.
 
 The type is registered in the three dispatchers under
 `src/worker/application/content/`: `compiler.ts`, `registry.ts`, `renderer.ts`.
@@ -310,10 +317,10 @@ A full-width positional grid, aligned to the layout both sides derive from
 ```
 
 Given (non-fillable) cells carry their value too, so the grid stays full width
-and lines up with the worker's positional grader. A counterexample submission
-uses the same full-width grid with only the one designated row filled, plus
-`counterexample` naming that row; grading then scores just that row and checks
-the target. For the validity variant, `publicData` also carries `premiseCount`
+and lines up with the worker's positional grader. A counterexample submission is
+the same full-width grid — as much of it as the student filled in — plus
+`counterexample` naming the row they are claiming; grading then scores just that
+row and checks the target, and the review shows the rest unmarked. For the validity variant, `publicData` also carries `premiseCount`
 (how many leading `formulas` entries are premises) and the answer adds the
 `validity` turnstile column. For the **partial** variant the grid — and so the
 answer's `reference`/`cells` — is exactly **one row** (whatever the atom count);

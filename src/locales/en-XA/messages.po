@@ -865,10 +865,6 @@ msgstr ""
 msgid "Checking"
 msgstr ""
 
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Choose a row, then fill it in."
-msgstr ""
-
 #: src/worker/exercises/model/strings.ts
 msgid "Choose a value for every argument."
 msgstr ""
@@ -879,6 +875,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Choose an assignment…"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Choose the row you're claiming as a counterexample."
 msgstr ""
 
 #: src/worker/application/lti-admin.ts
@@ -1071,6 +1071,10 @@ msgstr ""
 
 #: src/worker/exercises/model/strings.ts
 msgid "Could not read the value of {field}."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Counterexample row"
 msgstr ""
 
 #: src/worker/routes/assignments.ts
@@ -1698,6 +1702,30 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Feedback"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every formula is false, then mark it as your counterexample."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every formula is true, then mark it as your counterexample."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every premise is true and every conclusion is true, then mark it as your counterexample."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every premise is true and the conclusion is false, then mark it as your counterexample."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every premise is true and the conclusions disagree, then mark it as your counterexample."
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where the formulas disagree, then mark it as your counterexample."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -2604,30 +2632,6 @@ msgstr ""
 #. Example address in the add-staff field. Translate the local part; the example.edu domain is reserved for documentation.
 #: src/worker/web/courses.tsx
 msgid "person@example.edu"
-msgstr ""
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every formula is false, then fill it in."
-msgstr ""
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every formula is true, then fill it in."
-msgstr ""
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every premise is true and every conclusion is true, then fill it in."
-msgstr ""
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every premise is true and the conclusion is false, then fill it in."
-msgstr ""
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every premise is true and the conclusions disagree, then fill it in."
-msgstr ""
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where the formulas disagree, then fill it in."
 msgstr ""
 
 #: src/worker/web/admin.tsx
@@ -4046,6 +4050,10 @@ msgstr ""
 
 #: src/worker/exercises/help-strings.ts
 msgid "Usage and keyboard shortcuts"
+msgstr ""
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Use row {row} as the counterexample"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx

@@ -196,7 +196,8 @@ equivalent.
 With \`variant="validity"\` the body is a sequent: premises, \`:|-:\`, conclusion.
 The table gains a \`⊢\` column, marked \`F\` on any row that is a counterexample.
 Here the argument is invalid, and \`counterexample-to="validity"\` lets the
-student say so by producing the single bad row instead of the whole table.
+student say so by marking the one bad row — filled in like any other — as their
+counterexample, instead of submitting the whole table.
 
 \`\`\`md
 :::truth-table{id="tt_affirming" title="Affirming the consequent" variant="validity" counterexample-to="validity" points="3"}

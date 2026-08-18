@@ -13,9 +13,12 @@
  * round trip. Submitting still records authoritatively server-side.
  *
  * When the exercise allows it, the element also offers a **counterexample**
- * shortcut: instead of the full table, the student designates one row (by editing
- * it) that makes all formulas false (or true / disagree, per the target), and
- * that single row is graded.
+ * shortcut: the student fills the table in the ordinary way and then designates
+ * one row of it — the one that makes all formulas false (or true / disagree, per
+ * the target) — and that single row is what gets graded. Pressing the button
+ * reveals a column of row radios and changes nothing else; the working already in
+ * the grid is the point of the exercise, not something to be swept away for the
+ * one row that answers it.
  */
 
 import type { ExerciseFeedback } from "../../worker/domain/exercises";
@@ -124,6 +127,8 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
   private ceMode = false;
   private ceRow: number | null = null;
   private ceButton: HTMLButtonElement | null = null;
+  /** The per-row radios the student designates a counterexample row with. */
+  private ceRadios: HTMLInputElement[] = [];
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -166,6 +171,7 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       });
     }
 
+    this.wireCounterexampleRadios(root);
     this.wireRovingFocus();
 
     if (this.checkMode !== "off" || this.ceTarget !== null) {
@@ -231,16 +237,8 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     );
   }
 
-  /** Cycle a cell; in counterexample mode, editing a row also designates it. */
+  /** Cycle a cell. Every row stays editable, counterexample mode or not. */
   private onCellClick(cell: HTMLButtonElement): void {
-    if (this.ceMode) {
-      const row = Number(cell.dataset.ttRow);
-
-      if (this.ceRow !== row) {
-        this.selectCounterexampleRow(row);
-      }
-    }
-
     const next = CYCLE[(cell.dataset.ttValue ?? "") as TruthTableCellValue];
     this.setCellValue(cell, next);
     // Editing invalidates the last Check, so wipe the whole result — not just
@@ -259,10 +257,10 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
    * it did nothing about the distance across it.
    *
    * Nothing here changes a value — Space and Enter already do that, since the
-   * cells are real buttons and the browser fires `click` for both. Moving focus
-   * deliberately does *not* count as editing, which matters in counterexample
-   * mode: designating a row is an edit (it clears the grid), so arrowing through
-   * the rows to read them must stay free of that.
+   * cells are real buttons and the browser fires `click` for both. The
+   * counterexample radios are not cells and are left to the browser, which walks
+   * a radio group with the same arrow keys: pressing them there picks a row,
+   * which is what that column is for.
    */
   private wireRovingFocus(): void {
     const table = this.table;
@@ -527,6 +525,14 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       this.setCounterexampleMode(true);
       this.ceRow = priorRow;
       this.highlightRow(priorRow);
+
+      const radio = this.ceRadios.find(
+        (candidate) => Number(candidate.value) === priorRow,
+      );
+
+      if (radio !== undefined) {
+        radio.checked = true;
+      }
     }
   }
 
@@ -600,11 +606,17 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     bar.append(status);
   }
 
-  /** Enter or leave counterexample mode, resetting the grid either way. */
+  /**
+   * Enter or leave counterexample mode. The grid is left exactly as the student
+   * filled it — the mode is a claim about one row of their table, not a
+   * different exercise — so all this does is reveal the row radios and drop any
+   * designation, since leaving means submitting the whole table again and
+   * entering means the row has not been chosen yet.
+   */
   private setCounterexampleMode(on: boolean): void {
     this.ceMode = on;
     this.ceRow = null;
-    this.clearGrid();
+    this.clearRowSelection();
     this.clearRowHighlight();
     this.clearCheck();
     this.table?.classList.toggle("tt-ce-mode", on);
@@ -631,15 +643,15 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       switch (this.ceTarget) {
         case "inconsistency":
           return this.t(
-            "Pick one row where every premise is true and every conclusion is true, then fill it in.",
+            "Fill in a row where every premise is true and every conclusion is true, then mark it as your counterexample.",
           );
         case "equivalence":
           return this.t(
-            "Pick one row where every premise is true and the conclusions disagree, then fill it in.",
+            "Fill in a row where every premise is true and the conclusions disagree, then mark it as your counterexample.",
           );
         default:
           return this.t(
-            "Pick one row where every premise is true and the conclusion is false, then fill it in.",
+            "Fill in a row where every premise is true and the conclusion is false, then mark it as your counterexample.",
           );
       }
     }
@@ -647,30 +659,53 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     switch (this.ceTarget) {
       case "inconsistency":
         return this.t(
-          "Pick one row where every formula is true, then fill it in.",
+          "Fill in a row where every formula is true, then mark it as your counterexample.",
         );
       case "equivalence":
         return this.t(
-          "Pick one row where the formulas disagree, then fill it in.",
+          "Fill in a row where the formulas disagree, then mark it as your counterexample.",
         );
       default:
         return this.t(
-          "Pick one row where every formula is false, then fill it in.",
+          "Fill in a row where every formula is false, then mark it as your counterexample.",
         );
     }
   }
 
-  /** Choose `row` as the counterexample: clear the grid and highlight it. */
-  private selectCounterexampleRow(row: number): void {
-    this.clearGrid();
-    this.ceRow = row;
-    this.highlightRow(row);
+  /**
+   * The row radios: the one control that designates a counterexample. They ship
+   * with the grid (hidden and disabled until the button reveals them), so the
+   * whole interaction here is enabling them and listening — the browser handles
+   * one-of-many selection and arrow-key movement within the group.
+   */
+  private wireCounterexampleRadios(root: ShadowRoot): void {
+    this.ceRadios = Array.from(
+      root.querySelectorAll<HTMLInputElement>("input.tt-ce-radio"),
+    );
+
+    for (const radio of this.ceRadios) {
+      radio.disabled = false;
+      radio.addEventListener("change", () => {
+        if (radio.checked) {
+          this.selectCounterexampleRow(Number(radio.value));
+        }
+      });
+    }
   }
 
-  private clearGrid(): void {
-    for (const cell of this.cells) {
-      this.setCellValue(cell, "");
-      cell.classList.remove("tt-correct", "tt-incorrect");
+  /** Designate `row` as the counterexample, leaving the grid as it stands. */
+  private selectCounterexampleRow(row: number): void {
+    this.ceRow = row;
+    this.highlightRow(row);
+    // A different row is a different claim, so any verdict on the last one is
+    // no longer about what is being submitted.
+    this.clearCheck();
+    this.syncAnswer();
+  }
+
+  private clearRowSelection(): void {
+    for (const radio of this.ceRadios) {
+      radio.checked = false;
     }
   }
 
@@ -722,7 +757,9 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     }
 
     if (this.ceMode && this.ceRow === null) {
-      this.status.textContent = this.t("Choose a row, then fill it in.");
+      this.status.textContent = this.t(
+        "Choose the row you're claiming as a counterexample.",
+      );
       this.status.removeAttribute("data-state");
       return;
     }

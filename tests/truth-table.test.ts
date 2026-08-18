@@ -675,6 +675,77 @@ describe("truth-table counterexample", () => {
     expect(outOfRange.ok).toBe(false);
   });
 
+  test("the grid ships a row selector, hidden until the shortcut is used", async () => {
+    const artifact = await compileArtifact(directive("#cx-sel", "- P -> Q"));
+    const html = renderCompiledContent(artifact, i18nFor("en"));
+
+    // One radio per row, disabled like the cells until the element upgrades,
+    // each naming the row it would claim.
+    expect(html.match(/<input class="tt-ce-radio"/g)?.length).toBe(4);
+    expect(html).toContain(
+      'name="tt-ce-row" value="1" disabled aria-label="Use row 2 as the counterexample"',
+    );
+    expect(html).toContain('<th scope="col" class="tt-ce-select">');
+    // Hidden until the button reveals it, so an ordinary table is unchanged —
+    // and the student's grid is not what the mode acts on.
+    expect(html).toContain(".tt-ce-select {\n    display: none;\n  }");
+    expect(html).toContain(".tt.tt-ce-mode .tt-ce-select {");
+  });
+
+  test("no selector where there is no shortcut to use", async () => {
+    // The markup, not the stylesheet: one shared `<style>` ships with every
+    // grid, so the rules for the column are there whether it is or not.
+    const off = await compileArtifact(
+      directive('#cx-off options="nocounterexample"', "- P -> Q"),
+    );
+    expect(renderCompiledContent(off, i18nFor("en"))).not.toContain(
+      '<input class="tt-ce-radio"',
+    );
+
+    // A partial table is already a single-row task, so it offers neither the
+    // button nor the column that goes with it.
+    const partial = await compileArtifact(
+      directive('#cx-partial variant="partial"', "- P -> Q"),
+    );
+    expect(renderCompiledContent(partial, i18nFor("en"))).not.toContain(
+      '<input class="tt-ce-radio"',
+    );
+  });
+
+  test("a counterexample review keeps the rest of the student's table", () => {
+    // The whole table filled in correctly, with row 1 (P=T, Q=F) designated.
+    const answer: TruthTableAnswerData = {
+      cells: [
+        [
+          ["T", "T", "T"],
+          ["T", "F", "F"],
+          ["F", "T", "T"],
+          ["F", "T", "F"],
+        ],
+      ],
+      counterexample: 1,
+      reference: [
+        ["T", "T"],
+        ["T", "F"],
+        ["F", "T"],
+        ["F", "F"],
+      ],
+    };
+    const html = renderTruthTableReview(
+      ptoq,
+      { answer, exerciseId: "cx-review" },
+      passthroughTranslator,
+    );
+
+    // Only the designated row is graded, so only its five cells are marked …
+    expect(html.match(/class="tt-correct"/g)?.length).toBe(5);
+    expect(html).toContain('<tr class="tt-ce-row">');
+    // … and the work that led there is echoed back rather than blanked: the
+    // last row (P=F, Q=F) is in the student's answer and shows.
+    expect(html).toContain('<span data-tt-value="F">F</span>');
+    expect(html).not.toContain(">–<");
+  });
+
   test("evaluate and review report counterexample validity", async () => {
     const handler = new TruthTableExerciseHandler();
     const item = (
@@ -1361,6 +1432,23 @@ describe("truth-table given grid (simple/validity)", () => {
     // underlying data-tt-value stays canonical T/F.
     expect(html).toContain('data-tt-value="T">1<');
     expect(html).toContain('data-tt-value="F">0<');
+  });
+
+  test("nodash drops the glyph without dropping the cell's height", async () => {
+    const artifact = await compileArtifact(
+      directive('#g-nodash options="nodash"', "- P -> Q"),
+    );
+    const html = renderCompiledContent(artifact, i18nFor("en"));
+    // The blank cells are genuinely empty — no dash, no filler …
+    expect(html).not.toContain(">–<");
+    expect(html).toContain("></button>");
+    // … so the grid's stylesheet is the only thing giving them a line box, and
+    // without it a text-less button collapses to its padding: the table draws as
+    // slivers (measured 4px against a filled cell's 25px) and every value the
+    // student enters makes its row jump taller. No unit test can see a collapsed
+    // box, so the rule that prevents it is what gets pinned here.
+    expect(html).toContain('.tt [data-tt-value=""]::before');
+    expect(html).toContain('content: "\\200b"');
   });
 
   test("double-turnstile renders ⊨ in a validity header", async () => {

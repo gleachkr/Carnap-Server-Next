@@ -20,6 +20,7 @@ import {
   isTruthTablePublicData,
   type ResolvedTable,
   referenceFillable,
+  resolveCounterexample,
   resolveTable,
 } from "./grading";
 import { buildTruthTableStrings, type TruthTableStrings } from "./strings";
@@ -137,6 +138,23 @@ const TRUTH_TABLE_SHADOW_STYLES = `
     color: var(--ink-muted, #5f7388);
   }
 
+  /*
+   * A blank cell is still a cell. The nodash option leaves the glyph out
+   * altogether, and an element with no text has no line box at all, so the button
+   * collapses to its padding — a row of slivers instead of a grid, and a row that
+   * jumps taller the moment a student puts a value in it. A zero-width space gives
+   * every empty cell a line to stand on, so a blank one is exactly as tall as a
+   * filled one whatever glyph (or none) the author chose. Selected on the value
+   * rather than a class, because all three writers of an empty cell — the fillable
+   * button, the scaffolded given, the withheld review — carry data-tt-value, and
+   * only the blank value can be glyphless (a true/false mark is required
+   * non-empty). Nothing hears it: the cells are named by aria-label, and a
+   * zero-width space is nothing to read out in the first place.
+   */
+  .tt [data-tt-value=""]::before {
+    content: "\\200b";
+  }
+
   .tt-given {
     color: var(--ink-muted, #5f7388);
   }
@@ -163,11 +181,30 @@ const TRUTH_TABLE_SHADOW_STYLES = `
      (styled in the content stylesheet, so author CSS reaches every exercise's
      buttons uniformly), not in this shadow chrome. */
 
-  /* In counterexample mode the chosen row is highlighted and the rest recede. */
-  .tt.tt-ce-mode tbody tr:not(.tt-ce-row) {
-    opacity: 0.45;
+  /*
+   * The counterexample selector: one radio per row, in a leading column the grid
+   * always carries and shows only while the student is making that claim. Server
+   * markup rather than cells the client injects, so the column is styled and
+   * named by the same code as the rest of the grid; display:none rather than
+   * visibility, so an unpressed table is exactly the table it was before.
+   */
+  .tt-ce-select {
+    display: none;
   }
 
+  .tt.tt-ce-mode .tt-ce-select {
+    display: table-cell;
+  }
+
+  .tt-ce-radio {
+    accent-color: var(--blue-strong, #074f9f);
+    cursor: pointer;
+    margin: 0;
+  }
+
+  /* The row the student is claiming as their counterexample. Nothing else recedes:
+     the rest of the table is their own work, filled in as usual, and dimming it
+     would make the grid they are reading from harder to read. */
   .tt tr.tt-ce-row > * {
     background: color-mix(in srgb, var(--gold, #9a6400) 14%, transparent);
   }
@@ -274,14 +311,42 @@ function formulaHead(formula: ResolvedTable["formulas"][number]): string {
 }
 
 /**
- * The header row: reference atom columns, then each formula written out. For a
- * validity table the turnstile column is inserted between the last premise and
- * the first conclusion (at formula index `premiseCount`).
+ * The counterexample selector's header cell. Its name is for a reader who meets
+ * the column with no grid to look at; sighted readers have the radios and the
+ * hint in the status line, and a visible heading over a column of radios would
+ * only widen the table.
+ */
+function ceSelectHead(strings: TruthTableStrings): string {
+  return `<th scope="col" class="tt-ce-select"><span class="visually-hidden">${escapeHtml(strings["Counterexample row"])}</span></th>`;
+}
+
+/**
+ * One row's counterexample radio. Disabled like the cell buttons, for the same
+ * reason: before the element upgrades nothing here works, and a control that
+ * takes focus and does nothing is worse than one that says it is not ready.
+ * `aria-label` carries the whole claim ("use row 3…") because the column heading
+ * is not part of a radio's accessible name.
+ */
+function ceSelectCell(rowIndex: number, strings: TruthTableStrings): string {
+  const label = strings["Use row {row} as the counterexample"].replace(
+    "{row}",
+    String(rowIndex + 1),
+  );
+
+  return `<td class="tt-ce-select"><input class="tt-ce-radio" type="radio" name="tt-ce-row" value="${rowIndex}" disabled aria-label="${escapeHtml(label)}"></td>`;
+}
+
+/**
+ * The header row: the counterexample selector (when the table offers one),
+ * reference atom columns, then each formula written out. For a validity table
+ * the turnstile column is inserted between the last premise and the first
+ * conclusion (at formula index `premiseCount`).
  */
 function headerRow(
   table: ResolvedTable,
   premiseCount: number | null,
   turnstileGlyph: string,
+  ceSelect = "",
 ): string {
   const atomHeads = table.atoms
     .map((atom) => `<th scope="col">${escapeHtml(atom)}</th>`)
@@ -296,7 +361,7 @@ function headerRow(
     })
     .join("");
 
-  return `<tr>${atomHeads}${formulaHeads}</tr>`;
+  return `<tr>${ceSelect}${atomHeads}${formulaHeads}</tr>`;
 }
 
 /**
@@ -394,6 +459,7 @@ function bodyRow(
   rowIndex: number,
   premiseCount: number | null,
   strings: TruthTableStrings,
+  ceSelect: boolean,
 ): string {
   const refFillable = referenceFillable(options);
   const valuation = table.valuations[rowIndex] ?? [];
@@ -472,7 +538,9 @@ function bodyRow(
     })
     .join("");
 
-  return `<tr>${referenceCells}${formulaCells}</tr>`;
+  const select = ceSelect ? ceSelectCell(rowIndex, strings) : "";
+
+  return `<tr>${select}${referenceCells}${formulaCells}</tr>`;
 }
 
 /**
@@ -712,6 +780,11 @@ export function renderTruthTableElement(
     Array.isArray(publicData.givens) && publicData.givens.length > 0
       ? publicData.givens
       : null;
+  // The counterexample selector rides along with the button that reveals it. A
+  // partial table is already a single-row task, so it offers neither.
+  const ceSelect =
+    publicData.variant !== "partial" &&
+    resolveCounterexample(publicData.options).showButton;
   // A partial table is one free row; every other variant fills all 2ⁿ rows.
   const rows =
     publicData.variant === "partial"
@@ -727,11 +800,17 @@ export function renderTruthTableElement(
               rowIndex,
               premiseCount,
               strings,
+              ceSelect,
             ),
           )
           .join("");
   const grid = gridMarkup(
-    `<thead>${headerRow(table, premiseCount, turnstileGlyphFor(publicData.options))}</thead><tbody>${rows}</tbody>`,
+    `<thead>${headerRow(
+      table,
+      premiseCount,
+      turnstileGlyphFor(publicData.options),
+      ceSelect ? ceSelectHead(strings) : "",
+    )}</thead><tbody>${rows}</tbody>`,
     exerciseLegendHtml(
       exerciseGroupLabel(meta.exerciseKind, meta.title, meta.i18n),
     ),
@@ -754,6 +833,18 @@ interface TruthTableReview {
   readonly exerciseId: string;
 }
 
+/**
+ * A submitted cell in ordinary ink, making no claim about itself. Two readers
+ * get this: a review that withholds its verdicts (`feedback="none"`, until
+ * grades are out), and the rows outside a counterexample submission's one
+ * designated row — the student's own working, which only that row was graded
+ * against. Not the muted `.tt-given` treatment, which says "this was handed to
+ * you"; these cells are the reader's own work.
+ */
+function plainMark(submitted: TruthTableCellValue, marks: CellMarks): string {
+  return `<span data-tt-value="${submitted}">${cellGlyph(submitted, marks)}</span>`;
+}
+
 function reviewMark(
   verdict: boolean | null,
   submitted: TruthTableCellValue,
@@ -765,12 +856,8 @@ function reviewMark(
     return `<span class="tt-given" data-tt-value="${submitted}">${cellGlyph(submitted, marks)}</span>`;
   }
 
-  // The cell as the student left it, in ordinary ink and making no claim —
-  // which is what a table under `feedback="none"` shows until grades are out.
-  // Not the muted `.tt-given` treatment: that says "this was handed to you",
-  // and this cell is the reader's own work.
   if (!reveal) {
-    return `<span data-tt-value="${submitted}">${cellGlyph(submitted, marks)}</span>`;
+    return plainMark(submitted, marks);
   }
 
   const cls = verdict ? "tt-correct" : "tt-incorrect";
@@ -784,8 +871,10 @@ function reviewMark(
 
 /**
  * One review body row: the student's cells marked correct/incorrect. When the
- * submission was a counterexample, only its one designated row is shown; the
- * other rows the student never filled are drawn blank rather than as the key.
+ * submission was a counterexample, only its one designated row carries verdicts;
+ * the others are echoed back as the student left them — the table they filled in
+ * on the way to the row they are claiming — rather than blanked or filled with
+ * the key, neither of which is anything they wrote.
  */
 function reviewRow(
   table: ResolvedTable,
@@ -800,20 +889,28 @@ function reviewRow(
   reveal: boolean,
 ): string {
   const marks = marksOf(publicData.options);
-  const blank = ceRow !== null && rowIndex !== ceRow;
+  // An ungraded row of a counterexample submission: shown, but not judged.
+  const echoed = ceRow !== null && rowIndex !== ceRow;
   const turnstileCell = (): string => {
-    if (blank) {
-      return `<td class="tt-sep tt-turnstile">${cellGlyph("", marks)}</td>`;
+    const submitted = answer.validity?.[rowIndex] ?? "";
+
+    if (echoed) {
+      return `<td class="tt-sep tt-turnstile">${plainMark(submitted, marks)}</td>`;
     }
 
     const verdict = grade.validity?.[rowIndex] ?? null;
-    const submitted = answer.validity?.[rowIndex] ?? "";
     return `<td class="tt-sep tt-turnstile">${reviewMark(verdict, submitted, marks, strings, reveal)}</td>`;
   };
   const referenceCells = table.atoms
     .map((_atom, atomIndex) => {
-      if (blank) {
-        return `<td>${cellGlyph("", marks)}</td>`;
+      if (echoed) {
+        // The atom columns are the table's coordinates, so an `autoAtoms` grid
+        // shows them whatever the answer carries; where the student fills them
+        // in themselves, this is their row as they left it.
+        const submitted = referenceFillable(publicData.options)
+          ? (answer.reference[rowIndex]?.[atomIndex] ?? "")
+          : boolToCell(table.valuations[rowIndex]?.[atomIndex] ?? false);
+        return `<td>${plainMark(submitted, marks)}</td>`;
       }
 
       const verdict = grade.reference[rowIndex]?.[atomIndex] ?? null;
@@ -849,8 +946,11 @@ function reviewRow(
             const main = segment.isMain ? " tt-main" : "";
             const cls = `${sep}${main}`.trim();
 
-            if (blank) {
-              return `<td class="${cls}">${cellGlyph("", marks)}</td>`;
+            if (echoed) {
+              return `<td class="${cls}">${plainMark(
+                answer.cells[formulaIndex]?.[rowIndex]?.[c] ?? "",
+                marks,
+              )}</td>`;
             }
 
             const verdict =

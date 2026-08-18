@@ -525,8 +525,9 @@ conclusions, which also defines the turnstile column), `trueMark` / `falseMark`
 `nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
 `negated-double-turnstile`; `immutable` — Carnap's whole-table display lock — is
 recognized but not yet effective).
-The `simple` and `validity` variants let a student designate one row as a
-counterexample instead of filling the whole table (unless `nocounterexample`).
+On the `simple` and `validity` variants a student may fill the table and then
+mark one row of it as a counterexample, submitting that row instead of the whole
+table (unless `nocounterexample`).
 Notation is `~ /\ \/ -> <->` with single-letter atoms; the sequent turnstile is
 `:|-:`.
 
@@ -1060,8 +1061,9 @@ text payload:
 A truth-table answer (`truth-table-answer@1`) carries the filled grid as
 `"T"`/`"F"`/`""` cells: `reference[row][atom]` for the atom columns and
 `cells[formula][row][cell]` for each formula's written-out cells. A
-counterexample submission adds a `counterexample` row index and fills only that
-row; a `validity` submission adds a `validity[row]` turnstile column. A `partial`
+counterexample submission adds a `counterexample` row index naming the one row
+that is graded (the rest of the grid rides along as the student left it); a
+`validity` submission adds a `validity[row]` turnstile column. A `partial`
 submission is simply that same grid with exactly **one row**. The element builds
 and submits this automatically; see the truth-table README for the exact layout.
 

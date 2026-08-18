@@ -31,9 +31,13 @@ export function buildTruthTableStrings(i18n: Translator) {
     ),
     "Cancel counterexample": i18n.t("Cancel counterexample"),
     Check: i18n.t("Check"),
-    "Choose a row, then fill it in.": i18n.t(
-      "Choose a row, then fill it in.",
+    "Choose the row you're claiming as a counterexample.": i18n.t(
+      "Choose the row you're claiming as a counterexample.",
     ),
+    // The heading over the column of row radios, for a reader who meets it with
+    // no grid in front of them. Visually hidden: on screen the radios sit under
+    // an empty heading, beside the row they select.
+    "Counterexample row": i18n.t("Counterexample row"),
     // The count is computed in the browser, where there is no plural selector,
     // so the number stays a bare value instead of inflecting a noun — and the
     // placeholders have to survive this call for the browser to fill them.
@@ -121,26 +125,38 @@ export function buildTruthTableStrings(i18n: Translator) {
     ),
     "Not a valid counterexample.": i18n.t("Not a valid counterexample."),
     "Not correct yet.": i18n.t("Not correct yet."),
-    "Pick one row where every formula is false, then fill it in.": i18n.t(
-      "Pick one row where every formula is false, then fill it in.",
-    ),
-    "Pick one row where every formula is true, then fill it in.": i18n.t(
-      "Pick one row where every formula is true, then fill it in.",
-    ),
-    "Pick one row where every premise is true and every conclusion is true, then fill it in.":
+    // The standing hint while a counterexample is being made. The table is
+    // filled in the ordinary way — these say which row to look for, and that
+    // marking it is what turns it into the claim.
+    "Fill in a row where every formula is false, then mark it as your counterexample.":
       i18n.t(
-        "Pick one row where every premise is true and every conclusion is true, then fill it in.",
+        "Fill in a row where every formula is false, then mark it as your counterexample.",
       ),
-    "Pick one row where every premise is true and the conclusion is false, then fill it in.":
+    "Fill in a row where every formula is true, then mark it as your counterexample.":
       i18n.t(
-        "Pick one row where every premise is true and the conclusion is false, then fill it in.",
+        "Fill in a row where every formula is true, then mark it as your counterexample.",
       ),
-    "Pick one row where every premise is true and the conclusions disagree, then fill it in.":
+    "Fill in a row where every premise is true and every conclusion is true, then mark it as your counterexample.":
       i18n.t(
-        "Pick one row where every premise is true and the conclusions disagree, then fill it in.",
+        "Fill in a row where every premise is true and every conclusion is true, then mark it as your counterexample.",
       ),
-    "Pick one row where the formulas disagree, then fill it in.": i18n.t(
-      "Pick one row where the formulas disagree, then fill it in.",
+    "Fill in a row where every premise is true and the conclusion is false, then mark it as your counterexample.":
+      i18n.t(
+        "Fill in a row where every premise is true and the conclusion is false, then mark it as your counterexample.",
+      ),
+    "Fill in a row where every premise is true and the conclusions disagree, then mark it as your counterexample.":
+      i18n.t(
+        "Fill in a row where every premise is true and the conclusions disagree, then mark it as your counterexample.",
+      ),
+    "Fill in a row where the formulas disagree, then mark it as your counterexample.":
+      i18n.t(
+        "Fill in a row where the formulas disagree, then mark it as your counterexample.",
+      ),
+    // One row radio's accessible name. A column heading is no part of a radio's
+    // name, so each one says the whole claim it makes.
+    "Use row {row} as the counterexample": i18n.t(
+      "Use row {row} as the counterexample",
+      placeholders("row"),
     ),
     "That row is correct.": i18n.t("That row is correct."),
     "That's a valid counterexample.": i18n.t(

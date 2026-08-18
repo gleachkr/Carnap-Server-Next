@@ -20,7 +20,9 @@ Tab/Shift-Tab, arrows, Enter/Space, Esc only.
   - [ ] Truth table — the grid is **one** tab stop; arrows move between cells
         (Home/End for the row ends, Ctrl+Home/End for the grid's), Space or
         Enter cycles blank→T→F, and the focused cell shows a ring. Check and
-        counterexample are reachable by Tab from the grid.
+        counterexample are reachable by Tab from the grid. In counterexample
+        mode the row radios are their own tab stop before the cells, each named
+        for the row it claims, walked and picked with the arrow keys.
   - [ ] Proof (linear) — CodeMirror editor takes focus, types, and is escapable.
   - [ ] Proof (Fitch) — CodeMirror editor takes focus, types, and is escapable;
         the subproof scope-lines are decorative (no keyboard interaction).

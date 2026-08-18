@@ -865,10 +865,6 @@ msgstr "Check your email"
 msgid "Checking"
 msgstr "Checking"
 
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Choose a row, then fill it in."
-msgstr "Choose a row, then fill it in."
-
 #: src/worker/exercises/model/strings.ts
 msgid "Choose a value for every argument."
 msgstr "Choose a value for every argument."
@@ -880,6 +876,10 @@ msgstr "Choose an assignment"
 #: src/worker/web/courses.tsx
 msgid "Choose an assignment…"
 msgstr "Choose an assignment…"
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Choose the row you're claiming as a counterexample."
+msgstr "Choose the row you're claiming as a counterexample."
 
 #: src/worker/application/lti-admin.ts
 #: src/worker/web/admin-lti.tsx
@@ -1072,6 +1072,10 @@ msgstr "Could not parse formula “{formula}”: {detail}"
 #: src/worker/exercises/model/strings.ts
 msgid "Could not read the value of {field}."
 msgstr "Could not read the value of {field}."
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Counterexample row"
+msgstr "Counterexample row"
 
 #: src/worker/routes/assignments.ts
 #: src/worker/routes/gradebook.ts
@@ -1699,6 +1703,30 @@ msgstr "False"
 #: src/worker/web/assignment-detail.tsx
 msgid "Feedback"
 msgstr "Feedback"
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every formula is false, then mark it as your counterexample."
+msgstr "Fill in a row where every formula is false, then mark it as your counterexample."
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every formula is true, then mark it as your counterexample."
+msgstr "Fill in a row where every formula is true, then mark it as your counterexample."
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every premise is true and every conclusion is true, then mark it as your counterexample."
+msgstr "Fill in a row where every premise is true and every conclusion is true, then mark it as your counterexample."
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every premise is true and the conclusion is false, then mark it as your counterexample."
+msgstr "Fill in a row where every premise is true and the conclusion is false, then mark it as your counterexample."
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where every premise is true and the conclusions disagree, then mark it as your counterexample."
+msgstr "Fill in a row where every premise is true and the conclusions disagree, then mark it as your counterexample."
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Fill in a row where the formulas disagree, then mark it as your counterexample."
+msgstr "Fill in a row where the formulas disagree, then mark it as your counterexample."
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Filter submissions"
@@ -2605,30 +2633,6 @@ msgstr "Percent per day late"
 #: src/worker/web/courses.tsx
 msgid "person@example.edu"
 msgstr "person@example.edu"
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every formula is false, then fill it in."
-msgstr "Pick one row where every formula is false, then fill it in."
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every formula is true, then fill it in."
-msgstr "Pick one row where every formula is true, then fill it in."
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every premise is true and every conclusion is true, then fill it in."
-msgstr "Pick one row where every premise is true and every conclusion is true, then fill it in."
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every premise is true and the conclusion is false, then fill it in."
-msgstr "Pick one row where every premise is true and the conclusion is false, then fill it in."
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where every premise is true and the conclusions disagree, then fill it in."
-msgstr "Pick one row where every premise is true and the conclusions disagree, then fill it in."
-
-#: src/worker/exercises/truth-table/strings.ts
-msgid "Pick one row where the formulas disagree, then fill it in."
-msgstr "Pick one row where the formulas disagree, then fill it in."
 
 #: src/worker/web/admin.tsx
 msgid "Platform administration"
@@ -4047,6 +4051,10 @@ msgstr "Upload revision"
 #: src/worker/exercises/help-strings.ts
 msgid "Usage and keyboard shortcuts"
 msgstr "Usage and keyboard shortcuts"
+
+#: src/worker/exercises/truth-table/strings.ts
+msgid "Use row {row} as the counterexample"
+msgstr "Use row {row} as the counterexample"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Use the exercise controls above to submit answers."
