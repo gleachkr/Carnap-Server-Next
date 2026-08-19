@@ -608,7 +608,9 @@ Any variant may **seed a field** with a trailing `| Field : value` line, keyed b
 the label the exercise shows (`Domain`, `F(_,_)`, `a`, `f(_)`). A given naming a
 field the exercise does not have, holding something that field could not contain,
 or repeating a field, is a compile error. `strictGivens` locks the givens, turning
-a hint into a requirement.
+a hint into a requirement. A function's given is read row by row — `f(_) : [0;1]`
+fixes `f(0) = 1` and leaves every other argument to the student — so under
+`strictGivens` it locks those rows of the value table and no others.
 
 ```md
 ::::model{id="seeded" options="strictGivens"}

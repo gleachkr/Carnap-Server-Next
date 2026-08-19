@@ -135,6 +135,23 @@ the field renders inert, and grading substitutes the given for whatever arrives,
 so an answer that got around the lock is graded against the exercise as set. (The
 original calls `Prelude.error` there, which takes the widget down.)
 
+A **function's given is read row by row**: `f(_) : [0;1]` says `f(0) = 1` and
+nothing about the other arguments. Those rows are what the generated value table
+starts from, and under `strictGivens` they are the cells that lock — the rest of
+the table stays the student's, and grading puts the given's rows back over the
+submitted ones rather than replacing the whole extension.
+
+This is the one place the givens diverge from the original, and the value table
+forces it. There a function is a text field the student types in full, so
+`setField` can drop the given in whole and `strictGivens` can mark the field
+`readonly`; a partial given is then a half-written string to finish, and a
+partial *locked* given is an exercise nobody can answer — the field can only say
+`[0;1]`, and `validateFunc` refuses it with `does not have a value specified for
+some input`. Locking whole cells rather than whole fields keeps the same
+promise (the given is a requirement) without the dead end. Nor could the author
+avoid it: unless the domain is given *and* locked, the student decides how many
+rows the table has, so no given can be sure of covering it.
+
 ## Notation: forallx: Calgary 2019
 
 Carnap's `thomasBolducAndZachFOL2019ParserOptions` over `calgary2019OpTable`.
@@ -227,10 +244,17 @@ collapsed (`0,0,1` is the domain {0,1}).
 **Functions get a generated value table** rather than the original's single text
 field: one row per argument tuple over the current domain, each a menu. Totality
 is then structural, so the original's `does not have a value specified for some
-input` message is unreachable except through a given, and a binary function over
-a three-element domain no longer means typing nine tuples by hand. The table is
-an **editor over the same string the original stores** (`[0,0;1],[0,1;2]`), so
-givens and the recorded answer are unchanged by it.
+input` message is unreachable from the widget — only a submission that did not
+come from it can be partial — and a binary function over a three-element domain
+no longer means typing nine tuples by hand. The table is an **editor over the
+same string the original stores** (`[0,0;1],[0,1;2]`), so givens and the recorded
+answer are unchanged by it.
+
+The table is also why a function's given is read row by row where the original
+reads the field whole (below): the original's field starts *empty* and the
+student types the whole extension, so a partial given there is a half-written
+string to finish. Here every row already has a value, so a given can only mean
+the rows it names.
 
 The domain drives the constant menus and the function tables, so both are rebuilt
 whenever it changes, keeping any value still in range.

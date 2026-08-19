@@ -117,7 +117,11 @@ export class ModelExerciseType implements AssessmentExerciseType {
     // changed one is graded against the exercise as set rather than crashing
     // the widget the way the original does.
     const resolved = resolveModel(declaration.publicData);
-    const submitted = effectiveAnswer(declaration.publicData, envelope.data);
+    const submitted = effectiveAnswer(
+      declaration.publicData,
+      envelope.data,
+      resolved?.signature,
+    );
     const fields: Record<string, string> = {};
 
     for (const field of resolved?.signature ?? []) {
@@ -171,7 +175,11 @@ export class ModelExerciseType implements AssessmentExerciseType {
     const verdict = checkModel(
       resolved.signature,
       resolved.task,
-      effectiveAnswer(declaration.publicData, modelAnswerData(answer)),
+      effectiveAnswer(
+        declaration.publicData,
+        modelAnswerData(answer),
+        resolved.signature,
+      ),
     );
 
     // A model either does what was asked or it does not; there is no fraction
@@ -201,7 +209,11 @@ export class ModelExerciseType implements AssessmentExerciseType {
       return { summary: i18n.t("Model") };
     }
 
-    const graded = effectiveAnswer(declaration.publicData, data);
+    const graded = effectiveAnswer(
+      declaration.publicData,
+      data,
+      resolved.signature,
+    );
     const verdict = checkModel(resolved.signature, resolved.task, graded);
     // The same sentences the widget's own Check shows, so a student who checked
     // before submitting reads the identical verdict back on the review page.

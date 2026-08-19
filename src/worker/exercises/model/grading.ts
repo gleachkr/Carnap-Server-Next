@@ -20,8 +20,11 @@ import type {
 import {
   DOMAIN_FIELD_LABEL,
   dialectById,
+  formatFunctionTable,
   modelSignature,
   parseFormula,
+  parseFunctionTable,
+  tupleKey,
 } from "./logic";
 import type { ModelAnswerData, ModelPublicData, ModelVariant } from "./types";
 
@@ -151,23 +154,92 @@ export function givenFor(
 }
 
 /**
+ * The rows a function's given fixes, keyed by argument tuple.
+ *
+ * A given for a function names the arguments it decides and leaves the rest to
+ * the student: `f(_) : [0;1]` over the domain `0,1` says `f(0) = 1` and nothing
+ * about `f(1)`. Both the rendered value table and grading read it this way, so
+ * this is the one place that turns the spelling into cells. An unreadable given
+ * seeds nothing; the compiler has already refused it.
+ */
+export function seededFunctionRows(
+  given: string,
+  arity: number,
+): ReadonlyMap<string, number> {
+  const parsed = parseFunctionTable(given, arity);
+
+  return new Map(
+    parsed.ok
+      ? parsed.value.map((row) => [tupleKey(row.args), row.value])
+      : [],
+  );
+}
+
+/**
+ * A locked function given put back over what was submitted, cell by cell.
+ *
+ * Substituting the whole field the way the other kinds do would grade the
+ * student's table against a partial function — the given says nothing about the
+ * arguments it does not name, and a value table with a hole in it is not a
+ * model. So the given's rows win and the rest of the submitted table stands.
+ */
+function withFunctionGiven(
+  given: string,
+  submitted: string,
+  arity: number,
+): string {
+  const fixed = parseFunctionTable(given, arity);
+  const student = parseFunctionTable(submitted, arity);
+
+  if (!fixed.ok || !student.ok) {
+    return given;
+  }
+
+  const rows = new Map(student.value.map((row) => [tupleKey(row.args), row]));
+
+  for (const row of fixed.value) {
+    rows.set(tupleKey(row.args), row);
+  }
+
+  return formatFunctionTable([...rows.values()]);
+}
+
+/**
  * The model to grade: the student's fields, with any locked given put back.
+ *
+ * The signature says which fields are functions, whose givens go back cell by
+ * cell; pass the resolved one where it is already at hand rather than paying for
+ * a second parse of the formulas.
  */
 export function effectiveAnswer(
   publicData: ModelPublicData,
   answer: ModelAnswerData,
+  signature?: readonly ModelField[],
 ): ModelAnswerData {
   if (!publicData.options.strictGivens || publicData.givens === undefined) {
     return answer;
   }
 
   const givens = publicData.givens;
+  const byLabel = new Map(
+    (signature ?? resolveModel(publicData)?.signature ?? []).map((field) => [
+      field.label,
+      field,
+    ]),
+  );
   const fields = { ...answer.fields };
 
   for (const [label, value] of Object.entries(givens)) {
-    if (label !== DOMAIN_FIELD_LABEL) {
-      fields[label] = value;
+    if (label === DOMAIN_FIELD_LABEL) {
+      continue;
     }
+
+    const field = byLabel.get(label);
+
+    fields[label] =
+      field?.kind === "function"
+        ? withFunctionGiven(value, fields[label] ?? "", field.arity)
+        : value;
   }
 
   return { domain: givens[DOMAIN_FIELD_LABEL] ?? answer.domain, fields };

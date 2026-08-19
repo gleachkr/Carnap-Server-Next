@@ -26,6 +26,7 @@ import {
   effectiveAnswer,
   isModelPublicData,
   resolveModel,
+  seededFunctionRows,
 } from "../../worker/exercises/model/grading";
 import type { ModelField } from "../../worker/exercises/model/logic";
 import {
@@ -80,8 +81,10 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       }
 
       for (const control of controlsIn(row)) {
-        // A locked given stays disabled: it is a requirement, not a hint.
-        if (row.dataset.locked === undefined) {
+        // A locked given stays disabled: it is a requirement, not a hint. The
+        // lock is marked on the control, because a function's given may fix
+        // some rows of its table and leave the rest to the student.
+        if (control.dataset.locked === undefined) {
           control.disabled = false;
         }
 
@@ -187,20 +190,19 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     const domain = parsed.value;
 
     for (const { field, row } of this.rows) {
-      if (row.dataset.locked !== undefined) {
-        continue;
-      }
-
       if (field.kind === "constant") {
         const select = row.querySelector<HTMLSelectElement>("select");
 
-        if (select !== null) {
+        if (select !== null && select.dataset.locked === undefined) {
           fillOptions(select, domain, Number.parseInt(select.value, 10));
         }
 
         continue;
       }
 
+      // A function's table is rebuilt even where a given locks part of it: the
+      // locked rows are re-seeded from the given, and the rest follow the
+      // domain like any other.
       if (field.kind === "function") {
         this.rebuildFunctionTable(field, row, domain);
       }
@@ -219,6 +221,12 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     if (table === null || tuples === null) {
       return;
     }
+
+    const seeded = seededFunctionRows(
+      this.data?.givens?.[field.label] ?? "",
+      field.arity,
+    );
+    const lock = this.data?.options.strictGivens ?? false;
 
     // What the student has chosen so far, so a rebuild is not a reset.
     const kept = new Map<string, number>();
@@ -248,6 +256,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       caption.textContent = `${field.symbol}(${argument}) =`;
       cell.append(caption);
 
+      const fixed = seeded.get(argument);
       const select = document.createElement("select");
       select.className = "model-select";
       select.dataset.argument = argument;
@@ -262,7 +271,17 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       select.addEventListener("change", () => {
         this.onFieldEdit(field);
       });
-      fillOptions(select, domain, kept.get(argument) ?? null);
+
+      if (lock && fixed !== undefined) {
+        select.dataset.locked = "";
+        select.disabled = true;
+        fillOptions(select, domain, fixed);
+      } else {
+        // What the student chose, else what the given seeded — a row the old
+        // domain had no place for is still the exercise's.
+        fillOptions(select, domain, kept.get(argument) ?? fixed ?? null);
+      }
+
       cell.append(select);
       table.append(cell);
     }
@@ -342,22 +361,28 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       return;
     }
 
-    if (this.domainInput !== null && prior.domain !== "") {
+    // A locked domain is the exercise's, not the attempt's: grading puts it
+    // back either way, and showing the student's own instead would make every
+    // other field look like it was built over the wrong one.
+    if (
+      this.domainInput !== null &&
+      this.domainInput.dataset.locked === undefined &&
+      prior.domain !== ""
+    ) {
       this.domainInput.value = prior.domain;
       this.rebuildDomainDependents();
     }
 
     for (const { field, row } of this.rows) {
-      if (field.kind === "domain" || row.dataset.locked !== undefined) {
-        continue;
-      }
-
       const value = prior.fields[field.label];
 
-      if (value === undefined) {
+      if (field.kind === "domain" || value === undefined) {
         continue;
       }
 
+      // A function's table is restored cell by cell, because a locked given may
+      // hold only some of its rows. Every other kind is locked whole or not at
+      // all.
       if (field.kind === "function") {
         this.restoreFunctionTable(row, field, value);
         continue;
@@ -367,7 +392,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
         '[data-role="value"]',
       );
 
-      if (control !== null) {
+      if (control !== null && control.dataset.locked === undefined) {
         control.value = value;
       }
     }
@@ -394,7 +419,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     )) {
       const wanted = byArgument.get(select.dataset.argument ?? "");
 
-      if (wanted !== undefined) {
+      if (wanted !== undefined && select.dataset.locked === undefined) {
         select.value = String(wanted);
       }
     }
@@ -412,7 +437,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     const verdict = checkModel(
       resolved.signature,
       resolved.task,
-      effectiveAnswer(data, this.currentAnswer()),
+      effectiveAnswer(data, this.currentAnswer(), resolved.signature),
     );
 
     this.status.textContent = describeVerdict(

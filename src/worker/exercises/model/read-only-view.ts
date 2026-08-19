@@ -14,12 +14,17 @@ import {
   exerciseLegendHtml,
 } from "../group";
 import type { ResolvedModel } from "./grading";
-import { isModelPublicData, resolveModel } from "./grading";
+import {
+  isModelPublicData,
+  resolveModel,
+  seededFunctionRows,
+} from "./grading";
 import type { Formula, ModelField, ModelVerdict } from "./logic";
 import {
   DOMAIN_FIELD_LABEL,
   formulaToDisplay,
   parseDomain,
+  tupleKey,
   tuplesOver,
 } from "./logic";
 import type { ModelStrings } from "./strings";
@@ -131,9 +136,11 @@ const MODEL_SHADOW_STYLES = `
 
   /* A locked given is part of the exercise. Muting the control says so more
      plainly than the browser's own disabled styling, which on a select is
-     nearly invisible against this palette. */
-  .model-row[data-locked] .model-input,
-  .model-row[data-locked] .model-select {
+     nearly invisible against this palette. Marked on the control rather than
+     the row: a function's given may fix some rows of its table and leave the
+     rest to the student. */
+  .model-input[data-locked],
+  .model-select[data-locked] {
     background: var(--surface-soft, #f8f2e8);
     border-style: dashed;
   }
@@ -244,7 +251,7 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
     const value = given.toLowerCase() === "true";
 
     return row(
-      `<select aria-describedby="${id}-hint" class="model-select" data-role="value"${disabled ? " disabled" : ""} id="${id}"><option value="True"${value ? " selected" : ""}>${escapeHtml(context.strings("True"))}</option><option value="False"${value ? "" : " selected"}>${escapeHtml(context.strings("False"))}</option></select><span class="visually-hidden" id="${id}-hint">${escapeHtml(context.strings("{field}: its truth value", { field: field.label }))}</span>`,
+      `<select aria-describedby="${id}-hint" class="model-select" data-role="value"${lockedAttr}${disabled ? " disabled" : ""} id="${id}"><option value="True"${value ? " selected" : ""}>${escapeHtml(context.strings("True"))}</option><option value="False"${value ? "" : " selected"}>${escapeHtml(context.strings("False"))}</option></select><span class="visually-hidden" id="${id}-hint">${escapeHtml(context.strings("{field}: its truth value", { field: field.label }))}</span>`,
     );
   }
 
@@ -254,7 +261,7 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
 
     return row(
       `${domainSelect(
-        `aria-describedby="${id}-hint" data-role="value" id="${id}"`,
+        `aria-describedby="${id}-hint" data-role="value" id="${id}"${lockedAttr}`,
         context.domain,
         selected,
         disabled,
@@ -263,22 +270,29 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
   }
 
   if (field.kind === "function") {
+    // A function's given fixes the rows it names and no others, so the seeding
+    // — and the lock, under `strictGivens` — is per row rather than per field.
+    // A given the student is free to change is still shown: it is the model the
+    // exercise starts from, and a table left at its default is not that model.
+    const seeded = seededFunctionRows(given, field.arity);
     const tuples = tuplesOver(context.domain, field.arity) ?? [];
     const rows = tuples
       .map((tuple) => {
-        const argument = tuple.join(",");
+        const argument = tupleKey(tuple);
         const name = context.strings("{field} of {argument}", {
           argument,
           field: field.label,
         });
+        const value = seeded.get(argument);
+        const cellLocked = locked && value !== undefined;
 
         return `<div class="model-function-row"><span aria-hidden="true" class="model-function-arg">${escapeHtml(
           `${field.symbol}(${argument}) =`,
         )}</span>${domainSelect(
-          `aria-label="${escapeHtml(name)}" data-argument="${escapeHtml(argument)}" data-role="value"`,
+          `aria-label="${escapeHtml(name)}" data-argument="${escapeHtml(argument)}" data-role="value"${cellLocked ? " data-locked" : ""}`,
           context.domain,
-          context.domain[0] ?? 0,
-          disabled,
+          value ?? context.domain[0] ?? 0,
+          context.disabled || cellLocked,
         )}</div>`;
       })
       .join("");
@@ -297,7 +311,7 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
   const value = field.kind === "domain" ? given || "0" : given;
 
   return row(
-    `<input class="model-input"${field.kind === "domain" ? "" : ` aria-describedby="${id}-hint"`}${disabled ? " disabled" : ""}${locked ? " readonly" : ""} data-role="value" id="${id}" type="text" value="${escapeHtml(value)}"><span aria-live="polite" class="model-warning" data-role="warning"></span>${hint}`,
+    `<input class="model-input"${field.kind === "domain" ? "" : ` aria-describedby="${id}-hint"`}${disabled ? " disabled" : ""}${locked ? " readonly" : ""}${lockedAttr} data-role="value" id="${id}" type="text" value="${escapeHtml(value)}"><span aria-live="polite" class="model-warning" data-role="warning"></span>${hint}`,
   );
 }
 

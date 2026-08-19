@@ -494,6 +494,39 @@ describe("strict givens", () => {
     ).toEqual({ score: 1, status: "correct" });
   });
 
+  test("a locked function given fixes its own rows and no others", async () => {
+    // Substituting the whole field would grade the student against a partial
+    // function — `[0;1]` says nothing about `f(1)` — and a value table with a
+    // hole in it is not a model, so every answer came back incorrect.
+    const source = directive(
+      '#l5 options="strictGivens"',
+      "- Axf(f(x)) = x\n| Domain : 0,1\n| f(_) : [0;1]",
+    );
+
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "f(_)": "[0;1],[1;0]" },
+      }),
+    ).toEqual({ score: 1, status: "correct" });
+    // The student's own value for the row the given left open still counts,
+    // and here it makes `f(f(1)) = 1` come out false.
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "f(_)": "[0;1],[1;1]" },
+      }),
+    ).toEqual({ score: 0, status: "incorrect" });
+    // And the row the given did name is put back whatever arrived: the
+    // identity would satisfy the formula, but not with `f(0) = 1` restored.
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "f(_)": "[0;0],[1;1]" },
+      }),
+    ).toEqual({ score: 0, status: "incorrect" });
+  });
+
   test("effectiveAnswer substitutes only when the givens are locked", async () => {
     const locked = publicDataOf(
       await declaration(
@@ -553,6 +586,38 @@ describe("the rendered element", () => {
     expect(html).toContain('data-argument="0"');
     expect(html).toContain('data-argument="1"');
     expect(html).toContain('data-kind="function"');
+  });
+
+  test("a function's table is seeded row by row from its given", async () => {
+    // The reported bug: the given reached the domain, the constants and the
+    // relations, and every row of the value table stayed at the first element —
+    // so the model the student saw, and submitted, was not the seeded one.
+    const artifact = await compileArtifact(
+      directive("#v3a", "- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]"),
+    );
+    const html = renderCompiledContent(artifact, i18nFor("en"));
+    const cells = html.match(
+      /<select[^>]*data-argument[^>]*>.*?<\/select>/gs,
+    );
+
+    // `f(0) = 1` is the given; `f(1)` it says nothing about, so that row keeps
+    // the first element.
+    expect(cells?.[0]).toContain('<option selected value="1">1</option>');
+    expect(cells?.[1]).toContain('<option selected value="0">0</option>');
+  });
+
+  test("strictGivens locks the rows a function's given names, and no others", async () => {
+    const artifact = await compileArtifact(
+      directive(
+        '#v3b options="strictGivens"',
+        "- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]",
+      ),
+    );
+    const html = renderCompiledContent(artifact, i18nFor("en"));
+    const cells = html.match(/<select[^>]*data-argument[^>]*>/g);
+
+    expect(cells?.[0]).toContain("data-locked");
+    expect(cells?.[1]).not.toContain("data-locked");
   });
 
   test("the goal shows a sequent for a validity exercise", async () => {

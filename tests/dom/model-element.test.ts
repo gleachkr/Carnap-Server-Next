@@ -326,6 +326,48 @@ describe("the domain drives the other fields", () => {
     expect(answerOf(mounted).fields["f(_)"]).toContain("[0;1]");
   });
 
+  test("a seeded function row is what the answer carries, and survives a rebuild", async () => {
+    const mounted = mount(
+      await publicDataFor("- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]"),
+    );
+
+    // The given is the model the exercise starts from: an untouched widget
+    // records it, rather than a table of first elements.
+    expect(answerOf(mounted).fields["f(_)"]).toBe("[0;1],[1;0]");
+
+    type(valueControl(mounted.root, "Domain"), "0,1,2");
+
+    expect(answerOf(mounted).fields["f(_)"]).toBe("[0;1],[1;0],[2;0]");
+  });
+
+  test("strictGivens locks the rows a function's given names, and no others", async () => {
+    const mounted = mount(
+      await publicDataFor(
+        "- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]",
+        '#m2 options="strictGivens"',
+      ),
+    );
+    const cells = () =>
+      Array.from(
+        rowFor(mounted.root, "f(_)").querySelectorAll<HTMLSelectElement>(
+          "select[data-argument]",
+        ),
+      );
+
+    expect(cells().map((select) => select.disabled)).toEqual([true, false]);
+
+    // The lock has to survive the rebuild the domain drives, or widening the
+    // domain would hand the student the row the exercise fixed.
+    type(valueControl(mounted.root, "Domain"), "0,1,2");
+
+    expect(cells().map((select) => select.disabled)).toEqual([
+      true,
+      false,
+      false,
+    ]);
+    expect(cells()[0]?.value).toBe("1");
+  });
+
   test("an unreadable domain leaves the dependent controls alone", async () => {
     const mounted = mount(await publicDataFor("- F(a)"));
 
