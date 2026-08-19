@@ -2148,14 +2148,6 @@ msgstr "Max attempts override"
 msgid "Max percent penalty"
 msgstr "Max percent penalty"
 
-#: src/worker/web/assignment-detail.tsx
-msgid "Max score"
-msgstr "Max score"
-
-#: src/worker/application/manual-grading.ts
-msgid "Max score must be zero or greater."
-msgstr "Max score must be zero or greater."
-
 #: src/worker/web/profile.tsx
 msgid "Member since"
 msgstr "Member since"
@@ -3070,6 +3062,10 @@ msgid "Score not released yet"
 msgstr "Score not released yet"
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Score out of {maxScore}"
+msgstr "Score out of {maxScore}"
+
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
 msgid "Scores"
 msgstr "Scores"
@@ -3845,6 +3841,10 @@ msgstr "This submission is not in Disjunctive Normal Form."
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Prenex Normal Form."
 msgstr "This submission is not in Prenex Normal Form."
+
+#: src/worker/application/manual-grading.ts
+msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
+msgstr "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This translation is logically equivalent to the intended answer."

@@ -2148,14 +2148,6 @@ msgstr "Abweichung: maximale Versuche"
 msgid "Max percent penalty"
 msgstr "Maximaler Abzug in Prozent"
 
-#: src/worker/web/assignment-detail.tsx
-msgid "Max score"
-msgstr "Maximale Punktzahl"
-
-#: src/worker/application/manual-grading.ts
-msgid "Max score must be zero or greater."
-msgstr "Die maximale Punktzahl muss null oder größer sein."
-
 #: src/worker/web/profile.tsx
 msgid "Member since"
 msgstr "Mitglied seit"
@@ -3070,6 +3062,10 @@ msgid "Score not released yet"
 msgstr "Punkte noch nicht freigegeben"
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Score out of {maxScore}"
+msgstr "Punktzahl von {maxScore}"
+
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
 msgid "Scores"
 msgstr "Punktzahlen"
@@ -3845,6 +3841,10 @@ msgstr "Diese Abgabe ist nicht in disjunktiver Normalform."
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Prenex Normal Form."
 msgstr "Diese Abgabe ist nicht in pränexer Normalform."
+
+#: src/worker/application/manual-grading.ts
+msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
+msgstr "Die Übung zu dieser Abgabe gehört nicht mehr zur Aufgabe; es gibt daher keine Bezugsgröße für die Bewertung."
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This translation is logically equivalent to the intended answer."

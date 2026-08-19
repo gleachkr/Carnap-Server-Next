@@ -263,6 +263,8 @@ export interface InstructorSubmissionReviewEntry {
   readonly answerReview: ExerciseAnswerReview | null;
   readonly attemptId: string;
   readonly evaluation: ViewerEvaluation | null;
+  /** What the exercise is worth — the hand-grading form's max score. */
+  readonly nominalPoints: number | null;
   readonly submission: Submission;
   readonly user: User | null;
 }
@@ -2252,12 +2254,25 @@ const OverrideRoster: FC<{
   );
 };
 
+/**
+ * Grading by hand asks for one number. What it is out of is the exercise's to
+ * say — the label says which number that is, and there is no field for it,
+ * because a grader who edited it would be editing the wording of this card and
+ * nothing else: an assignment's total divides by the author's declared points
+ * whatever an evaluation records.
+ *
+ * The score is deliberately not capped at that figure. Marking above it is how
+ * bonus is awarded, and it works — the extra lands in the numerator over an
+ * unchanged denominator, so it offsets a low score elsewhere. Capping the field
+ * would take that away in exchange for nothing.
+ */
 const ManualEvaluationForm: FC<{
   readonly assignmentId: string;
   readonly context: Context<AppBindings>;
   readonly courseId: string;
+  readonly maxScore: number | null;
   readonly submissionId: string;
-}> = ({ assignmentId, context, courseId, submissionId }) => {
+}> = ({ assignmentId, context, courseId, maxScore, submissionId }) => {
   const i18n = useI18n();
 
   return (
@@ -2267,18 +2282,13 @@ const ManualEvaluationForm: FC<{
       method="post"
     >
       <CsrfInput context={context} />
-      <div class="field-grid">
-        <label>
-          {i18n.t("Score")}
-          <br />
-          <input min="0" name="score" required step="0.01" type="number" />
-        </label>
-        <label>
-          {i18n.t("Max score")}
-          <br />
-          <input min="0" name="maxScore" required step="0.01" type="number" />
-        </label>
-      </div>
+      <label>
+        {maxScore === null
+          ? i18n.t("Score")
+          : i18n.t("Score out of {maxScore}", { maxScore })}
+        <br />
+        <input min="0" name="score" required step="0.01" type="number" />
+      </label>
       <label>
         {i18n.t("Feedback")}
         <br />
@@ -2424,6 +2434,7 @@ const SubmissionReviewCard: FC<{
             assignmentId={assignmentId}
             context={context}
             courseId={courseId}
+            maxScore={entry.evaluation?.maxScore ?? entry.nominalPoints}
             submissionId={submission.id}
           />
         </details>

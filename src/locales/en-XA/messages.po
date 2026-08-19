@@ -2148,14 +2148,6 @@ msgstr ""
 msgid "Max percent penalty"
 msgstr ""
 
-#: src/worker/web/assignment-detail.tsx
-msgid "Max score"
-msgstr ""
-
-#: src/worker/application/manual-grading.ts
-msgid "Max score must be zero or greater."
-msgstr ""
-
 #: src/worker/web/profile.tsx
 msgid "Member since"
 msgstr ""
@@ -3070,6 +3062,10 @@ msgid "Score not released yet"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Score out of {maxScore}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
 msgid "Scores"
 msgstr ""
@@ -3844,6 +3840,10 @@ msgstr ""
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Prenex Normal Form."
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
 msgstr ""
 
 #: src/worker/exercises/translation/strings.ts

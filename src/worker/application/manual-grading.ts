@@ -7,6 +7,7 @@ import { timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseStaff } from "./authorization";
+import { contentArtifactFromRevision } from "./content/artifact";
 import { AppHttpError, badRequest } from "./errors";
 import { GradebookService } from "./gradebook";
 import type { AppStores } from "./stores";
@@ -16,9 +17,16 @@ export interface ManualGradingServiceOptions {
   readonly stores: AppStores;
 }
 
+/**
+ * A hand grade is a score and, optionally, something to say about it. What the
+ * score is out of is not part of it: the exercise's author already said, and
+ * the assignment total counts every exercise at that declared value whatever an
+ * evaluation records. A grader who could edit the maximum here would be editing
+ * a number that changes the words on the review card and nothing else — while
+ * the gradebook went on dividing by the author's.
+ */
 export interface ManualEvaluationCommand {
   readonly feedback?: JsonValue | null;
-  readonly maxScore: number;
   readonly score: number;
 }
 
@@ -63,18 +71,19 @@ function submissionNotFound(): AppHttpError {
   );
 }
 
-function assertScore(command: ManualEvaluationCommand): void {
-  if (!Number.isFinite(command.score) || command.score < 0) {
+/**
+ * A score is a number, and it is not negative. It is deliberately not capped at
+ * what the exercise is worth: a grade above the maximum is how bonus marks are
+ * awarded, and the arithmetic downstream is built for it. An assignment's total
+ * divides by the sum of the manifest's declared points, so an extra mark here
+ * adds to the numerator and leaves the denominator alone — which is what makes
+ * it offset a low score elsewhere instead of quietly costing one.
+ */
+function assertScore(score: number): void {
+  if (!Number.isFinite(score) || score < 0) {
     throw badRequest(
       "invalid_score",
       deferred.i18n.t("Score must be zero or greater."),
-    );
-  }
-
-  if (!Number.isFinite(command.maxScore) || command.maxScore < 0) {
-    throw badRequest(
-      "invalid_max_score",
-      deferred.i18n.t("Max score must be zero or greater."),
     );
   }
 }
@@ -90,21 +99,22 @@ export class ManualGradingService {
     command: ManualEvaluationCommand,
   ): Promise<ManualEvaluationResult> {
     await requireCourseStaff(this.options.stores, actor, courseId);
-    assertScore(command);
 
     const { assignment, submission } = await this.gradableSubmission(
       courseId,
       assignmentId,
       submissionId,
     );
+    const maxScore = await this.nominalPointsFor(assignment, submission);
     const feedback = command.feedback ?? null;
 
+    assertScore(command.score);
     assertJsonValue(feedback);
 
     return this.appendManualEvaluation(assignment, submission, {
       feedback,
       gradedById: actor.user.id,
-      maxScore: command.maxScore,
+      maxScore,
       score: command.score,
     });
   }
@@ -172,6 +182,41 @@ export class ManualGradingService {
       maxScore: automatic.maxScore,
       score: automatic.score,
     });
+  }
+
+  /**
+   * What the graded exercise is worth, read from the assignment's own pinned
+   * revision — the same artifact the review page displays and the gradebook
+   * divides by, so the three cannot disagree about one exercise.
+   *
+   * Nothing can answer it for a submission whose exercise has left that
+   * revision, or one recorded without an exercise at all. There is no maximum
+   * to record and none to type, so the refusal says what is missing.
+   */
+  private async nominalPointsFor(
+    assignment: Assignment,
+    submission: Submission,
+  ): Promise<number> {
+    const revision = await this.options.stores.content.getRevision(
+      assignment.contentRevisionId,
+    );
+    const declaration =
+      revision === null || submission.exerciseId === null
+        ? undefined
+        : contentArtifactFromRevision(revision).manifest.find(
+            (item) => item.id === submission.exerciseId,
+          );
+
+    if (declaration === undefined) {
+      throw badRequest(
+        "unknown_max_score",
+        deferred.i18n.t(
+          "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of.",
+        ),
+      );
+    }
+
+    return declaration.nominalPoints;
   }
 
   private async gradableSubmission(

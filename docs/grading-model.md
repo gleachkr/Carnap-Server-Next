@@ -75,6 +75,20 @@ does not make the submission ungradable.
 Manual evaluations may award partial credit or extra credit. They are still
 not final scores. They are evidence used by the score projection layer.
 
+A manual evaluation is always out of the exercise's own declared points, read
+from the assignment's pinned revision — the same artifact the review page shows
+and the score projection divides by. The max score is not the grader's to set,
+and the route refuses one rather than accepting a number it will not honour.
+
+The score itself is uncapped, and that is where extra credit lives. An
+assignment's maximum is the sum of the manifest's declared points; the earned
+score is the sum of the evaluations. A score above one exercise's points
+therefore adds to the numerator over an unchanged denominator, which is what
+lets it offset a low score elsewhere. Raising a per-evaluation maximum would do
+the opposite of what it looks like: it changes how the submission reads on the
+review card — including whether it counts as full marks — while the total goes
+on dividing by the author's figure.
+
 ## Policy-derived modifiers
 
 Availability, timing, attempt limits, resets, accommodations, overrides, late

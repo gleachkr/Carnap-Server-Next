@@ -884,7 +884,6 @@ describe("gradebook", () => {
         jsonRequest(
           {
             feedback: "Right idea, wrong connective.",
-            maxScore: 3,
             score: 2,
           },
           instructor,
@@ -910,6 +909,34 @@ describe("gradebook", () => {
       expect(regraded.rows.map((row) => row.exerciseScores)).toEqual([
         [2, 2],
       ]);
+
+      // Bonus marks reach the total as given. The denominator is the manifest's
+      // own points — five, whatever any evaluation says — so five out of a
+      // three-point exercise carries the row past what the set is worth rather
+      // than being clipped back to it. That is what makes an extra mark here
+      // offset a lost one elsewhere.
+      const bonusResponse = await appRequest(
+        createTestApp(),
+        `${gradingBase}/submissions/${secondSubmissionId}/evaluations`,
+        jsonRequest({ score: 5 }, instructor),
+        env,
+      );
+
+      expect(bonusResponse.status).toBe(201);
+
+      const withBonus = (await (
+        await appRequest(
+          createTestApp(),
+          `${gradingBase}/gradebook`,
+          asInstructor,
+          env,
+        )
+      ).json()) as FullGradebookResponse;
+
+      expect(withBonus.rows[0]?.score).toMatchObject({
+        maxScore: 5,
+        score: 7,
+      });
 
       const gradebookPage = await appRequest(
         createTestApp(),

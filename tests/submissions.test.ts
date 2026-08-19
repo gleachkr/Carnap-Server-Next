@@ -1914,6 +1914,132 @@ Explain the proof.
     });
   });
 
+  test("hand grading is out of the exercise's points, and may exceed them", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "hand-teacher@example.test");
+      const student = await login(env, "hand-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Lesson
+
+::::free-response{#essay_1 points="5"}
+Explain the proof.
+::::`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignment.id,
+      );
+
+      await submitAnswer(
+        env,
+        student,
+        courseId,
+        assignment.id,
+        attemptId,
+        freeResponseAnswer("It uses modus ponens."),
+      );
+
+      const listPath = `/courses/${courseId}/instructor/assignments/${assignment.id}/submissions`;
+      const list = (await (
+        await appRequest(
+          createTestApp(),
+          listPath,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).json()) as InstructorReviewSubmissionsResponse;
+      const submissionId = list.submissions[0]?.submission.id ?? "";
+      const page = await (
+        await appRequest(
+          createTestApp(),
+          listPath,
+          {
+            headers: { Accept: "text/html", Cookie: instructor.cookieHeader },
+          },
+          env,
+        )
+      ).text();
+
+      // The exercise says what the score is out of, and says it in the label —
+      // there is no field for it, because editing it would change the wording
+      // here and nothing the gradebook does. This is a free response, so the
+      // figure can only have come from the declaration.
+      expect(page).toContain("Score out of 5");
+      expect(page).not.toContain('name="maxScore"');
+
+      const settingMax = await appRequest(
+        createTestApp(),
+        `${listPath}/${submissionId}/evaluations`,
+        jsonRequest({ maxScore: 8, score: 4 }, instructor),
+        env,
+      );
+
+      // Accepting a maximum and then grading out of the exercise's own would be
+      // the worse of the two answers, so it is refused rather than ignored.
+      expect(settingMax.status).toBe(400);
+
+      const graded = await appRequest(
+        createTestApp(),
+        `${listPath}/${submissionId}/evaluations`,
+        jsonRequest({ feedback: "Clear.", score: 4 }, instructor),
+        env,
+      );
+
+      expect(graded.status).toBe(201);
+
+      const afterGrading = (await (
+        await appRequest(
+          createTestApp(),
+          listPath,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).json()) as InstructorReviewSubmissionsResponse;
+
+      // Out of the five the author declared, with nothing said about it.
+      expect(afterGrading.submissions[0]?.evaluation?.score).toBe(4);
+      expect(afterGrading.submissions[0]?.evaluation?.maxScore).toBe(5);
+
+      const bonus = await appRequest(
+        createTestApp(),
+        `${listPath}/${submissionId}/evaluations`,
+        jsonRequest({ score: 7 }, instructor),
+        env,
+      );
+
+      // Bonus marks: seven out of five is recorded as it was given. The score
+      // is the numerator and the manifest is the denominator, so the extra two
+      // offset a low score elsewhere instead of costing one.
+      expect(bonus.status).toBe(201);
+
+      const afterBonus = (await (
+        await appRequest(
+          createTestApp(),
+          listPath,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).json()) as InstructorReviewSubmissionsResponse;
+
+      expect(afterBonus.submissions[0]?.evaluation?.score).toBe(7);
+      expect(afterBonus.submissions[0]?.evaluation?.maxScore).toBe(5);
+    });
+  });
+
   test("the review page filters to submissions needing review", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "filter-teacher@example.test");

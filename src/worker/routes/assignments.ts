@@ -862,7 +862,6 @@ function manualEvaluationCommandFromForm(form: FormData) {
 
   return {
     feedback: feedback.length === 0 ? null : feedback,
-    maxScore: Number(fieldValue(form.get("maxScore"))),
     score: Number(fieldValue(form.get("score"))),
   };
 }
@@ -892,8 +891,14 @@ function manualEvaluationCommandFromJson(body: ManualEvaluationBody) {
     throw badRequest("invalid_score", "Score must be a number.");
   }
 
-  if (typeof body.maxScore !== "number") {
-    throw badRequest("invalid_max_score", "Max score must be a number.");
+  // The exercise says what the score is out of, and the gradebook divides by
+  // that whatever an evaluation records. Accepting a max score here and then
+  // ignoring it would be the worse of the two answers.
+  if (body.maxScore !== undefined && body.maxScore !== null) {
+    throw badRequest(
+      "max_score_not_settable",
+      "Max score comes from the exercise and cannot be set by hand.",
+    );
   }
 
   const feedback = body.feedback ?? null;
@@ -904,7 +909,7 @@ function manualEvaluationCommandFromJson(body: ManualEvaluationBody) {
     throw badRequest("invalid_feedback", "Feedback must be JSON.");
   }
 
-  return { feedback, maxScore: body.maxScore, score: body.score };
+  return { feedback, score: body.score };
 }
 
 function nullableString(value: unknown, code: string): string | null {

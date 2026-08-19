@@ -631,9 +631,10 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
 
       const data = new FormData(form);
       const feedback = String(data.get("feedback") || "");
+      // The score alone: what it is out of belongs to the exercise, and the
+      // server reads it there. Sending one would be refused.
       submit(form, {
         feedback: feedback.length === 0 ? null : feedback,
-        maxScore: Number(data.get("maxScore")),
         score: Number(data.get("score")),
       });
     });

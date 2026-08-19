@@ -91,6 +91,13 @@ export interface SubmissionHistoryEntry {
   readonly attemptId: AppId;
   readonly answerReview: ExerciseAnswerReview | null;
   readonly evaluation: ViewerEvaluation | null;
+  /**
+   * What the exercise is worth, as its author declared it — what a hand grade
+   * is out of unless the grader says otherwise. Null where the exercise is no
+   * longer in the assignment's content, which is the one case nothing can
+   * answer it.
+   */
+  readonly nominalPoints: number | null;
   readonly submission: Submission;
 }
 
@@ -688,6 +695,7 @@ export class SubmissionService {
                 ? null
                 : viewerEvaluation(evaluation)
               : studentEvaluation(evaluation, declaration, assignment, now),
+          nominalPoints: declaration?.nominalPoints ?? null,
           submission,
         };
       }),
