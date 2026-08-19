@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "aufbau-server",
+  "name": "carnap-server",
   "main": "src/worker/index.ts",
   "compatibility_date": "2025-01-01",
   // Built client bundles (bun run build:client). Requests matching a file in
@@ -17,24 +17,45 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "aufbau-server-local",
+      "database_name": "carnap-server-local",
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "src/worker/infrastructure/database/migrations"
     }
   ],
   "vars": {
-    "AUFBAU_ENV": "local"
+    "CARNAP_ENV": "local"
   },
   "env": {
     "preview": {
       "vars": {
-        "AUFBAU_ENV": "preview"
+        "CARNAP_ENV": "preview"
       }
     },
-    "production": {
+    "demo": {
+      // Named environments do NOT inherit top-level bindings, so the demo
+      // deploy repeats assets/d1/triggers here. Deploy with
+      // `wrangler deploy --env demo`. The env name makes the worker
+      // carnap-server-demo.<subdomain>.workers.dev (honest "this is a demo"
+      // URL). CARNAP_ENV is any non-"local" value → production behaviour
+      // (secure cookies, real email).
       "vars": {
-        "AUFBAU_ENV": "production"
-      }
+        "CARNAP_ENV": "demo",
+        "AUTH_LOGIN_EMAIL_FROM": "noreply@grahamlk.me"
+      },
+      "assets": {
+        "directory": "./public"
+      },
+      "triggers": {
+        "crons": ["*/5 * * * *"]
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "carnap-server-demo",
+          "database_id": "bb6bb092-dbc4-453c-871b-475c7f93bb9f",
+          "migrations_dir": "src/worker/infrastructure/database/migrations"
+        }
+      ]
     }
   }
 }

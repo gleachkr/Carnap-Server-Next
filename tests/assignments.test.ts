@@ -954,7 +954,9 @@ describe("assignment publication", () => {
       const closedHref = `/courses/${course.course.id}/assignments/${closed.assignment.id}`;
 
       expect(page.status).toBe(200);
-      expect(html).toContain("<th>Availability</th>");
+      expect(html).toContain(
+        '<th data-sort="" scope="col">Availability</th>',
+      );
       expect(html).toContain(">Open<");
       expect(html).toContain("Closes ");
       expect(html).toContain("Opens ");
@@ -966,6 +968,61 @@ describe("assignment publication", () => {
       expect(html).toContain(`href="${openHref}"`);
       expect(html).not.toContain(`href="${upcomingHref}"`);
       expect(html).not.toContain(`href="${closedHref}"`);
+    });
+  });
+
+  test("the assignments table hands its columns what they sort by", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "sorting-teacher@example.test");
+      const student = await login(env, "sorting-student@example.test");
+      const course = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("sorting_question", "Sorting prompt."),
+      );
+      const drafts = [
+        { availableFrom: "2999-01-01T00:00:00.000Z", title: "Upcoming work" },
+        { availableUntil: "2000-01-01T00:00:00.000Z", title: "Closed work" },
+        { dueAt: "2030-05-31T20:00:00.000Z", title: "Available work" },
+      ];
+
+      for (const fields of drafts) {
+        const draft = await createDraft(
+          env,
+          instructor,
+          course.course.id,
+          revision.revision.id,
+          fields,
+        );
+
+        await publish(env, instructor, course.course.id, draft.assignment.id);
+      }
+
+      await enrollStudent(env, instructor, student, course.course.id);
+
+      const page = await appRequest(
+        createTestApp(),
+        `/courses/${course.course.id}`,
+        { headers: { Accept: "text/html", Cookie: student.cookieHeader } },
+        env,
+      );
+
+      expect(page.status).toBe(200);
+
+      const html = await page.text();
+
+      // Availability sorts by what the reader can do about it: open work
+      // first, then what has yet to open, then what is over.
+      expect(html).toContain('<td data-sort-value="0">Open</td>');
+      expect(html).toContain('<td data-sort-value="1">Opens ');
+      expect(html).toContain('<td data-sort-value="2">Closed ');
+      // The instant, not the localized date the cell ends up showing.
+      expect(html).toContain(
+        '<td data-sort-value="2030-05-31T20:00:00.000Z">',
+      );
+      // No due date is absent rather than early or late.
+      expect(html).toContain('<td data-sort-value="">None</td>');
     });
   });
 

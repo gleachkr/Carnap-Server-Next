@@ -7,8 +7,14 @@ import type { Timestamp } from "../domain/time";
 import type { AppBindings } from "../http";
 import { splitAtValue, VALUE } from "../i18n/translator";
 import { CreateBar, StatusBadge, TableScroll, Time } from "./components";
-import { assessmentModeLabel, assignmentStateLabel } from "./labels";
+import {
+  ASSESSMENT_MODE_ORDER,
+  ASSIGNMENT_STATE_ORDER,
+  assessmentModeLabel,
+  assignmentStateLabel,
+} from "./labels";
 import { useI18n } from "./layout";
+import { SortHeader, sortNumber, sortRank } from "./table-sort";
 
 const AssignmentStatus: FC<{
   readonly assignment: Assignment;
@@ -202,17 +208,29 @@ const AssignmentRow: FC<{
         {linked ? <a href={href}>{assignment.title}</a> : assignment.title}
       </td>
       {instructor ? (
-        <td>
+        // Three badges in the cell, so its sort value settles all three: live
+        // work before drafts, listed before hidden, then by mode. Ordering on
+        // the first alone would leave the column looking half-sorted.
+        <td data-sort-value={statusSortValue(assignment)}>
           <AssignmentStatus assignment={assignment} instructor={instructor} />
         </td>
       ) : (
-        <td>{assessmentModeLabel(i18n, assignment.assessmentMode)}</td>
+        <td
+          data-sort-value={sortRank(
+            ASSESSMENT_MODE_ORDER,
+            assignment.assessmentMode,
+          )}
+        >
+          {assessmentModeLabel(i18n, assignment.assessmentMode)}
+        </td>
       )}
-      <td>
+      {/* The instant, not the date the reader sees: the cell is localized on
+          load, and "Jul 6" does not sort. */}
+      <td data-sort-value={assignment.dueAt ?? ""}>
         <Time fallback={i18n.t("None")} value={assignment.dueAt} />
       </td>
       {instructor ? null : (
-        <td>
+        <td data-sort-value={sortRank(AVAILABILITY_ORDER, state)}>
           <AvailabilityCell assignment={assignment} state={state} />
         </td>
       )}
@@ -232,7 +250,7 @@ const AssignmentRow: FC<{
           )}
         </td>
       ) : (
-        <td>
+        <td data-sort-value={sortNumber(scoreFraction(score))}>
           <ScoreCell
             assignmentId={assignment.id}
             courseId={courseId}
@@ -289,6 +307,43 @@ const StudentTotalFooter: FC<{
   );
 };
 
+/**
+ * The instructor's status cell as one number: state first, then whether it is
+ * listed, then the mode — the same order the three badges read in.
+ */
+function statusSortValue(assignment: Assignment): string {
+  const state = ASSIGNMENT_STATE_ORDER.indexOf(assignment.state);
+  const mode = ASSESSMENT_MODE_ORDER.indexOf(assignment.assessmentMode);
+
+  return String(state * 100 + (assignment.listed ? 0 : 10) + mode);
+}
+
+/** Open work first, then what is yet to open, then what is over. */
+const AVAILABILITY_ORDER: readonly AvailabilityState[] = [
+  "open",
+  "upcoming",
+  "closed",
+];
+
+/**
+ * What a student's score sorts on: the fraction they earned. A score they
+ * cannot see yet is not a number to be ordered by — it sorts as absent, with
+ * the assignments they have never opened.
+ */
+function scoreFraction(
+  entry: StudentScorecardEntry | undefined,
+): number | null {
+  if (entry === undefined || entry.earned === null) {
+    return null;
+  }
+
+  if (entry.counts && !entry.released) {
+    return null;
+  }
+
+  return entry.worth === 0 ? 0 : entry.earned / entry.worth;
+}
+
 export const AssignmentsTable: FC<{
   readonly assignments: readonly Assignment[];
   readonly courseId: string;
@@ -309,26 +364,26 @@ export const AssignmentsTable: FC<{
   const scoreByAssignment = new Map(
     (scores ?? []).map((entry) => [entry.assignmentId, entry]),
   );
-
   return (
     <TableScroll>
       <thead>
         <tr>
-          <th>{i18n.t("Title")}</th>
+          <SortHeader label={i18n.t("Title")} />
           {instructor ? (
-            <th>{i18n.t("Status")}</th>
+            <SortHeader label={i18n.t("Status")} />
           ) : (
-            <th>{i18n.t("Type")}</th>
+            <SortHeader label={i18n.t("Type")} />
           )}
-          <th>{i18n.t("Due")}</th>
-          {instructor ? null : <th>{i18n.t("Availability")}</th>}
+          <SortHeader label={i18n.t("Due")} />
+          {instructor ? null : <SortHeader label={i18n.t("Availability")} />}
           {/* The column holds a link per row, and what it leads to is a table
               of grades for one assignment and of practice scores for another,
-              so the heading takes the word that covers both. */}
+              so the heading takes the word that covers both. There is nothing
+              in it to sort. */}
           {instructor ? (
-            <th>{i18n.t("Scores")}</th>
+            <th scope="col">{i18n.t("Scores")}</th>
           ) : (
-            <th>{i18n.t("Score")}</th>
+            <SortHeader label={i18n.t("Score")} />
           )}
         </tr>
       </thead>

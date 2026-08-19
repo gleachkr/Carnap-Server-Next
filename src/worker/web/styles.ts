@@ -411,6 +411,44 @@ ${UI_FONT_FACES}
     font-weight: 600;
   }
 
+  /* A heading that reorders the table under it. The shell script builds this
+     button out of the heading's own text on load, so it takes the heading's
+     small uppercase type rather than a button's or a link's: the roster should
+     still read as a ledger with a couple of live headings, not as a row of
+     controls. Hover and the triangle are what say it does something. */
+  th > .column-sort {
+    align-items: center;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    gap: 0.3em;
+    letter-spacing: inherit;
+    padding: 0;
+    text-align: inherit;
+    text-transform: inherit;
+  }
+
+  /* Winning back the button hover, which would otherwise paint a blue pill
+     across a table heading. */
+  th > .column-sort:hover {
+    background: none;
+    color: var(--ink);
+    text-decoration: underline;
+  }
+
+  /* Which way the sorted column runs. Hidden from the accessibility tree — the
+     heading's aria-sort already says it, and in words. The triangle is set well
+     under the heading's own size (at full size it out-weighs the word it
+     qualifies) and centred on it rather than sat on the baseline, where a
+     shape with no descender reads as having slipped. */
+  .column-sort-mark {
+    font-size: 0.62em;
+    line-height: 1;
+  }
+
   /* Tables carry a content-driven minimum width (one column per gradebook
      assignment, long endpoint URLs, …) that can exceed a narrow sheet. The
      sheet clips its overflow, so wrap the table in a scroller: it fills the

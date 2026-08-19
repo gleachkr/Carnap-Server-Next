@@ -239,6 +239,12 @@ export const ASSESSMENT_MODE_ORDER: readonly AssessmentMode[] = [
   "none",
 ];
 
+/** Live work before drafts, on the same "most current first" principle. */
+export const ASSIGNMENT_STATE_ORDER: readonly AssignmentState[] = [
+  "published",
+  "draft",
+];
+
 export const GRADES_VISIBILITY_ORDER: readonly GradesVisibility[] = [
   "immediate",
   "manual",

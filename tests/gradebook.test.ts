@@ -1023,7 +1023,9 @@ describe("gradebook", () => {
 
       const hiddenCourseHtml = await hiddenCoursePage.text();
 
-      expect(hiddenCourseHtml).toContain("<th>Score</th>");
+      expect(hiddenCourseHtml).toContain(
+        '<th data-sort="" scope="col">Score</th>',
+      );
       expect(hiddenCourseHtml).toContain("not released");
       expect(hiddenCourseHtml).not.toContain(resultsPath);
 
@@ -1094,6 +1096,80 @@ describe("gradebook", () => {
 
       expect(releasedResultsHtml).toContain("Attempt 1");
       expect(releasedResultsHtml).toContain("q1");
+    });
+  });
+
+  test("the course gradebook hands its columns what they sort by", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "sort-teacher@example.test");
+      const first = await login(env, "a-scored@example.test");
+      const second = await login(env, "b-zero@example.test");
+      const third = await login(env, "c-untouched@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+
+      await enrollStudent(env, instructor, first, courseId);
+      await enrollStudent(env, instructor, second, courseId);
+      await enrollStudent(env, instructor, third, courseId);
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+
+      for (const [student, answer] of [
+        [first, "yes"],
+        [second, "no"],
+      ] as const) {
+        const attemptId = await beginAttempt(
+          env,
+          student,
+          courseId,
+          assignmentId,
+        );
+
+        expect(
+          (
+            await submitAnswer(
+              env,
+              student,
+              courseId,
+              assignmentId,
+              attemptId,
+              [answer],
+            )
+          ).status,
+        ).toBe(201);
+      }
+
+      const page = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/gradebook`,
+        {
+          headers: {
+            Accept: "text/html",
+            Cookie: instructor.cookieHeader,
+          },
+        },
+        env,
+      );
+
+      expect(page.status).toBe(200);
+
+      const html = await page.text();
+
+      // Every assignment is a column a reader can order by — "who has not done
+      // problem set 3" is the question this table exists to answer.
+      expect(html.match(/<th data-sort="" scope="col">/g)?.length).toBe(4);
+      expect(html).toContain('<th data-sort="" scope="col">Homework</th>');
+      // Scores sort on the fraction earned, not the printed "2/2".
+      expect(html).toContain('<td data-sort-value="1">2/2</td>');
+      expect(html).toContain('<td data-sort-value="0">0/2</td>');
+      // Work nobody started is not a zero: it carries no sort value at all,
+      // which is what puts it after every real score and, reversed, on top.
+      expect(html).toContain('<td data-sort-value="">—/2</td>');
     });
   });
 });

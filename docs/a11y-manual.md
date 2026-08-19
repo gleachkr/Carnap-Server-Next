@@ -81,7 +81,10 @@ Tab/Shift-Tab, arrows, Enter/Space, Esc only.
       sensibly (not as stray punctuation).
 - [ ] **1.3.1 Info & relationships** — headings, lists, and tables are announced
       as such; form fields announce their label; the proof tree announces node
-      role/selection.
+      role/selection; a sortable column heading (roster, assignments, courses,
+      gradebooks, content list) is a button once the shell script upgrades it,
+      and the sorted one announces ascending/descending from `aria-sort`, with
+      only one column claiming it at a time.
 - [ ] **2.4.6 Headings & labels** — each page has one descriptive `<h1>` and a
       sensible heading outline (no skipped levels).
 - [ ] **3.3.2 Labels/instructions** — every input's purpose is clear from its

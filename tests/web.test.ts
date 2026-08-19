@@ -339,9 +339,13 @@ describe("native web workflow", () => {
       expect(studentCourseHtml).toContain("Intro Logic");
       expect(studentCourseHtml).toContain("Assignments");
       expect(studentCourseHtml).toContain("Inline homework");
-      expect(studentCourseHtml).toContain("<th>Type</th>");
+      expect(studentCourseHtml).toContain(
+        '<th data-sort="" scope="col">Type</th>',
+      );
       expect(studentCourseHtml).toContain(">Graded<");
-      expect(studentCourseHtml).toContain("<th>Availability</th>");
+      expect(studentCourseHtml).toContain(
+        '<th data-sort="" scope="col">Availability</th>',
+      );
       expect(studentCourseHtml).toContain(">Open<");
       expect(studentCourseHtml).not.toContain("Assignment management");
       expect(studentCourseHtml).not.toContain('placeholder="new assignment"');
@@ -432,7 +436,9 @@ describe("native web workflow", () => {
       // the archived drawer only exists once something is in it — with the
       // count on the summary, so a closed drawer still says where the course
       // went.
-      expect(beforeListHtml).toContain("<th>Your status</th>");
+      expect(beforeListHtml).toContain(
+        '<th data-sort="" scope="col">Your status</th>',
+      );
       // The element, not the class: the page's inlined stylesheet names the
       // class whether or not anything wears it.
       expect(beforeListHtml).not.toContain(
@@ -443,8 +449,116 @@ describe("native web workflow", () => {
       );
       expect(archivedListHtml).toContain("Modal Logic");
       // Staff can act on their own archived course, so the column is there.
-      expect(archivedListHtml).toContain("<th>Actions</th>");
+      expect(archivedListHtml).toContain('<th scope="col">Actions</th>');
       expect(archivedListHtml).toContain("Unarchive");
+    });
+  });
+
+  test("the members roster ships what its columns sort by", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await webLogin(env, "instructor@example.test");
+      // Two students and a promotion, so every column below has more than one
+      // value in it.
+      const zoe = await webLogin(env, "zoe@example.test");
+      const aaron = await webLogin(env, "aaron@example.test");
+
+      await grantTestCourseCreator(env, instructor.actorId);
+
+      const createCourse = await appRequest(
+        createTestApp(),
+        "/courses",
+        formRequest(
+          {
+            csrfToken: instructor.csrfToken,
+            timezone: "UTC",
+            title: "Set Theory",
+          },
+          instructor.cookieHeader,
+        ),
+        env,
+      );
+      const coursePath = expectLocation(createCourse).split("?")[0] ?? "";
+      const linkResponse = await appRequest(
+        createTestApp(),
+        `${coursePath}/enrollment-links`,
+        formRequest(
+          { csrfToken: instructor.csrfToken },
+          instructor.cookieHeader,
+        ),
+        env,
+      );
+      const enrollToken = new URL(
+        expectLocation(linkResponse),
+        "http://localhost",
+      ).searchParams.get("enrollToken");
+
+      for (const student of [zoe, aaron]) {
+        const accepted = await appRequest(
+          createTestApp(),
+          `/enrollments/${enrollToken}`,
+          formRequest({ csrfToken: student.csrfToken }, student.cookieHeader),
+          env,
+        );
+
+        expect(accepted.status).toBe(303);
+      }
+
+      const promoted = await appRequest(
+        createTestApp(),
+        `${coursePath}/staff`,
+        formRequest(
+          {
+            csrfToken: instructor.csrfToken,
+            email: "zoe@example.test",
+            role: "teacher_assistant",
+          },
+          instructor.cookieHeader,
+        ),
+        env,
+      );
+
+      expect(promoted.status).toBe(303);
+
+      const page = await appRequest(
+        createTestApp(),
+        coursePath,
+        { headers: htmlHeaders(instructor.cookieHeader) },
+        env,
+      );
+
+      expect(page.status).toBe(200);
+
+      // Read the roster's own table: the navbar prints the signed-in
+      // instructor's email above everything else.
+      const html = await page.text();
+      const start = html.indexOf("<h2>Members</h2>");
+      const roster = html.slice(start, html.indexOf("</table>", start));
+
+      expect(start).toBeGreaterThan(-1);
+
+      // Three of the four headings are sortable; the actions column has
+      // nothing in it to sort by. The browser turns these into buttons — a
+      // reader with no script sees no control, because there is none.
+      expect(roster.match(/<th data-sort="" scope="col">/g)?.length).toBe(3);
+      expect(roster).toContain('<th scope="col">Actions</th>');
+      expect(roster).not.toContain("aria-sort");
+
+      // What the columns sort by travels with the cells. The user column
+      // carries the one name a reader looks a member up under, since the cell
+      // itself holds two lines and a crown.
+      expect(roster).toContain('<td data-sort-value="zoe@example.test">');
+      // Roles and statuses carry their rank, not their words: sorting the
+      // labels would order the roster differently in every language.
+      expect(roster).toContain('<td data-sort-value="3">Instructor</td>');
+      expect(roster).toContain(
+        '<td data-sort-value="1">Teaching assistant</td>',
+      );
+      expect(roster).toContain('<td data-sort-value="0">Student</td>');
+      // Active is first among the membership states.
+      expect(
+        roster.match(/<td data-sort-value="0"><span class="status-badge/g)
+          ?.length,
+      ).toBe(3);
     });
   });
 
@@ -566,7 +680,7 @@ describe("native web workflow", () => {
       // Read-only, and the actions column goes with the actions rather than
       // standing empty beside the row.
       expect(studentListHtml).not.toContain("Unarchive");
-      expect(studentListHtml).not.toContain("<th>Actions</th>");
+      expect(studentListHtml).not.toContain('<th scope="col">Actions</th>');
       // And the active table must not call a student with an archived course
       // unenrolled, on a page that has just promised them their historical
       // memberships.

@@ -508,6 +508,130 @@ const LTI_DEEP_LINK_SCRIPT = `
   }
 })();`;
 
+/**
+ * Column sorting for the ledger tables, done here rather than by reloading the
+ * page with the order in the URL: the rows are already on the screen, and a
+ * round trip to put them in a different order is slower than reading them.
+ *
+ * The server marks the sortable headings (`data-sort`) and hands over any value
+ * a column should be ordered by that is not its own text (`data-sort-value` on
+ * the cell) — a role's rank, a due date's instant, a score's fraction. This
+ * only compares them. An empty value means absent — no due date, nothing
+ * submitted — and sorts after every real one while ascending, so reversing the
+ * column collects them at the top.
+ *
+ * The heading arrives as plain text and leaves as a button: a reader with no
+ * script sees no control, which is honest, since there would be nothing behind
+ * it. `aria-sort` on the heading is what says which column is ordering the
+ * table and which way — the triangle is the same thing in ink, and is hidden
+ * from the accessibility tree rather than read out twice.
+ */
+export const TABLE_SORT_SCRIPT = `
+(() => {
+  const collator = new Intl.Collator(
+    document.documentElement.lang || undefined,
+  );
+
+  function sortValue(row, index) {
+    const cell = row.cells[index];
+
+    if (!cell) {
+      return "";
+    }
+
+    const override = cell.dataset.sortValue;
+
+    return (override === undefined ? cell.textContent || "" : override).trim();
+  }
+
+  for (const table of document.querySelectorAll("table")) {
+    const headings = Array.from(table.querySelectorAll("thead th[data-sort]"));
+    const body = table.tBodies[0];
+
+    if (headings.length === 0 || !body) {
+      continue;
+    }
+
+    // The order the server sent, kept as the tiebreaker for every later sort:
+    // rows that tie on the sorted column stay in the order they arrived in
+    // (when they joined, when they were created) rather than in the order the
+    // previous sort happened to leave them.
+    const arrived = new Map(
+      Array.from(body.rows).map((row, index) => [row, index]),
+    );
+
+    for (const heading of headings) {
+      const button = document.createElement("button");
+
+      button.type = "button";
+      button.className = "column-sort";
+
+      // The heading's own content becomes the control's, so the button is
+      // named by the column and there is no second string to translate.
+      while (heading.firstChild) {
+        button.appendChild(heading.firstChild);
+      }
+
+      const mark = document.createElement("span");
+
+      mark.className = "column-sort-mark";
+      mark.setAttribute("aria-hidden", "true");
+      button.appendChild(mark);
+      heading.appendChild(button);
+
+      button.addEventListener("click", () => {
+        // One click sorts by this column; a second reverses it. Sorting a
+        // different column starts that one over, ascending.
+        const descending = heading.getAttribute("aria-sort") === "ascending";
+        const direction = descending ? -1 : 1;
+        const index = heading.cellIndex;
+        const rows = Array.from(body.rows);
+        const numeric = rows.every((row) => {
+          const value = sortValue(row, index);
+
+          return value === "" || !Number.isNaN(Number(value));
+        });
+
+        rows.sort((left, right) => {
+          const first = sortValue(left, index);
+          const second = sortValue(right, index);
+          let ranked = 0;
+
+          if (first === "" || second === "") {
+            ranked = first === second ? 0 : first === "" ? 1 : -1;
+          } else if (numeric) {
+            ranked = Number(first) - Number(second);
+          } else {
+            ranked = collator.compare(first, second);
+          }
+
+          return direction * ranked || arrived.get(left) - arrived.get(right);
+        });
+
+        for (const row of rows) {
+          body.appendChild(row);
+        }
+
+        for (const other of headings) {
+          const otherMark = other.querySelector(".column-sort-mark");
+
+          other.removeAttribute("aria-sort");
+
+          if (otherMark) {
+            otherMark.textContent = "";
+          }
+        }
+
+        heading.setAttribute(
+          "aria-sort",
+          descending ? "descending" : "ascending",
+        );
+        mark.textContent = descending ? "▼" : "▲";
+      });
+    }
+  }
+})();`;
+
 /** Every shell script, in the order they were emitted when they were inline. */
 export const SHELL_SCRIPT = [
   DIALOG_SCRIPT,
@@ -518,5 +642,6 @@ export const SHELL_SCRIPT = [
   GATED_FIELD_SCRIPT,
   TIMEZONE_INPUT_SCRIPT,
   CLIPBOARD_SCRIPT,
+  TABLE_SORT_SCRIPT,
   LTI_DEEP_LINK_SCRIPT,
 ].join("\n");

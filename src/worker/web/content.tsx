@@ -28,6 +28,7 @@ import {
 import { renderContentDocument } from "./content-document";
 import { renderShell, useI18n } from "./layout";
 import { revisionDetailsText } from "./revisions";
+import { SortHeader } from "./table-sort";
 import {
   EDITOR_UI_STRINGS_ATTRIBUTE,
   editorUiStrings,
@@ -73,8 +74,8 @@ const ItemsTable: FC<{
     <TableScroll>
       <thead>
         <tr>
-          <th>{i18n.t("Title")}</th>
-          <th>{i18n.t("Updated")}</th>
+          <SortHeader label={i18n.t("Title")} />
+          <SortHeader label={i18n.t("Updated")} />
         </tr>
       </thead>
       <tbody>
@@ -83,7 +84,8 @@ const ItemsTable: FC<{
             <td>
               <a href={`/content/${item.id}`}>{item.title}</a>
             </td>
-            <td>
+            {/* The instant behind the localized date, which does not sort. */}
+            <td data-sort-value={item.updatedAt}>
               <Time value={item.updatedAt} />
             </td>
           </tr>

@@ -36,10 +36,12 @@ import { AccessibilityIcon, CrownIcon, SettingsIcon } from "./icons";
 import {
   COURSE_ROLE_ORDER,
   courseRoleLabel,
+  MEMBERSHIP_STATUS_ORDER,
   membershipStatusLabel,
   membershipStatusOptions,
 } from "./labels";
 import { renderShell, useI18n } from "./layout";
+import { SortHeader, sortRank } from "./table-sort";
 import { type UserDirectory, UserLabel, userDisplayName } from "./users";
 
 const DEFAULT_TIMEZONE = "UTC";
@@ -176,8 +178,17 @@ const CourseRow: FC<{
         <a href={`/courses/${entry.course.id}`}>{entry.course.title}</a>
       </td>
       <td>{entry.course.timezone}</td>
-      <td>{courseRoleLabel(i18n, entry.membership.role)}</td>
-      <td>
+      <td
+        data-sort-value={sortRank(COURSE_ROLE_ORDER, entry.membership.role)}
+      >
+        {courseRoleLabel(i18n, entry.membership.role)}
+      </td>
+      <td
+        data-sort-value={sortRank(
+          MEMBERSHIP_STATUS_ORDER,
+          entry.membership.status,
+        )}
+      >
         <MembershipStatusBadge status={entry.membership.status} />
       </td>
     </tr>
@@ -248,14 +259,14 @@ const CoursesTable: FC<{
     <TableScroll>
       <thead>
         <tr>
-          <th>{i18n.t("Course")}</th>
-          <th>{i18n.t("Timezone")}</th>
-          <th>{i18n.t("Role")}</th>
+          <SortHeader label={i18n.t("Course")} />
+          <SortHeader label={i18n.t("Timezone")} />
+          <SortHeader label={i18n.t("Role")} />
           {/* Whose status: the reader's membership, not the course's. Under a
               bare "Status" an instructor who had just archived a course read
               the neighbouring rows' "Active" as the courses' own state and
               concluded that archiving had done nothing. */}
-          <th>{i18n.t("Your status")}</th>
+          <SortHeader label={i18n.t("Your status")} />
         </tr>
       </thead>
       <tbody>
@@ -551,28 +562,50 @@ const MembersTable: FC<{
       accommodation,
     ]),
   );
-
+  // Sorted by the label the reader actually sees — a member with no name is
+  // filed under their email, where the eye looking for it will be.
+  const nameOf = (membership: CourseMembership): string =>
+    userDisplayName(
+      i18n,
+      directory.get(membership.userId) ?? null,
+      membership.userId,
+    );
   return (
     <TableScroll>
       <thead>
         <tr>
-          <th>{i18n.t("User")}</th>
-          <th>{i18n.t("Role")}</th>
-          <th>{i18n.t("Status")}</th>
-          <th>{i18n.t("Actions")}</th>
+          {/* Roles and statuses carry their rank as the sort value, not the
+              word: "Instructor" outranking "Student" is a fact about the
+              course, and sorting the labels would order the roster differently
+              in every language. */}
+          <SortHeader label={i18n.t("User")} />
+          <SortHeader label={i18n.t("Role")} />
+          <SortHeader label={i18n.t("Status")} />
+          <th scope="col">{i18n.t("Actions")}</th>
         </tr>
       </thead>
       <tbody>
         {memberships.map((membership) => (
           <tr>
-            <td>
+            {/* Two lines and a crown in the cell; the one name a reader looks
+                for it under is what it sorts by. */}
+            <td data-sort-value={nameOf(membership)}>
               <UserLabel directory={directory} userId={membership.userId} />
               {membership.userId === course.createdById ? (
                 <OwnerCrown />
               ) : null}
             </td>
-            <td>{courseRoleLabel(i18n, membership.role)}</td>
-            <td>
+            <td
+              data-sort-value={sortRank(COURSE_ROLE_ORDER, membership.role)}
+            >
+              {courseRoleLabel(i18n, membership.role)}
+            </td>
+            <td
+              data-sort-value={sortRank(
+                MEMBERSHIP_STATUS_ORDER,
+                membership.status,
+              )}
+            >
               <MembershipStatusBadge status={membership.status} />{" "}
               <AccommodationBadge
                 accommodation={
@@ -1068,14 +1101,13 @@ const ArchivedCoursesTable: FC<{
 }> = ({ context, courses }) => {
   const i18n = useI18n();
   const showActions = courses.some((entry) => canUnarchive(entry.membership));
-
   return (
     <TableScroll>
       <thead>
         <tr>
-          <th>{i18n.t("Course")}</th>
-          <th>{i18n.t("Role")}</th>
-          {showActions ? <th>{i18n.t("Actions")}</th> : null}
+          <SortHeader label={i18n.t("Course")} />
+          <SortHeader label={i18n.t("Role")} />
+          {showActions ? <th scope="col">{i18n.t("Actions")}</th> : null}
         </tr>
       </thead>
       <tbody>
@@ -1084,7 +1116,14 @@ const ArchivedCoursesTable: FC<{
             <td>
               <a href={`/courses/${entry.course.id}`}>{entry.course.title}</a>
             </td>
-            <td>{courseRoleLabel(i18n, entry.membership.role)}</td>
+            <td
+              data-sort-value={sortRank(
+                COURSE_ROLE_ORDER,
+                entry.membership.role,
+              )}
+            >
+              {courseRoleLabel(i18n, entry.membership.role)}
+            </td>
             {showActions ? (
               <td>
                 {canUnarchive(entry.membership) ? (
