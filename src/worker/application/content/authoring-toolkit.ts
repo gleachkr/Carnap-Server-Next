@@ -75,7 +75,26 @@ export interface CompiledExercise {
   readonly node: ContentNode;
 }
 
-export const EXERCISE_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+/**
+ * What an exercise ID may be: an HTML id, bounded in length.
+ *
+ * HTML's own rule is "not empty and no ASCII whitespace", and that is very
+ * nearly this one. An id reaches the page only as `data-exercise-id="…"` and,
+ * for the two server-rendered answer forms, as an HTML `id`/`for` pair — none
+ * of which needs a character class narrower than the one HTML already gives.
+ * A tighter rule than that would only be refusing `ex1.2` to no purpose, which
+ * is what this used to do.
+ *
+ * Excluded past HTML's rule, all for the same reason — an id that cannot be
+ * seen cannot be typed back or told apart: whitespace of every kind rather than
+ * just ASCII's, so a non-breaking space is not an invisible difference between
+ * two ids; control characters; and format characters, which include the bidi
+ * overrides that would let one id render as another.
+ *
+ * A dotted id has to be written `id="ex1.2"`. The `#` shorthand cannot spell
+ * one, because `.` opens a class there — see `docs/carnap-markdown-v1.md`.
+ */
+export const EXERCISE_ID_PATTERN = /^[^\s\p{Cc}\p{Cf}]{1,64}$/u;
 
 /**
  * The default GitHub-style sanitize schema, relaxed to keep `class`
@@ -974,7 +993,7 @@ export function validateExerciseId(
       diagnostic(
         block.line,
         "invalid_exercise_id",
-        "Exercise IDs must start with a letter and use letters, numbers, underscores, or hyphens.",
+        "Exercise IDs must be 1 to 64 characters long and contain no spaces.",
       ),
     );
   }

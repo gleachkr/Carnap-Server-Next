@@ -855,8 +855,10 @@ function textSubmissionForm(
 
   const i18n = submission.context.get("i18n");
   const label = exerciseGroupLabel(kind, title, i18n);
-  // Unique per document, and safe as an id: `EXERCISE_ID_PATTERN` admits only
-  // `[A-Za-z][A-Za-z0-9_-]*`.
+  // Unique per document, and safe as an id: `EXERCISE_ID_PATTERN` admits
+  // anything HTML admits as an id, which is what `for` matches against —
+  // exactly, with no escaping — and refuses the whitespace that would keep the
+  // two from ever pairing.
   const fieldId = `${node.exerciseId}-answer`;
 
   return (

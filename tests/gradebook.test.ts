@@ -758,6 +758,53 @@ describe("gradebook", () => {
     });
   });
 
+  test("an exercise column carrying a comma is quoted, not spilled", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "quoting-teacher@example.test");
+      const student = await login(env, "quoting-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      // Both halves of the column name are the author's: the title is free
+      // text, and an ID may hold a comma too. Unquoted, either would shift
+      // every column to its right — in the one row that says what the numbers
+      // are.
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        [
+          "# Lesson",
+          `::::multiple-choice{id="q1.a" title="Modus ponens, twice" points="2" exam="true"}
+Choose yes.
+
+- [x] yes | Yes
+- [ ] no | No
+::::`,
+        ].join("\n\n"),
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const csvResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/grades.csv`,
+        { headers: { Cookie: instructor.cookieHeader } },
+        env,
+      );
+      const [header = ""] = (await csvResponse.text()).split("\n");
+
+      expect(csvResponse.status).toBe(200);
+      expect(header).toBe(
+        "student_name,student_email,user_id,score,max_score,percent,status," +
+          'calculated_at,"Modus ponens, twice (q1.a) /2"',
+      );
+    });
+  });
+
   test("a practice set records points, and the instructor can read them", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "practice-teacher@example.test");

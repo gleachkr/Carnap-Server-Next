@@ -807,6 +807,69 @@ Another?
     );
   });
 
+  test("an exercise ID may be anything HTML would take as an id", async () => {
+    // A textbook numbers its problems "1.2", and refusing that spelling bought
+    // nothing: an ID reaches the page as `data-exercise-id="…"`, which an
+    // attribute selector matches with the dot and all. What is still refused is
+    // what HTML itself refuses — a space — and what would make two IDs
+    // indistinguishable on screen.
+    const cases = [
+      { attrs: 'id="ex1.2"', id: "ex1.2" },
+      { attrs: 'id="1.2"', id: "1.2" },
+      { attrs: 'id="σ1"', id: "σ1" },
+      { attrs: 'id="ex#2"', id: "ex#2" },
+    ];
+
+    for (const { attrs, id } of cases) {
+      const compiled = await compileCarnapMarkdown(
+        `::::multiple-choice{${attrs}}\nQuestion?\n\n- [x] yes | Yes\n- [ ] no | No\n::::`,
+      );
+
+      expect(compiled.diagnostics).toEqual([]);
+
+      if (!compiled.ok) {
+        throw new Error("Expected successful compilation.");
+      }
+
+      expect(compiled.artifact.manifest.map((item) => item.id)).toEqual([id]);
+    }
+
+    // A space; the non-breaking space that would look like none, written as
+    // an escape because in source it would look like the line above; and one
+    // character past the limit.
+    for (const attrs of [
+      'id="ex 2"',
+      'id="ex\u00a02"',
+      `id="${"x".repeat(65)}"`,
+    ]) {
+      const compiled = await compileCarnapMarkdown(
+        `::::multiple-choice{${attrs}}\nQuestion?\n\n- [x] yes | Yes\n- [ ] no | No\n::::`,
+      );
+
+      expect(compiled.diagnostics.map((item) => item.code)).toContain(
+        "invalid_exercise_id",
+      );
+    }
+  });
+
+  test("a dotted ID written with the # shorthand is caught, not silently truncated", async () => {
+    // `.2` is a class there, as it is in HTML — so the ID would quietly become
+    // `ex1`. It does not, because a directive's attributes are a closed list:
+    // the stray class is what fails, and the author is told to write `id=`.
+    const compiled = await compileCarnapMarkdown(
+      `::::multiple-choice{#ex1.2}\nQuestion?\n\n- [x] yes | Yes\n- [ ] no | No\n::::`,
+    );
+
+    expect(compiled.ok).toBe(false);
+    expect(
+      compiled.diagnostics.find((item) => item.code === "unknown_attribute")
+        ?.params,
+    ).toEqual({
+      accepted: "exam, feedback, id, mode, points, title",
+      name: "class",
+    });
+  });
+
   test("an attribute the directive does not know is refused, by name", async () => {
     const compiled =
       await compileCarnapMarkdown(`::::multiple-choice{#m1 exm="true"}

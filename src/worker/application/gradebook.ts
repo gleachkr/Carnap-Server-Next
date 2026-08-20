@@ -326,7 +326,11 @@ export function assignmentGradebookCsv(
       .join(","),
   );
 
-  return `${header.join(",")}\n${rows.join("\n")}\n`;
+  // The header is quoted like any other row. Every other column name here is a
+  // literal, but an exercise column carries the author's title and ID, and a
+  // comma in either would otherwise shift every column after it — silently, in
+  // the one row a reader uses to know what the numbers mean.
+  return `${header.map(csvCell).join(",")}\n${rows.join("\n")}\n`;
 }
 
 /**

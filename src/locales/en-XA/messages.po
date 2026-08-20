@@ -1600,12 +1600,12 @@ msgstr ""
 msgid "Exercise ID {id} is used more than once."
 msgstr ""
 
-#: src/worker/application/assignments.ts
-msgid "Exercise IDs must be between 1 and 200 characters."
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Exercise IDs must be 1 to 64 characters long and contain no spaces."
 msgstr ""
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Exercise IDs must start with a letter and use letters, numbers, underscores, or hyphens."
+#: src/worker/application/assignments.ts
+msgid "Exercise IDs must be between 1 and 200 characters."
 msgstr ""
 
 #: src/worker/application/content/registry.ts

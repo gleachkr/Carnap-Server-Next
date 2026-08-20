@@ -228,6 +228,11 @@ values that contain spaces. `{#name}` is shorthand for `id="name"`, and a bare
 word (like `{reset}`) is a valueless flag. Attributes written outside the
 braces are not recognized and fail with `invalid_directive_attributes`.
 
+The `#` shorthand reads `.` and `#` the way the same shorthand does in HTML: in
+`{#ex1.2}` the ID is `ex1` and `.2` is a class, which then fails as an unknown
+attribute, and in `{#a#b}` the second ID silently replaces the first. An ID
+containing either character has to be written out as `id="ex1.2"`.
+
 Every directive declares the attributes it understands, and one it does not is
 a compile error (`unknown_attribute`) naming the set it accepts. This is
 deliberately strict: `exam` decides whether a wrong answer is recorded at all,
@@ -350,9 +355,12 @@ Which sentence is a tautology?
 ### Attributes
 
 `id` is required. It is the stable exercise ID stored in the compiled document
-and manifest. It must start with a letter and may then use letters, numbers,
-underscores, or hyphens. It may be at most 64 characters long. IDs must be
-unique within a content revision.
+and manifest. Any 1 to 64 characters will do, so long as none of them is a
+space — the rule is HTML's own rule for an `id`, since that is what the ID
+becomes on the page. So `ex1.2`, `1.2`, and `σ1` are all IDs, but they have to
+be written `id="ex1.2"` rather than `{#ex1.2}` for the reason above. IDs must be
+unique within a content revision, and are compared exactly: two IDs that differ
+only in how an accent is encoded are two IDs.
 
 `title` is optional. It is stored in the manifest for instructor and later
 assignment views.

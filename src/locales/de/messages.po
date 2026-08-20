@@ -1600,13 +1600,13 @@ msgstr "Übung entschuldigt."
 msgid "Exercise ID {id} is used more than once."
 msgstr "Die Übungs-ID {id} wird mehr als einmal verwendet."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Exercise IDs must be 1 to 64 characters long and contain no spaces."
+msgstr "Übungs-IDs müssen 1 bis 64 Zeichen lang sein und dürfen keine Leerzeichen enthalten."
+
 #: src/worker/application/assignments.ts
 msgid "Exercise IDs must be between 1 and 200 characters."
 msgstr "Übungs-IDs müssen zwischen 1 und 200 Zeichen lang sein."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Exercise IDs must start with a letter and use letters, numbers, underscores, or hyphens."
-msgstr "Übungs-IDs müssen mit einem Buchstaben beginnen und dürfen Buchstaben, Zahlen, Unterstriche und Bindestriche enthalten."
 
 #: src/worker/application/content/registry.ts
 msgid "Exercise kind {kind} is not supported."

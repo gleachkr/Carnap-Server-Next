@@ -37,7 +37,7 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
       (_unused, index) => `P${String(index)}`,
     ).join(" /\\ ")}\n::::`,
   ],
-  ["bad exercise id", "::::truth-table{#9bad points=1}\n- P\n::::"],
+  ["bad exercise id", '::::truth-table{id="bad id" points=1}\n- P\n::::'],
   [
     "duplicate exercise id",
     "::::truth-table{#t points=1}\n- P\n::::\n\n::::truth-table{#t points=1}\n- Q\n::::",

@@ -34,9 +34,9 @@ import { placeholders, type Translator } from "../../i18n/translator";
 export function buildDiagnosticStrings(i18n: Translator) {
   return {
     // Shared directive machinery (`authoring-toolkit.ts`).
-    "Exercise IDs must start with a letter and use letters, numbers, underscores, or hyphens.":
+    "Exercise IDs must be 1 to 64 characters long and contain no spaces.":
       i18n.t(
-        "Exercise IDs must start with a letter and use letters, numbers, underscores, or hyphens.",
+        "Exercise IDs must be 1 to 64 characters long and contain no spaces.",
       ),
     "Exercise points must be a positive number no greater than 1000.": i18n.t(
       "Exercise points must be a positive number no greater than 1000.",
