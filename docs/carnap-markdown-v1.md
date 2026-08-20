@@ -610,7 +610,7 @@ field the exercise does not have, holding something that field could not contain
 or repeating a field, is a compile error. `strictGivens` locks the givens, turning
 a hint into a requirement. A function's given is read row by row — `f(_) : [0;1]`
 fixes `f(0) = 1` and leaves every other argument to the student — so under
-`strictGivens` it locks those rows of the value table and no others.
+`strictGivens` it locks those cells of the value table and no others.
 
 ```md
 ::::model{id="seeded" options="strictGivens"}
@@ -631,8 +631,9 @@ Carnap flags (`nocheck`, `strictGivens`, `double-turnstile`,
 
 A domain is up to 16 naturals. Extensions are tuples in `[…]`, `(…)` or `<…>`
 (`[0,0],[1,0]`, or bare numbers for a one-place predicate); a constant is a menu
-of the domain; a function gets a **generated value table**, one row per argument
-tuple, so it cannot be left partly undefined. The recorded answer is the raw text
+of the domain; a function gets a **generated value table** — a menu of the domain
+for every argument tuple, laid out as a grid with the last argument heading the
+columns — so it cannot be left partly undefined. The recorded answer is the raw text
 of each field, so review shows what the student typed.
 
 The full reference — every option, the notation rules, the field languages, the

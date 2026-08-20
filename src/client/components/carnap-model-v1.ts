@@ -10,9 +10,9 @@
  * Two things it does that the inert markup cannot:
  *
  *   - **The domain drives the other fields.** A constant is a `<select>` over the
- *     domain and a function is a table with one row per argument tuple, so both
- *     have to be rebuilt whenever the domain changes. Values still in range
- *     survive the rebuild.
+ *     domain and a function is a table of them — the last argument across the
+ *     columns, the rest down the rows — so both have to be rebuilt whenever the
+ *     domain changes. Values still in range survive the rebuild.
  *   - **A local Check**, which here is not an approximation of the server's
  *     grade but the same computation: a model exercise has no secret key —
  *     success is a property of the submitted model against public formulas — so
@@ -28,15 +28,19 @@ import {
   resolveModel,
   seededFunctionRows,
 } from "../../worker/exercises/model/grading";
-import type { ModelField } from "../../worker/exercises/model/logic";
+import type {
+  FunctionTableLayout,
+  ModelField,
+} from "../../worker/exercises/model/logic";
 import {
   checkModel,
   formatFunctionTable,
+  functionTableLayout,
   parseDomain,
   parseFunctionTable,
   parseNatural,
   parseTupleList,
-  tuplesOver,
+  tupleKey,
 } from "../../worker/exercises/model/logic";
 import type { ModelStringId } from "../../worker/exercises/model/strings";
 import type {
@@ -83,7 +87,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       for (const control of controlsIn(row)) {
         // A locked given stays disabled: it is a requirement, not a hint. The
         // lock is marked on the control, because a function's given may fix
-        // some rows of its table and leave the rest to the student.
+        // some cells of its table and leave the rest to the student.
         if (control.dataset.locked === undefined) {
           control.disabled = false;
         }
@@ -175,8 +179,8 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
    * Rebuild the controls whose shape follows from the domain.
    *
    * A constant's `<select>` offers the domain's elements; a function's table has
-   * a row per argument tuple over it. Both keep whatever value is still in range,
-   * so widening a domain does not discard the work already done.
+   * a cell per argument tuple over it. Both keep whatever value is still in
+   * range, so widening a domain does not discard the work already done.
    */
   private rebuildDomainDependents(): void {
     const parsed = parseDomain(this.domainInput?.value ?? "");
@@ -201,7 +205,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       }
 
       // A function's table is rebuilt even where a given locks part of it: the
-      // locked rows are re-seeded from the given, and the rest follow the
+      // locked cells are re-seeded from the given, and the rest follow the
       // domain like any other.
       if (field.kind === "function") {
         this.rebuildFunctionTable(field, row, domain);
@@ -215,10 +219,10 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     row: HTMLElement,
     domain: readonly number[],
   ): void {
-    const table = row.querySelector<HTMLElement>('[data-role="table"]');
-    const tuples = tuplesOver(domain, field.arity);
+    const host = row.querySelector<HTMLElement>('[data-role="table"]');
+    const layout = functionTableLayout(domain, field.arity);
 
-    if (table === null || tuples === null) {
+    if (host === null || layout === null) {
       return;
     }
 
@@ -231,9 +235,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     // What the student has chosen so far, so a rebuild is not a reset.
     const kept = new Map<string, number>();
 
-    for (const select of table.querySelectorAll<HTMLSelectElement>(
-      "select",
-    )) {
+    for (const select of host.querySelectorAll<HTMLSelectElement>("select")) {
       const argument = select.dataset.argument;
 
       if (argument !== undefined) {
@@ -241,50 +243,63 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       }
     }
 
-    table.replaceChildren();
+    // Mirrors the server's table exactly — same shape, same headers, same
+    // document order; `tests/dom/model-element.test.ts` is what keeps the two
+    // in step.
+    const table = document.createElement("table");
+    table.className = "model-function-table";
+    table.append(functionTableHead(layout));
 
-    for (const tuple of tuples) {
-      const argument = tuple.join(",");
-      const cell = document.createElement("div");
-      cell.className = "model-function-row";
+    const body = document.createElement("tbody");
 
-      // Mirrors the server's row exactly; `tests/model-element.test.ts` is what
-      // keeps the two in step.
-      const caption = document.createElement("span");
-      caption.className = "model-function-arg";
-      caption.setAttribute("aria-hidden", "true");
-      caption.textContent = `${field.symbol}(${argument}) =`;
-      cell.append(caption);
+    for (const line of layout.rows) {
+      const tr = document.createElement("tr");
 
-      const fixed = seeded.get(argument);
-      const select = document.createElement("select");
-      select.className = "model-select";
-      select.dataset.argument = argument;
-      select.dataset.role = "value";
-      select.setAttribute(
-        "aria-label",
-        this.t("{field} of {argument}", {
-          argument,
-          field: field.label,
-        }),
-      );
-      select.addEventListener("change", () => {
-        this.onFieldEdit(field);
-      });
-
-      if (lock && fixed !== undefined) {
-        select.dataset.locked = "";
-        select.disabled = true;
-        fillOptions(select, domain, fixed);
-      } else {
-        // What the student chose, else what the given seeded — a row the old
-        // domain had no place for is still the exercise's.
-        fillOptions(select, domain, kept.get(argument) ?? fixed ?? null);
+      if (layout.rowHeaders) {
+        const header = document.createElement("th");
+        header.scope = "row";
+        header.textContent = line.label;
+        tr.append(header);
       }
 
-      cell.append(select);
-      table.append(cell);
+      for (const tuple of line.cells) {
+        const argument = tupleKey(tuple);
+        const fixed = seeded.get(argument);
+        const select = document.createElement("select");
+        select.className = "model-select";
+        select.dataset.argument = argument;
+        select.dataset.role = "value";
+        select.setAttribute(
+          "aria-label",
+          this.t("{field} of {argument}", {
+            argument,
+            field: field.label,
+          }),
+        );
+        select.addEventListener("change", () => {
+          this.onFieldEdit(field);
+        });
+
+        if (lock && fixed !== undefined) {
+          select.dataset.locked = "";
+          select.disabled = true;
+          fillOptions(select, domain, fixed);
+        } else {
+          // What the student chose, else what the given seeded — a cell the old
+          // domain had no place for is still the exercise's.
+          fillOptions(select, domain, kept.get(argument) ?? fixed ?? null);
+        }
+
+        const cell = document.createElement("td");
+        cell.append(select);
+        tr.append(cell);
+      }
+
+      body.append(tr);
     }
+
+    table.append(body);
+    host.replaceChildren(table);
   }
 
   /** Mark every field whose contents will not read. */
@@ -493,6 +508,29 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
   protected getAnswer(): unknown {
     return this.currentAnswer();
   }
+}
+
+/** A value table's column headers: the last argument, after an empty corner. */
+function functionTableHead(
+  layout: FunctionTableLayout,
+): HTMLTableSectionElement {
+  const head = document.createElement("thead");
+  const row = document.createElement("tr");
+
+  if (layout.rowHeaders) {
+    row.append(document.createElement("td"));
+  }
+
+  for (const element of layout.columns) {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = String(element);
+    row.append(th);
+  }
+
+  head.append(row);
+
+  return head;
 }
 
 /** Fill a select with the domain's elements, keeping `selected` if it is one. */

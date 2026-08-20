@@ -11,6 +11,7 @@ import {
   DOMAIN_FIELD_LABEL,
   FORALLX_CALGARY_2019,
   formatFunctionTable,
+  functionTableLayout,
   MAX_DOMAIN_SIZE,
   modelSignature,
   parseDomain,
@@ -20,6 +21,7 @@ import {
   parseTupleList,
   readModel,
   satisfies,
+  tupleKey,
   tuplesOver,
 } from "../src/worker/exercises/model/logic";
 
@@ -177,6 +179,52 @@ describe("field syntax", () => {
 
   test("an enumeration too large to fill is refused, not truncated", () => {
     expect(tuplesOver([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 3)).toBeNull();
+  });
+
+  test("a value table puts the last argument across the columns", () => {
+    const binary = functionTableLayout([0, 1], 2);
+
+    expect(binary?.columns).toEqual([0, 1]);
+    expect(binary?.rows.map((row) => row.label)).toEqual(["0,_", "1,_"]);
+    expect(binary?.rows.map((row) => row.cells)).toEqual([
+      [
+        [0, 0],
+        [0, 1],
+      ],
+      [
+        [1, 0],
+        [1, 1],
+      ],
+    ]);
+  });
+
+  test("a unary function is one line of values under its arguments", () => {
+    const unary = functionTableLayout([0, 1, 2], 1);
+
+    expect(unary?.columns).toEqual([0, 1, 2]);
+    expect(unary?.rows.length).toBe(1);
+    expect(unary?.rows[0]?.cells).toEqual([[0], [1], [2]]);
+    // Nothing is fixed down the side, so there is no header column to fix it
+    // in: a blank label beside a blank corner reads as something withheld.
+    expect(unary?.rowHeaders).toBe(false);
+    expect(unary?.rows[0]?.label).toBe("");
+    expect(functionTableLayout([0, 1], 2)?.rowHeaders).toBe(true);
+  });
+
+  test("reading a value table off the page gives odometer order", () => {
+    // What lets the rendered table be serialized straight down the DOM: the
+    // string a widget records has to be the one the parser reads back.
+    const layout = functionTableLayout([0, 1, 2], 3);
+
+    expect(layout?.rows.flatMap((row) => row.cells.map(tupleKey))).toEqual(
+      (tuplesOver([0, 1, 2], 3) ?? []).map(tupleKey),
+    );
+  });
+
+  test("a value table too large to fill is refused, like the enumeration", () => {
+    expect(
+      functionTableLayout([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 3),
+    ).toBeNull();
   });
 });
 

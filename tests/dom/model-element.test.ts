@@ -291,6 +291,57 @@ describe("the domain drives the other fields", () => {
     expect(args).toEqual(["0,0", "0,1", "1,0", "1,1"]);
   });
 
+  test("a rebuilt binary table is the same square the server renders", async () => {
+    const mounted = mount(await publicDataFor("- AxAyf(x,y) = f(y,x)"));
+
+    type(valueControl(mounted.root, "Domain"), "0,1");
+
+    const table = rowFor(mounted.root, "f(_,_)").querySelector("table");
+
+    expect(
+      Array.from(
+        table?.querySelectorAll<HTMLElement>('th[scope="col"]') ?? [],
+      ).map((th) => th.textContent),
+    ).toEqual(["0", "1"]);
+    expect(
+      Array.from(
+        table?.querySelectorAll<HTMLElement>('th[scope="row"]') ?? [],
+      ).map((th) => th.textContent),
+    ).toEqual(["0,_", "1,_"]);
+    // One cell per column, and the argument each stands for is the pair its
+    // axes name.
+    expect(
+      Array.from(
+        table?.querySelectorAll<HTMLTableRowElement>("tbody tr") ?? [],
+      ).map((tr) =>
+        Array.from(tr.querySelectorAll<HTMLSelectElement>("td select")).map(
+          (select) => select.dataset.argument,
+        ),
+      ),
+    ).toEqual([
+      ["0,0", "0,1"],
+      ["1,0", "1,1"],
+    ]);
+  });
+
+  test("a rebuilt unary table has no header column either", async () => {
+    const mounted = mount(await publicDataFor("- Axf(x) = x"));
+
+    type(valueControl(mounted.root, "Domain"), "0,1,2");
+
+    const table = rowFor(mounted.root, "f(_)").querySelector("table");
+
+    expect(
+      Array.from(
+        table?.querySelectorAll<HTMLElement>('th[scope="col"]') ?? [],
+      ).map((th) => th.textContent),
+    ).toEqual(["0", "1", "2"]);
+    expect(table?.querySelectorAll('th[scope="row"]').length).toBe(0);
+    // The corner cell goes with the header column, or the values would sit one
+    // place to the right of the arguments they answer to.
+    expect(table?.querySelectorAll("thead td").length).toBe(0);
+  });
+
   test("a function serializes to the spelling Carnap stores", async () => {
     const mounted = mount(await publicDataFor("- Axf(x) = x"));
 

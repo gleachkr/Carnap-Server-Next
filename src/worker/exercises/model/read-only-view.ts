@@ -23,9 +23,9 @@ import type { Formula, ModelField, ModelVerdict } from "./logic";
 import {
   DOMAIN_FIELD_LABEL,
   formulaToDisplay,
+  functionTableLayout,
   parseDomain,
   tupleKey,
-  tuplesOver,
 } from "./logic";
 import type { ModelStrings } from "./strings";
 import { buildModelStrings } from "./strings";
@@ -109,35 +109,47 @@ const MODEL_SHADOW_STYLES = `
     display: none;
   }
 
+  /* A function's values as a table: the last argument across the columns, the
+     rest down the rows. A binary function over a small domain is then the
+     square it is written as on a blackboard, and no cell has to repeat the
+     function symbol — the argument is read off the two axes. A table wider than
+     the column scrolls rather than stretching the exercise. */
   .model-function {
-    border: 1px solid var(--rule-soft, #e5ded3);
-    border-radius: 4px;
-    display: grid;
-    flex: 1 1 20rem;
-    gap: 0.35rem 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(8rem, max-content));
+    flex: 1 1 auto;
+    max-width: 100%;
     min-width: 0;
-    padding: 0.4rem 0.6rem;
+    overflow-x: auto;
   }
 
-  .model-function-row {
-    align-items: baseline;
-    display: flex;
-    gap: 0.35rem;
-  }
-
-  /* Which argument this value is for. Without it the table is a column of
-     identical selects: the accessible name carries the argument, and a sighted
-     reader has nothing at all. */
-  .model-function-arg {
+  .model-function-table {
+    border-collapse: collapse;
     font-variant-numeric: tabular-nums;
+  }
+
+  .model-function-table td,
+  .model-function-table th {
+    padding: 0.1rem 0.3rem;
+    text-align: center;
+  }
+
+  /* The two argument axes, ruled off the way a textbook value table is. */
+  .model-function-table thead td,
+  .model-function-table thead th {
+    border-bottom: 1px solid var(--rule-soft, #e5ded3);
+    font-weight: 560;
+  }
+
+  .model-function-table th[scope="row"] {
+    border-right: 1px solid var(--rule-soft, #e5ded3);
+    font-weight: 560;
+    text-align: right;
     white-space: nowrap;
   }
 
   /* A locked given is part of the exercise. Muting the control says so more
      plainly than the browser's own disabled styling, which on a select is
      nearly invisible against this palette. Marked on the control rather than
-     the row: a function's given may fix some rows of its table and leave the
+     the row: a function's given may fix some cells of its table and leave the
      rest to the student. */
   .model-input[data-locked],
   .model-select[data-locked] {
@@ -270,36 +282,53 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
   }
 
   if (field.kind === "function") {
-    // A function's given fixes the rows it names and no others, so the seeding
-    // — and the lock, under `strictGivens` — is per row rather than per field.
-    // A given the student is free to change is still shown: it is the model the
-    // exercise starts from, and a table left at its default is not that model.
+    // A function's given fixes the arguments it names and no others, so the
+    // seeding — and the lock, under `strictGivens` — is per cell rather than per
+    // field. A given the student is free to change is still shown: it is the
+    // model the exercise starts from, and a table left at its default is not
+    // that model.
     const seeded = seededFunctionRows(given, field.arity);
-    const tuples = tuplesOver(context.domain, field.arity) ?? [];
-    const rows = tuples
-      .map((tuple) => {
-        const argument = tupleKey(tuple);
-        const name = context.strings("{field} of {argument}", {
-          argument,
-          field: field.label,
-        });
-        const value = seeded.get(argument);
-        const cellLocked = locked && value !== undefined;
+    const layout = functionTableLayout(context.domain, field.arity);
+    const cell = (tuple: readonly number[]): string => {
+      const argument = tupleKey(tuple);
+      const name = context.strings("{field} of {argument}", {
+        argument,
+        field: field.label,
+      });
+      const value = seeded.get(argument);
+      const cellLocked = locked && value !== undefined;
 
-        return `<div class="model-function-row"><span aria-hidden="true" class="model-function-arg">${escapeHtml(
-          `${field.symbol}(${argument}) =`,
-        )}</span>${domainSelect(
-          `aria-label="${escapeHtml(name)}" data-argument="${escapeHtml(argument)}" data-role="value"${cellLocked ? " data-locked" : ""}`,
-          context.domain,
-          value ?? context.domain[0] ?? 0,
-          context.disabled || cellLocked,
-        )}</div>`;
-      })
-      .join("");
+      return `<td>${domainSelect(
+        `aria-label="${escapeHtml(name)}" data-argument="${escapeHtml(argument)}" data-role="value"${cellLocked ? " data-locked" : ""}`,
+        context.domain,
+        value ?? context.domain[0] ?? 0,
+        context.disabled || cellLocked,
+      )}</td>`;
+    };
+    // The corner cell is empty: the field's own label, to the left of the whole
+    // table, already says which function this is. A unary function has no
+    // header column, and so no corner either.
+    const corner = layout?.rowHeaders === true ? "<td></td>" : "";
+    const head =
+      layout === null
+        ? ""
+        : `<thead><tr>${corner}${layout.columns
+            .map((element) => `<th scope="col">${element}</th>`)
+            .join("")}</tr></thead>`;
+    const body =
+      layout === null
+        ? ""
+        : `<tbody>${layout.rows
+            .map(
+              (line) =>
+                `<tr>${layout.rowHeaders ? `<th scope="row">${escapeHtml(line.label)}</th>` : ""}${line.cells.map(cell).join("")}</tr>`,
+            )
+            .join("")}</tbody>`;
 
     // The label names the group rather than one control, so it is not a `for=`
-    // target: each select carries its own name (`f(_,_) of 0,1`).
-    return `<div class="model-row" data-field="${escapeHtml(field.label)}" data-kind="function"${lockedAttr}><span class="model-label">${escapeHtml(field.label)}</span><div class="model-function" data-role="table" role="group" aria-label="${escapeHtml(field.label)}">${rows}</div></div>`;
+    // target: each select carries its own name (`f(_,_) of 0,1`), and the two
+    // header rows put the same argument on the page for a sighted reader.
+    return `<div class="model-row" data-field="${escapeHtml(field.label)}" data-kind="function"${lockedAttr}><span class="model-label">${escapeHtml(field.label)}</span><div class="model-function" data-role="table" role="group" aria-label="${escapeHtml(field.label)}"><table class="model-function-table">${head}${body}</table></div></div>`;
   }
 
   // Domain and relations are free text: a comma-separated list of numbers, or

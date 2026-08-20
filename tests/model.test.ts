@@ -588,6 +588,36 @@ describe("the rendered element", () => {
     expect(html).toContain('data-kind="function"');
   });
 
+  test("a binary function renders as a square, not a list of applications", async () => {
+    const artifact = await compileArtifact(
+      directive("#v3m", "- AxAyf(x,y) = f(y,x)\n| Domain : 0,1"),
+    );
+    const html = renderCompiledContent(artifact, i18nFor("en"));
+
+    // The last argument heads the columns, the rest name the rows, and the
+    // function symbol appears once — in the field's label, not in every cell.
+    expect(html).toContain('<th scope="col">0</th><th scope="col">1</th>');
+    expect(html).toContain('<th scope="row">0,_</th>');
+    expect(html).toContain('<th scope="row">1,_</th>');
+    expect(html).not.toContain("f(0,1) =");
+    // The argument is still on every control, for a reader who cannot see the
+    // two axes.
+    expect(html).toContain('aria-label="f(_,_) of 0,1"');
+  });
+
+  test("a unary function's table has no header column to leave blank", async () => {
+    const artifact = await compileArtifact(
+      directive("#v3u", "- Axf(x) = x\n| Domain : 0,1"),
+    );
+    const html = renderCompiledContent(artifact, i18nFor("en"));
+
+    // Its one line fixes no argument, so there is nothing to name down the
+    // side — and a blank label beside a blank corner reads as withheld.
+    expect(html).toContain('<th scope="col">0</th><th scope="col">1</th>');
+    expect(html).not.toContain('<th scope="row"');
+    expect(html).toContain("<thead><tr><th");
+  });
+
   test("a function's table is seeded row by row from its given", async () => {
     // The reported bug: the given reached the domain, the constants and the
     // relations, and every row of the value table stayed at the first element —

@@ -40,10 +40,16 @@ export type {
   ModelVerdict,
 } from "./check";
 export { checkModel, judgeModel, readModel } from "./check";
-export type { FieldParse, FunctionRow } from "./fields";
+export type {
+  FieldParse,
+  FunctionRow,
+  FunctionTableLayout,
+  FunctionTableRow,
+} from "./fields";
 export {
   formatFunctionTable,
   formatTupleList,
+  functionTableLayout,
   MAX_DOMAIN_SIZE,
   MAX_FUNCTION_ROWS,
   parseDomain,

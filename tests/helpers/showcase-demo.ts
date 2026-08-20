@@ -246,8 +246,9 @@ sentences come out the way it asked. The fields are not authored: they follow
 from the sentences, so adding a name or a function symbol adds its field.
 
 Choose the domain first. A constant is a menu of the domain's elements and a
-function is a table with a row for every argument, so both are rebuilt when the
-domain changes.
+function is a grid of them — the last argument across the columns, the rest down
+the rows, so a binary function is the square it is written as on a blackboard —
+and both are rebuilt when the domain changes.
 
 \`\`\`md
 :::model{id="md_both" title="Two at once" points="3"}

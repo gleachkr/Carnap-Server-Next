@@ -236,25 +236,41 @@ label order.
 | `F(_,_)` | text | `[0,0],[1,0]` — tuples in `[…]`, `(…)` or `<…>`; a 1-tuple may be bare (`0,1`); empty field = empty extension |
 | `P` | True/False | — |
 | `a` | menu of the domain | one element |
-| `f(_,_)` | a value table | one row per argument tuple, each a menu of the domain |
+| `f(_,_)` | a value table | a menu of the domain per argument tuple, laid out as a grid |
 
 Every element mentioned must be in the domain. Duplicate domain elements are
 collapsed (`0,0,1` is the domain {0,1}).
 
 **Functions get a generated value table** rather than the original's single text
-field: one row per argument tuple over the current domain, each a menu. Totality
-is then structural, so the original's `does not have a value specified for some
-input` message is unreachable from the widget — only a submission that did not
-come from it can be partial — and a binary function over a three-element domain
-no longer means typing nine tuples by hand. The table is an **editor over the
-same string the original stores** (`[0,0;1],[0,1;2]`), so givens and the recorded
-answer are unchanged by it.
+field: a menu of the domain for every argument tuple over the current domain.
+Totality is then structural, so the original's `does not have a value specified
+for some input` message is unreachable from the widget — only a submission that
+did not come from it can be partial — and a binary function over a three-element
+domain no longer means typing nine tuples by hand. The table is an **editor over
+the same string the original stores** (`[0,0;1],[0,1;2]`), so givens and the
+recorded answer are unchanged by it.
 
-The table is also why a function's given is read row by row where the original
+The layout is the one a function is written in on a blackboard: **the last
+argument heads the columns, the rest name the rows.** A binary function over
+`0,1,2` is then a 3×3 square, a unary one a single line of values under its
+arguments (with no header column at all — its one line fixes nothing, and a
+blank label beside a blank corner reads as something withheld), and no cell
+repeats the function symbol — `f(1,2)` is read off the row
+`1,_` and the column `2`, with the symbol itself appearing once, in the field's
+label. Higher arities keep the columns bounded by the domain and grow downwards
+(`0,0,_`, `0,1,_`, …) rather than sideways. Reading the rows in order, and each
+row left to right, is exactly the odometer order the field's string is written
+in, which is what lets the table be serialized straight down the DOM; the shape
+comes from `functionTableLayout`, shared by the server's markup and the client's
+rebuild so the two cannot drift. Every menu still carries the whole argument as
+its accessible name (`f(_,_) of 1,2`), because the two axes are only on the page
+for a reader who can see them.
+
+The table is also why a function's given is read cell by cell where the original
 reads the field whole (below): the original's field starts *empty* and the
 student types the whole extension, so a partial given there is a half-written
-string to finish. Here every row already has a value, so a given can only mean
-the rows it names.
+string to finish. Here every cell already has a value, so a given can only mean
+the cells it names.
 
 The domain drives the constant menus and the function tables, so both are rebuilt
 whenever it changes, keeping any value still in range.
@@ -281,7 +297,8 @@ Scoring is all-or-nothing: there is no fraction of a countermodel.
   the obvious next entries. A dialect that permits open formulas additionally
   needs the universal-closure step in the evaluator.
 - **Generated grids for relations.** A checkbox list (arity 1) or a matrix
-  (arity 2) would be the win the function table is; it breaks down at arity 3
-  and diverges from the givens syntax, so the text field stays for now.
+  (arity 2) would be the win the function table is — the same
+  `functionTableLayout` shape with checkboxes for cells — but it diverges from
+  the givens syntax, so the text field stays for now.
 - **`forallxStyle`**, the original's undocumented relabelling.
 - **Non-numeric domains.** Elements are naturals, as in the original.

@@ -341,3 +341,68 @@ export function tuplesOver(
 export function tupleKey(tuple: readonly number[]): string {
   return tuple.join(",");
 }
+
+/** One line of a function's value table: the arguments it fixes, and its cells. */
+export interface FunctionTableRow {
+  /** The full argument tuple of each cell, one per column. */
+  readonly cells: readonly (readonly number[])[];
+  /**
+   * How the line names its arguments: the fixed ones, then a blank for the
+   * column to fill — `0,_` beside a column headed `1` is the argument `0,1`.
+   * Blanked the way a symbol's own label is (`f(_,_)`), so the two read alike.
+   * Empty for a unary function, whose single line fixes nothing.
+   */
+  readonly label: string;
+  /** Every argument but the last, fixed for the whole line. */
+  readonly prefix: readonly number[];
+}
+
+/** A function's argument tuples arranged as a table. */
+export interface FunctionTableLayout {
+  /** The last argument's values — the columns, in domain order. */
+  readonly columns: readonly number[];
+  /**
+   * Whether the lines need naming at all. False for a unary function: its one
+   * line fixes no argument, so a header column there would be a blank label
+   * beside a blank corner, which reads as something withheld rather than as
+   * nothing to say.
+   */
+  readonly rowHeaders: boolean;
+  readonly rows: readonly FunctionTableRow[];
+}
+
+/**
+ * A function's argument tuples arranged as a table: the last argument across
+ * the columns, the rest down the rows.
+ *
+ * A binary function over a small domain is then the square it is written as on
+ * a blackboard, and no cell has to repeat the function symbol — the argument is
+ * read off the two axes. A unary function is the degenerate case, one row of
+ * values under its arguments and no row headers at all; a ternary one keeps the
+ * columns bounded by the domain and grows downwards instead.
+ *
+ * Reading the rows in order and each row's cells in order gives exactly
+ * {@link tuplesOver}'s odometer order, which is what lets the rendered table be
+ * serialized straight down the DOM. `null` on the same over-large table
+ * {@link tuplesOver} refuses, and for an arity no function has.
+ */
+export function functionTableLayout(
+  domain: readonly number[],
+  arity: number,
+): FunctionTableLayout | null {
+  if (arity < 1 || tuplesOver(domain, arity) === null) {
+    return null;
+  }
+
+  const prefixes = tuplesOver(domain, arity - 1) ?? [];
+
+  return {
+    columns: domain,
+    rowHeaders: arity > 1,
+    rows: prefixes.map((prefix) => ({
+      cells: domain.map((element) => [...prefix, element]),
+      label: prefix.length === 0 ? "" : [...prefix, "_"].join(","),
+      prefix,
+    })),
+  };
+}
