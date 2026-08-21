@@ -1006,10 +1006,12 @@ Rules and behavior:
   the block with `::::style` if you ever need one.
 - The renderer preserves `class` attributes, but no dialect syntax writes
   them yet, so for now target element selectors and the renderer's structural
-  classes: `.exercise`, `.exercise-prompt`, `.exercise-status`. Interactive
-  widget chrome (e.g. multiple-choice options) lives inside a shadow root and
-  is deliberately unreachable from author styles; only the slotted prompt and
-  option labels can be styled.
+  classes: `.exercise`, `.exercise-prompt`, `.exercise-status`,
+  `.exercise-actions` and the controls in it, including
+  `.exercise-check-status` — the line a widget's own Check writes under the
+  button row. Interactive widget chrome (e.g. multiple-choice options) lives
+  inside a shadow root and is deliberately unreachable from author styles; only
+  the slotted prompt, the action bar, and option labels can be styled.
 - Long documents print best from the fullscreen view.
 
 ### Linking external stylesheets

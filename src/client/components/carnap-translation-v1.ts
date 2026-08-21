@@ -61,7 +61,6 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
   private dialect: FirstOrderDialect | null = null;
   private input: HTMLInputElement | null = null;
   private preview: HTMLParagraphElement | null = null;
-  private status: HTMLParagraphElement | null = null;
 
   /** The certificate for the current text, when the last check found one. */
   private mmb = "";
@@ -89,9 +88,6 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     );
     this.preview = root.querySelector<HTMLParagraphElement>(
       'p[data-role="preview"]',
-    );
-    this.status = root.querySelector<HTMLParagraphElement>(
-      'p[data-role="status"]',
     );
 
     const input = this.input;
@@ -127,7 +123,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
       const parsed = this.parseCurrent();
       if (parsed === null || !parsed.ok) {
         event.preventDefault();
-        this.setStatus(
+        this.setCheckStatus(
           this.t(
             "This answer does not parse, so it cannot be submitted on an exam.",
           ),
@@ -168,7 +164,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     this.mmb = "";
     this.solutionIndex = null;
     this.updatePreview();
-    this.setStatus("");
+    this.setCheckStatus("");
     this.syncAnswer();
     if (this.debounceHandle !== null) {
       clearTimeout(this.debounceHandle);
@@ -220,12 +216,6 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     preview.dataset.mood = "error";
   }
 
-  private setStatus(text: string): void {
-    if (this.status !== null) {
-      this.status.textContent = text;
-    }
-  }
-
   /**
    * Check the current text, computing the certificate the submission will
    * carry. `explicit` marks a check the reader asked for (Enter): that is
@@ -234,9 +224,9 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
    */
   private runCheck(explicit: boolean): void {
     const token = ++this.checkToken;
-    const say = (sentence: string): void => {
+    const say = (sentence: string, correct = false): void => {
       if (explicit && this.showsDetail) {
-        this.setStatus(sentence);
+        this.setCheckStatus(sentence, correct);
       }
     };
     const data = this.data;
@@ -290,6 +280,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
           : this.t(
               "This translation is logically equivalent to the intended answer.",
             ),
+        true,
       );
       return;
     }
@@ -343,10 +334,11 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
           this.syncAnswer();
           this.setMark("ok");
           if (explicit && this.showsDetail) {
-            this.setStatus(
+            this.setCheckStatus(
               this.t(
                 "This translation is logically equivalent to the intended answer.",
               ),
+              true,
             );
           }
           return;
@@ -369,7 +361,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     }
     this.setMark("idle");
     if (explicit && this.showsDetail) {
-      this.setStatus(
+      this.setCheckStatus(
         this.t("This translation is not equivalent to the intended answer."),
       );
     }

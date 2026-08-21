@@ -116,10 +116,26 @@ export interface ExerciseActionsOptions {
 /**
  * The bar, as a fragment of HTML.
  *
- * Source order is submit · status · mark, which is what puts the mark hard right
- * of the row (the stylesheet gives it `margin-left: auto`). A widget that adds
- * its own controls inserts them before the submit, so the row reads
+ * Source order is submit · status · mark · check status, which is what puts the
+ * mark hard right of the row (the stylesheet gives it `margin-left: auto`) and
+ * the check status alone on the line below it (`flex-basis: 100%`). A widget that
+ * adds its own controls inserts them before the submit, so the row reads
  * `(?) · Check · Submit`.
+ *
+ * The two status lines are two different voices and that is why there are two.
+ * The first is the platform's: what the *server* did with an answer that was
+ * sent to it. The second is the widget's: what its own local Check makes of the
+ * work in front of it, which needs no submission and happens far more often. One
+ * line carrying both would have a recorded submission and a keystroke overwrite
+ * each other, and the reader with no way to tell which they were reading.
+ *
+ * Rendered here, empty, rather than built by each widget that wants one — the
+ * same reasoning as the correctness mark beside it. Three widgets check locally
+ * today and each had grown its own line: the truth table's in this bar, the model
+ * and translation's inside their shadow roots, where the content stylesheet
+ * cannot reach and so the same sentence came out in body type above the buttons
+ * instead of small type below them. A widget that never checks leaves this empty
+ * and `:empty` hides it.
  */
 export function exerciseActionsHtml(
   i18n: Translator,
@@ -136,7 +152,7 @@ export function exerciseActionsHtml(
     strings.submit,
   )}</button><p aria-live="polite" class="exercise-status" data-exercise-status>${escapeHtml(
     options.status ?? "",
-  )}</p>${correctnessMarkHtml(i18n)}</div>`;
+  )}</p>${correctnessMarkHtml(i18n)}<p aria-live="polite" class="exercise-status exercise-check-status" data-exercise-check-status></p></div>`;
 }
 
 /**

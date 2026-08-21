@@ -556,9 +556,12 @@ Fill it in.
       expect(countOccurrences(html, 'aria-label="Not correct yet"')).toBe(4);
       expect(countOccurrences(html, 'title="Not correct yet"')).toBe(4);
 
-      // In the action bar, and last in it, which is what puts it hard right of
-      // the row for all four.
-      expect(html).toMatch(/class="exercise-mark"[^>]*>-<\/span><\/div>/);
+      // In the action bar, and last on its row, which is what puts it hard right
+      // for all four. Only the widget's own check status may follow it, and that
+      // is not on the row: it takes the whole line under it.
+      expect(html).toMatch(
+        /class="exercise-mark"[^>]*>-<\/span><p aria-live="polite" class="exercise-status exercise-check-status" data-exercise-check-status><\/p><\/div>/,
+      );
     });
   });
 

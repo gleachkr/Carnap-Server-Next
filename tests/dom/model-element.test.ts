@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
+import { exerciseActionsHtml } from "../../src/worker/exercises/actions";
 import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercises/correctness-mark";
 import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration";
 import { renderModelElement } from "../../src/worker/exercises/model/read-only-view";
@@ -64,17 +65,11 @@ function mount(
   options: { readonly feedback?: string } = {},
 ): Mounted {
   const i18n = i18nFor("en");
-  const actions =
-    '<div class="exercise-actions" slot="exercise-actions">' +
-    '<button class="exercise-submit" type="submit">Submit</button>' +
-    // The shared correctness mark, abbreviated to the attributes `setMark`
-    // writes through — it lives in the light-DOM bar, outside every widget's
-    // shadow root, which is exactly why one widget can overwrite what another
-    // part of the page put there.
-    `<span class="${CORRECTNESS_MARK_CLASS}" data-state="idle"` +
-    ' data-label-idle="Not correct" data-label-ok="Correct"' +
-    ' data-label-error="Could not check" data-label-working="Checking">-</span>' +
-    "</div>";
+  // The real bar, not a hand-written stand-in for it. Everything the widget
+  // writes to — the correctness mark, the check status line — lives in it, in
+  // light DOM outside the shadow root, and a fixture that spelled its own would
+  // go on passing after the bar had changed underneath it.
+  const actions = exerciseActionsHtml(i18n, { slotted: true });
   const hydration = {
     mode: "answer",
     options,
@@ -157,11 +152,22 @@ function answerOf(mounted: Mounted): ModelAnswerData {
   return JSON.parse(mounted.answerData.value) as ModelAnswerData;
 }
 
-function statusText(root: ShadowRoot): string {
+/**
+ * The Check's verdict, on the line the shared action bar keeps for it. Light
+ * DOM, outside the shadow root: it is the same element for every type that
+ * checks locally, which is what makes the sentence come out the same size and in
+ * the same place as the truth table's.
+ */
+function checkStatus(mounted: Mounted): HTMLElement | null {
   return (
-    root.querySelector<HTMLElement>('p[data-role="status"]')?.textContent ??
-    ""
+    mounted.element
+      .closest("form")
+      ?.querySelector<HTMLElement>("[data-exercise-check-status]") ?? null
   );
+}
+
+function statusText(mounted: Mounted): string {
+  return checkStatus(mounted)?.textContent ?? "";
 }
 
 function markState(mounted: Mounted): string {
@@ -478,14 +484,10 @@ describe("the local Check", () => {
     type(valueControl(mounted.root, "G(_)"), "1");
     clickCheck(mounted);
 
-    expect(statusText(mounted.root)).toBe(
+    expect(statusText(mounted)).toBe(
       "This model does everything the exercise asks.",
     );
-    expect(
-      mounted.root
-        .querySelector('p[data-role="status"]')
-        ?.getAttribute("data-state"),
-    ).toBe("correct");
+    expect(checkStatus(mounted)?.dataset.state).toBe("correct");
   });
 
   test("names the formulas that came out wrong", async () => {
@@ -495,7 +497,7 @@ describe("the local Check", () => {
     type(valueControl(mounted.root, "F(_)"), "0");
     clickCheck(mounted);
 
-    expect(statusText(mounted.root)).toBe(
+    expect(statusText(mounted)).toBe(
       "Not all formulas are true in this model. Take another look at: ∀xF(x).",
     );
   });
@@ -506,18 +508,18 @@ describe("the local Check", () => {
     type(valueControl(mounted.root, "Domain"), "");
     clickCheck(mounted);
 
-    expect(statusText(mounted.root)).toBe("The domain cannot be empty.");
+    expect(statusText(mounted)).toBe("The domain cannot be empty.");
   });
 
   test("an edit clears the last verdict", async () => {
     const mounted = mount(await publicDataFor("- AxF(x)"));
 
     clickCheck(mounted);
-    expect(statusText(mounted.root)).not.toBe("");
+    expect(statusText(mounted)).not.toBe("");
 
     type(valueControl(mounted.root, "F(_)"), "0");
 
-    expect(statusText(mounted.root)).toBe("");
+    expect(statusText(mounted)).toBe("");
   });
 
   test("check=off offers no button", async () => {

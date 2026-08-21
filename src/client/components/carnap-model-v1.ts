@@ -60,7 +60,6 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
   private data: ModelPublicData | null = null;
   private rows: FieldRow[] = [];
   private domainInput: HTMLInputElement | null = null;
-  private status: HTMLParagraphElement | null = null;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -74,9 +73,6 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     }
 
     this.data = data;
-    this.status = root.querySelector<HTMLParagraphElement>(
-      'p[data-role="status"]',
-    );
     this.rows = this.collectRows(root, data);
 
     for (const { field, row } of this.rows) {
@@ -445,7 +441,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     const data = this.data;
     const resolved = data === null ? null : resolveModel(data);
 
-    if (data === null || resolved === null || this.status === null) {
+    if (data === null || resolved === null) {
       return;
     }
 
@@ -455,23 +451,20 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       effectiveAnswer(data, this.currentAnswer(), resolved.signature),
     );
 
-    this.status.textContent = describeVerdict(
-      verdict,
-      {
-        dialect: resolved.dialect,
-        required: resolved.task.required,
-        target: resolved.task.target,
-        targeted: resolved.task.targeted,
-        variant: data.variant,
-      },
-      (id, values) => this.t(id, values),
+    this.setCheckStatus(
+      describeVerdict(
+        verdict,
+        {
+          dialect: resolved.dialect,
+          required: resolved.task.required,
+          target: resolved.task.target,
+          targeted: resolved.task.targeted,
+          variant: data.variant,
+        },
+        (id, values) => this.t(id, values),
+      ),
+      verdict.ok,
     );
-
-    if (verdict.ok) {
-      this.status.setAttribute("data-state", "correct");
-    } else {
-      this.status.removeAttribute("data-state");
-    }
 
     // A model exercise has no answer key, so the browser runs the very check the
     // worker runs: this mark is not a guess at what the server will say.
@@ -479,10 +472,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
   }
 
   private clearStatus(): void {
-    if (this.status !== null) {
-      this.status.textContent = "";
-      this.status.removeAttribute("data-state");
-    }
+    this.setCheckStatus("");
 
     // An edited model is not the model any verdict was about, including a
     // recorded one the runtime put up on load.

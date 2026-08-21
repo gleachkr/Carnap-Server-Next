@@ -63,10 +63,6 @@ const TRANSLATION_SHADOW_STYLES = `
   .translation-preview:empty {
     display: none;
   }
-
-  .translation-status:empty {
-    display: none;
-  }
 `;
 
 interface TranslationElementMeta {
@@ -106,7 +102,6 @@ export function renderTranslationElement(
             <slot name="prompt"></slot>
             <div class="translation-row"><label class="visually-hidden" for="${inputId}">${escapeHtml(strings("Your translation"))}</label><input autocapitalize="off" autocomplete="off" class="translation-input" data-role="text" disabled id="${inputId}" spellcheck="false" type="text" value="${escapeHtml(publicData.starter ?? "")}"></div>
             <p aria-live="polite" class="translation-preview" data-role="preview"></p>
-            <p class="exercise-status translation-status" data-role="status" role="status"></p>
             <slot name="exercise-actions"></slot>
           </fieldset>
         </template>

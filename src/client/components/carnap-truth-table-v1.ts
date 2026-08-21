@@ -112,7 +112,6 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
   /** {@link cells} again, grouped by table row — the map arrow keys walk. */
   private rows: GridCell[][] = [];
   private table: HTMLTableElement | null = null;
-  private status: HTMLParagraphElement | null = null;
   private checkMode: TruthTableCheckMode = "cells";
   private nodash = false;
   /** Display glyphs for true/false cells (cf. Carnap `trueMark`/`falseMark`). */
@@ -561,7 +560,8 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
    * Add the Check / counterexample affordances the inert SSR grid omits, into
    * the shared light-DOM action bar (`.exercise-actions`) so they sit in one row
    * with Submit and are styled uniformly by the content stylesheet and any
-   * author CSS. The Check status drops onto its own line under the button row.
+   * author CSS. The status line under that row is the bar's own — see
+   * `setCheckStatus`.
    */
   private buildControls(): void {
     const bar = this.querySelector<HTMLElement>(".exercise-actions");
@@ -573,11 +573,6 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     // Insert our controls before the (server-rendered) submit button, so the row
     // reads Check · counterexample · Submit.
     const submit = bar.querySelector<HTMLElement>('button[type="submit"]');
-
-    const status = document.createElement("p");
-    status.className = "exercise-status tt-check-status";
-    status.setAttribute("aria-live", "polite");
-    this.status = status;
 
     if (this.checkMode !== "off") {
       const check = document.createElement("button");
@@ -602,8 +597,6 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       this.ceButton = ce;
       bar.insertBefore(ce, submit);
     }
-
-    bar.append(status);
   }
 
   /**
@@ -628,11 +621,7 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       );
     }
 
-    if (this.status !== null) {
-      this.status.textContent = on ? this.counterexampleHint() : "";
-      this.status.removeAttribute("data-state");
-    }
-
+    this.setCheckStatus(on ? this.counterexampleHint() : "");
     this.syncAnswer();
   }
 
@@ -732,11 +721,8 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       cell.classList.remove("tt-correct", "tt-incorrect");
     }
 
-    if (this.status !== null) {
-      // In counterexample mode keep the standing hint; only clear results.
-      this.status.textContent = this.ceMode ? this.counterexampleHint() : "";
-      this.status.removeAttribute("data-state");
-    }
+    // In counterexample mode keep the standing hint; only clear results.
+    this.setCheckStatus(this.ceMode ? this.counterexampleHint() : "");
 
     // An edited grid is no longer the grid any verdict was about, including a
     // recorded one the runtime put up on load.
@@ -752,15 +738,14 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
   private runCheck(): void {
     const data = this.publicData;
 
-    if (!isTruthTablePublicData(data) || this.status === null) {
+    if (!isTruthTablePublicData(data)) {
       return;
     }
 
     if (this.ceMode && this.ceRow === null) {
-      this.status.textContent = this.t(
-        "Choose the row you're claiming as a counterexample.",
+      this.setCheckStatus(
+        this.t("Choose the row you're claiming as a counterexample."),
       );
-      this.status.removeAttribute("data-state");
       return;
     }
 
@@ -787,17 +772,16 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     }
 
     if (grade.allCorrect) {
-      this.status.textContent = this.t("All cells correct.");
-      this.status.setAttribute("data-state", "correct");
+      this.setCheckStatus(this.t("All cells correct."), true);
     } else if (this.checkMode === "terse") {
-      this.status.textContent = this.t("There's an error somewhere.");
-      this.status.removeAttribute("data-state");
+      this.setCheckStatus(this.t("There's an error somewhere."));
     } else {
-      this.status.textContent = this.t("Correct cells: {count} of {total}", {
-        count: grade.correctCount,
-        total: grade.fillableCount,
-      });
-      this.status.removeAttribute("data-state");
+      this.setCheckStatus(
+        this.t("Correct cells: {count} of {total}", {
+          count: grade.correctCount,
+          total: grade.fillableCount,
+        }),
+      );
     }
 
     if (this.checkMode === "terse") {
@@ -816,33 +800,29 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
   private reportPartial(
     grade: NonNullable<ReturnType<typeof gradeTruthTable>>,
   ): void {
-    if (this.status === null) {
-      return;
-    }
-
     const partial = grade.partial;
 
     if (grade.allCorrect) {
-      this.status.textContent = this.t("That row is correct.");
-      this.status.setAttribute("data-state", "correct");
+      this.setCheckStatus(this.t("That row is correct."), true);
     } else if (this.checkMode === "terse") {
-      this.status.textContent = this.t("Not correct yet.");
-      this.status.removeAttribute("data-state");
+      this.setCheckStatus(this.t("Not correct yet."));
     } else if (
       partial?.hasGivens &&
       partial.filledCorrectly &&
       !partial.consistentWithGiven
     ) {
-      this.status.textContent = this.t(
-        "This row is filled in correctly, but it doesn't satisfy the given conditions.",
+      this.setCheckStatus(
+        this.t(
+          "This row is filled in correctly, but it doesn't satisfy the given conditions.",
+        ),
       );
-      this.status.removeAttribute("data-state");
     } else {
-      this.status.textContent = this.t("Correct cells: {count} of {total}", {
-        count: grade.correctCount,
-        total: grade.fillableCount,
-      });
-      this.status.removeAttribute("data-state");
+      this.setCheckStatus(
+        this.t("Correct cells: {count} of {total}", {
+          count: grade.correctCount,
+          total: grade.fillableCount,
+        }),
+      );
     }
 
     if (this.checkMode !== "terse") {
@@ -853,26 +833,20 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
   private reportCounterexample(
     grade: NonNullable<ReturnType<typeof gradeTruthTable>>,
   ): void {
-    if (this.status === null) {
-      return;
-    }
-
     const ce = grade.counterexample;
 
     if (grade.allCorrect) {
-      this.status.textContent = this.t("That's a valid counterexample.");
-      this.status.setAttribute("data-state", "correct");
+      this.setCheckStatus(this.t("That's a valid counterexample."), true);
     } else if (this.checkMode === "terse") {
-      this.status.textContent = this.t("Not a valid counterexample yet.");
-      this.status.removeAttribute("data-state");
+      this.setCheckStatus(this.t("Not a valid counterexample yet."));
     } else if (ce?.predicateHolds && !ce.filledCorrectly) {
-      this.status.textContent = this.t(
-        "This row is a counterexample, but it isn't filled in correctly.",
+      this.setCheckStatus(
+        this.t(
+          "This row is a counterexample, but it isn't filled in correctly.",
+        ),
       );
-      this.status.removeAttribute("data-state");
     } else {
-      this.status.textContent = this.t("This row isn't a counterexample.");
-      this.status.removeAttribute("data-state");
+      this.setCheckStatus(this.t("This row isn't a counterexample."));
     }
 
     if (this.checkMode !== "terse") {

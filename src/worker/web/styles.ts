@@ -701,13 +701,22 @@ ${UI_FONT_FACES}
     margin: 0;
   }
 
-  /* The truth-table Check status drops onto its own line under the button row. */
-  .exercise-actions .tt-check-status {
+  /* A widget's own Check speaks here: its own line under the button row, in the
+     same small muted type as every other status. Under the buttons and not over
+     them, because it is an answer to the Check that was just pressed — a sentence
+     above the control that produced it reads as part of the exercise. */
+  .exercise-actions .exercise-check-status {
     flex-basis: 100%;
     margin: 0.1rem 0 0;
   }
 
-  .exercise-actions .tt-check-status[data-state="correct"] {
+  /* Nothing to say yet: the row must not open a blank line under itself before
+     the first Check, nor keep one after an edit clears the verdict. */
+  .exercise-actions .exercise-check-status:empty {
+    display: none;
+  }
+
+  .exercise-actions .exercise-check-status[data-state="correct"] {
     color: var(--green, #1b7048);
     font-weight: 600;
   }

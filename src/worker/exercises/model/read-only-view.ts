@@ -157,10 +157,6 @@ const MODEL_SHADOW_STYLES = `
     border-style: dashed;
   }
 
-  .model-status:empty {
-    display: none;
-  }
-
   ${VISUALLY_HIDDEN_STYLES}
 `;
 
@@ -393,7 +389,6 @@ export function renderModelElement(
             <slot name="prompt"></slot>
             <p class="model-goal">${escapeHtml(modelGoalText(publicData, resolved))}</p>
             <div class="model-fields">${fields}</div>
-            <p class="exercise-status model-status" data-role="status" role="status"></p>
             <slot name="exercise-actions"></slot>
           </fieldset>
         </template>

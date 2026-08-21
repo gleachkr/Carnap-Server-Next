@@ -317,6 +317,47 @@ export abstract class CarnapExerciseElement<
   }
 
   /**
+   * What this widget's own Check has to say, on the line under the button row.
+   *
+   * The element is the server-rendered one in the shared action bar (see
+   * `exercises/actions.ts`), found the same way and for the same reasons as the
+   * correctness mark above. Empty text clears the line, which the stylesheet then
+   * hides — so "no verdict" and "no line" are one call, and a widget cannot leave
+   * a stale sentence standing by forgetting to remove an attribute.
+   *
+   * `correct` is the only distinction the line draws, because it is the only one
+   * a colour can carry honestly: everything else it says — a count of right
+   * cells, a failed test, a hint about which row to fill, why a button did
+   * nothing — is somewhere on a road to being right, and red for all of it would
+   * call an unfinished table an error.
+   *
+   * Deliberately *not* clamped under `feedback: "none"`, unlike
+   * {@link CarnapExerciseElement.setMark}. The mark makes exactly one claim, so
+   * withholding it is a decision this class can take alone; this line carries
+   * hints and refusals as well as verdicts — a widget that will not submit
+   * unparseable text on an exam has to be able to say so — and only the caller
+   * knows which it is holding. Each one gates on {@link showsDetail} at the point
+   * it words the sentence.
+   */
+  protected setCheckStatus(text: string, correct = false): void {
+    const line = (this.form ?? this).querySelector<HTMLElement>(
+      "[data-exercise-check-status]",
+    );
+
+    if (line == null) {
+      return;
+    }
+
+    line.textContent = text;
+
+    if (correct && text !== "") {
+      line.dataset.state = "correct";
+    } else {
+      delete line.dataset.state;
+    }
+  }
+
+  /**
    * Reflect the current answer into the form's hidden `answerData` field, and
    * re-check whether it still matches what the server has.
    */

@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
+import { exerciseActionsHtml } from "../../src/worker/exercises/actions";
 import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercises/correctness-mark";
 import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration";
 import { renderTranslationElement } from "../../src/worker/exercises/translation/read-only-view";
@@ -81,13 +82,10 @@ function mount(
   options: { readonly feedback?: string } = {},
 ): Mounted {
   const i18n = i18nFor("en");
-  const actions =
-    '<div class="exercise-actions" slot="exercise-actions">' +
-    '<button class="exercise-submit" type="submit">Submit</button>' +
-    `<span class="${CORRECTNESS_MARK_CLASS}" data-state="idle"` +
-    ' data-label-idle="Not correct" data-label-ok="Correct"' +
-    ' data-label-error="Could not check" data-label-working="Checking">-</span>' +
-    "</div>";
+  // The real bar, not a hand-written stand-in: the widget writes its verdict to
+  // the check status line inside it, and a fixture spelling its own markup would
+  // keep passing after that line had moved.
+  const actions = exerciseActionsHtml(i18n, { slotted: true });
   const hydration = {
     mode: "answer",
     options,
@@ -154,9 +152,15 @@ function previewText(mounted: Mounted): string {
   );
 }
 
+/**
+ * The Check's verdict, on the line the shared action bar keeps for it — light
+ * DOM, outside the shadow root, the same element every locally-checking type
+ * writes to. The preview above stays inside the card: it reads the student's own
+ * keystrokes back and belongs beside the input, not down in the button row.
+ */
 function statusText(mounted: Mounted): string {
   return (
-    mounted.root.querySelector<HTMLElement>('p[data-role="status"]')
+    mounted.form.querySelector<HTMLElement>("[data-exercise-check-status]")
       ?.textContent ?? ""
   );
 }
