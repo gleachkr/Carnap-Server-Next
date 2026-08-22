@@ -550,6 +550,42 @@ function parseConstraintBody(
 }
 
 /**
+ * The body lines a model reads as data rather than prose: its formula, sequent,
+ * and constraint lines, and its givens.
+ *
+ * The compiler asks so that a colon in one of them is not reported as a
+ * directive. `| Domain:0,1,2` — a given written the way most authors write a
+ * key and a value — parses as a text directive named “0”, and the author would
+ * be told their given was an unsupported directive rather than that it was a
+ * given. Nothing is lost by not reading these lines as markdown: the body
+ * parsers below take them from the source, and the markdown parse of them was
+ * never used for anything.
+ *
+ * A prompt is the run of lines before the first formula, sequent, or constraint
+ * line, which is what all three body parsers agree on; from there on the body
+ * is data whatever the variant. A given is data wherever it is written.
+ */
+export function modelDataBodyLines(
+  block: DirectiveBlock,
+): ReadonlySet<number> {
+  const data = new Set<number>();
+  let pastPrompt = false;
+
+  for (const [index, line] of block.bodyLines.entries()) {
+    const given = isGivenLine(line);
+
+    pastPrompt ||=
+      !given && (FORMULA_LINE.test(line) || line.includes(TURNSTILE));
+
+    if (given || pastPrompt) {
+      data.add(block.bodyStartLine + index);
+    }
+  }
+
+  return data;
+}
+
+/**
  * Read the `| Field : value` lines, checking each names a field this exercise
  * actually has and holds something that field could contain.
  *

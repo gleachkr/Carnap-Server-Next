@@ -252,6 +252,49 @@ describe("compiling a model directive", () => {
     });
   });
 
+  test("a given needs no space around its colon", async () => {
+    // `| Domain:0,1,2` is how most people write a key and a value, and micromark
+    // reads the `:0` in it as a text directive named "0" — which used to reach
+    // the author as "Directive 0 is not supported here."
+    const data = publicDataOf(
+      await declaration(
+        directive(
+          "#g1a",
+          "- AxF(x), G(a)\n| Domain:0,1,2\n|F(_) :1,2\n| a:1",
+        ),
+      ),
+    );
+
+    expect(data.givens).toEqual({
+      Domain: "0,1,2",
+      "F(_)": "1,2",
+      a: "1",
+    });
+  });
+
+  test("a constraint line needs no space around its colon", async () => {
+    const data = publicDataOf(
+      await declaration(
+        `::::model{#g1b variant="constraint"}\n- ExEy~x = y:AxAyF(x,y)\n::::`,
+      ),
+    );
+
+    expect(data.required).toEqual(["ExEy~x = y"]);
+  });
+
+  test("a directive in the prompt is still reported", async () => {
+    // Only the data lines are exempt from the nested-directive scan; a model's
+    // prompt is prose, and a directive written there renders as nothing.
+    expect(
+      await compileCodes(
+        directive(
+          "#g1c",
+          "Find a model :sup[here].\n\n- AxF(x)\n| Domain:0,1",
+        ),
+      ),
+    ).toContain("unsupported_directive");
+  });
+
   test("a given for a field the exercise does not have is rejected", async () => {
     // Carnap only notices this when a student submits, and then only in the
     // browser console.

@@ -20,7 +20,10 @@ import { compileAufbauProofTree } from "../../exercises/aufbau-proof-tree/author
 import { AUFBAU_PROOF_TREE_KIND } from "../../exercises/aufbau-proof-tree/types";
 import { compileFreeResponse } from "../../exercises/free-response/authoring";
 import { FREE_RESPONSE_KIND } from "../../exercises/free-response/types";
-import { compileModel } from "../../exercises/model/authoring";
+import {
+  compileModel,
+  modelDataBodyLines,
+} from "../../exercises/model/authoring";
 import { MODEL_KIND } from "../../exercises/model/types";
 import { compileMultipleChoice } from "../../exercises/multiple-choice/authoring";
 import { MULTIPLE_CHOICE_KIND } from "../../exercises/multiple-choice/types";
@@ -31,7 +34,11 @@ import { TRANSLATION_KIND } from "../../exercises/translation/types";
 import { compileTruthTable } from "../../exercises/truth-table/authoring";
 import { TRUTH_TABLE_KIND } from "../../exercises/truth-table/types";
 import { createDefaultAuthoringExerciseRegistry } from "./authoring-registry";
-import type { CompilerDiagnostic, MarkdownNode } from "./authoring-toolkit";
+import type {
+  CompilerDiagnostic,
+  DirectiveBlock,
+  MarkdownNode,
+} from "./authoring-toolkit";
 import {
   createFootnoteNumbering,
   diagnostic,
@@ -137,6 +144,8 @@ const RAW_BODY_PROOF_DIRECTIVE_NAMES: ReadonlySet<string> = new Set([
   "aufbau-proof-prawitz",
 ]);
 
+const MODEL_DIRECTIVE_NAME = "model";
+
 function isRawBodyProofDirective(
   node: MarkdownNode,
 ): node is ContainerDirective {
@@ -202,9 +211,34 @@ function isDirectiveNode(node: { readonly type?: string }): boolean {
   );
 }
 
+/**
+ * The body lines a directive reads as data rather than markdown, and so the
+ * lines on which a stray `:token` is not a nested directive the author meant.
+ *
+ * Deliberately not the same set as {@link rawDirectiveBodyLines}, which serves
+ * the raw-HTML and legacy-syntax *line* scans: a model is here and not there,
+ * because its prompt is prose and raw HTML written in it is still a mistake.
+ * Which is also why this is per line rather than per directive — a model's body
+ * is only partly data, and a nested directive in its prompt is worth reporting.
+ */
+function dataBodyLines(block: DirectiveBlock): ReadonlySet<number> {
+  if (RAW_BODY_PROOF_DIRECTIVE_NAMES.has(block.name)) {
+    return new Set(
+      block.bodyLines.map((_line, index) => block.bodyStartLine + index),
+    );
+  }
+
+  if (block.name === MODEL_DIRECTIVE_NAME) {
+    return modelDataBodyLines(block);
+  }
+
+  return NO_EXCLUDED_LINES;
+}
+
 function collectNestedDirectiveDiagnostics(
   node: unknown,
   diagnostics: CompilerDiagnostic[],
+  dataLines: ReadonlySet<number> = NO_EXCLUDED_LINES,
 ): void {
   if (typeof node !== "object" || node === null) {
     return;
@@ -219,10 +253,12 @@ function collectNestedDirectiveDiagnostics(
     readonly type?: string;
   };
 
-  if (isDirectiveNode(candidate)) {
+  const line = candidate.position?.start?.line ?? 1;
+
+  if (isDirectiveNode(candidate) && !dataLines.has(line)) {
     diagnostics.push(
       diagnostic(
-        candidate.position?.start?.line ?? 1,
+        line,
         "unsupported_directive",
         "Directive {name} is not supported here.",
         { params: { name: candidate.name ?? "unknown" } },
@@ -230,8 +266,11 @@ function collectNestedDirectiveDiagnostics(
     );
   }
 
+  // Descended into whatever the node is: a raw line is often a lazy
+  // continuation of a paragraph that began on a prose line, so a node's own
+  // position is the only one that says which line it was written on.
   for (const child of candidate.children ?? []) {
-    collectNestedDirectiveDiagnostics(child, diagnostics);
+    collectNestedDirectiveDiagnostics(child, diagnostics, dataLines);
   }
 }
 
@@ -474,14 +513,10 @@ export async function compileCarnapMarkdown(
 
     const block = directiveBlockFromNode(child, lines);
 
-    // The Fitch and Prawitz bodies are raw proof text; their `:<rule>`
-    // justifications and `-- label:n` comments parse as inline directives, so
-    // skip the nested-directive scan for them (like the raw-body directives
-    // handled above).
-    if (!isRawBodyProofDirective(child)) {
-      for (const nested of block.children) {
-        collectNestedDirectiveDiagnostics(nested, diagnostics);
-      }
+    const dataLines = dataBodyLines(block);
+
+    for (const nested of block.children) {
+      collectNestedDirectiveDiagnostics(nested, diagnostics, dataLines);
     }
 
     let exerciseKind: string;
