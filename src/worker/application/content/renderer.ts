@@ -256,21 +256,39 @@ export function componentAssetsForArtifact(
  * is fully interactive, just unsubmittable: there is no form to mirror into and
  * no submit button, so an author can work the exercise without recording
  * anything.
+ *
+ * `feedback` comes off the manifest, which is why the manifest is walked at all
+ * — a document node carries the author's public render data but not the
+ * declaration the setting lives on. Without it every previewed widget behaved as
+ * `full`, so an author who wrote `feedback="none"` was offered a Check button
+ * and a green tick by the very page they were checking the setting on. It is the
+ * authored value rather than one resolved against an assignment: a preview is
+ * outside any assignment, and a release date that has not arrived is not
+ * withholding anything from the author of the exercise.
  */
 export function exerciseHydrationForArtifact(
   artifact: CompiledContentArtifact,
   i18n: Translator,
 ): Record<string, ExerciseHydration> {
   const table: Record<string, ExerciseHydration> = {};
+  // The setting alone, not the manifest entry it came off. This function builds
+  // a payload that goes to the browser, and a manifest entry carries the answer
+  // key in `privateData` — so the one thing the lookup is for is the only thing
+  // it holds.
+  const authored = new Map(
+    artifact.manifest.map((item) => [item.id, item.feedback]),
+  );
 
   for (const node of artifact.document.nodes) {
     if (node.kind !== "exercise") {
       continue;
     }
 
+    const feedback = authored.get(node.exerciseId);
+
     table[node.exerciseId] = {
       mode: "answer",
-      options: {},
+      options: feedback === undefined ? {} : { feedback },
       priorAnswer: null,
       publicData: node.publicData,
       strings: exerciseStrings(node.render.assetId, i18n),

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
+import { exerciseHydrationForArtifact } from "../../src/worker/application/content/renderer";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
 import { exerciseActionsHtml } from "../../src/worker/exercises/actions";
 import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercises/correctness-mark";
@@ -567,6 +568,69 @@ describe("the local Check", () => {
     // student staring at a dead widget should still be told.
     element.setMark("error", "Could not load the proof engine.");
     expect(markState(sealed)).toBe("error");
+  });
+
+  /**
+   * The same refusal on the preview path, which reaches the widget by the other
+   * channel: a document-scoped hydration table rather than a payload inside the
+   * form. It used to carry no `feedback` at all, so an author who wrote
+   * `feedback="none"` was handed a green tick by the very page they were
+   * checking the setting on.
+   */
+  test("a preview honours the authored feedback", async () => {
+    const compiled = await compileCarnapMarkdown(
+      '::::model{#m1 feedback="none"}\n- AxF(x)\n::::',
+    );
+
+    if (!compiled.ok) {
+      throw new Error("compile failed");
+    }
+
+    const i18n = i18nFor("en");
+    const item = compiled.artifact.manifest[0] as ExerciseManifestItem;
+    // The server's own table, not a hand-written stand-in: the point of the test
+    // is that what the preview page emits carries the setting.
+    const table = domDocument.createElement("script");
+
+    table.setAttribute("data-exercise-hydration-map", "");
+    table.type = "application/json";
+    table.textContent = JSON.stringify(
+      exerciseHydrationForArtifact(compiled.artifact, i18n),
+    );
+    domDocument.body.append(table);
+
+    const host = domDocument.createElement("div");
+
+    host.innerHTML = renderModelElement(
+      item.publicData as unknown as ModelPublicData,
+      {
+        component: "carnap-model",
+        componentVersion: "1",
+        exerciseId: "m1",
+        exerciseKind: "model@1",
+        i18n,
+        title: null,
+      },
+      // A preview has no form and so no per-element payload — the table above is
+      // the only thing telling this widget anything.
+      exerciseActionsHtml(i18n, { slotted: true }),
+    );
+    adoptShadowRoots(host);
+    domDocument.body.append(host);
+
+    const element = host.querySelector("carnap-model") as unknown as {
+      setMark(state: string): void;
+    };
+
+    element.setMark("ok");
+
+    expect(
+      host.querySelector<HTMLElement>(`.${CORRECTNESS_MARK_CLASS}`)?.dataset
+        .state,
+    ).toBe("idle");
+
+    table.remove();
+    host.remove();
   });
 });
 

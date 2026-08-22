@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import { exerciseHydrationForArtifact } from "../src/worker/application/content/renderer";
 import type {
   AssessmentMode,
   Assignment,
@@ -13,6 +15,8 @@ import {
   resolveExerciseFeedback,
   verdictSealed,
 } from "../src/worker/domain/feedback";
+import type { ExerciseHydrationOptions } from "../src/worker/exercises/hydration";
+import { passthroughTranslator } from "../src/worker/i18n/translator";
 
 const NOW = "2026-08-07T12:00:00.000Z";
 const PAST = "2026-08-01T00:00:00.000Z";
@@ -188,5 +192,44 @@ describe("the verdict seal", () => {
     // And the default seals a withheld assignment without the author lifting a
     // finger, which is the report this whole setting came from.
     expect(verdictSealed({}, withheld, NOW)).toBe(true);
+  });
+});
+
+describe("the preview hydration table", () => {
+  async function previewOptions(
+    attributes: string,
+  ): Promise<ExerciseHydrationOptions | undefined> {
+    const compiled = await compileCarnapMarkdown(
+      `::::truth-table{${attributes}}\n- (P -> P)\n::::`,
+    );
+
+    if (!compiled.ok) {
+      throw new Error(
+        `compile failed: ${compiled.diagnostics.map((item) => item.code).join(", ")}`,
+      );
+    }
+
+    return exerciseHydrationForArtifact(
+      compiled.artifact,
+      passthroughTranslator,
+    ).tt1?.options;
+  }
+
+  test("carries the authored feedback to the widget", async () => {
+    // Without this the preview hydrated every widget as `full`, so an author who
+    // wrote feedback="none" was offered a Check button and a green tick by the
+    // very page they were checking the setting on.
+    expect(await previewOptions('#tt1 points=1 feedback="none"')).toEqual({
+      feedback: "none",
+    });
+    expect(await previewOptions('#tt1 points=1 feedback="terse"')).toEqual({
+      feedback: "terse",
+    });
+  });
+
+  test("says nothing when the author said nothing", async () => {
+    // A preview is outside any assignment, so there is no release date to
+    // resolve the absence against and the widget's own `full` default stands.
+    expect(await previewOptions("#tt1 points=1")).toEqual({});
   });
 });
