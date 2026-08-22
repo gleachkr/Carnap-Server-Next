@@ -347,6 +347,7 @@ msgid "Action"
 msgstr ""
 
 #: src/worker/web/admin.tsx
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Actions"
 msgstr ""
@@ -1385,6 +1386,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Download CSV"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Download the source of {name}"
 msgstr ""
 
 #: src/worker/web/labels.ts

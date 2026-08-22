@@ -1215,6 +1215,38 @@ class SqliteContentStore implements ContentStore {
 
     return rows.map(mapContentRevision);
   }
+
+  async latestRevisionIdsForItems(
+    itemIds: readonly AppId[],
+  ): Promise<Map<AppId, AppId>> {
+    if (itemIds.length === 0) {
+      // `inArray` with nothing in it is a SQL syntax error in some dialects and
+      // a query that cannot match in the rest; either way there is no question
+      // to ask.
+      return new Map();
+    }
+
+    // Two columns, never the source or the compiled artifact. Ascending by
+    // revision number so the last row written into the map for an item is its
+    // newest revision — the ordering does the grouping, without a correlated
+    // subquery per item.
+    const rows = await this.db
+      .select({
+        id: contentRevisions.id,
+        itemId: contentRevisions.itemId,
+      })
+      .from(contentRevisions)
+      .where(inArray(contentRevisions.itemId, [...itemIds]))
+      .orderBy(asc(contentRevisions.revisionNumber));
+
+    const latest = new Map<AppId, AppId>();
+
+    for (const row of rows) {
+      latest.set(row.itemId, row.id);
+    }
+
+    return latest;
+  }
 }
 
 class SqliteAssignmentStore implements AssignmentStore {

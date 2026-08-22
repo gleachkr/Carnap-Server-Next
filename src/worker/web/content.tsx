@@ -26,6 +26,7 @@ import {
   Time,
 } from "./components";
 import { renderContentDocument } from "./content-document";
+import { DownloadIcon } from "./icons";
 import { renderShell, useI18n } from "./layout";
 import { revisionDetailsText } from "./revisions";
 import { SortHeader } from "./table-sort";
@@ -52,10 +53,37 @@ Which option is correct?
 ::::`;
 }
 
+/**
+ * The download beside a listed piece of content: its Markdown source, as a
+ * file, for an author who would rather edit it in their own editor and upload
+ * the result. A link rather than a form because it takes nothing and changes
+ * nothing; the server sends it as an attachment, and the `download` attribute
+ * says so in the markup too.
+ *
+ * The label names what is being downloaded, because a column of identical
+ * "Download" links tells a reader listening to the page which row they are on
+ * and nothing else.
+ */
+const SourceDownload: FC<{
+  readonly href: string;
+  readonly label: string;
+}> = ({ href, label }) => (
+  <a
+    aria-label={label}
+    class="icon-button"
+    download
+    href={href}
+    title={label}
+  >
+    <DownloadIcon />
+  </a>
+);
+
 const ItemsTable: FC<{
   readonly canAuthor: boolean;
   readonly items: readonly ContentItem[];
-}> = ({ canAuthor, items }) => {
+  readonly latestRevisionIds: ReadonlyMap<string, string>;
+}> = ({ canAuthor, items, latestRevisionIds }) => {
   const i18n = useI18n();
 
   if (items.length === 0) {
@@ -76,20 +104,37 @@ const ItemsTable: FC<{
         <tr>
           <SortHeader label={i18n.t("Title")} />
           <SortHeader label={i18n.t("Updated")} />
+          <th scope="col">{i18n.t("Actions")}</th>
         </tr>
       </thead>
       <tbody>
-        {items.map((item) => (
-          <tr>
-            <td>
-              <a href={`/content/${item.id}`}>{item.title}</a>
-            </td>
-            {/* The instant behind the localized date, which does not sort. */}
-            <td data-sort-value={item.updatedAt}>
-              <Time value={item.updatedAt} />
-            </td>
-          </tr>
-        ))}
+        {items.map((item) => {
+          // The source an author would want is the current one, which is the
+          // newest revision. An item with none is a title and nothing else.
+          const revisionId = latestRevisionIds.get(item.id);
+
+          return (
+            <tr>
+              <td>
+                <a href={`/content/${item.id}`}>{item.title}</a>
+              </td>
+              {/* The instant behind the localized date, which does not sort. */}
+              <td data-sort-value={item.updatedAt}>
+                <Time value={item.updatedAt} />
+              </td>
+              <td>
+                {revisionId === undefined ? null : (
+                  <SourceDownload
+                    href={`/content/revisions/${revisionId}/source`}
+                    label={i18n.t("Download the source of {name}", {
+                      name: item.title,
+                    })}
+                  />
+                )}
+              </td>
+            </tr>
+          );
+        })}
       </tbody>
     </TableScroll>
   );
@@ -338,6 +383,7 @@ const RevisionsTable: FC<{
         <tr>
           <th>{i18n.t("Details")}</th>
           <th>{i18n.t("Created")}</th>
+          <th scope="col">{i18n.t("Actions")}</th>
         </tr>
       </thead>
       <tbody>
@@ -362,6 +408,17 @@ const RevisionsTable: FC<{
             <td>
               <Time value={revision.createdAt} />
             </td>
+            {/* Named by the same note the row is named by, so a reader who
+                cannot see which row a link is in still hears which revision
+                they are about to save. */}
+            <td>
+              <SourceDownload
+                href={`/content/revisions/${revision.id}/source`}
+                label={i18n.t("Download the source of {name}", {
+                  name: revisionDetailsText(i18n, revision.details),
+                })}
+              />
+            </td>
           </tr>
         ))}
       </tbody>
@@ -374,6 +431,8 @@ export function renderContentLibrary(
   model: {
     readonly canAuthor: boolean;
     readonly items: readonly ContentItem[];
+    /** Item id → the revision a download of that item would hand over. */
+    readonly latestRevisionIds: ReadonlyMap<string, string>;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -399,7 +458,11 @@ export function renderContentLibrary(
       }
       title={i18n.t("Your content")}
     >
-      <ItemsTable canAuthor={model.canAuthor} items={model.items} />
+      <ItemsTable
+        canAuthor={model.canAuthor}
+        items={model.items}
+        latestRevisionIds={model.latestRevisionIds}
+      />
     </Sheet>,
   );
 }

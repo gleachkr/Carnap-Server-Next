@@ -472,6 +472,39 @@ export function describeStorageContract(
       });
     });
 
+    test("the newest revision of each item, and none for an item with none", async () => {
+      await withStorage(async ({ stores }) => {
+        const { instructor, item } = await createContentRevision(stores);
+        const second = await stores.content.createRevision({
+          id: "content-revision-2",
+          itemId: item.id,
+          revisionNumber: 2,
+          details: "Reworded the second step.",
+          sourceFormat: "markdown",
+          sourceText: "# Modus Ponens\n\nEdited.",
+          contentHash: "sha256:second",
+          compiled: { exercises: [{ id: "mp" }] },
+          createdById: instructor.id,
+          createdAt: NOW,
+        });
+        const unwritten = await stores.content.createItem({
+          id: "content-item-2",
+          ownerUserId: instructor.id,
+          title: "Modus Tollens",
+          createdAt: NOW,
+        });
+
+        // Absent rather than mapped to null: a listing asks this to decide
+        // whether there is any source to offer, and an entry would say there is.
+        await expect(
+          stores.content.latestRevisionIdsForItems([item.id, unwritten.id]),
+        ).resolves.toEqual(new Map([[item.id, second.id]]));
+        await expect(
+          stores.content.latestRevisionIdsForItems([]),
+        ).resolves.toEqual(new Map());
+      });
+    });
+
     test("assignments can be published by content revision ID", async () => {
       await withStorage(async ({ stores }) => {
         const { assignment, instructor } =

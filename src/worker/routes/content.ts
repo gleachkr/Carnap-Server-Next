@@ -34,6 +34,7 @@ import {
   artifactStyleProps,
   contentDocumentHtml,
 } from "../web/content-document";
+import { markdownDownloadHeaders } from "../web/download";
 import {
   fieldValue,
   isFormSubmission,
@@ -179,6 +180,10 @@ async function libraryPage(context: Context<AppBindings>): Promise<Response> {
   return renderContentLibrary(context, {
     canAuthor: canAuthorContent(actor),
     items,
+    // What each row's download would hand over. An item created a minute ago
+    // and never written to has no revision and no entry here, and the listing
+    // draws no download for it.
+    latestRevisionIds: await service.latestRevisionIds(actor, items),
   });
 }
 
@@ -445,6 +450,46 @@ async function revisionPage(
   });
 }
 
+/**
+ * A revision's Markdown source as a file, for an author who would rather work
+ * on it in their own editor and upload the result. The source is what a
+ * revision is made of, so this is a download of the record itself rather than
+ * an export of it — no rendering, no compiled artifact, nothing that would not
+ * compile back to the same revision.
+ */
+async function revisionSourceDownload(
+  context: Context<AppBindings>,
+): Promise<Response> {
+  const loginRedirect = webActorOrLogin(context);
+
+  if (loginRedirect !== null) {
+    return loginRedirect;
+  }
+
+  const actor = requireAuthenticated(context);
+  const service = contentService(context);
+  const revision = await service.getRevision(
+    actor,
+    requiredParam(context, "revisionId"),
+  );
+  const item = await service.getItem(actor, revision.itemId);
+
+  return new Response(revision.sourceText, {
+    headers: markdownDownloadHeaders({
+      // When the revision was saved, not when it was downloaded: the file is a
+      // copy of a fixed thing, and two downloads of it should land on the same
+      // name rather than accumulate in a folder. A content item belongs to no
+      // course, so there is no clock to prefer over UTC.
+      at: new Date(revision.createdAt),
+      // The item names the file; the author's note, where there is one,
+      // distinguishes revisions of it the way it does everywhere else a
+      // revision is named to a reader.
+      parts: [item.title, revision.details],
+      timezone: "UTC",
+    }),
+  });
+}
+
 async function revisionDocumentPage(
   context: Context<AppBindings>,
 ): Promise<Response> {
@@ -523,6 +568,10 @@ contentRoutes.get("/go/:itemId", (context) =>
 
 contentRoutes.get("/revisions/:revisionId/document", (context) =>
   revisionDocumentPage(context),
+);
+
+contentRoutes.get("/revisions/:revisionId/source", (context) =>
+  revisionSourceDownload(context),
 );
 
 contentRoutes.get("/revisions/:revisionId", async (context) => {

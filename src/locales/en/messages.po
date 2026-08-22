@@ -347,6 +347,7 @@ msgid "Action"
 msgstr "Action"
 
 #: src/worker/web/admin.tsx
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Actions"
 msgstr "Actions"
@@ -1386,6 +1387,10 @@ msgstr "Donate to charity →"
 #: src/worker/web/courses.tsx
 msgid "Download CSV"
 msgstr "Download CSV"
+
+#: src/worker/web/content.tsx
+msgid "Download the source of {name}"
+msgstr "Download the source of {name}"
 
 #: src/worker/web/labels.ts
 msgid "Draft"

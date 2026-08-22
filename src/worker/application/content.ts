@@ -226,4 +226,28 @@ export class ContentService {
 
     return this.options.stores.content.listRevisionsForItem(itemId);
   }
+
+  /**
+   * Which revision each of `items` would be downloaded at — the newest one, or
+   * no entry at all for an item nobody has written a revision of yet.
+   *
+   * Items rather than ids: the caller has already read them, so the ownership
+   * check here is a restatement rather than a second round of reads, and this
+   * method hands back nothing the caller could not have had by listing each
+   * item's revisions itself.
+   */
+  async latestRevisionIds(
+    actor: AuthenticatedActor,
+    items: readonly ContentItem[],
+  ): Promise<Map<AppId, AppId>> {
+    for (const item of items) {
+      if (item.ownerUserId !== actor.user.id) {
+        throw forbidden("content_owner_required");
+      }
+    }
+
+    return this.options.stores.content.latestRevisionIdsForItems(
+      items.map((item) => item.id),
+    );
+  }
 }

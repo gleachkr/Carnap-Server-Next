@@ -351,6 +351,20 @@ export interface ContentStore {
    * rather than the first draft. Callers that want the latest take `[0]`.
    */
   listRevisionsForItem(itemId: AppId): Promise<ContentRevision[]>;
+  /**
+   * The newest revision of each of the given items, as an item id → revision id
+   * map. An item nobody has written a revision of is absent rather than mapped
+   * to null: there is no source under it, which is the whole question a caller
+   * asks this.
+   *
+   * Ids rather than revisions because the library listing asks it of every item
+   * at once, and a revision carries its whole source and its compiled artifact
+   * — a page that shows neither would be loading every draft of everything to
+   * decide whether to draw a link.
+   */
+  latestRevisionIdsForItems(
+    itemIds: readonly AppId[],
+  ): Promise<Map<AppId, AppId>>;
 }
 
 export interface CreateAssignmentInput {

@@ -127,3 +127,19 @@ export function csvDownloadHeaders(
     "Content-Type": "text/csv; charset=utf-8",
   };
 }
+
+/**
+ * Headers for a content revision's source: Markdown, named for the item it
+ * belongs to, and saved rather than displayed. `.md` because that is the
+ * extension an editor opens and the upload field accepts back.
+ */
+export function markdownDownloadHeaders(
+  name: DownloadName,
+): Record<string, string> {
+  return {
+    "Content-Disposition": attachmentDisposition(
+      downloadFilename(name, "md"),
+    ),
+    "Content-Type": "text/markdown; charset=utf-8",
+  };
+}

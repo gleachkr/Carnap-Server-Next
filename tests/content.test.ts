@@ -65,6 +65,7 @@ interface ContentRevisionResponse {
   readonly revision: {
     readonly compiled: CompiledContentArtifact;
     readonly contentHash: string;
+    readonly createdAt: string;
     readonly details: string;
     readonly id: string;
     readonly revisionNumber: number;
@@ -2014,6 +2015,172 @@ ${sampleSource("styled_doc")}`,
       const detail = (await detailResponse.json()) as ContentDetailResponse;
 
       expect(detail.revisions).toHaveLength(1);
+    });
+  });
+});
+
+describe("content source downloads", () => {
+  test("a revision downloads as the Markdown it was saved from", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "downloading-author@example.test");
+      const item = await createContent(env, author);
+      const created = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest(
+          {
+            details: "Second question reworded",
+            sourceText: sampleSource("downloaded_q"),
+          },
+          author,
+        ),
+        env,
+      );
+      const createdBody = (await created.json()) as ContentRevisionResponse;
+      const response = await appRequest(
+        createTestApp(),
+        `/content/revisions/${createdBody.revision.id}/source`,
+        { headers: { Cookie: author.cookieHeader } },
+        env,
+      );
+      const disposition = response.headers.get("Content-Disposition") ?? "";
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Content-Type")).toBe(
+        "text/markdown; charset=utf-8",
+      );
+      // The source itself, byte for byte: what comes back has to compile to the
+      // revision it came from, so nothing may be rendered, wrapped, or trimmed
+      // on the way out.
+      expect(await response.text()).toBe(sampleSource("downloaded_q"));
+      // Named for the item and the author's own note, and stamped with when the
+      // revision was saved rather than when it was fetched.
+      expect(disposition).toContain(
+        `filename="Truth tables - Second question reworded - ${createdBody.revision.createdAt.slice(0, 10)} `,
+      );
+      expect(disposition).toContain('.md"');
+    });
+  });
+
+  test("a revision of somebody else's item does not download", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "owner-of-source@example.test");
+      const item = await createContent(env, author);
+      const created = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest({ sourceText: sampleSource("private_q") }, author),
+        env,
+      );
+      const createdBody = (await created.json()) as ContentRevisionResponse;
+      const stranger = await login(env, "stranger-to-source@example.test");
+      const response = await appRequest(
+        createTestApp(),
+        `/content/revisions/${createdBody.revision.id}/source`,
+        { headers: { Cookie: stranger.cookieHeader } },
+        env,
+      );
+
+      // The download is a read of the record, so it is refused where every
+      // other read of it is: ownership, not the authoring capability the
+      // stranger happens to hold.
+      expect(response.status).toBe(403);
+      expect(await response.text()).not.toContain("Choose the tautology.");
+    });
+  });
+
+  test("the library offers each item's newest source, and nothing for an item with none", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "library-downloader@example.test");
+      const item = await createContent(env, author);
+      const first = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest({ sourceText: sampleSource("older_q") }, author),
+        env,
+      );
+      const second = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest({ sourceText: sampleSource("newer_q") }, author),
+        env,
+      );
+      const firstBody = (await first.json()) as ContentRevisionResponse;
+      const secondBody = (await second.json()) as ContentRevisionResponse;
+
+      await appRequest(
+        createTestApp(),
+        "/content",
+        jsonRequest({ title: "Nothing written yet" }, author),
+        env,
+      );
+
+      const page = await appRequest(
+        createTestApp(),
+        "/content",
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+      const html = await page.text();
+
+      expect(page.status).toBe(200);
+      // The source an author wants is the current one.
+      expect(html).toContain(
+        `href="/content/revisions/${secondBody.revision.id}/source"`,
+      );
+      expect(html).not.toContain(
+        `href="/content/revisions/${firstBody.revision.id}/source"`,
+      );
+      // Exactly one download on the page: the item nobody has written a
+      // revision of has no source to offer and draws no link at all.
+      expect(html.split('/source"').length - 1).toBe(1);
+      expect(html).toContain("Download the source of Truth tables");
+    });
+  });
+
+  test("the item page offers every revision's source", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "revision-downloader@example.test");
+      const item = await createContent(env, author);
+      const first = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest(
+          { details: "The older note", sourceText: sampleSource("rev_one") },
+          author,
+        ),
+        env,
+      );
+      const second = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest(
+          { details: "The newer note", sourceText: sampleSource("rev_two") },
+          author,
+        ),
+        env,
+      );
+      const firstBody = (await first.json()) as ContentRevisionResponse;
+      const secondBody = (await second.json()) as ContentRevisionResponse;
+      const page = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}`,
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+      const html = await page.text();
+
+      // A history is downloadable revision by revision: an author reaching back
+      // for the version before last is why the page lists them at all.
+      expect(html).toContain(
+        `href="/content/revisions/${firstBody.revision.id}/source"`,
+      );
+      expect(html).toContain(
+        `href="/content/revisions/${secondBody.revision.id}/source"`,
+      );
+      // Each named by the note its row is named by, so the links are told apart
+      // by a reader who cannot see which row they sit in.
+      expect(html).toContain("Download the source of The newer note");
     });
   });
 });
