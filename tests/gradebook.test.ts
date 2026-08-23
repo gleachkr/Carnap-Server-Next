@@ -614,7 +614,7 @@ describe("gradebook", () => {
         /^attachment; filename="Intro Logic - Homework - \d{4}-\d{2}-\d{2} \d{2}-\d{2}\.csv"; filename\*=UTF-8''/,
       );
       expect(csv).toContain(
-        "student_name,student_email,user_id,score,max_score,percent,status",
+        "student_name,student_email,student_id,user_id,score,max_score,percent,status",
       );
       expect(csv.indexOf("a-correct@example.test")).toBeLessThan(
         csv.indexOf("b-incorrect@example.test"),
@@ -641,7 +641,7 @@ describe("gradebook", () => {
       // Tidy long format: the assignment leads each row, then the same columns
       // the per-assignment export uses.
       expect(courseCsv).toContain(
-        "assignment_id,assignment_title,student_name,student_email,user_id,score,max_score,percent,status,calculated_at",
+        "assignment_id,assignment_title,student_name,student_email,student_id,user_id,score,max_score,percent,status,calculated_at",
       );
       expect(courseCsv).toContain(`${assignmentId},`);
       // One row per (student, assignment) score, grouped by student in row order.
@@ -730,7 +730,7 @@ describe("gradebook", () => {
       // Titled by its author where there is a title, by the id either way, and
       // always with what it is worth: a bare "1" is unreadable out of nothing.
       expect(header).toBe(
-        "student_name,student_email,user_id,score,max_score,percent,status," +
+        "student_name,student_email,student_id,user_id,score,max_score,percent,status," +
           "calculated_at,Modus ponens (q1) /2,q2 /1",
       );
       expect(header).not.toContain("q3");
@@ -799,7 +799,7 @@ Choose yes.
 
       expect(csvResponse.status).toBe(200);
       expect(header).toBe(
-        "student_name,student_email,user_id,score,max_score,percent,status," +
+        "student_name,student_email,student_id,user_id,score,max_score,percent,status," +
           'calculated_at,"Modus ponens, twice (q1.a) /2"',
       );
     });

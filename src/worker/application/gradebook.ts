@@ -300,6 +300,11 @@ export function assignmentGradebookCsv(
   const header = [
     "student_name",
     "student_email",
+    // The institution's own identifier, when an LMS launch has supplied one —
+    // empty otherwise, which is every student who has only ever signed in here.
+    // It sits with the other identifying columns rather than at the end because
+    // the per-exercise columns after them vary in number per assignment.
+    "student_id",
     "user_id",
     "score",
     "max_score",
@@ -312,6 +317,7 @@ export function assignmentGradebookCsv(
     [
       user.name ?? "",
       user.email,
+      user.studentId ?? "",
       user.id,
       score.score.toString(),
       score.maxScore.toString(),
@@ -351,6 +357,7 @@ export function courseGradebookCsv(gradebook: CourseGradebook): string {
     "assignment_title",
     "student_name",
     "student_email",
+    "student_id",
     "user_id",
     "score",
     "max_score",
@@ -378,6 +385,7 @@ export function courseGradebookCsv(gradebook: CourseGradebook): string {
           assignment.title,
           user.name ?? "",
           user.email,
+          user.studentId ?? "",
           user.id,
           score.score.toString(),
           score.maxScore.toString(),

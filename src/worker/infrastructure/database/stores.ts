@@ -471,6 +471,7 @@ class SqliteUserStore implements UserStore {
           email: input.email,
           emailVerifiedAt: input.emailVerifiedAt ?? null,
           name: input.name,
+          studentId: input.studentId ?? null,
           createdAt: input.createdAt,
           updatedAt: input.createdAt,
         })
@@ -487,6 +488,20 @@ class SqliteUserStore implements UserStore {
         .update(users)
         .set({ emailVerifiedAt: verifiedAt, updatedAt: verifiedAt })
         .where(and(eq(users.id, id), isNull(users.emailVerifiedAt)))
+        .returning(),
+    );
+  }
+
+  async adoptStudentId(
+    id: AppId,
+    studentId: string,
+    updatedAt: string,
+  ): Promise<User | null> {
+    return nullableSingle(
+      await this.db
+        .update(users)
+        .set({ studentId, updatedAt })
+        .where(and(eq(users.id, id), isNull(users.studentId)))
         .returning(),
     );
   }

@@ -153,6 +153,22 @@ export function renderProfile(
               </span>
             ) : null}
           </label>
+          {/* Shown, but not editable and not offered when absent: this is the
+              institution's identifier for the account holder, asserted by their
+              LMS, and neither a preference of theirs nor something they should
+              be able to invent. It is here so that someone whose grades are
+              being matched against a roster can see which number they are being
+              matched by. */}
+          {user.studentId === null ? null : (
+            <label>
+              {i18n.t("Student ID")}
+              <br />
+              <input readonly value={user.studentId} />
+              <span class="small">
+                {i18n.t("Supplied by your school's LMS.")}
+              </span>
+            </label>
+          )}
         </div>
         <button type="submit">{i18n.t("Save changes")}</button>
       </form>

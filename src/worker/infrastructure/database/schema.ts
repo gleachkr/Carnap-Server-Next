@@ -21,6 +21,7 @@ export const users = sqliteTable(
     emailVerifiedAt: text("email_verified_at"),
     name: text("name"),
     locale: text("locale"),
+    studentId: text("student_id"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
     disabledAt: text("disabled_at"),

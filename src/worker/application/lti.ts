@@ -11,7 +11,12 @@ import type { CourseRole } from "../domain/courses";
 import { createAppId } from "../domain/ids";
 import type { LtiPlatform, LtiResourceLink } from "../domain/lti";
 import { addSeconds, type Timestamp, timestampNow } from "../domain/time";
-import { NAME_MAX_LENGTH, normalizeName, type User } from "../domain/users";
+import {
+  NAME_MAX_LENGTH,
+  normalizeName,
+  normalizeStudentId,
+  type User,
+} from "../domain/users";
 import { deferred } from "../i18n/deferred";
 import type { SupportedLocale } from "../i18n/locales";
 import { matchSupportedLocale } from "../i18n/locales";
@@ -54,6 +59,7 @@ const CLAIM_CONTEXT = "https://purl.imsglobal.org/spec/lti/claim/context";
 const CLAIM_AGS_ENDPOINT =
   "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint";
 const CLAIM_CUSTOM = "https://purl.imsglobal.org/spec/lti/claim/custom";
+const CLAIM_LIS = "https://purl.imsglobal.org/spec/lti/claim/lis";
 const CLAIM_LAUNCH_PRESENTATION =
   "https://purl.imsglobal.org/spec/lti/claim/launch_presentation";
 const CLAIM_DL_SETTINGS =
@@ -245,6 +251,12 @@ interface NormalizedLaunch {
     readonly title: string | null;
   } | null;
   readonly role: CourseRole;
+  /**
+   * The institution's identifier for this person, normalized — see
+   * {@link studentIdClaim} for where a platform may put it. Null is the common
+   * case and carries no consequence: nothing here depends on having one.
+   */
+  readonly studentId: string | null;
   readonly subject: string;
 }
 
@@ -277,6 +289,36 @@ function normalizedEmailClaim(payload: JWTPayload): string | null {
   const email = stringClaim(payload, "email")?.trim().toLowerCase() ?? null;
 
   return email !== null && email.length > 0 ? email : null;
+}
+
+/**
+ * The institution's identifier for the launching person: `lis.person_sourcedid`
+ * and nothing else.
+ *
+ * A custom parameter looks like the obvious fallback for the platforms that do
+ * not send this claim, and was built and then removed. The `custom` claim is
+ * not an administrator-only channel — LTI allows custom parameters at the link
+ * placement as well as at tool registration, and the launch presents both
+ * identically, so we cannot tell which we are reading. Proven against Moodle:
+ * an ordinary course teacher, editing the activity through the normal form,
+ * can set the parameter and thereby write a permanent, unalterable identifier
+ * onto every student who launches it — all of them the same value, shown to
+ * each student as having come from their institution. A field whose whole
+ * purpose is to match an institutional record cannot be sourced from a channel
+ * the institution does not control.
+ *
+ * Should a platform turn up that really withholds the claim, the way back is an
+ * opt-in on the {@link LtiPlatform} registration, so that a Carnap site admin
+ * makes the trust decision the claim itself cannot carry.
+ *
+ * Normalized here rather than at the adopter so that every route to the column
+ * — this and the account-creating insert alike — is bounded and blank-free by
+ * construction.
+ */
+function studentIdClaim(payload: JWTPayload): string | null {
+  return normalizeStudentId(
+    stringField(objectClaim(payload, CLAIM_LIS), "person_sourcedid"),
+  );
 }
 
 function objectClaim(
@@ -691,7 +733,16 @@ export class LtiService {
     // account it just attached to may have none — the commonest case being an
     // account that reached Carnap by email before its LMS ever launched into
     // it. Same rule as a launch: fill a blank, overwrite nothing.
-    await this.adoptAssertedName(user, challenge.name, nowDate);
+    //
+    // Only the name: a challenge records what it needs to identify the pending
+    // link, and a student ID is not part of that. Nothing is lost, because the
+    // identity now exists and the person's next launch — the one that follows
+    // this approval — adopts the ID through the ordinary path.
+    await this.adoptAssertedProfile(
+      user,
+      { name: challenge.name, studentId: null },
+      nowDate,
+    );
 
     // The approval token went to the account's address, so clicking it is
     // also proof of that mailbox.
@@ -1202,6 +1253,7 @@ export class LtiService {
               title: stringField(resourceLinkClaim, "title"),
             },
       role: mapLtiRolesToCourseRole(roles),
+      studentId: studentIdClaim(payload),
       subject,
     };
   }
@@ -1229,7 +1281,7 @@ export class LtiService {
 
       return {
         kind: "user",
-        user: await this.adoptAssertedName(user, launch.name, nowDate),
+        user: await this.adoptAssertedProfile(user, launch, nowDate),
       };
     }
 
@@ -1261,6 +1313,7 @@ export class LtiService {
         // signs in natively (or approves a link) via that mailbox.
         emailVerifiedAt: null,
         name: launch.name,
+        studentId: launch.studentId,
         createdAt: now,
       });
     } catch (error) {
@@ -1282,7 +1335,7 @@ export class LtiService {
 
         return {
           kind: "user",
-          user: await this.adoptAssertedName(racedUser, launch.name, nowDate),
+          user: await this.adoptAssertedProfile(racedUser, launch, nowDate),
         };
       }
 
@@ -1304,23 +1357,53 @@ export class LtiService {
   }
 
   /**
-   * Give an account with no name the one the platform asserts.
+   * Fill in whatever this account is still missing that the platform asserts —
+   * its name, its student ID — leaving anything already recorded alone.
    *
-   * The name a launch carries used to reach the row only at creation, which
-   * left two populations permanently anonymous: accounts made by a launch from
-   * a platform that was not sharing names at the time, and accounts that
-   * existed before their LMS identity was linked to them. Both show up in every
-   * roster and gradebook as a bare email address — often a placeholder one —
-   * and neither can be repaired by relaunching. The prompt that would ask them
-   * to fix it themselves is no help either: it does not render on the
-   * chrome-free pages a launch lands on.
+   * The assertions a launch carries used to reach the row only at creation,
+   * which left two populations permanently incomplete: accounts made by a
+   * launch from a platform that was not sharing a field at the time, and
+   * accounts that existed before their LMS identity was linked to them. Both
+   * show up in every roster and gradebook as a bare email address — often a
+   * placeholder one — and neither can be repaired by relaunching. The prompt
+   * that would ask them to fix it themselves is no help either: it does not
+   * render on the chrome-free pages a launch lands on.
    *
    * Filling only a blank is what makes this safe to run on every launch. It is
    * not the hole that taking the name off the login form closed — a launch is a
    * signed assertion from a registered platform, not an anonymous form post —
    * but a name the account holder chose is still theirs, and a platform that
    * disagrees with it does not get to win.
+   *
+   * One method for both fields rather than one per field, because the whole
+   * bug being fixed here is a write that reaches some of the paths a launch can
+   * take and not others: there are four, and they are easy to add a fifth to.
+   * The argument is structural so that a {@link NormalizedLaunch} satisfies it
+   * as-is and the link-approval path, which has only a name to offer, can say
+   * so in a literal.
+   *
+   * The rule is the name's rule, applied to a field that may not deserve it:
+   * a student ID is the institution's fact about a person rather than the
+   * person's own choice, so a platform that disagrees with a stored one may
+   * simply be right, and keeping the stale value is a failure mode the name
+   * was never exposed to. Left as-is deliberately, and conservatively — this
+   * writes less, not more — pending a decision on conflict handling.
    */
+  private async adoptAssertedProfile(
+    user: User,
+    asserted: {
+      readonly name: string | null;
+      readonly studentId: string | null;
+    },
+    nowDate: Date,
+  ): Promise<User> {
+    return this.adoptAssertedStudentId(
+      await this.adoptAssertedName(user, asserted.name, nowDate),
+      asserted.studentId,
+      nowDate,
+    );
+  }
+
   private async adoptAssertedName(
     user: User,
     asserted: string | null,
@@ -1345,6 +1428,40 @@ export class LtiService {
     const updated = await this.options.stores.users.updateProfile(
       user.id,
       { locale: user.locale, name },
+      timestampNow(nowDate),
+    );
+
+    return updated ?? user;
+  }
+
+  /**
+   * The same fill-only-if-blank rule, but tested in the `WHERE` clause instead
+   * of here: `adoptStudentId` writes only over a null. An LMS that opens
+   * several Carnap activities on one page launches them concurrently, and a
+   * read-then-write would let two of those see an empty column and race.
+   *
+   * `normalizeStudentId` returning null covers both nothing-asserted and
+   * too-long-to-store; over-long is dropped rather than truncated because a
+   * truncated institutional ID still looks like one in a grade export.
+   */
+  private async adoptAssertedStudentId(
+    user: User,
+    asserted: string | null,
+    nowDate: Date,
+  ): Promise<User> {
+    const studentId = normalizeStudentId(asserted);
+
+    // The `user.studentId` half is a fast path and not the rule: it saves an
+    // update that would match no rows on every launch by a student who already
+    // has an ID, which is most of them after the first. Deleting it would
+    // change nothing but the query count — the `WHERE` clause is what decides.
+    if (studentId === null || user.studentId !== null) {
+      return user;
+    }
+
+    const updated = await this.options.stores.users.adoptStudentId(
+      user.id,
+      studentId,
       timestampNow(nowDate),
     );
 

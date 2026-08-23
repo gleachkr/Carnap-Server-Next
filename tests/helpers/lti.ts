@@ -27,6 +27,9 @@ export const CLAIM_CONTEXT =
   "https://purl.imsglobal.org/spec/lti/claim/context";
 export const CLAIM_AGS_ENDPOINT =
   "https://purl.imsglobal.org/spec/lti-ags/claim/endpoint";
+export const CLAIM_CUSTOM =
+  "https://purl.imsglobal.org/spec/lti/claim/custom";
+export const CLAIM_LIS = "https://purl.imsglobal.org/spec/lti/claim/lis";
 
 export const INSTRUCTOR_ROLE =
   "http://purl.imsglobal.org/vocab/lis/v2/membership#Instructor";

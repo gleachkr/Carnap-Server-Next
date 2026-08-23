@@ -3211,6 +3211,11 @@ msgid "Student"
 msgstr "Student"
 
 #: src/worker/web/admin.tsx
+#: src/worker/web/profile.tsx
+msgid "Student ID"
+msgstr "Student ID"
+
+#: src/worker/web/admin.tsx
 msgid "Subject"
 msgstr "Subject"
 
@@ -3255,6 +3260,10 @@ msgstr "Submitted proof"
 #: src/worker/web/ui-strings.ts
 msgid "Submitting…"
 msgstr "Submitting…"
+
+#: src/worker/web/profile.tsx
+msgid "Supplied by your school's LMS."
+msgstr "Supplied by your school's LMS."
 
 #: src/worker/web/donate.tsx
 msgid "Support"

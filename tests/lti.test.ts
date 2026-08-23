@@ -14,6 +14,8 @@ import type { Env } from "../src/worker/env";
 import type { WorkerApp } from "../src/worker/http";
 import {
   beginTestLogin,
+  CLAIM_CUSTOM,
+  CLAIM_LIS,
   CONTENT_DEVELOPER_ROLE,
   createLtiTestApp,
   formRequest,
@@ -377,6 +379,149 @@ describe("LTI 1.3 core launches", () => {
       );
 
       expect((await stores.users.getById(userId))?.name).toBeNull();
+    });
+  });
+
+  // The institution's own identifier for a student, which an instructor needs
+  // to join a Carnap grade export to a roster their registrar produced. Only a
+  // launch can supply one — nothing on the site can type it.
+  test("a launch records the student ID its platform asserts", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        claims: {
+          [CLAIM_LIS]: { person_sourcedid: "20261234" },
+        },
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBe(
+        "20261234",
+      );
+    });
+  });
+
+  // A custom parameter is NOT a second source, and this is the test that keeps
+  // it from becoming one again. LTI allows custom parameters at the link
+  // placement as well as at tool registration, and the launch presents both
+  // identically — so reading one would let any course teacher who can edit the
+  // activity stamp a permanent institutional identifier onto every student who
+  // launches it. Verified against Moodle before this was taken out: teacher1,
+  // through the ordinary activity form, set `carnap_student_id=SET-BY-TEACHER`
+  // and that is what the next student launch recorded.
+  test("a custom parameter is not a student ID", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        claims: {
+          [CLAIM_CUSTOM]: {
+            carnap_student_id: "set-by-whoever-can-edit-the-activity",
+          },
+        },
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBeNull();
+    });
+  });
+
+  // The same reason the name is adopted on every launch and not only at
+  // creation: an account that existed before its platform shared the field
+  // cannot be repaired by any other route.
+  test("a later launch fills a student ID the first launch left blank", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env);
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBeNull();
+
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "20261234" } },
+      });
+
+      expect((await stores.users.getById(userId))?.studentId).toBe(
+        "20261234",
+      );
+    });
+  });
+
+  // Fill-only-if-blank, as for the name — though whether that is the right rule
+  // for a fact the institution owns rather than the account holder is the open
+  // question this behaviour is pinned here to make visible.
+  test("a launch does not overwrite a student ID already recorded", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "first" } },
+      });
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "second" } },
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBe("first");
+    });
+  });
+
+  // A platform with the claim configured but the value unset sends a blank
+  // rather than omitting it. Stored as-is that would read as "this account has
+  // an ID" everywhere, and would block the real one from ever landing.
+  test("a blank asserted student ID is not an ID", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "   " } },
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBeNull();
+
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "20261234" } },
+      });
+
+      expect((await stores.users.getById(userId))?.studentId).toBe(
+        "20261234",
+      );
+    });
+  });
+
+  // Dropped rather than truncated: a truncated institutional ID still looks
+  // like an ID in a grade export, and joins against the wrong row or none.
+  test("an asserted student ID over the length limit is left on the floor", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "x".repeat(201) } },
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBeNull();
     });
   });
 
@@ -1424,7 +1569,6 @@ const CLAIM_DL_SETTINGS =
 const CLAIM_DL_CONTENT_ITEMS =
   "https://purl.imsglobal.org/spec/lti-dl/claim/content_items";
 const CLAIM_DL_DATA = "https://purl.imsglobal.org/spec/lti-dl/claim/data";
-const CLAIM_CUSTOM = "https://purl.imsglobal.org/spec/lti/claim/custom";
 const DL_RETURN_URL = `${TEST_ISSUER}/deep-link-return`;
 
 interface TestToolKeyPair {

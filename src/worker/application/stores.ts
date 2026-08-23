@@ -44,6 +44,12 @@ export interface CreateUserInput {
   /** Omitted or null means the address has not been proven (LTI-asserted). */
   readonly emailVerifiedAt?: Timestamp | null;
   readonly name: string | null;
+  /**
+   * The institution's identifier for this student, when the launch creating the
+   * account asserted one. Optional because only the LTI path has any, and the
+   * native path should not have to say `null` about a field it can never fill.
+   */
+  readonly studentId?: string | null;
   readonly createdAt: Timestamp;
 }
 
@@ -82,6 +88,20 @@ export interface UserStore {
    * was already verified.
    */
   markEmailVerified(id: AppId, verifiedAt: Timestamp): Promise<User | null>;
+  /**
+   * Record the institution's identifier for this student. Only ever sets a null
+   * student_id; returns null when the user is missing or already has one.
+   *
+   * The blank test belongs in the statement rather than in the caller because
+   * two launches for the same student can be in flight at once — an LMS that
+   * opens several activities in one page does exactly that — and a
+   * read-then-write would let both see an empty column.
+   */
+  adoptStudentId(
+    id: AppId,
+    studentId: string,
+    updatedAt: Timestamp,
+  ): Promise<User | null>;
   /**
    * Rewrite the fields a user controls about themselves — name and language —
    * as one row update, because they are saved as one form.

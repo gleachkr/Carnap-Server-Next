@@ -229,6 +229,27 @@ server, not just from the browser. Without the variable set, the LTI routes
 report themselves unconfigured and the passback sweep idles without spending
 queries.
 
+### Student IDs
+
+A launch may tell Carnap the identifier the institution knows the student by.
+It lands in the `student_id` column of both grade exports, which is what lets an
+instructor join a Carnap export to a roster their registrar produced.
+
+Carnap reads it from `lis.person_sourcedid` claim. On Moodle that needs no tool 
+configuration at all — set the user's **ID number** in their Moodle profile (or 
+via your user sync) and it arrives on the next launch. Other platforms gate the 
+claim behind their own privacy settings.
+
+Nothing depends on having a student ID. An account with none exports an empty
+cell.
+
+The value is adopted the first time a launch supplies it and is then left alone:
+a later launch asserting a different ID does not overwrite it, on the same rule
+that stops a platform overwriting a name its owner chose. Nobody can type a
+student ID — there is no form field for it anywhere, deliberately, since the
+value is the institution's assertion about a person rather than a preference of
+theirs. A student can see the ID their LMS supplied on their profile page.
+
 ## What is not here
 
 - **Postgres.** The storage seam admits another dialect, but it would need a

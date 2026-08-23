@@ -624,6 +624,18 @@ export function renderAdminUserProfile(
                       <VerifiedAt at={profile.user.emailVerifiedAt} />
                     ),
                 },
+                // Omitted rather than shown empty: an admin looking at a record
+                // needs to know an LMS asserted an ID and what it was, and a
+                // blank field on the majority of accounts that have none would
+                // only crowd the strip.
+                ...(profile.user.studentId === null
+                  ? []
+                  : [
+                      {
+                        label: i18n.t("Student ID"),
+                        value: profile.user.studentId,
+                      },
+                    ]),
               ]}
             />
             <SuspensionForm context={context} profile={profile} />

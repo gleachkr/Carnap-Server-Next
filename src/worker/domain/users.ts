@@ -20,6 +20,19 @@ export interface User {
    * be indistinguishable from a deliberate pick of the default.
    */
   readonly locale: string | null;
+  /**
+   * The identifier the student's institution knows them by — a registrar's
+   * student number, not anything of ours. Only an LMS launch writes it, from
+   * the `lis.person_sourcedid` claim or a configured custom parameter; nobody
+   * can type one, here or on the profile form.
+   *
+   * It exists for one job: letting an instructor join a Carnap grade export to
+   * a roster their institution produced, which an email address does poorly and
+   * our own {@link User.id} cannot do at all. Null is the ordinary value — every
+   * account that has never been launched into, and every platform that does not
+   * share the claim.
+   */
+  readonly studentId: string | null;
   readonly createdAt: Timestamp;
   readonly updatedAt: Timestamp;
   readonly disabledAt: Timestamp | null;
@@ -68,6 +81,48 @@ export function normalizeName(
  */
 export function hasName(user: User | null): user is User {
   return user !== null && (user.name?.trim().length ?? 0) > 0;
+}
+
+/**
+ * The longest student ID we store.
+ *
+ * No form imposes this one — nothing on the site can type a student ID — so it
+ * is a sanity bound on what a platform may assert, and the reason an over-long
+ * value is dropped rather than truncated: a truncated institutional ID still
+ * looks like an ID in a grade export, and joins against the wrong row or none
+ * at all without ever saying it was cut.
+ */
+export const STUDENT_ID_MAX_LENGTH = 200;
+
+/**
+ * A student ID as it should be stored, or null when there is nothing storable:
+ * trimmed, with both blank and over-{@link STUDENT_ID_MAX_LENGTH} meaning
+ * absent.
+ *
+ * Blank is worth normalizing even though only a platform writes this field:
+ * an LMS with the claim configured but the value unset sends `""` or a space
+ * rather than omitting it, and a stored `""` would read as "this account has
+ * an ID" everywhere that asks.
+ *
+ * The length test lives here rather than at the caller — the arrangement
+ * {@link normalizeName} makes, where the caller applies
+ * {@link NAME_MAX_LENGTH} itself — so that every path a value can reach the
+ * column by is bounded by construction. There is more than one: a launch that
+ * finds an existing account adopts, and a launch that creates one passes
+ * straight to the insert.
+ */
+export function normalizeStudentId(
+  studentId: string | null | undefined,
+): string | null {
+  if (studentId === null || studentId === undefined) {
+    return null;
+  }
+
+  const trimmed = studentId.trim();
+
+  return trimmed.length === 0 || trimmed.length > STUDENT_ID_MAX_LENGTH
+    ? null
+    : trimmed;
 }
 
 export interface ExternalIdentity {

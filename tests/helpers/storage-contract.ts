@@ -258,6 +258,33 @@ export function describeStorageContract(
           ),
         ).resolves.toBeNull();
 
+        // A student ID is written once and never over: the blank test lives in
+        // the statement, so two concurrent launches cannot both see an empty
+        // column. Null back means "somebody already filled it" — the same
+        // signal `markEmailVerified` gives, and the reason both are their own
+        // narrow method rather than fields of `updateProfile`.
+        expect(user.studentId).toBeNull();
+
+        const adopted = await stores.users.adoptStudentId(
+          user.id,
+          "20261234",
+          "2026-01-06T00:00:00.000Z",
+        );
+
+        expect(adopted).toMatchObject({
+          studentId: "20261234",
+          updatedAt: "2026-01-06T00:00:00.000Z",
+        });
+        await expect(
+          stores.users.adoptStudentId(user.id, "99999999", NOW),
+        ).resolves.toBeNull();
+        await expect(stores.users.getById(user.id)).resolves.toMatchObject({
+          studentId: "20261234",
+        });
+        await expect(
+          stores.users.adoptStudentId("missing-user", "20261234", NOW),
+        ).resolves.toBeNull();
+
         await expect(
           stores.users.deleteExternalIdentity(identity.id),
         ).resolves.toBe(true);

@@ -3211,6 +3211,11 @@ msgid "Student"
 msgstr "Studierende Person"
 
 #: src/worker/web/admin.tsx
+#: src/worker/web/profile.tsx
+msgid "Student ID"
+msgstr "Matrikelnummer"
+
+#: src/worker/web/admin.tsx
 msgid "Subject"
 msgstr "Subjekt"
 
@@ -3255,6 +3260,10 @@ msgstr "Abgegebener Beweis"
 #: src/worker/web/ui-strings.ts
 msgid "Submitting…"
 msgstr "Wird abgegeben …"
+
+#: src/worker/web/profile.tsx
+msgid "Supplied by your school's LMS."
+msgstr "Von dem LMS Ihrer Hochschule übermittelt."
 
 #: src/worker/web/donate.tsx
 msgid "Support"

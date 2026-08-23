@@ -173,6 +173,51 @@ describe("profile page", () => {
       expect(html).toContain("ada@example.test");
       expect(html).toContain("Sign-in");
       expect(html).toContain("Member since");
+      // No student ID on an account no LMS has launched into, and no empty
+      // field where one would go.
+      expect(html).not.toContain("Student ID");
+    });
+  });
+
+  // Shown so that someone whose grades are being matched against a roster can
+  // see which number they are matched by — and shown read-only, with no input
+  // the form posts back, because the value is the institution's assertion about
+  // them rather than a preference of theirs.
+  test("shows an LMS-supplied student ID without offering to edit it", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const session = await login(env);
+
+      await stores.users.adoptStudentId(session.actorId, "20261234", NOW);
+
+      const response = await appRequest(
+        createTestApp(),
+        "/profile",
+        { headers: { Cookie: session.cookieHeader } },
+        env,
+      );
+      const html = await response.text();
+
+      expect(html).toContain("Student ID");
+      expect(html).toContain('<input readonly="" value="20261234"/>');
+      expect(html).not.toContain('name="studentId"');
+    });
+  });
+
+  // The field is not on the form, so a post that names it anyway is ignored
+  // rather than honoured: there is no route by which a person can choose the
+  // identifier their institution knows them by.
+  test("a student ID cannot be set by posting one", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const session = await login(env);
+      const response = await saveProfile(env, session, {
+        name: "Ada Lovelace",
+        studentId: "99999999",
+      });
+
+      expect(response.status).toBe(303);
+      await expect(
+        stores.users.getById(session.actorId),
+      ).resolves.toMatchObject({ studentId: null });
     });
   });
 

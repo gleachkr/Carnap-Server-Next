@@ -1,0 +1,15 @@
+-- The identifier a student's institution knows them by, as asserted by an LMS
+-- launch: `lis.person_sourcedid`, or the custom parameter an admin configures
+-- when their platform will not share the claim.
+--
+-- Nullable, and null is the ordinary value: every account that has never been
+-- launched into, and every platform that shares nothing. Nothing on the site
+-- writes it — there is no form field for it, deliberately, because the value is
+-- the institution's assertion about a person and not a preference of theirs.
+--
+-- Deliberately not unique. Two institutions numbering their students
+-- independently will collide eventually, and a unique index would turn that
+-- collision into a failed launch for whoever arrived second — a student locked
+-- out of their coursework over a column that only exists to make an instructor's
+-- spreadsheet join easier.
+ALTER TABLE `users` ADD `student_id` text;
