@@ -1064,6 +1064,49 @@ describe("native web workflow", () => {
     });
   });
 
+  // Signed out there is no Courses link, no Content, no Admin and no profile,
+  // so the header was a bar holding the brand and nothing else — a link to "/",
+  // which sends a signed-out visitor back to the page they were already on. The
+  // footer keeps that brand link, so no page loses its way in.
+  test("a page with nothing to navigate to has no navbar", async () => {
+    await withStorage(async (_storage, env) => {
+      const form = await appRequest(
+        createTestApp(),
+        "/login",
+        { headers: htmlHeaders() },
+        env,
+      );
+      const sent = await appRequest(
+        createTestApp(),
+        "/login",
+        formRequest({ email: "no-navbar@example.test" }),
+        env,
+      );
+      const formHtml = await form.text();
+      const sentHtml = await sent.text();
+
+      expect(formHtml).not.toContain("app-header");
+      expect(sentHtml).toContain("Check your email");
+      expect(sentHtml).not.toContain("app-header");
+
+      // Both keep the footer, which is where the brand link survives.
+      expect(formHtml).toContain("app-footer");
+      expect(sentHtml).toContain("app-footer");
+
+      // And the rule is about having somewhere to go, not about these two
+      // pages: signing in puts the navbar back.
+      const login = await webLogin(env, "no-navbar@example.test");
+      const courses = await appRequest(
+        createTestApp(),
+        "/courses",
+        { headers: htmlHeaders(login.cookieHeader) },
+        env,
+      );
+
+      expect(await courses.text()).toContain("app-header");
+    });
+  });
+
   test("a name posted to the login route does not reach the account", async () => {
     await withStorage(async (storage, env) => {
       const start = await appRequest(

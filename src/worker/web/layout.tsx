@@ -104,6 +104,12 @@ const Layout: FC<LayoutProps> = ({
   // want the locale, and taking it off the translator that worded the page is
   // what stops the two drifting apart.
   const i18n = useI18n();
+  // The header is navigation, so it appears when there is somewhere to go. A
+  // signed-out visitor gets no nav items and no profile link, which left a bar
+  // holding nothing but the brand — and on the login page that brand links to
+  // "/", which sends them back to the login page. The footer carries the same
+  // brand link, so the way in is still on every page that drops the header.
+  const showHeader = !chromeless && (actor !== null || actions.length > 0);
 
   return (
     <html lang={i18n.locale}>
@@ -147,7 +153,7 @@ const Layout: FC<LayoutProps> = ({
             )}
           </div>
         </noscript>
-        {chromeless ? null : (
+        {showHeader ? (
           <header class="app-header">
             <a class="brand" href="/" aria-label={i18n.t("Carnap home")}>
               <span class="brand-mark" aria-hidden="true">
@@ -183,7 +189,7 @@ const Layout: FC<LayoutProps> = ({
               </>
             )}
           </header>
-        )}
+        ) : null}
         <main class="page-shell">
           {/* Inside the landmark rather than above it: a strip between the
               header and `main` is content belonging to no region, which is
