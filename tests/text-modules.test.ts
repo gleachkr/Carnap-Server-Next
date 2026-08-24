@@ -60,6 +60,20 @@ describe("text modules", () => {
         }
 
         const statement = source.slice(begin + 1, end + 1);
+
+        // Nor is one in a statement that merely *starts* like an import. A
+        // registry keyed by file name — `{ "gentzen-lk.mm0": gentzenLk }` — is
+        // an `export const` with no `from` in it, and reading it as a re-export
+        // reports the opposite of the truth about a file that imports
+        // correctly two lines above. Every form the rules are about names its
+        // specifier after `from`, except the side-effect `import "./x.css"`.
+        if (
+          !/^import\b/.test(statement) &&
+          !/^export\b[^;]*\bfrom\b/.test(statement)
+        ) {
+          continue;
+        }
+
         const where = `${relative(ROOT, path)}: ${statement
           .replace(/\s+/g, " ")
           .trim()}`;

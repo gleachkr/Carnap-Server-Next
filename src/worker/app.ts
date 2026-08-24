@@ -21,6 +21,7 @@ import { healthRoutes } from "./routes/health";
 import { ltiRoutes } from "./routes/lti";
 import { scriptRoutes } from "./routes/scripts";
 import { styleRoutes } from "./routes/styles";
+import { theoryRoutes } from "./routes/theories";
 import { webRoutes } from "./routes/web";
 
 export interface CreateAppOptions {
@@ -55,6 +56,7 @@ export function createApp(options: CreateAppOptions = {}): WorkerApp {
   // needs an actor, a locale, or CSRF must go below it.
   app.route("/", styleRoutes);
   app.route("/", scriptRoutes);
+  app.route("/", theoryRoutes);
 
   app.use("*", requestIdMiddleware());
   // Locale resolves in two passes around authentication: the request's own
