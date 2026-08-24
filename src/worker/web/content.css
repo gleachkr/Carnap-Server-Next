@@ -1,0 +1,613 @@
+/*
+ * The content layer: everything that styles authored content and exercise
+ * forms. Loaded by the app shell *and* by the standalone content documents
+ * served into iframes, so the two render identically.
+ *
+ * Assembled into a served stylesheet by ./styles.ts, which puts the generated
+ * @font-face blocks above this file and the exercise-group and theory-panel
+ * rules below it. Order matters at exactly one seam, documented there.
+ */
+
+/* The interface families are generated in ./ui-fonts (their URLs are hashed)
+   and joined in above this file by ./styles.ts. They belong to this layer and
+   not to the chrome one because a content document loads only this layer, and
+   the widgets inside its shadow roots ask for Fira Code. */
+
+/*
+ * Every color in the application is one of these, and nothing outside this
+ * block picks a color of its own: a rule elsewhere that wants a tint reaches
+ * for color-mix over a token rather than respelling the token's channels at
+ * an alpha. That is what lets a second palette be a second copy of this block
+ * and nothing else — see the dark override below.
+ *
+ * Shadow-DOM styles may write var(--token, <fallback>), because a content
+ * document rendered with cssReset has no stylesheet of ours at all and the
+ * fallback is then the widget's only color. Every such fallback must repeat
+ * the light value here exactly; tests/a11y/tokens.test.ts enforces it, which
+ * is what stops a stale fallback from pinning a light color under dark.
+ */
+:root {
+  /* Surfaces, from the ground the page sits on up to a control's own fill. */
+  --paper: #f1eadf;
+  --paper-top: #f5efe6;
+  --surface: #fbf7ef;
+  --surface-soft: #f8f2e8;
+  /* The header and footer's fill, laid over content scrolling beneath. */
+  --surface-translucent: color-mix(in srgb, var(--surface) 96%, transparent);
+  /* A control's fill. The same value as --surface here, and its own token
+     anyway: these seven uses mean "the thing you press", and in dark a
+     control has to sit visibly off the sheet instead of dissolving into it.
+     A token whose only sin is coinciding in one palette still earns its
+     keep in the other. */
+  --control-surface: #fbf7ef;
+  --rule: #d8d0c3;
+  --rule-soft: #e5ded3;
+  --ink: #16324a;
+  /* Clears WCAG AA 4.5:1 on --surface (4.58:1) and --paper-top, which is
+     where nearly all secondary text sits. It does *not* clear it on the
+     warmer fills — --surface-soft, --paper, --rule-soft — so muted text
+     drawn on one of those reaches for --ink-muted-strong. */
+  --ink-muted: #5f7388;
+  /* --ink-muted for the warmer fills: same hue, dark enough for AA down to
+     --rule-soft (4.9:1). Only for text that actually sits on one of them;
+     used app-wide it reads as ordinary ink rather than as secondary. */
+  --ink-muted-strong: #4d5f72;
+  /* Decoration only — separators, a disclosure triangle. At ~2.8:1 on the
+     lightest surface it is below AA, so nothing a reader has to read (or
+     click) may be drawn in it; that is what --ink-muted is for. */
+  --ink-faint: #8797a7;
+  --blue: #0b66d8;
+  /* The emphatic blue: a hover, a pressed state, an active nav item. Named
+     for the emphasis and not for the lightness, because under a dark palette
+     more emphasis means lighter rather than darker. */
+  --blue-strong: #074f9f;
+  --blue-soft: #eaf3ff;
+  --green: #1b7048;
+  --green-soft: #edf9f2;
+  --red: #b42318;
+  --red-soft: #fff0ed;
+  --gold: #9a6400;
+  --gold-soft: #fff7df;
+  /* Text drawn on a filled accent — a pressed chip, a selected option. */
+  --on-accent: #ffffff;
+  /* What a dialog casts, at whatever alpha the rule wants. Its own token
+     rather than --ink at an alpha: a shadow has to deepen under a dark
+     palette, where the ink is nearly white and would lift it instead. */
+  --shadow-color: #102235;
+  /* The faint wash of colour up in the page's top right. Whole-colour rather
+     than an alpha applied at the use site, because how much of it reads is a
+     property of the ground it lies on and so belongs to the palette. */
+  --body-glow: color-mix(in srgb, var(--blue) 5.5%, transparent);
+  /* The scope lines a Fitch proof draws down its subproofs. Relative to the
+     text it accompanies, so it follows the palette on its own; an instructor
+     theme can still override it outright. */
+  --fitch-scope: color-mix(in srgb, currentColor 72%, transparent);
+  --logo-font: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
+  --body-font:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+  /* Horizontal padding shared by the header, page shell, and footer, so
+     their content edges align. */
+  --shell-gutter: clamp(1.25rem, 4vw, 3.75rem);
+  /* How wide a page's content actually gets: the shell's cap less its two
+     gutters. Anything that has to line up with an ordinary page's measure
+     reaches for this — the breadcrumb above the split columns, and the
+     standalone content document, which has no shell to sit inside. */
+  --page-measure: calc(85rem - 2 * var(--shell-gutter));
+  color-scheme: light;
+}
+
+/*
+ * The same sheet at night. Only the colours are redeclared — every rule in
+ * both layers already reads through the tokens, so this block is the whole
+ * of dark mode, and it reaches the app shell, the standalone content
+ * document (which links this stylesheet and evaluates the query itself), and
+ * the exercise widgets' shadow roots (custom properties cross that boundary)
+ * without any of them knowing a second palette exists.
+ *
+ * Warm charcoal rather than a neutral or an inversion: the light palette's
+ * subject is paper, and paper in a dark room is warm and dim, not grey. The
+ * ratios are tuned to sit near the light palette's rather than as far from
+ * the ground as they will go — --ink-muted lands at 4.76:1 on the lightest
+ * ground it may be drawn on, against 4.58:1 in light, because muted text
+ * that clears AA comfortably stops reading as muted. tests/a11y/contrast.ts
+ * holds every one of these pairings.
+ *
+ * Two tokens invert outright, which is the whole reason each has a name
+ * rather than a value: --on-accent goes dark, because an accent light enough
+ * to read on charcoal cannot also carry white text; and --shadow-color goes
+ * to black, because a shadow derived from the ink would be a highlight here.
+ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Stacked as in light: --surface-soft is the recessed fill, so it stays
+       a step *below* the sheet, and --control-surface the raised one — which
+       in light coincides with --surface and here is what keeps a button from
+       dissolving into the sheet it sits on. */
+    --paper: #17140f;
+    --paper-top: #1d1913;
+    --surface-soft: #1e1a13;
+    --surface: #221d16;
+    --control-surface: #2a241b;
+    --rule: #3d352a;
+    --rule-soft: #2e281f;
+    --ink: #e9e1d3;
+    --ink-muted: #988e7e;
+    --ink-muted-strong: #aca291;
+    --ink-faint: #6e6557;
+    --blue: #5b9bef;
+    --blue-strong: #8fbcff;
+    --blue-soft: #16273d;
+    --green: #46b87c;
+    --green-soft: #12281d;
+    --red: #f58a7c;
+    --red-soft: #2e1815;
+    --gold: #c9a043;
+    --gold-soft: #2b2110;
+    --on-accent: #17140f;
+    --shadow-color: #000000;
+    /* Carries further on a dark ground than the same wash does on cream,
+       but starts from so much less light that it needs the extra to read
+       at all. */
+    --body-glow: color-mix(in srgb, var(--blue) 9%, transparent);
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--blue-strong);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 1.2rem;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin-bottom: 0.8rem;
+}
+
+h3 {
+  font-size: 0.96rem;
+  margin-bottom: 0.45rem;
+}
+
+:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--blue) 30%, transparent);
+  outline-offset: 3px;
+}
+
+/* Buttons and controls */
+
+button,
+.button {
+  align-items: center;
+  background: var(--control-surface);
+  border: 1px solid var(--blue);
+  border-radius: 4px;
+  color: var(--blue);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 650;
+  gap: 0.45rem;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0.6rem 1.15rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+button:hover,
+.button:hover {
+  background: var(--blue-soft);
+  color: var(--blue-strong);
+  text-decoration: none;
+}
+
+/* A control that is on screen to show the shape of things but cannot be worked
+   — the preview's submit above all. Without a rule of its own it is drawn
+   exactly like a live button, because the colour set above overrides the grey
+   a browser would otherwise apply, and the only way to learn it is dead is to
+   press it. The faint ink is deliberate: a disabled control is exempt from the
+   contrast minimum, and reading as unavailable is the whole point.
+
+   A hover state does not match a disabled form control, so none of the hover
+   rules below need to win this back. */
+button:disabled,
+.button:disabled {
+  background: var(--surface-soft);
+  border-color: var(--rule);
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* .secondary is retained as an alias for the default light button so
+   existing markup keeps working; the two are intentionally identical. */
+
+button.ghost,
+.button.ghost {
+  background: transparent;
+  border-color: var(--rule);
+  color: var(--ink);
+}
+
+button.danger,
+.button.danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
+  color: var(--red);
+}
+
+button.ghost:hover,
+.button.ghost:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  filter: none;
+}
+
+button.danger:hover,
+.button.danger:hover {
+  background: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red);
+  filter: none;
+}
+
+input,
+select,
+textarea {
+  background: var(--control-surface);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  color: var(--ink);
+  font: inherit;
+  padding: 0.55rem 0.65rem;
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--blue);
+}
+
+/* Growing a field taller is fine; dragging it wider breaks the form's
+   layout, so the handle only moves vertically. */
+textarea {
+  resize: vertical;
+}
+
+/* Checkboxes are inline controls: the full-width block treatment above
+   would stretch and misplace them inside their label text. */
+input[type="checkbox"] {
+  accent-color: var(--blue);
+  margin-right: 0.45rem;
+  width: auto;
+}
+
+input[type="hidden"] {
+  display: none;
+}
+
+/* The browser's date/time control is exactly as wide as the reader's own
+   locale format makes it — "07/31/2026, 11:59 PM" needs more room than
+   "31.07.2026, 23:59" — and a field too narrow for its value does not
+   shrink the text or show that anything is missing: it silently scrolls the
+   tail, the AM/PM marker, out of sight. So the control is never squeezed
+   below its intrinsic width; a tight row wraps or grows instead. */
+input[type="datetime-local"] {
+  min-width: min-content;
+}
+
+/* A prefilled-but-immutable field: legible, but visibly not for editing. The
+   --rule-soft fill is the darkest surface in the palette, so this is the
+   --ink-muted-strong case (plain --ink-muted is only 3.66:1 here). */
+input[readonly] {
+  background: var(--rule-soft);
+  color: var(--ink-muted-strong);
+}
+
+input[readonly]:focus {
+  border-color: var(--rule);
+}
+
+label {
+  color: var(--ink);
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 560;
+}
+
+label + label,
+form > label {
+  margin-top: 0.9rem;
+}
+
+form button,
+form .button {
+  margin-top: 1.1rem;
+}
+
+fieldset {
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  margin: 1rem 0 0;
+  padding: 0.5rem 1rem 1rem;
+}
+
+legend {
+  color: var(--ink-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0 0.4rem;
+  text-transform: uppercase;
+}
+
+/* Tables (ledger styling) */
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--rule-soft);
+  padding: 0.82rem 0.95rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+tr:last-child td {
+  border-bottom: 0;
+}
+
+th {
+  color: var(--ink-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+td:first-child,
+th:first-child {
+  padding-left: 0;
+}
+
+td:last-child,
+th:last-child {
+  padding-right: 0;
+}
+
+td a {
+  font-weight: 600;
+}
+
+/* A heading that reorders the table under it. The shell script builds this
+   button out of the heading's own text on load, so it takes the heading's
+   small uppercase type rather than a button's or a link's: the roster should
+   still read as a ledger with a couple of live headings, not as a row of
+   controls. Hover and the triangle are what say it does something. */
+th > .column-sort {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: 0.3em;
+  letter-spacing: inherit;
+  padding: 0;
+  text-align: inherit;
+  text-transform: inherit;
+}
+
+/* Winning back the button hover, which would otherwise paint a blue pill
+   across a table heading. */
+th > .column-sort:hover {
+  background: none;
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* Which way the sorted column runs. Hidden from the accessibility tree — the
+   heading's aria-sort already says it, and in words. The triangle is set well
+   under the heading's own size (at full size it out-weighs the word it
+   qualifies) and centred on it rather than sat on the baseline, where a
+   shape with no descender reads as having slipped. */
+.column-sort-mark {
+  font-size: 0.62em;
+  line-height: 1;
+}
+
+/* Tables carry a content-driven minimum width (one column per gradebook
+   assignment, long endpoint URLs, …) that can exceed a narrow sheet. The
+   sheet clips its overflow, so wrap the table in a scroller: it fills the
+   sheet on wide screens and scrolls sideways instead of hiding columns on a
+   phone. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+/* The admin audit log is one event per *pair* of rows: the four fields anyone
+   scans by, then a full-width line carrying the request id and — behind a
+   disclosure, when the event recorded any — its metadata. So the rule that
+   divides events goes after the pair rather than through the middle of one,
+   and the detail line sits tight under the row it belongs to. */
+
+.audit-event td {
+  border-bottom: 0;
+  padding-bottom: 0.3rem;
+}
+
+.audit-event-detail td {
+  padding-top: 0;
+}
+
+/* Indented by exactly the drawn marker below, so the id starts in the same
+   place whether or not the event recorded metadata to disclose. */
+.audit-request {
+  color: var(--ink-muted);
+  margin: 0;
+  padding-left: 0.85rem;
+}
+
+.audit-request > summary {
+  cursor: pointer;
+  list-style: none;
+  /* Only the text is the hit target; a summary left to fill the row would
+     make the whole line clickable with nothing to say so. */
+  width: fit-content;
+}
+
+.audit-request > summary:hover {
+  color: var(--ink);
+}
+
+/* The triangle is drawn rather than left to the browser: the native marker's
+   box is a different width in every engine, so a metadata-less event would
+   sit a few pixels off from the rows around it. Borders rather than a glyph
+   because generated text joins the summary's accessible name, and "black
+   right-pointing small triangle" is not part of it. */
+
+.audit-request > summary::-webkit-details-marker {
+  display: none;
+}
+
+.audit-request > summary::before {
+  border: 0.3rem solid transparent;
+  border-left-color: currentcolor;
+  content: "";
+  display: inline-block;
+  height: 0;
+  margin: 0 0.25rem 0 -0.85rem;
+  vertical-align: 0.04rem;
+  width: 0;
+}
+
+.audit-request[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.audit-request pre {
+  margin: 0.55rem 0 0;
+}
+
+/* Code, inline and in blocks: a lesson quoting a directive, a worked proof
+   shown as text, the app shell's own source listings. Fira Code is already
+   loaded for the editor's source field, so the same face carries here.
+   Ligatures are off for the same reason it is there: a lesson writing an
+   arrow or a turnstile in ascii must show the characters the author typed,
+   not a glyph standing in for them. Monospace runs wider than the body face
+   at one nominal size, so the notch down keeps a full line of source on
+   screen — and both sizes are in rem, so a code element inside a pre does
+   not shrink twice. */
+code,
+pre {
+  font-family: "Fira Code", ui-monospace, monospace;
+  font-size: 0.9rem;
+  font-variant-ligatures: none;
+}
+
+/* A block reads as a quoted slab of source: the same soft fill and hairline
+   the answer-review box uses, so content and chrome agree. Lines are long and
+   must not be re-flowed, so they scroll sideways rather than being clipped by
+   the sheet. */
+pre {
+  background: var(--surface-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  line-height: 1.45;
+  overflow-x: auto;
+  padding: 0.7rem 0.85rem;
+}
+
+/* Mathematics. The compiler stores formulas as MathML, which the browser
+   lays out itself — but only well if it is given a font carrying an OpenType
+   MATH table, and no platform reliably has one. See ./math-font, which is
+   also where an instructor is pointed to override this. The generic 'math'
+   family is the fallback: on a machine that does have such a font installed
+   it is the right one, and on one that does not, nothing else would help. */
+
+math {
+  /* biome-ignore lint/a11y/useGenericFontNames: `math` is the generic family
+     here — CSS Fonts 4 added it for exactly this element, and the rule's list
+     of generics predates it. */
+  font-family: "STIX Two Math", math;
+}
+
+/* MathML Core does not break a long equation across lines — there is no
+   property that asks it to — so a displayed one that outgrows the measure
+   scrolls on its own rather than widening the page. A reader on a phone
+   otherwise gets a document that pans sideways. */
+math[display="block"] {
+  margin: 1.1rem 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Exercise and submission review surfaces */
+
+.exercise {
+  margin-bottom: 1.1rem;
+}
+
+.exercise + .exercise {
+  margin-top: 1rem;
+}
+
+/* A submitted answer, as the grader or the student reviews it: a soft box
+   of labeled values (selected options, response text, the correct answer
+   for instructors). */
+
+.answer-review {
+  background: var(--surface-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 4px;
+  padding: 0.85rem 1rem;
+}
+
+.answer-review p {
+  margin: 0;
+}
+
+.answer-review dl {
+  display: grid;
+  gap: 0.45rem 1.25rem;
+  grid-template-columns: max-content 1fr;
+  margin: 0;
+}
+
+.answer-review dt {
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding-top: 0.14rem;
+  text-transform: uppercase;
+}
+
+.answer-review dd {
+  margin: 0;
+  white-space: pre-wrap;
+}

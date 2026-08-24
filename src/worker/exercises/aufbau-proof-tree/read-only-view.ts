@@ -12,6 +12,7 @@ import {
   exerciseLegendHtml,
 } from "../group";
 import { reviewHydrationScript } from "../hydration";
+import shadowStyles from "./shadow.css" with { type: "text" };
 import type { AufbauProofTreePublicData, ProofTreeNode } from "./types";
 import {
   AUFBAU_PROOF_TREE_COMPONENT_METADATA,
@@ -29,37 +30,10 @@ import {
  */
 const TREE_ASSET_URL = `/assets/components/${AUFBAU_PROOF_TREE_COMPONENT_METADATA.assetId}.js`;
 
-/**
- * Shadow-DOM chrome styles for the tree proof element. The prompt is slotted
- * from light DOM (so author `:::style` CSS and the document's math font reach
- * it) while
- * the tree canvas is isolated. The tree itself is drawn by the vendored ProofML
- * custom elements (`<proof-tree>` etc.); these rules only theme them (border
- * colour, fonts) — ProofML computes the fitch-bar layout client-side. The client
- * editor (Stage 3) adopts this same shadow root and rebuilds the tree with
- * editing affordances.
- */
-const AUFBAU_PROOF_TREE_SHADOW_STYLES = `
-  ${EXERCISE_GROUP_SHADOW_STYLES}
-
-  .proof-tree-canvas {
-    --border-color: var(--ink, #16324a);
-    --inference-size: 0.72rem;
-    margin: 0.85rem 0 0;
-    overflow-x: auto;
-    padding: 1.3rem 0;
-  }
-
-  proof-proposition {
-    font-family: "STIX Two Math", Cambria, Georgia, serif;
-    font-size: 1.02rem;
-  }
-
-  proof-inference {
-    color: var(--ink-muted, #5f7388);
-    font-family: ui-sans-serif, system-ui, sans-serif;
-  }
-`;
+const AUFBAU_PROOF_TREE_SHADOW_STYLES = [
+  EXERCISE_GROUP_SHADOW_STYLES,
+  shadowStyles,
+].join("\n");
 
 interface AufbauProofTreeElementMeta {
   readonly component: string;

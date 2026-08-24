@@ -12,6 +12,7 @@ import {
   exerciseLegendHtml,
 } from "../group";
 import { reviewHydrationScript } from "../hydration";
+import shadowStyles from "./shadow.css" with { type: "text" };
 import type { AufbauProofPrawitzPublicData, PrawitzProofNode } from "./types";
 import {
   AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
@@ -29,51 +30,10 @@ import {
  */
 const PRAWITZ_ASSET_URL = `/assets/components/${AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA.assetId}.js`;
 
-/**
- * Shadow-DOM chrome styles for the Prawitz proof element. The prompt is slotted
- * from light DOM (so author `:::style` CSS and the document's math font reach
- * it) while
- * the tree canvas is isolated. The tree itself is drawn by the vendored ProofML
- * custom elements; these rules only theme them. The discharge superscripts (the
- * `¹` on a bracketed assumption and beside the discharging inference) are plain
- * `<sup>`s inside ProofML propositions/inferences.
- */
-const AUFBAU_PROOF_PRAWITZ_SHADOW_STYLES = `
-  ${EXERCISE_GROUP_SHADOW_STYLES}
-
-  .prawitz-canvas {
-    --border-color: var(--ink, #16324a);
-    --inference-size: 0.72rem;
-    margin: 0.85rem 0 0;
-    overflow-x: auto;
-    padding: 1.3rem 0;
-  }
-
-  proof-proposition {
-    font-family: "STIX Two Math", Cambria, Georgia, serif;
-    font-size: 1.02rem;
-  }
-
-  proof-inference {
-    color: var(--ink-muted, #5f7388);
-    font-family: ui-sans-serif, system-ui, sans-serif;
-  }
-
-  proof-proposition sup,
-  proof-inference sup {
-    font-size: 0.85em;
-  }
-
-  /* The assumption label hangs off the proposition's top-right corner instead
-     of taking inline width — otherwise it widens the box and shoves the
-     centered formula leftward under its inference line. */
-  proof-proposition { position: relative; }
-  proof-proposition > sup {
-    left: 100%;
-    position: absolute;
-    top: -0.55em;
-  }
-`;
+const AUFBAU_PROOF_PRAWITZ_SHADOW_STYLES = [
+  EXERCISE_GROUP_SHADOW_STYLES,
+  shadowStyles,
+].join("\n");
 
 interface AufbauProofPrawitzElementMeta {
   readonly component: string;

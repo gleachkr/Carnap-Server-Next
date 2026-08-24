@@ -21,6 +21,7 @@
  * editable body. Author toggles for proof search (`auto?`) and completion are
  * carried in the options but not yet wired to editor assistance.
  */
+
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { type Diagnostic, setDiagnostics } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
@@ -29,6 +30,7 @@ import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/st
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
 import { loadProofCompiler } from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
+import shadowStyles from "./carnap-aufbau-proof-v1.css" with { type: "text" };
 
 const DEBOUNCE_MS = 400;
 
@@ -106,87 +108,7 @@ function bodyFromProofText(proofText: string): string {
   return underline === -1 ? proofText : lines.slice(underline + 1).join("\n");
 }
 
-const SHADOW_STYLES = `
-  .proof-goal {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    /* Fira Code first (loaded as a web font) so connective ligatures render. */
-    font-family: "Fira Code", ui-monospace, monospace;
-    font-size: 0.9rem;
-    gap: 0.4rem;
-    margin: 0.5rem 0 0.4rem;
-    opacity: 0.85;
-  }
-  .proof-goal-label {
-    font-family: inherit;
-    font-weight: 600;
-    opacity: 0.7;
-  }
-  .proof-goal-decl {
-    min-width: 0;
-  }
-  .proof-editor {
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 0.4rem;
-    overflow: hidden;
-  }
-  .proof-editor .cm-editor {
-    background: transparent;
-  }
-  .proof-editor .cm-editor.cm-focused {
-    outline: none;
-  }
-  .proof-editor .cm-gutters {
-    background: transparent;
-    border: none;
-    opacity: 0.5;
-  }
-  .proof-editor .cm-content {
-    font-family: "Fira Code", ui-monospace, monospace;
-    font-size: 0.9rem;
-  }
-  /* The insertion point, which CodeMirror's base theme would otherwise paint
-     black. It ships both colours and picks between them from the
-     EditorView.darkTheme facet rather than from the OS, so a view that never
-     sets that facet gets the black one in both schemes and the caret vanishes
-     into the dark surface. Taking it from the ink token follows the palette
-     instead, and needs no facet reconfigured when the preference changes.
-
-     The extra .cm-editor in the selector is load-bearing. CodeMirror mounts its
-     theme through adoptedStyleSheets, which the cascade puts after this shadow
-     root's own style element, so its rule wins every tie on specificity alone.
-     Its selector is two classes; this one is three. */
-  .proof-editor .cm-editor .cm-content {
-    caret-color: var(--ink, #16324a);
-  }
-  /* The bubble a diagnostic is read in. CodeMirror's base theme paints it
-     #f5f5f5 from a rule scoped to &light, and &light is selected by the
-     EditorView.darkTheme facet rather than by the OS — so a view that never sets
-     that facet keeps the pale background in dark mode while the message inside
-     inherits the light ink, and the text disappears into it. Repainting the
-     bubble from the tokens covers both schemes at once.
-
-     Two things about the selector. .cm-tooltip-lint names the <ul> *inside* the
-     bubble rather than the bubble itself, so .cm-tooltip.cm-tooltip-lint matches
-     nothing at all; the wrapper has to be named directly. And the extra
-     .cm-editor is load-bearing for the same reason it is on the caret above —
-     CodeMirror's adopted stylesheet is applied after this shadow root's own
-     style element, so its two-class rule wins every tie. Three classes wins. */
-  .proof-editor .cm-editor .cm-tooltip {
-    background: var(--surface-soft, #f8f2e8);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 0.3rem;
-    color: var(--ink, #16324a);
-    font-family: system-ui, sans-serif;
-    font-size: 0.82rem;
-  }
-  /* The severity bar down the left of each message, which the base theme draws
-     in a raw #d11 that neither palette uses. */
-  .proof-editor .cm-editor .cm-diagnostic-error {
-    border-left-color: var(--red, #b42318);
-  }
-`;
+const SHADOW_STYLES = shadowStyles;
 
 class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   private mm0 = "";

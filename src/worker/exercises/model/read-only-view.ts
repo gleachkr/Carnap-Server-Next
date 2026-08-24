@@ -27,6 +27,8 @@ import {
   parseDomain,
   tupleKey,
 } from "./logic";
+import reviewStyles from "./review.css" with { type: "text" };
+import shadowStyles from "./shadow.css" with { type: "text" };
 import type { ModelStrings } from "./strings";
 import { buildModelStrings } from "./strings";
 import type {
@@ -37,128 +39,11 @@ import type {
 import { MODEL_KIND } from "./types";
 import { describeVerdict } from "./verdict-text";
 
-/**
- * Shadow-DOM chrome styles for the model element, server-rendered into its
- * Declarative Shadow Root. The shadow boundary isolates them from author
- * `:::style` CSS; the prompt is slotted from light DOM so author CSS and the
- * document's math font still reach it. Custom properties inherit across the
- * boundary, so the palette tokens resolve to the content document's values —
- * which is also why nothing here is a hex literal.
- */
-const MODEL_SHADOW_STYLES = `
-  ${EXERCISE_GROUP_SHADOW_STYLES}
-
-  .model-goal {
-    font-size: 1.05rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .model-fields {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .model-row {
-    align-items: baseline;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .model-label {
-    font-weight: 560;
-    min-width: 6ch;
-  }
-
-  .model-input {
-    background: var(--control-surface, #fbf7ef);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 3px;
-    color: inherit;
-    font: inherit;
-    min-width: 12ch;
-    padding: 0.15rem 0.35rem;
-  }
-
-  .model-input:disabled,
-  .model-select:disabled {
-    opacity: 0.75;
-  }
-
-  .model-select {
-    background: var(--control-surface, #fbf7ef);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 3px;
-    color: inherit;
-    font: inherit;
-    padding: 0.1rem 0.25rem;
-  }
-
-  /* A locked given is a requirement, not a hint: it reads as part of the
-     exercise rather than as something left half-answered. */
-  .model-row[data-locked] .model-label {
-    font-weight: 600;
-  }
-
-  .model-warning {
-    color: var(--red, #b42318);
-    font-weight: 600;
-  }
-
-  .model-warning:empty {
-    display: none;
-  }
-
-  /* A function's values as a table: the last argument across the columns, the
-     rest down the rows. A binary function over a small domain is then the
-     square it is written as on a blackboard, and no cell has to repeat the
-     function symbol — the argument is read off the two axes. A table wider than
-     the column scrolls rather than stretching the exercise. */
-  .model-function {
-    flex: 1 1 auto;
-    max-width: 100%;
-    min-width: 0;
-    overflow-x: auto;
-  }
-
-  .model-function-table {
-    border-collapse: collapse;
-    font-variant-numeric: tabular-nums;
-  }
-
-  .model-function-table td,
-  .model-function-table th {
-    padding: 0.1rem 0.3rem;
-    text-align: center;
-  }
-
-  /* The two argument axes, ruled off the way a textbook value table is. */
-  .model-function-table thead td,
-  .model-function-table thead th {
-    border-bottom: 1px solid var(--rule-soft, #e5ded3);
-    font-weight: 560;
-  }
-
-  .model-function-table th[scope="row"] {
-    border-right: 1px solid var(--rule-soft, #e5ded3);
-    font-weight: 560;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  /* A locked given is part of the exercise. Muting the control says so more
-     plainly than the browser's own disabled styling, which on a select is
-     nearly invisible against this palette. Marked on the control rather than
-     the row: a function's given may fix some cells of its table and leave the
-     rest to the student. */
-  .model-input[data-locked],
-  .model-select[data-locked] {
-    background: var(--surface-soft, #f8f2e8);
-    border-style: dashed;
-  }
-
-  ${VISUALLY_HIDDEN_STYLES}
-`;
+const MODEL_SHADOW_STYLES = [
+  EXERCISE_GROUP_SHADOW_STYLES,
+  shadowStyles,
+  VISUALLY_HIDDEN_STYLES,
+].join("\n");
 
 const TURNSTILES: Readonly<Record<ModelTurnstileGlyph, string>> = {
   double: "⊨",
@@ -397,41 +282,7 @@ export function renderModelElement(
       </carnap-model>`;
 }
 
-/**
- * Shadow-DOM styles for the model `review` widget: the submitted model as a
- * plain list of field values, with the verdict above it.
- */
-const MODEL_REVIEW_STYLES = `
-  .model-review-goal {
-    font-weight: 560;
-    margin: 0 0 0.4rem;
-  }
-
-  .model-review-verdict {
-    margin: 0 0 0.5rem;
-  }
-
-  .model-review {
-    display: grid;
-    gap: 0.2rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  .model-review-field {
-    display: flex;
-    gap: 0.4rem;
-  }
-
-  .model-review-label {
-    font-weight: 560;
-  }
-
-  .model-review-value {
-    font-variant-numeric: tabular-nums;
-  }
-`;
+const MODEL_REVIEW_STYLES = reviewStyles;
 
 export interface ModelReview {
   readonly answer: ModelAnswerData;

@@ -1,0 +1,72 @@
+.tree-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0.2rem;
+}
+.tree-toolbar button {
+  background: var(--control-surface, #fbf7ef);
+  border: 1px solid var(--rule, #d8d0c3);
+  border-radius: 0.3rem;
+  color: var(--blue-strong, #074f9f);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+}
+.tree-toolbar button:disabled {
+  color: var(--ink-muted, #5f7388);
+  cursor: default;
+  opacity: 0.55;
+}
+.tree-edit {
+  border-bottom: 1px dashed transparent;
+  /* Fira Code first (loaded as a web font) so its contextual ligatures turn
+     typed connectives like -> and <-> into → and ↔ in the rendered proof. */
+  font-family: "Fira Code", ui-monospace, monospace;
+  min-width: 1ch;
+  outline: none;
+  padding: 0 0.1rem;
+  white-space: pre;
+}
+.tree-edit:focus {
+  border-bottom-color: var(--blue, #0b66d8);
+}
+.tree-edit.is-selected {
+  background: var(--blue-soft, #eaf3ff);
+}
+.tree-edit.is-error {
+  border-bottom: 1px wavy var(--red, #b42318);
+  text-decoration: underline wavy var(--red, #b42318);
+}
+.tree-edit:not(.is-selected):not(.is-empty):hover {
+  background: var(--surface-soft, #f8f2e8);
+}
+/* An unfilled conclusion/rule: a tinted, comfortably-clickable box. */
+.tree-edit.is-empty {
+  background: var(--blue-soft, #eaf3ff);
+  border-bottom-color: transparent;
+  border-radius: 0.2rem;
+  display: inline-block;
+  min-height: 1.15em;
+  min-width: 2.6ch;
+  outline: 1px dashed var(--blue, #0b66d8);
+  outline-offset: 1px;
+}
+.tree-rule.is-empty {
+  min-width: 3.4ch;
+}
+/* The read-only goal is still a selection target (add premises to it). */
+.tree-fixed {
+  cursor: pointer;
+}
+/* Roving-focus wrapper: carries keyboard focus for tree navigation. */
+.tree-node {
+  border-radius: 0.25rem;
+  outline: none;
+}
+.tree-node:focus-visible {
+  outline: 2px solid var(--blue, #0b66d8);
+  outline-offset: 2px;
+}

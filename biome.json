@@ -3,6 +3,7 @@
   "files": {
     "ignoreUnknown": true,
     "includes": [
+      "src/**/*.css",
       "src/**/*.ts",
       "src/**/*.tsx",
       "tests/**/*.ts",
@@ -23,7 +24,10 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "noDescendingSpecificity": "off"
+      }
     }
   }
 }

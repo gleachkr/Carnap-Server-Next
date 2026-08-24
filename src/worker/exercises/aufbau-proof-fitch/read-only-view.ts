@@ -12,6 +12,7 @@ import {
   exerciseLegendHtml,
 } from "../group";
 import { reviewHydrationScript } from "../hydration";
+import shadowStyles from "./shadow.css" with { type: "text" };
 import type { AufbauProofFitchPublicData } from "./types";
 import {
   AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
@@ -28,30 +29,10 @@ import {
  */
 const FITCH_ASSET_URL = `/assets/components/${AUFBAU_PROOF_FITCH_COMPONENT_METADATA.assetId}.js`;
 
-/**
- * Shadow-DOM chrome styles for the Fitch proof element, server-rendered into its
- * Declarative Shadow Root so author `:::style` CSS cannot reach the chrome. The
- * prompt is slotted from light DOM so author CSS and the document's math font
- * still reach
- * it. The client (Stage 3) replaces the inert `<pre>` with a CodeMirror editor
- * that draws the subproof scope-lines; the inert view is just the source text.
- */
-const AUFBAU_PROOF_FITCH_SHADOW_STYLES = `
-  ${EXERCISE_GROUP_SHADOW_STYLES}
-
-  .proof-source {
-    background: var(--surface-soft, #f8f2e8);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 0.4rem;
-    font-family: "Fira Code", ui-monospace, monospace;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin: 0.75rem 0 0;
-    overflow-x: auto;
-    padding: 0.75rem 0.9rem;
-    white-space: pre;
-  }
-`;
+const AUFBAU_PROOF_FITCH_SHADOW_STYLES = [
+  EXERCISE_GROUP_SHADOW_STYLES,
+  shadowStyles,
+].join("\n");
 
 interface AufbauProofFitchElementMeta {
   readonly component: string;

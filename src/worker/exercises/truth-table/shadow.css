@@ -1,0 +1,183 @@
+/*
+ * Shadow-DOM chrome for the truth-table element, server-rendered into its
+ * Declarative Shadow Root so it is isolated from author `:::style` CSS and needs
+ * no JS to render. The prompt is slotted from light DOM so author CSS and the
+ * document's math font
+ * still reach it; the grid chrome cannot be. Custom properties (`--blue-strong`,
+ * `--green`, `--red`, `--ink-muted`) inherit across the boundary.
+ */
+
+/* Block, not grid: the run-in legend floats, and floats do not apply to grid
+   items (see EXERCISE_GROUP_STYLES). What the grid's gap used to space, the
+   children now space themselves — the slotted prompt and action bar carry page
+   margins already, so only the note below needs one. */
+.tt-wrap {
+  display: block;
+}
+
+.tt-scroll {
+  overflow-x: auto;
+}
+
+table.tt {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.tt th,
+.tt td {
+  border: 1px solid var(--rule, #d8d0c3);
+  min-width: 2rem;
+  padding: 0.2rem 0.4rem;
+  text-align: center;
+}
+
+/* The rule under the header carries the same weight as the separators between
+   formulas (.tt-sep): both mark a division of the table itself rather than the
+   grid of its cells, so they should read alike. */
+.tt thead th {
+  border-bottom: 2px solid var(--ink, #16324a);
+  font-weight: 600;
+}
+
+.tt .tt-paren {
+  border-inline: 0;
+  color: var(--ink-muted, #5f7388);
+  min-width: 0;
+  padding-inline: 0.1rem;
+}
+
+/*
+ * Parens drop their side borders so they blend, but that erases the table's
+ * outer edge when a formula ends (or starts) with one. Force the edge back on
+ * the first and last cell of every row.
+ */
+.tt tr > :first-child {
+  border-inline-start: 1px solid var(--rule, #d8d0c3);
+}
+
+.tt tr > :last-child {
+  border-inline-end: 1px solid var(--rule, #d8d0c3);
+}
+
+.tt .tt-sep {
+  border-left: 2px solid var(--ink, #16324a);
+}
+
+.tt .tt-main {
+  background: color-mix(in srgb, var(--gold, #9a6400) 12%, transparent);
+  font-weight: 600;
+}
+
+.tt .tt-turnstile {
+  font-weight: 600;
+}
+
+.tt-cell {
+  background: var(--surface, #fbf7ef);
+  border: 1px solid var(--rule, #d8d0c3);
+  border-radius: 3px;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  min-width: 1.6rem;
+  padding: 0.05rem 0.3rem;
+}
+
+.tt-cell[disabled] {
+  cursor: default;
+}
+
+/* The grid is navigated by arrow key, so the ring is not a nicety — it is the
+   only thing telling a keyboard user which of 32 cells they are about to
+   change. Drawn outside the border so it reads against the filled and the
+   marked states alike. */
+.tt-cell:focus-visible {
+  outline: 2px solid var(--blue-strong, #074f9f);
+  outline-offset: 2px;
+}
+
+.tt-cell[data-tt-value=""] {
+  color: var(--ink-muted, #5f7388);
+}
+
+/*
+ * A blank cell is still a cell. The nodash option leaves the glyph out
+ * altogether, and an element with no text has no line box at all, so the button
+ * collapses to its padding — a row of slivers instead of a grid, and a row that
+ * jumps taller the moment a student puts a value in it. A zero-width space gives
+ * every empty cell a line to stand on, so a blank one is exactly as tall as a
+ * filled one whatever glyph (or none) the author chose. Selected on the value
+ * rather than a class, because all three writers of an empty cell — the fillable
+ * button, the scaffolded given, the withheld review — carry data-tt-value, and
+ * only the blank value can be glyphless (a true/false mark is required
+ * non-empty). Nothing hears it: the cells are named by aria-label, and a
+ * zero-width space is nothing to read out in the first place.
+ */
+.tt [data-tt-value=""]::before {
+  content: "\200b";
+}
+
+.tt-given {
+  color: var(--ink-muted, #5f7388);
+}
+
+.tt-correct {
+  color: var(--green, #1b7048);
+  font-weight: 600;
+}
+
+.tt-incorrect {
+  color: var(--red, #b42318);
+  font-weight: 600;
+}
+
+.tt-cell.tt-correct {
+  border-color: var(--green, #1b7048);
+}
+
+.tt-cell.tt-incorrect {
+  border-color: var(--red, #b42318);
+}
+
+/* The Check / counterexample controls live in the shared light-DOM action bar
+   (styled in the content stylesheet, so author CSS reaches every exercise's
+   buttons uniformly), not in this shadow chrome. */
+
+/*
+ * The counterexample selector: one radio per row, in a leading column the grid
+ * always carries and shows only while the student is making that claim. Server
+ * markup rather than cells the client injects, so the column is styled and
+ * named by the same code as the rest of the grid; display:none rather than
+ * visibility, so an unpressed table is exactly the table it was before.
+ */
+.tt-ce-select {
+  display: none;
+}
+
+.tt.tt-ce-mode .tt-ce-select {
+  display: table-cell;
+}
+
+.tt-ce-radio {
+  accent-color: var(--blue-strong, #074f9f);
+  cursor: pointer;
+  margin: 0;
+}
+
+/* The row the student is claiming as their counterexample. Nothing else recedes:
+   the rest of the table is their own work, filled in as usual, and dimming it
+   would make the grid they are reading from harder to read. */
+.tt tr.tt-ce-row > * {
+  background: color-mix(in srgb, var(--gold, #9a6400) 14%, transparent);
+}
+
+.tt-ce-note {
+  color: var(--ink-muted, #5f7388);
+  margin: 0.75rem 0 0;
+}
+
+.tt-ce-note[data-state="correct"] {
+  color: var(--green, #1b7048);
+  font-weight: 600;
+}

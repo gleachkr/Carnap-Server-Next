@@ -1,0 +1,32 @@
+/*
+ * Shadow-DOM chrome styles for the multiple-choice element, server-rendered
+ * into its Declarative Shadow Root. The shadow boundary isolates them so author
+ * `:::style` CSS cannot reach the chrome; the prompt and option labels are
+ * slotted from light DOM, so author CSS and the document's math font still
+ * reach
+ * them. Custom properties (e.g. `--blue-strong`) inherit across the boundary, so
+ * palette tokens resolve to the content document's values.
+ */
+
+.mc-options {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.mc-option {
+  align-items: center;
+  display: flex;
+  font-weight: 460;
+  gap: 0.5rem;
+}
+
+.mc-input {
+  margin: 0;
+  width: auto;
+}
+
+/* The element marks the chosen option once it enhances. */
+.mc-option[data-selected] {
+  color: var(--blue-strong);
+  font-weight: 600;
+}

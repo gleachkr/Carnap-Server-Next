@@ -29,3 +29,18 @@ export const MATH_FONT_VERSION = "5.3.0";
 export const MATH_FONT_FILE = `stix-two-math-${MATH_FONT_VERSION}.woff2`;
 
 export const MATH_FONT_HREF = fontHref(MATH_FONT_FILE);
+
+/**
+ * The `@font-face` itself, generated here rather than written in
+ * `./content.css` because the URL carries a content hash and a stylesheet has
+ * nowhere to compute one. `./styles` joins it into the content layer beside
+ * the interface families, which are generated for the same reason.
+ *
+ * A rule that *uses* the family — `math { font-family }` — is ordinary CSS and
+ * stays in the stylesheet. Only the declaration has to be built.
+ */
+export const MATH_FONT_FACE = `@font-face {
+  font-display: swap;
+  font-family: "STIX Two Math";
+  src: url("${MATH_FONT_HREF}") format("woff2");
+}`;

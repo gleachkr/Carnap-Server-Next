@@ -16,6 +16,8 @@
  * spent. Nothing of them is left visible — the `(?)` is the whole affordance.
  */
 
+import helpDialogStyles from "./help-dialog.css" with { type: "text" };
+
 /** One row of the key table: the keys as written, and what they do. */
 export interface HelpShortcut {
   /** What the keys do, in the viewer's language. */
@@ -342,106 +344,5 @@ export function openHelpDialog(
   }
 }
 
-/**
- * The dialog's look. Appended to a widget's shadow styles, which is where the
- * panel lives; the `(?)` that opens it is in light DOM and is styled by
- * `.exercise-actions .help-trigger` in `web/styles.ts`.
- *
- * `position` and `margin` here are not decoration: they are what defeats the UA
- * stylesheet's centring so {@link openHelpDialog} can place the panel.
- */
-export const HELP_DIALOG_STYLES = `
-  .help-dialog {
-    background: var(--surface, #fbf7ef);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 6px;
-    box-shadow: 0 18px 44px rgb(16 34 53 / 0.22);
-    color: var(--ink, #16324a);
-    font-size: 0.85rem;
-    margin: 0;
-    max-width: min(28rem, calc(100vw - 1rem));
-    padding: 0;
-    position: absolute;
-  }
-  /* Only when open: an author rule beats the UA's \`dialog:not([open])\`
-     whatever its specificity, so an unconditional \`display\` would leave the
-     closed dialog on the page. A column so the body can take the slack under
-     the height cap \`openHelpDialog\` sets. */
-  .help-dialog[open] {
-    display: flex;
-    flex-direction: column;
-  }
-  .help-dialog::backdrop {
-    background: rgb(16 34 53 / 0.28);
-  }
-  .help-dialog-header {
-    align-items: baseline;
-    border-bottom: 1px solid var(--rule-soft, #e5ded3);
-    display: flex;
-    flex: 0 0 auto;
-    gap: 1rem;
-    justify-content: space-between;
-    padding: 0.6rem 0.85rem;
-  }
-  .help-dialog-title {
-    font-size: 0.95rem;
-    margin: 0;
-  }
-  .help-dialog-close {
-    background: transparent;
-    border: 0;
-    color: var(--ink-muted, #5f7388);
-    cursor: pointer;
-    font: inherit;
-    font-size: 1.2rem;
-    line-height: 1;
-    padding: 0 0.2rem;
-  }
-  .help-dialog-close:hover {
-    color: var(--ink, #16324a);
-  }
-  /* A long key table scrolls inside the panel rather than growing past the
-     bottom of the reader's view, where nothing could scroll it into sight. The
-     bound is the height \`openHelpDialog\` measures and sets, not a \`vh\`: a
-     viewport unit inside the content frame is a fraction of the whole lesson.
-     \`min-height: 0\` is what lets this flex item shrink under that cap. */
-  .help-dialog-body {
-    min-height: 0;
-    overflow-y: auto;
-    padding: 0.75rem 0.85rem 0.9rem;
-  }
-  .help-dialog-body p {
-    margin: 0 0 0.55rem;
-  }
-  .help-dialog-heading {
-    color: var(--ink-muted, #5f7388);
-    font-size: 0.72rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    margin: 0.85rem 0 0.45rem;
-    text-transform: uppercase;
-  }
-  .help-shortcuts {
-    display: grid;
-    gap: 0.4rem 0.75rem;
-    grid-template-columns: max-content 1fr;
-    margin: 0;
-  }
-  .help-shortcuts dt,
-  .help-shortcuts dd {
-    margin: 0;
-  }
-  .help-shortcuts dt {
-    display: flex;
-    gap: 0.25rem;
-  }
-  .help-shortcuts kbd {
-    background: var(--control-surface, #fbf7ef);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 0.25rem;
-    font-family: ui-monospace, monospace;
-    font-size: 0.78rem;
-    padding: 0.05rem 0.3rem;
-    white-space: nowrap;
-  }
-`;
+/** The look; the prose is in the stylesheet, with the rules. */
+export const HELP_DIALOG_STYLES = helpDialogStyles;

@@ -9,6 +9,7 @@ import { AUFBAU_PROOF_FITCH_KIND } from "./aufbau-proof-fitch/types";
 import { AUFBAU_PROOF_PRAWITZ_KIND } from "./aufbau-proof-prawitz/types";
 import { AUFBAU_PROOF_TREE_KIND } from "./aufbau-proof-tree/types";
 import { FREE_RESPONSE_KIND } from "./free-response/types";
+import groupStyles from "./group.css" with { type: "text" };
 import { MODEL_KIND } from "./model/types";
 import { MULTIPLE_CHOICE_KIND } from "./multiple-choice/types";
 import { SHORT_ANSWER_KIND } from "./short-answer/types";
@@ -101,76 +102,7 @@ export function exerciseLegendHtml(label: ExerciseGroupLabel): string {
   return `<legend class="${className}">${escapeHtml(label.text)}</legend>`;
 }
 
-/**
- * Shared look for the group and its legend, in a form both the page stylesheet
- * and the widgets' shadow roots can use — a shadow root inherits no page CSS, so
- * without one constant the same legend drifts into six slightly different labels.
- *
- * The fieldset itself is reset to nothing: a border around a truth table or a
- * CodeMirror editor reads as a second card inside the card, and the exercise is
- * already separated from its neighbours by `.exercise`'s margins. Palette tokens
- * carry literal fallbacks because the shadow roots of a preview iframe may resolve
- * them against a document that never set them.
- */
-export const EXERCISE_GROUP_STYLES = `
-  .exercise-group {
-    border: 0;
-    margin: 0;
-    min-inline-size: 0;
-    padding: 0;
-  }
-
-  .exercise-legend {
-    color: var(--ink-muted, #5f7388);
-    font-size: 0.74rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    margin-bottom: 0.55rem;
-    padding: 0;
-    text-transform: uppercase;
-  }
-
-  /* A visible title runs in with the prompt's first line rather than sitting on a
-     line of its own. \`float\` is what makes that possible at all: an unfloated
-     \`<legend>\` is the fieldset's *rendered legend*, which the browser lifts out of
-     the flow, so no value of \`display\` will put it beside the prompt. Two
-     corollaries, both load-bearing:
-
-     - a group that wants the run-in title cannot be a grid or flex container,
-       since floats do not apply to those items (see \`.tt-wrap\`);
-     - the padding is a baseline nudge — a float aligns by its top edge, and the
-       small caps would otherwise ride above the prompt's much larger text. */
-  /* The run-in title lives on a height budget: a float excludes text by its
-     *margin* box, so that box has to stay shorter than one line of the prompt
-     (1.5rem = 24px at the default size). Overshoot it and the prompt's *second*
-     line clips the float and comes out indented — a ragged left edge that appears
-     and vanishes with the font size. Line-height 1.15 plus the baseline padding
-     spends 20px of the 24, and there is deliberately no bottom margin: 0.35rem
-     there was enough to break it. Both texts are sized in rem, so the budget
-     scales with the root font size rather than drifting against it. */
-  .exercise-legend:not(.visually-hidden) {
-    float: left;
-    line-height: 1.15;
-    margin-bottom: 0;
-    margin-right: 0.6rem;
-    /* Sits the small caps on the prompt's baseline. A float aligns by its top
-       edge, and the two texts differ in size, so the nudge is the difference
-       between their baseline positions within their own line boxes — measured
-       (0.1px residual), not derived: no CSS length expresses "one font's ascent
-       minus another's". */
-    padding-top: 0.4rem;
-  }
-
-  /* Whatever follows the prompt begins on a fresh line. A float only pushes
-     *inline* content aside, so a block sibling — the grid, an editor, the action
-     bar — would slide under a title taller than the prompt beside it. Two
-     selectors for the two shapes the prompt takes: a named slot in the widgets'
-     shadow roots, a light-DOM div in the text kinds. */
-  .exercise-group > slot[name="prompt"] ~ *,
-  .exercise-group > .exercise-prompt ~ * {
-    clear: left;
-  }
-`;
+export const EXERCISE_GROUP_STYLES = groupStyles;
 
 /**
  * {@link EXERCISE_GROUP_STYLES} for a widget's **shadow root**, which inherits no

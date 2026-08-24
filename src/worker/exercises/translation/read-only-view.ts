@@ -12,58 +12,16 @@ import {
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
+import reviewStyles from "./review.css" with { type: "text" };
+import shadowStyles from "./shadow.css" with { type: "text" };
 import { buildTranslationStrings } from "./strings";
 import type { TranslationPublicData } from "./types";
 import { isTranslationPublicData, TRANSLATION_KIND } from "./types";
 
-/**
- * Shadow-DOM chrome styles for the translation element, server-rendered into
- * its Declarative Shadow Root. The shadow boundary isolates them from author
- * `:::style` CSS; the prompt is slotted from light DOM so author CSS and the
- * document's math font still reach it. Custom properties inherit across the
- * boundary, so the palette tokens resolve to the content document's values —
- * which is also why nothing here is a hex literal.
- */
-const TRANSLATION_SHADOW_STYLES = `
-  ${EXERCISE_GROUP_SHADOW_STYLES}
-
-  .translation-row {
-    align-items: baseline;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .translation-input {
-    background: var(--control-surface, #fbf7ef);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 3px;
-    color: inherit;
-    flex: 1 1 24ch;
-    font: inherit;
-    min-width: 12ch;
-    padding: 0.25rem 0.45rem;
-  }
-
-  .translation-input:disabled {
-    opacity: 0.75;
-  }
-
-  /* What the typed ASCII parses as, in logical symbols — or, while it does
-     not parse, the parser's complaint. Same line, two moods. */
-  .translation-preview {
-    margin: 0.35rem 0 0;
-    min-height: 1.4em;
-  }
-
-  .translation-preview[data-mood="error"] {
-    color: var(--red, #b42318);
-  }
-
-  .translation-preview:empty {
-    display: none;
-  }
-`;
+const TRANSLATION_SHADOW_STYLES = [
+  EXERCISE_GROUP_SHADOW_STYLES,
+  shadowStyles,
+].join("\n");
 
 interface TranslationElementMeta {
   readonly component: string;
@@ -110,23 +68,7 @@ export function renderTranslationElement(
       </carnap-translation>`;
 }
 
-/**
- * Shadow-DOM styles for the translation review widget: the submitted formula,
- * shown once in logical symbols and once as typed when the two differ.
- */
-const TRANSLATION_REVIEW_STYLES = `
-  .translation-review-display {
-    font-size: 1.05rem;
-    margin: 0;
-  }
-
-  .translation-review-source {
-    color: var(--ink-muted, #5f7388);
-    font-family: ui-monospace, "Fira Code", monospace;
-    font-size: 0.9em;
-    margin: 0.25rem 0 0;
-  }
-`;
+const TRANSLATION_REVIEW_STYLES = reviewStyles;
 
 export interface TranslationReview {
   /** The submission in logical symbols — or as typed, when it won't parse. */

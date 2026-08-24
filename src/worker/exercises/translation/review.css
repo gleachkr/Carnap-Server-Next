@@ -1,0 +1,16 @@
+/*
+ * Shadow-DOM styles for the translation review widget: the submitted formula,
+ * shown once in logical symbols and once as typed when the two differ.
+ */
+
+.translation-review-display {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+.translation-review-source {
+  color: var(--ink-muted, #5f7388);
+  font-family: ui-monospace, "Fira Code", monospace;
+  font-size: 0.9em;
+  margin: 0.25rem 0 0;
+}

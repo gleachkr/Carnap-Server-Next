@@ -37,6 +37,7 @@
  * translator's own structural diagnostics (a discharge mark with no matching
  * assumption, mixed formulas under one mark) surface the same way.
  */
+
 import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
@@ -50,6 +51,9 @@ import type {
 import type { CorrectnessMarkState } from "../../worker/exercises/correctness-mark";
 import { loadProofCompiler } from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
+import shadowStyles from "./carnap-aufbau-proof-prawitz-v1.css" with {
+  type: "text",
+};
 import {
   createHelpDialog,
   HELP_DIALOG_STYLES,
@@ -495,167 +499,7 @@ function docReducer(doc: Doc, action: Action): Doc {
 // Presentation (Preact).
 // ---------------------------------------------------------------------------
 
-const SHADOW_STYLES = `
-  ${HELP_DIALOG_STYLES}
-
-  .pz-toolbar {
-    align-items: center;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin: 0.6rem 0 0.2rem;
-  }
-  .pz-toolbar button {
-    background: var(--control-surface, #fbf7ef);
-    border: 1px solid var(--rule, #d8d0c3);
-    border-radius: 0.3rem;
-    color: var(--blue-strong, #074f9f);
-    cursor: pointer;
-    font: inherit;
-    font-size: 0.78rem;
-    padding: 0.2rem 0.55rem;
-  }
-  .pz-toolbar button:disabled {
-    color: var(--ink-muted, #5f7388);
-    cursor: default;
-    opacity: 0.55;
-  }
-  .pz-goal {
-    color: var(--ink-muted, #5f7388);
-    font-size: 0.85rem;
-    margin: 0.4rem 0 0;
-  }
-  .pz-goal code {
-    color: var(--ink, #16324a);
-    font-family: "Fira Code", ui-monospace, monospace;
-  }
-  /* The forest lays its trees side by side; each is its own derivation. */
-  .prawitz-canvas {
-    align-items: flex-end;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 2.2rem;
-    padding-left: 1rem
-  }
-  .pz-edit {
-    border-bottom: 1px dashed transparent;
-    /* An atomic inline box, not a run of inline text. This is what makes the
-       text caret visible: a root line's .pz-node wrapper is itself inline (its
-       proof-proposition is the flex item, so only the proposition gets
-       blockified), and Chromium paints no caret in an editable inline box whose
-       whole ancestry up to the block container is inline. It showed as a caret
-       that vanished the moment anything was typed — an unfilled field is
-       .is-empty, which was already inline-block, so the box changed formatting
-       context under the reader mid-keystroke. Keeping it inline-block in every
-       state fixes the caret and makes filled and empty fields agree.
-       Also: min-width has no effect on a non-replaced inline box, so the 1ch
-       floor below only starts applying here. */
-    display: inline-block;
-    /* Fira Code first (loaded as a web font) so its contextual ligatures turn
-       typed connectives like -> and <-> into → and ↔ in the rendered proof. */
-    font-family: "Fira Code", ui-monospace, monospace;
-    min-width: 1ch;
-    outline: none;
-    padding: 0 0.1rem;
-    white-space: pre;
-  }
-  .pz-edit:focus { border-bottom-color: var(--blue, #0b66d8); }
-  .pz-edit.is-selected { background: var(--blue-soft, #eaf3ff); }
-  .pz-edit.is-error {
-    border-bottom: 1px wavy var(--red, #b42318);
-    text-decoration: underline wavy var(--red, #b42318);
-  }
-  .pz-edit:not(.is-selected):not(.is-empty):hover {
-    background: var(--surface-soft, #f8f2e8);
-  }
-  /* An unfilled field: a tinted, comfortably-clickable box. */
-  .pz-edit.is-empty {
-    background: var(--blue-soft, #eaf3ff);
-    border-bottom-color: transparent;
-    border-radius: 0.2rem;
-    min-height: 1.15em;
-    min-width: 2.6ch;
-    outline: 1px dashed var(--blue, #0b66d8);
-    outline-offset: 1px;
-  }
-  .pz-rule.is-empty { min-width: 3.4ch; }
-  /* A field with no child nodes at all has no line box, so its baseline is
-     its bottom edge and the box rides high on the line — visibly misplacing
-     the assumption label hung off the node's corner. A zero-width space
-     restores real text metrics. Only the freshly-rendered state needs it:
-     after type-then-delete the browser leaves its own placeholder <br>
-     behind (that <br> *is* contenteditable's empty state, which is why it
-     can't be deleted), and with any child present :empty stops matching. */
-  .pz-edit:empty::before { content: "\\200B"; }
-  /* Label / discharge marks: superscripts, like the printed notation — kept
-     large enough to read and to hit (0.72em proved squint-sized). */
-  sup .pz-edit { font-size: 0.85em; }
-  sup .pz-edit.is-empty { min-width: 1.6ch; }
-  /* The secondary fields stay out of the way until asked for: an *empty* label
-     or discharge box shows only on the selected line, so an untouched proof
-     isn't studded with blue boxes. A filled one is notation and always shows. */
-  .pz-secondary.is-empty { display: none; }
-  .pz-current > proof-proposition .pz-secondary.is-empty,
-  .pz-current > proof-inference .pz-secondary.is-empty {
-    display: inline-block;
-  }
-  .pz-bracket { font-family: "Fira Code", ui-monospace, monospace; }
-  /* An assumption has no inference line above it. ProofML puts a border-top on
-     any proposition whose forest is uninhabited (its zero-premise-rule line);
-     an outer-tree rule outranks the shadow ::slotted one, so this wins. */
-  .pz-assumption > proof-proposition { border-top: none; }
-  /* Roving-focus wrapper: carries keyboard focus for tree navigation. */
-  .pz-node { border-radius: 0.25rem; outline: none; position: relative; }
-  .pz-node:focus-visible {
-    outline: 2px solid var(--blue, #0b66d8);
-    outline-offset: 2px;
-  }
-  /* The assumption label hangs off the node's top-right corner instead of
-     taking inline width — otherwise it widens the proposition box and shoves
-     the centered formula leftward under its inference line. Needs an elevated
-     z-index so it doesn't get covered by the right-struts of the proof tree */
-  .pz-node > sup {
-    left: 100%;
-    position: absolute;
-    top: -0.55em;
-    z-index: 1;
-  }
-  /* Each root tree with its Select chip beneath, feet aligned on one baseline. */
-  .pz-root {
-    align-items: center;
-    display: flex;
-    flex-direction: column;
-    gap: 0.3rem;
-  }
-  /* The premise dot: hollow until ticked, then filled with its order. The
-     words live in the accessible name — visually it stays a quiet dot. */
-  .pz-pick {
-    align-items: center;
-    background: transparent;
-    border: 1.5px solid var(--rule, #d8d0c3);
-    border-radius: 50%;
-    color: var(--on-accent, #ffffff);
-    cursor: pointer;
-    display: flex;
-    font: inherit;
-    font-size: 0.62rem;
-    font-weight: 700;
-    height: 1.05rem;
-    justify-content: center;
-    line-height: 1;
-    padding: 0;
-    position: relative;
-    width: 1.05rem;
-  }
-  /* An invisible halo brings the tap target up to ~28px — the dot is sized
-     for the eye, not the finger, and touch is exactly where it matters. */
-  .pz-pick::after { content: ""; inset: -0.35rem; position: absolute; }
-  .pz-pick:hover { border-color: var(--blue, #0b66d8); }
-  .pz-pick[aria-pressed="true"] {
-    background: var(--blue, #0b66d8);
-    border-color: var(--blue, #0b66d8);
-  }
-`;
+const SHADOW_STYLES = [shadowStyles, HELP_DIALOG_STYLES].join("\n");
 
 /**
  * What the `(?)` in the toolbar opens: how the workspace works, and every key it

@@ -1,0 +1,231 @@
+/*
+ * The content layer, continued: exercise chrome — prompts, the action bar, the
+ * correctness mark, load failures — plus formula type and the small utilities
+ * everything else leans on.
+ *
+ * Split from ./content.css rather than appended to it because the shared
+ * exercise-group rules have to be spliced *between* the two: this file
+ * restyles `.exercise-prompt` and `.visually-hidden`, which that block
+ * declares. See ./styles.ts.
+ */
+
+.exercise-prompt {
+  font-weight: 560;
+  margin-bottom: 0.75rem;
+}
+
+/* A note cited from a prompt is reference apparatus, not more of the
+   question: without this it inherits the prompt's weight and reads as part of
+   what is being asked. */
+.exercise-prompt .footnotes {
+  font-weight: normal;
+}
+
+.exercise-status,
+.exercise-rubric {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  margin-top: 0.6rem;
+}
+
+/* The action bar an interactive exercise projects into its shadow card via
+   slot="exercise-actions". Every control — Check, counterexample, Submit —
+   sits in one light-DOM row so author CSS styles them all uniformly. Its box
+   is styled here (not from a shadow ::slotted rule) precisely so custom CSS
+   can reach it. */
+.exercise-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.8rem;
+  margin-top: 0.45rem;
+}
+
+/* The action buttons: quiet and small, so they read as part of the exercise
+   rather than page-level calls to action. The warm rule border keeps them
+   recessive until hover brings the blue forward. */
+.exercise-submit,
+.exercise-actions button {
+  border-color: var(--rule);
+  font-size: 0.82rem;
+  font-weight: 600;
+  min-height: 0;
+  padding: 0.32rem 0.85rem;
+}
+
+.exercise-submit:hover,
+.exercise-actions button:hover {
+  background: var(--blue-soft);
+  border-color: var(--blue);
+  color: var(--blue-strong);
+}
+
+/* The base form-button margin-top would push controls down inside the bar's
+   flex row; the bar owns its own spacing above itself instead. */
+.exercise-actions button {
+  margin-top: 0;
+}
+
+/* The instructions button, first in the row. It used to be a round pill in each
+   widget's own toolbar; it is a plain button here, the same shape and height as
+   Check and Submit beside it, because it is one of the exercise's controls and
+   not a badge stuck to the side of one.
+
+   Only the horizontal padding is its own: the glyph is a single character, so
+   the row's full side padding would leave it swimming. Nothing vertical is set
+   here — a padding shorthand, or a tighter line height, would make it the one
+   short button in the row, which is exactly what it must not be. */
+.exercise-actions .help-trigger {
+  padding-left: 0.6rem;
+  padding-right: 0.6rem;
+}
+
+/* The submission status sits inline with the buttons. */
+.exercise-actions .exercise-status {
+  margin: 0;
+}
+
+/* A widget's own Check speaks here: its own line under the button row, in the
+   same small muted type as every other status. Under the buttons and not over
+   them, because it is an answer to the Check that was just pressed — a sentence
+   above the control that produced it reads as part of the exercise. */
+.exercise-actions .exercise-check-status {
+  flex-basis: 100%;
+  margin: 0.1rem 0 0;
+}
+
+/* Nothing to say yet: the row must not open a blank line under itself before
+   the first Check, nor keep one after an edit clears the verdict. */
+.exercise-actions .exercise-check-status:empty {
+  display: none;
+}
+
+.exercise-actions .exercise-check-status[data-state="correct"] {
+  color: var(--green, #1b7048);
+  font-weight: 600;
+}
+
+/* The counterexample toggle, pressed. */
+.exercise-actions .tt-ce[aria-pressed="true"] {
+  border-color: var(--blue);
+  border-width: 2px;
+}
+
+/* The correctness mark: one indicator, in one place, in one shape, for every
+   exercise type. It is deliberately present from the first paint rather than
+   appearing when there is something to say — a reader who has never seen a
+   correct exercise should still know where the verdict will show up, and an
+   indicator that materializes out of nothing also reflows the row it is in.
+   So the idle state is a grey dash rather than an empty box.
+
+   It lives in the light-DOM action bar, not in each widget's shadow root,
+   which is what makes "the same place" true across nine types that otherwise
+   share no layout at all — and means this rule is the only description of it.
+
+   Two things write to it and they answer different questions. The runtime
+   sets it from the recorded evaluation (on load, and after each submit): is
+   the answer the server holds correct? A widget that can grade itself in the
+   browser overrides that with its own live verdict: is what is on screen
+   right now correct? The live answer wins whenever there is one, because it
+   is the one about the work the reader is looking at. */
+.exercise-mark {
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  display: inline-flex;
+  flex: none;
+  /* Named rather than inherited: the mark sits in a monospace toolbar in two
+     of the widgets and beside a serif prompt in the others, and the glyph has
+     to be the same glyph in all of them. */
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  justify-content: center;
+  line-height: 1;
+  /* Hard right of the button row, so it is in the same place whether the row
+     holds one button or three. */
+  margin-left: auto;
+  min-height: 1.5rem;
+  min-width: 1.9rem;
+}
+
+.exercise-mark[data-state="ok"] {
+  background: var(--green-soft);
+  border-color: color-mix(in srgb, var(--green) 45%, transparent);
+  color: var(--green);
+}
+
+.exercise-mark[data-state="error"] {
+  background: var(--red-soft);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  color: var(--red);
+  /* The specific problem is the title; the cursor is what says to hover. */
+  cursor: help;
+}
+
+/* "Checking": the proof types compile in the background, and the wait is long
+   enough to need saying. Drawn here rather than built as an SVG in the client,
+   so setting the mark stays a matter of writing attributes. */
+.exercise-mark[data-state="working"]::after {
+  animation: exercise-spin 0.7s linear infinite;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  border-top-color: transparent;
+  content: "";
+  display: block;
+  height: 0.8rem;
+  opacity: 0.7;
+  width: 0.8rem;
+}
+
+@keyframes exercise-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .exercise-mark[data-state="working"]::after {
+    animation-duration: 2.5s;
+  }
+}
+
+/* Shown when an interactive exercise's bundle fails to upgrade it in time. */
+.exercise-load-error {
+  color: var(--red);
+  font-size: 0.85rem;
+  margin-top: 0.6rem;
+}
+
+/* Formulas */
+
+.formula,
+.proof-formula {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+}
+
+/* Utilities */
+
+.small {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

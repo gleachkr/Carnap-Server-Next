@@ -913,8 +913,12 @@ Choose yes.
       // earned them. Practice collects real answers — a free response, a proof
       // an autograder scored zero on a technicality — and an instructor reading
       // them has the same reasons to write back and to correct a score.
-      expect(reviewHtml).toContain("q2");
-      expect(reviewHtml).not.toContain("q1");
+      // Matched on the attribute, not on the bare id: a page carries hashed
+      // asset URLs and a fresh CSRF token, and a two-character needle finds
+      // itself inside one of them sooner or later. (It did — a stylesheet
+      // edit moved `content.<hash>.css` onto a hash spelling `q1`.)
+      expect(reviewHtml).toContain('data-exercise-id="q2"');
+      expect(reviewHtml).not.toContain('data-exercise-id="q1"');
       expect(reviewHtml).toContain("Add a manual evaluation");
       expect(reviewHtml).toContain("review-state-label");
 

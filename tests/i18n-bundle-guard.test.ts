@@ -166,6 +166,14 @@ async function walkClientGraph(): Promise<WalkResult> {
       continue;
     }
 
+    // A text module (`import … with { type: "text" }`, see
+    // `src/text-modules.d.ts`) is a leaf: it is a string, it imports nothing,
+    // and handing it to a TypeScript transpiler is how a stylesheet becomes a
+    // syntax error rather than an edge.
+    if (!/\.[jt]sx?$/.test(file) && !file.endsWith(".mjs")) {
+      continue;
+    }
+
     const source = await Bun.file(file).text();
     const transpiler = /\.[jt]sx$/.test(file)
       ? TRANSPILERS.tsx

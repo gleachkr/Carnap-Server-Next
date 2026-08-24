@@ -688,7 +688,11 @@ describe("truth-table counterexample", () => {
     expect(html).toContain('<th scope="col" class="tt-ce-select">');
     // Hidden until the button reveals it, so an ordinary table is unchanged —
     // and the student's grid is not what the mode acts on.
-    expect(html).toContain(".tt-ce-select {\n    display: none;\n  }");
+    // On the rule, not on its indentation: the stylesheet is a file now
+    // (`truth-table/shadow.css`) and a formatter may reindent it freely.
+    expect(html.replace(/\s+/g, " ")).toContain(
+      ".tt-ce-select { display: none; }",
+    );
     expect(html).toContain(".tt.tt-ce-mode .tt-ce-select {");
   });
 

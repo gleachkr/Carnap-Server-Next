@@ -1,0 +1,122 @@
+/*
+ * Reproduces the warm-sheet interior the content used to render inside: the
+ * sheet's surface color and the sheet-section padding, applied to the
+ * document itself since the iframe fills its host card edge to edge.
+ */
+
+html,
+body {
+  background: var(--surface);
+}
+
+body {
+  color: var(--ink);
+  font: 16px / 1.5 var(--body-font);
+  margin: 0;
+  min-height: 100vh;
+  padding: 1.25rem clamp(1rem, 2vw, 1.5rem);
+}
+
+/* Inside the iframe this never binds — the host card is always narrower than
+   a page's measure — so it does its work only in the fullscreen view, where
+   the document owns the whole monitor and would otherwise set lines the full
+   width of it. Author CSS is appended after this, so a document that wants
+   the width back only has to say so. */
+.content-column {
+  margin-inline: auto;
+  max-width: var(--page-measure);
+}
+
+/* Prose tables. The shared table rules are written for the app's ledgers —
+   a full-width grid with uppercase column heads — which is the wrong voice
+   for a table inside a lesson: there it is a figure, sized by what it holds
+   and read like the paragraph above it. */
+
+table {
+  /* The block display is what lets a wide table scroll instead of being cut
+     off by the sheet, since a table box cannot itself be a scroll container;
+     the rows still lay out as a table inside it. The max-content width then
+     keeps the figure as wide as its widest row and no wider. */
+  display: block;
+  margin: 1.1rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  width: max-content;
+}
+
+th,
+td {
+  padding: 0.42rem 1.1rem;
+  vertical-align: baseline;
+}
+
+th {
+  color: var(--ink);
+  font-size: inherit;
+  font-weight: 640;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* A column's :---: or ---: alignment arrives as the align attribute, and an
+   attribute like that is only a presentational hint: it loses to every author
+   rule, including the text-align the shared table styles set. So the three
+   alignments are spelled out as CSS. */
+
+[align="center"] {
+  text-align: center;
+}
+
+[align="left"] {
+  text-align: left;
+}
+
+[align="right"] {
+  text-align: right;
+}
+
+/* Footnotes. The reference is a raised number, the notes themselves a
+   smaller block under a rule at the foot of the lesson — the shape a printed
+   page uses, which is what an author reaching for a footnote has in mind. */
+
+sup a[data-footnote-ref] {
+  padding: 0 0.1rem;
+  text-decoration: none;
+}
+
+.footnotes {
+  border-top: 1px solid var(--rule-soft);
+  font-size: 0.92rem;
+  margin-top: 2.4rem;
+  padding-top: 0.5rem;
+}
+
+.footnotes li {
+  margin: 0.35rem 0;
+}
+
+.footnotes p {
+  margin: 0.25rem 0;
+}
+
+/* The arrow back to the reference. Undecorated, since it repeats once per
+   note and is chrome rather than something to read — but in the body's ink
+   rather than the muted one: it is a link, and a link is not decoration. */
+a[data-footnote-backref] {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+a[data-footnote-backref]:hover,
+a[data-footnote-backref]:focus-visible {
+  text-decoration: underline;
+}
+
+.content-noscript {
+  background: #fff4d6;
+  border: 1px solid #d9b45a;
+  border-radius: 0.5rem;
+  color: #6b4e00;
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+}

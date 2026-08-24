@@ -639,6 +639,36 @@ describe("the interactive submission path", () => {
   });
 
   /**
+   * The widgets that import `pkg`, each with its shadow stylesheet.
+   *
+   * The two checks below are about CSS but keyed on a TypeScript import, and
+   * those are no longer the same file: a widget's rules live in the `.css`
+   * beside it (see `src/text-modules.d.ts`). Reading only the module would let
+   * both of these pass by finding nothing to look at — the failure mode a
+   * source-scanning test has to be written against.
+   */
+  async function* widgetsImporting(
+    pkg: string,
+  ): AsyncGenerator<{ path: string; styles: string }> {
+    const glob = new Bun.Glob("src/client/components/carnap-*.{ts,tsx}");
+
+    for await (const path of glob.scan(".")) {
+      const source = await Bun.file(path).text();
+
+      if (!source.includes(pkg)) {
+        continue;
+      }
+
+      const sheet = Bun.file(path.replace(/\.tsx?$/, ".css"));
+      const styles = (await sheet.exists()) ? await sheet.text() : "";
+
+      // The module still counts: a widget may keep a rule inline, and one that
+      // has neither file's worth of CSS must fail rather than be skipped.
+      yield { path, styles: `${source}\n${styles}` };
+    }
+  }
+
+  /**
    * Every CodeMirror view in a shadow root paints its caret from the palette.
    *
    * CodeMirror's base theme ships two caret colours and picks between them from
@@ -654,19 +684,14 @@ describe("the interactive submission path", () => {
    * exactly the state this test was written for. Three classes wins.
    */
   test("a CodeMirror view in a shadow root sets its own caret colour", async () => {
-    const glob = new Bun.Glob("src/client/components/carnap-*.{ts,tsx}");
     const offenders: string[] = [];
 
-    for await (const path of glob.scan(".")) {
-      const source = await Bun.file(path).text();
-
-      if (!source.includes("@codemirror/view")) {
-        continue;
-      }
-
+    for await (const { path, styles } of widgetsImporting(
+      "@codemirror/view",
+    )) {
       if (
         !/\.[a-z-]+ \.cm-editor \.cm-content \{\s*caret-color: var\(--ink/.test(
-          source,
+          styles,
         )
       ) {
         offenders.push(path);
@@ -695,19 +720,14 @@ describe("the interactive submission path", () => {
    * the document — which is how this shipped past the caret fix.
    */
   test("a CodeMirror view in a shadow root repaints its diagnostic tooltip", async () => {
-    const glob = new Bun.Glob("src/client/components/carnap-*.{ts,tsx}");
     const offenders: string[] = [];
 
-    for await (const path of glob.scan(".")) {
-      const source = await Bun.file(path).text();
-
-      if (!source.includes("@codemirror/lint")) {
-        continue;
-      }
-
+    for await (const { path, styles } of widgetsImporting(
+      "@codemirror/lint",
+    )) {
       if (
         !/\.[a-z-]+ \.cm-editor \.cm-tooltip \{[^}]*\bbackground: var\(--/.test(
-          source,
+          styles,
         )
       ) {
         offenders.push(path);

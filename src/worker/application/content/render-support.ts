@@ -4,6 +4,9 @@ import type {
   ShortAnswerPublicData,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import visuallyHiddenStyles from "./visually-hidden.css" with {
+  type: "text",
+};
 
 /**
  * Shared helpers for the no-submission exercise renderers (the previews:
@@ -11,29 +14,7 @@ import type { JsonValue } from "../../domain/json";
  * depend on.
  */
 
-/**
- * The one rule that hides an element from sight while leaving it in the
- * accessibility tree. The page stylesheet has its own copy for light DOM
- * (`.visually-hidden` in `web/styles.ts`); shadow roots inherit no page CSS, so
- * every widget that hides a name or a verdict has to carry the rule itself. This
- * is that copy — one constant rather than the per-widget duplicates it replaces,
- * because a *slightly* wrong version of this (a `display: none` say) silently
- * takes the text out of the a11y tree too.
- */
-export const VISUALLY_HIDDEN_STYLES = `
-  .visually-hidden {
-    border: 0;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    height: 1px;
-    margin: -1px;
-    overflow: hidden;
-    padding: 0;
-    position: absolute;
-    white-space: nowrap;
-    width: 1px;
-  }
-`;
+export const VISUALLY_HIDDEN_STYLES = visuallyHiddenStyles;
 
 export function escapeHtml(value: string): string {
   return value

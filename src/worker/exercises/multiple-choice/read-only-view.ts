@@ -16,43 +16,14 @@ import {
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
+import reviewStyles from "./review.css" with { type: "text" };
+import shadowStyles from "./shadow.css" with { type: "text" };
 import { MULTIPLE_CHOICE_KIND } from "./types";
 
-/**
- * Shadow-DOM chrome styles for the multiple-choice element, server-rendered
- * into its Declarative Shadow Root. The shadow boundary isolates them so author
- * `:::style` CSS cannot reach the chrome; the prompt and option labels are
- * slotted from light DOM, so author CSS and the document's math font still
- * reach
- * them. Custom properties (e.g. `--blue-strong`) inherit across the boundary, so
- * palette tokens resolve to the content document's values.
- */
-const MULTIPLE_CHOICE_SHADOW_STYLES = `
-  ${EXERCISE_GROUP_SHADOW_STYLES}
-
-  .mc-options {
-    display: grid;
-    gap: 0.5rem;
-  }
-
-  .mc-option {
-    align-items: center;
-    display: flex;
-    font-weight: 460;
-    gap: 0.5rem;
-  }
-
-  .mc-input {
-    margin: 0;
-    width: auto;
-  }
-
-  /* The element marks the chosen option once it enhances. */
-  .mc-option[data-selected] {
-    color: var(--blue-strong);
-    font-weight: 600;
-  }
-`;
+const MULTIPLE_CHOICE_SHADOW_STYLES = [
+  EXERCISE_GROUP_SHADOW_STYLES,
+  shadowStyles,
+].join("\n");
 
 /**
  * The option labels as light-DOM slotted spans. Kept in light DOM (not the
@@ -130,52 +101,10 @@ export function renderMultipleChoiceElement(
       </carnap-multiple-choice>`;
 }
 
-/**
- * Shadow-DOM styles for the multiple-choice `review` widget. Marks colour only
- * the glyph; the option text is muted unless the student chose it. The state
- * words are visually hidden but read by assistive tech.
- */
-const MULTIPLE_CHOICE_REVIEW_STYLES = `
-  ${VISUALLY_HIDDEN_STYLES}
-
-  .mc-review {
-    display: grid;
-    gap: 0.5rem;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  /* The review list renders on the submission card's --surface-soft fill, which
-     is one of the warm ones plain --ink-muted misses AA on (4.39:1). */
-  .mc-review-option {
-    align-items: baseline;
-    color: var(--ink-muted-strong, #4d5f72);
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .mc-review-option[data-selected] {
-    color: inherit;
-    font-weight: 600;
-  }
-
-  .mc-review-mark {
-    flex: none;
-    font-weight: 700;
-    min-width: 1.1rem;
-    text-align: center;
-  }
-
-  .mc-review-option[data-correct] .mc-review-mark {
-    color: var(--green, #1b7048);
-  }
-
-  .mc-review-option[data-incorrect] .mc-review-mark {
-    color: var(--red, #b42318);
-  }
-
-`;
+const MULTIPLE_CHOICE_REVIEW_STYLES = [
+  VISUALLY_HIDDEN_STYLES,
+  reviewStyles,
+].join("\n");
 
 interface MultipleChoiceReview {
   /** The correct option ids, or null to withhold the key (student audience). */

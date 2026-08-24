@@ -1,0 +1,42 @@
+/*
+ * Shadow-DOM styles for the multiple-choice `review` widget. Marks colour only
+ * the glyph; the option text is muted unless the student chose it. The state
+ * words are visually hidden but read by assistive tech.
+ */
+
+.mc-review {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The review list renders on the submission card's --surface-soft fill, which
+   is one of the warm ones plain --ink-muted misses AA on (4.39:1). */
+.mc-review-option {
+  align-items: baseline;
+  color: var(--ink-muted-strong, #4d5f72);
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mc-review-option[data-selected] {
+  color: inherit;
+  font-weight: 600;
+}
+
+.mc-review-mark {
+  flex: none;
+  font-weight: 700;
+  min-width: 1.1rem;
+  text-align: center;
+}
+
+.mc-review-option[data-correct] .mc-review-mark {
+  color: var(--green, #1b7048);
+}
+
+.mc-review-option[data-incorrect] .mc-review-mark {
+  color: var(--red, #b42318);
+}
