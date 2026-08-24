@@ -17,6 +17,7 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
 import type { AufbauProofOptions, AufbauProofPublicData } from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
@@ -238,11 +239,63 @@ function parseProofBody(
 
 /**
  * What `:::aufbau-mm0{…}` accepts. None of the exercise attributes: a theory
- * block declares shared MM0, it is not answered, scored, or fed back. `src` is
- * listed although it is refused below — the refusal says why, which "unknown
- * attribute" would not.
+ * block declares shared MM0, it is not answered, scored, or fed back.
  */
 const AUFBAU_MM0_ATTRIBUTES = ["name", "show", "src"] as const;
+
+/** A `src` that is anything but a path on this site: a scheme, or `//host`. */
+const ELSEWHERE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
+
+/**
+ * The theory a `src=` names, or null with a diagnostic saying which kind of
+ * miss it was — the two are worth telling apart, because one is a typo and the
+ * other is a feature that does not exist yet.
+ *
+ * A built-in resolves from the module graph rather than by fetching the path it
+ * names. The bytes are the same either way (`tests/theories.test.ts` holds the
+ * route and this resolver to each other), and answering locally is what lets a
+ * theory resolve identically here, in the browser preview, and in tests with no
+ * server running. A path this site will one day serve from the database, and a
+ * URL on somebody else's server, are the two branches that grow from here.
+ */
+function resolveTheorySrc(
+  src: string,
+  line: number,
+  diagnostics: CompilerDiagnostic[],
+): string | null {
+  if (ELSEWHERE.test(src)) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "remote_theory_src",
+        "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet.",
+        { params: { path: src } },
+      ),
+    );
+
+    return null;
+  }
+
+  const found = theoryByPath(src);
+
+  if (found === null) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "unknown_theory_src",
+        "No theory is served at “{path}”. This site ships: {available}.",
+        {
+          params: {
+            available: BUILT_IN_THEORY_PATHS.join(", "),
+            path: src,
+          },
+        },
+      ),
+    );
+  }
+
+  return found;
+}
 
 /**
  * Compile an `:::aufbau-mm0` theory block. Not an exercise — the top-level
@@ -250,8 +303,17 @@ const AUFBAU_MM0_ATTRIBUTES = ["name", "show", "src"] as const;
  * `:::aufbau-proof` blocks can reference it. Declaring a theory does not put it
  * on the page: MM0 source is machinery, and a lesson that teaches from a
  * textbook's rules rarely wants a slab of it above every exercise. `show` asks
- * for the read-only panel. `src=` (a theory located elsewhere) is not supported
- * yet.
+ * for the read-only panel.
+ *
+ * The block's MM0 is a `src=` naming a theory this site serves, a body written
+ * inline, or **both** — in which case the body extends the named theory. That
+ * is what a course with its own vocabulary needs: the shipped forallx signature
+ * is one binary predicate and two unary ones, and without extension the only
+ * way to add `Cube` or `Loves` would be to paste all three hundred lines back
+ * into the lesson. Appending is how the goal declaration already composes with
+ * a theory further down this file, so nothing new is being invented — the
+ * author's lines simply arrive last, and the engine reads the result as one
+ * theory.
  */
 export function compileAufbauMm0(
   block: DirectiveBlock,
@@ -267,29 +329,37 @@ export function compileAufbauMm0(
     diagnostics,
   );
 
-  if (block.attrs.src !== undefined) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "unsupported_theory_src",
-        "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline.",
-      ),
-    );
-  }
+  const src = block.attrs.src;
+  const extension = block.bodyLines.join("\n").trim();
+  const base =
+    src === undefined ? null : resolveTheorySrc(src, block.line, diagnostics);
 
-  const mm0 = block.bodyLines.join("\n").trim();
-
-  if (mm0.length === 0) {
+  if (src === undefined && extension.length === 0) {
     diagnostics.push(
       diagnostic(
         block.line,
         "empty_theory",
-        "An aufbau-mm0 block needs MM0 source in its body.",
+        "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves.",
       ),
     );
   }
 
-  if (name === null || mm0.length === 0) {
+  // A `src` that did not resolve is not the same as no `src`: compiling the
+  // extension on its own would hand the engine a theory missing everything the
+  // author expected to build on, and bury the real diagnostic under whatever it
+  // said about the fragment.
+  if (name === null || (src !== undefined && base === null)) {
+    return null;
+  }
+
+  const mm0 =
+    base === null
+      ? extension
+      : extension.length === 0
+        ? base
+        : `${base}\n${extension}`;
+
+  if (mm0.length === 0) {
     return null;
   }
 

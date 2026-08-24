@@ -31,6 +31,10 @@ msgstr "„{name}“ ist eine freie Variable; jede Formel muss ein Satz sein."
 msgid "“{operator}” cannot be chained; add parentheses to group it."
 msgstr "„{operator}“ kann nicht verkettet werden; setzen Sie Klammern, um die Gruppierung anzugeben."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet."
+msgstr ""
+
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "“{token}” is not a line number or a subproof range like “a-b”."
 msgstr "„{token}“ ist weder eine Zeilennummer noch ein Teilbeweisbereich der Form „a-b“."
@@ -466,12 +470,8 @@ msgid "An assumption carries a single discharge label; “{payload}” reads as 
 msgstr "Eine Annahme trägt genau eine Entladungsmarke; „{payload}“ liest sich als Liste."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "An aufbau-mm0 block needs MM0 source in its body."
-msgstr "Ein aufbau-mm0-Block braucht MM0-Quelltext in seinem Körper."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline."
-msgstr "Ein src-Attribut an aufbau-mm0 wird noch nicht unterstützt; schreiben Sie den MM0-Quelltext direkt hinein."
+msgid "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves."
+msgstr ""
 
 #: src/worker/web/lti.tsx
 msgid "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
@@ -2367,6 +2367,10 @@ msgstr "Es wurden keine Abgaben erfasst."
 #: src/worker/web/gradebook.tsx
 msgid "No submissions were recorded in this attempt."
 msgstr "In diesem Versuch wurden keine Abgaben erfasst."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No theory is served at “{path}”. This site ships: {available}."
+msgstr ""
 
 #: src/worker/web/admin.tsx
 msgid "No users matched."

@@ -379,18 +379,19 @@ export function buildDiagnosticStrings(i18n: Translator) {
       i18n.t(
         "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal.",
       ),
-    "An aufbau-mm0 block needs MM0 source in its body.": i18n.t(
-      "An aufbau-mm0 block needs MM0 source in its body.",
-    ),
-    "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline.":
+    "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves.":
       i18n.t(
-        "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline.",
+        "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves.",
       ),
     "No aufbau-mm0 theory named “{name}” is declared before this proof.":
       i18n.t(
         "No aufbau-mm0 theory named “{name}” is declared before this proof.",
         placeholders("name"),
       ),
+    "No theory is served at “{path}”. This site ships: {available}.": i18n.t(
+      "No theory is served at “{path}”. This site ships: {available}.",
+      placeholders("available", "path"),
+    ),
     "The goal header must be followed by a '----' underline, then the proof body.":
       i18n.t(
         "The goal header must be followed by a '----' underline, then the proof body.",
@@ -398,6 +399,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "The goal header must state the goal formula inside '$ … $'.": i18n.t(
       "The goal header must state the goal formula inside '$ … $'.",
     ),
+    "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet.":
+      i18n.t(
+        "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet.",
+        placeholders("path"),
+      ),
     "Unknown proof option “{option}”. Supported options are 'auto' and 'complete'.":
       i18n.t(
         "Unknown proof option “{option}”. Supported options are 'auto' and 'complete'.",

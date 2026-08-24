@@ -31,6 +31,10 @@ msgstr "“{name}” is a free variable; every formula must be a sentence."
 msgid "“{operator}” cannot be chained; add parentheses to group it."
 msgstr "“{operator}” cannot be chained; add parentheses to group it."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet."
+msgstr "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet."
+
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "“{token}” is not a line number or a subproof range like “a-b”."
 msgstr "“{token}” is not a line number or a subproof range like “a-b”."
@@ -466,12 +470,8 @@ msgid "An assumption carries a single discharge label; “{payload}” reads as 
 msgstr "An assumption carries a single discharge label; “{payload}” reads as a list."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "An aufbau-mm0 block needs MM0 source in its body."
-msgstr "An aufbau-mm0 block needs MM0 source in its body."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline."
-msgstr "An aufbau-mm0 src attribute is not supported yet; write the MM0 inline."
+msgid "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves."
+msgstr "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves."
 
 #: src/worker/web/lti.tsx
 msgid "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
@@ -2367,6 +2367,10 @@ msgstr "No submissions have been recorded."
 #: src/worker/web/gradebook.tsx
 msgid "No submissions were recorded in this attempt."
 msgstr "No submissions were recorded in this attempt."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No theory is served at “{path}”. This site ships: {available}."
+msgstr "No theory is served at “{path}”. This site ships: {available}."
 
 #: src/worker/web/admin.tsx
 msgid "No users matched."

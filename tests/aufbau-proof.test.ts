@@ -254,12 +254,15 @@ ${THEORY}`),
     ).toContain("missing_name");
   });
 
-  test("a theory src attribute is rejected (deferred)", async () => {
+  // What a `src` resolves to, and how each way of mistyping one reads, is
+  // `theory-src.test.ts`. Here only that a path naming nothing is refused
+  // rather than quietly leaving the body to stand in for the theory.
+  test("a theory src naming nothing is refused", async () => {
     expect(
       await diagnosticsFor(
         `:::aufbau-mm0{name="prop" src="/theories/prop.mm0"}\nprovable sort wff;\n:::`,
       ),
-    ).toContain("unsupported_theory_src");
+    ).toContain("unknown_theory_src");
   });
 
   test("MM0 notation containing angle brackets is not flagged as raw HTML", async () => {
