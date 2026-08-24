@@ -1,5 +1,3 @@
-import { FORALLX_THEORY_MM0 } from "./forallx-theory";
-
 /**
  * A demo lesson for Prawitz-style natural-deduction trees over the forallx:
  * Calgary system: the theory panel plus seven tree exercises of rising
@@ -37,8 +35,7 @@ The connective rules are: \`and_intro\` / \`and_elim_l\` / \`and_elim_r\`,
 \`all_intro\` / \`all_elim\` (∀I / ∀E) and \`ex_intro\` / \`ex_elim\`
 (∃I / ∃E). The editor checks your tree as you type; a ✓ means it verifies.
 
-:::aufbau-mm0{name="forallx"}
-${FORALLX_THEORY_MM0}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
 :::
 
 ## 1. Modus ponens

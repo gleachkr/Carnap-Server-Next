@@ -1,7 +1,6 @@
 import { flattenProofTree } from "../../src/worker/exercises/aufbau-proof-tree/flatten";
 import type { ProofTreeNode } from "../../src/worker/exercises/aufbau-proof-tree/types";
 import { GENTZEN_CASES } from "./gentzen-cases";
-import { GENTZEN_THEORY_MM0 } from "./gentzen-theory";
 
 /**
  * A second Gentzen-LK demo lesson, built to exercise the **pre-populated tree**
@@ -83,8 +82,7 @@ sequent calculus **LK** is the same one from the earlier lesson: a sequent is
 instructor can *seed the tree* — as a **worked example** to study, or as a
 **scaffold** with a step or two left for you to fill in.
 
-:::aufbau-mm0{name="gentzen"}
-${GENTZEN_THEORY_MM0}
+:::aufbau-mm0{name="gentzen" src="/theories/gentzen-lk.mm0"}
 :::
 
 ## 1. A worked example

@@ -1,5 +1,3 @@
-import { GENTZEN_THEORY_MM0 } from "./gentzen-theory";
-
 /**
  * A demo lesson for the Gentzen classical sequent calculus (LK), built for the
  * *tree* proof editor: the theory panel plus four proof-tree exercises of rising
@@ -25,8 +23,7 @@ grows the branches above a node into the premise sequents it needs. Leaves are
 term. The predicate signature is \`P\` and \`Q\` (one-place); names are \`x\`, \`y\`,
 \`z\`. The editor checks the tree as you build it; a ✓ means it verifies.
 
-:::aufbau-mm0{name="gentzen"}
-${GENTZEN_THEORY_MM0}
+:::aufbau-mm0{name="gentzen" src="/theories/gentzen-lk.mm0"}
 :::
 
 ## 1. Universal to existential (worked)

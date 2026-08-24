@@ -1,5 +1,3 @@
-import { FORALLX_THEORY_MM0 } from "./forallx-theory";
-
 /**
  * A demo lesson for the forallx: Calgary natural-deduction system, TFL through
  * the first-order fragment: the theory panel plus six Fitch exercises of rising
@@ -27,8 +25,7 @@ Terms are written with the small signature \`F\`, \`G\` (one-place), \`R\`
 (two-place); the names and variables are \`x\`, \`y\`, \`z\`. The editor checks
 your proof as you type; a ✓ means it verifies.
 
-:::aufbau-mm0{name="forallx"}
-${FORALLX_THEORY_MM0}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
 :::
 
 ## 1. Modus ponens (worked)

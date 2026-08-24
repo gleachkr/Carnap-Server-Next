@@ -1,10 +1,8 @@
-import { FORALLX_THEORY_MM0 } from "./forallx-theory";
-
 /**
  * A demo lesson that exercises **every** exercise directive the profile exposes,
  * and shows the source of each one in a fenced code block right above it — so the
  * page doubles as a tour of the format and a tour of the widgets. Logic is the
- * forallx: Calgary system from {@link FORALLX_THEORY_MM0} (truth tables use its
+ * forallx: Calgary system, named by its served path (truth tables use its
  * truth-functional fragment in Carnap ascii notation).
  *
  * Shared by `tests/showcase-demo.test.ts` (which compiles it, so a directive that
@@ -49,30 +47,32 @@ IP (indirect proof)    ip
 ∃I  /  ∃E              ex_intro / ex_elim
 \`\`\`
 
-The rules themselves are declared in an \`aufbau-mm0\` block, which is what makes
-them available to the proof exercises further down. A whole system fits in one
-block. Declaring a theory does not put it on the page — add \`show\` when you want
-students to be able to read the axioms, as the panel below does:
+The rules themselves come from an \`aufbau-mm0\` block, which is what makes them
+available to the proof exercises further down. This one names a system the site
+already serves, so the lesson does not carry three hundred lines of MM0:
 
 \`\`\`md
-:::aufbau-mm0{name="forallx" show}
-provable sort wff;
-sort ctx;
-sort tm;
-
-term imp (a b: wff): wff;
-infixr imp: $→$ prec 25;
-term all {x: tm} (p: wff x): wff;
-prefix all: $∀$ prec 46;
-
-axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
-axiom imp_intro (g h: ctx) (a b: wff): $ g , a ⊢ b $ > $ g , h ⊢ a → b $;
-axiom imp_elim (g h i: ctx) (a b: wff): $ g ⊢ a → b $ > $ h ⊢ a $ > $ g , h , i ⊢ b $;
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
 :::
 \`\`\`
 
-:::aufbau-mm0{name="forallx" show}
-${FORALLX_THEORY_MM0}
+That path is a real one — open it and you get the theory, rule names and all.
+A course with its own vocabulary adds to it in the body of the same block, and
+the declarations arrive after the ones the path brought:
+
+\`\`\`md
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+term Cube (x: tm): wff;
+
+--| @congr
+axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
+:::
+\`\`\`
+
+Declaring a theory does not put it on the page — add \`show\` when you want
+students to be able to read the axioms, as the panel below does:
+
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0" show}
 :::
 
 ## 1. Multiple choice
