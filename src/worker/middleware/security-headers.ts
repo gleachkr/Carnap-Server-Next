@@ -90,11 +90,12 @@ const CONTENT_SECURITY_POLICY = [
   // Submissions, the UI-strings payloads and the compiler's WASM all come from
   // here. Nothing in Carnap talks to a third party from the browser.
   //
-  // Notably this is *not* what an `src=` on `aufbau-mm0` would need. A theory is
-  // frozen into the exercise's `publicData.mm0` at compile time and is the sole
-  // input the worker verifies against, so a theory fetched by URL would be
-  // fetched by us, once, on the server — where the control that matters is which
-  // hosts the worker may call, not what a reader's browser may connect to.
+  // Notably this is *not* what an `src=` on `aufbau-mm0` needs. A built-in
+  // theory is answered from the module graph rather than fetched, so naming one
+  // costs no connection at all — and the revision editor compiles in the
+  // browser, so if a theory kept on another origin is ever supported it will be
+  // resolved by the worker and handed to the preview from here, rather than
+  // widening this directive to every host an author might name.
   "connect-src 'self'",
   "object-src 'none'",
   // `'none'` rather than `'self'`, because nothing sets a base URL: the only

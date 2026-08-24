@@ -733,22 +733,82 @@ diagnostic live — and the worker independently re-verifies that certificate on
 submit. (The client compiler is an untrusted convenience; the server verifier is
 the arbiter.)
 
-Declare a theory with `aufbau-mm0`. Its body is raw MM0, not Markdown; give it a
-`name` other proof blocks reference.
+Declare a theory with `aufbau-mm0`. Give it a `name` other proof blocks
+reference. Its MM0 comes from a `src` naming a theory this site serves, from its
+body (raw MM0, not Markdown), or from both.
 
-A declared theory does not appear in the lesson. MM0 source is machinery, and a
-course that gives students its rules in a textbook rarely wants a slab of it
-above every exercise. Add `show` when you do want it readable — it renders a
-collapsed disclosure panel, labelled with the theory's name, that opens to the
-source:
+### Naming a theory the site serves
+
+Most courses teach a system somebody has already written down, so the usual
+block is one line and no body:
 
 ```md
-:::aufbau-mm0{name="prop" show}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+:::
+```
+
+These paths are real. Open one in a browser and you get the theory itself — the
+axiom names your students will cite, and the commentary that ships with them.
+Two are available:
+
+| Path | System |
+| --- | --- |
+| `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment. Sequents `Γ ⊢ φ`; the Fitch and Prawitz surfaces are built for it. |
+| `/theories/gentzen-lk.mm0` | Classical LK, a multi-conclusion sequent calculus with both sides comma-separated. An LK derivation is a tree, so this is the tree surface's system. |
+
+A `src` must be a path this site serves. A theory kept on another server is not
+supported: the text is frozen into the exercise when you save, and putting a
+third party's uptime inside that save — and inside the live preview, which
+compiles in your browser under a policy that permits only same-origin
+requests — would make saving a lesson fail for reasons that have nothing to do
+with the lesson. Copy the MM0 into the block instead.
+
+### Extending a theory, and writing one
+
+A course with its own vocabulary puts the extra declarations in the body of the
+same block. They arrive after everything the path brought, and the engine reads
+the result as one theory:
+
+```md
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+term Cube (x: tm): wff;
+term Loves (x y: tm): wff;
+
+--| @congr
+axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
+--| @congr
+axiom Loves_congr (a b c d: tm): $ a = b $ > $ c = d $ > $ Loves a c ↔ Loves b d $;
+:::
+```
+
+The shipped signature is deliberately small — unary `F`, `G` and binary `R` —
+so this is the ordinary way to teach with `Cube` or `Loves`. Congruence axioms
+are what let `=E` replace equals inside your new predicates; without them the
+predicate still parses and proves, it simply cannot be rewritten through.
+
+A block with a body and no `src` is a theory written from scratch, which is what
+a system nobody has published yet needs:
+
+```md
+:::aufbau-mm0{name="prop"}
 delimiter $ ( ) $;
 provable sort wff;
 term imp (a b: wff): wff; infixr imp: $->$ prec 25;
 axiom top_i: $ top $;
 axiom ax_1 (a b: wff): $ a -> b -> a $;
+:::
+```
+
+### Showing a theory to students
+
+A declared theory does not appear in the lesson. MM0 source is machinery, and a
+course that gives students its rules in a textbook rarely wants a slab of it
+above every exercise. Add `show` when you do want it readable — it renders a
+collapsed disclosure panel, labelled with the theory's name, that opens to the
+source, extension and all:
+
+```md
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0" show}
 :::
 ```
 
@@ -781,10 +841,9 @@ off by default — appropriate for introductory work, worth enabling for a cours
 where search is expected). The proof-script format (proof lines, `by`, rule
 applications, `auto?`) is documented in the engine repository's `docs/proof.md`.
 
-v1 is a plain text editor; richer GUIs on the same engine may follow. A theory
-located elsewhere (an `src=` on `aufbau-mm0`) and the `auto?`/completion wiring
-are not implemented yet. The full reference lives next to the code in
-`src/worker/exercises/aufbau-proof/README.md`.
+v1 is a plain text editor; richer GUIs on the same engine may follow. The
+`auto?`/completion wiring is not implemented yet. The full reference lives next
+to the code in `src/worker/exercises/aufbau-proof/README.md`.
 
 ## Aufbau-proof-tree directive
 
@@ -1136,7 +1195,8 @@ Common diagnostic codes include:
 - `missing_name`
 - `empty_theory`
 - `duplicate_theory`
-- `unsupported_theory_src`
+- `unknown_theory_src`
+- `remote_theory_src`
 - `unknown_theory`
 - `missing_theorem_header`
 - `missing_proof_underline`

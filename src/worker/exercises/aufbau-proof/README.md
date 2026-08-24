@@ -31,10 +31,24 @@ was produced (copying is a plagiarism concern, not a soundness one).
 
 ## Authoring syntax
 
-Two directives. `aufbau-mm0` declares a named theory (raw MM0 body, rendered as a
-read-only panel); `aufbau-proof` references it and states the goal.
+Two directives. `aufbau-mm0` declares a named theory; `aufbau-proof` references
+it and states the goal.
+
+A theory's MM0 comes from a `src` naming one this site serves, from a raw MM0
+body, or from both — in which case the body's declarations are appended to what
+the path brought, which is how a course adds its own predicates without carrying
+the whole system. The built-ins live in `src/worker/logic/theories/` and are
+served at `/theories/<name>.mm0`; `logic/theories/index.ts` is the resolver, and
+it answers from the module graph rather than fetching the path it names, so a
+theory resolves identically in the worker, in the browser preview, and in tests
+with no server running. A `src` pointing at another origin is refused
+(`remote_theory_src`) rather than fetched.
 
 ```md
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+term Cube (x: tm): wff;
+:::
+
 :::aufbau-mm0{name="prop"}
 delimiter $ ( ) $;
 provable sort wff;
@@ -62,7 +76,7 @@ then the starter proof body. The student edits only the body.
 | Attribute | Directive | Meaning |
 | --- | --- | --- |
 | `name` | `aufbau-mm0` | theory name other proof blocks reference (required) |
-| `src` | `aufbau-mm0` | external theory — **not supported yet** (`unsupported_theory_src`) |
+| `src` | `aufbau-mm0` | a theory path this site serves; the body, if any, extends it |
 | `id` | `aufbau-proof` | exercise id (required) |
 | `theory` | `aufbau-proof` | a theory declared earlier in the document (required) |
 | `title`, `points`, `exam`, `feedback` | `aufbau-proof` | as for every exercise |
