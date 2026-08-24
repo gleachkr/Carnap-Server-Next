@@ -1,0 +1,93 @@
+-- Carnap's default `prop` propositional language, as the truth-table
+-- exercise type speaks it: ASCII connectives only, atoms are single Roman
+-- letters of either case, five separate precedence rungs (negation, then
+-- ∧ over ∨ over → over ↔), every rung chains, and plain parentheses may
+-- enclose anything.
+--
+-- Carnap's own spec. Ported from the worked example of the same name in
+-- @aufbau/syntax and free to diverge from it, as its sibling explains.
+--
+-- The atoms are ordinary nullary declarations — MM0's finite vocabulary;
+-- the incumbent `truth-table/logic/formula.ts` also accepts a bare-digit
+-- subscript (`P0`), which this spec cannot spell and which is a deliberate
+-- casualty of a letter lexicon.
+
+-- The surface delimiter set: where one chunk of student input ends and the
+-- next begins, fixed before anything is looked up. The lexicon letters are
+-- listed so `~~P` reads without spaces, the operator spellings so `P->Q`
+-- does. Nothing here may be a string the vocabulary cannot answer to, and
+-- no lexicon name may be split by it; the reader checks both.
+--| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
+--| @syntax delimiter $ a b c d e f g h i j k l m n o p q r s t u v w x y z $
+--| @syntax delimiter $ ( ) ~ /\ \/ -> <-> $
+delimiter $ ( ) $;
+
+provable sort wff;
+
+term A: wff;
+term B: wff;
+term C: wff;
+term D: wff;
+term E: wff;
+term F: wff;
+term G: wff;
+term H: wff;
+term I: wff;
+term J: wff;
+term K: wff;
+term L: wff;
+term M: wff;
+term N: wff;
+term O: wff;
+term P: wff;
+term Q: wff;
+term R: wff;
+term S: wff;
+term T: wff;
+term U: wff;
+term V: wff;
+term W: wff;
+term X: wff;
+term Y: wff;
+term Z: wff;
+term a: wff;
+term b: wff;
+term c: wff;
+term d: wff;
+term e: wff;
+term f: wff;
+term g: wff;
+term h: wff;
+term i: wff;
+term j: wff;
+term k: wff;
+term l: wff;
+term m: wff;
+term n: wff;
+term o: wff;
+term p: wff;
+term q: wff;
+term r: wff;
+term s: wff;
+term t: wff;
+term u: wff;
+term v: wff;
+term w: wff;
+term x: wff;
+term y: wff;
+term z: wff;
+
+term not (p: wff): wff;
+prefix not: $~$ prec 50;
+
+term and (p q: wff): wff;
+infixl and: $/\$ prec 40;
+
+term or (p q: wff): wff;
+infixl or: $\/$ prec 35;
+
+term imp (p q: wff): wff;
+infixr imp: $->$ prec 30;
+
+term iff (p q: wff): wff;
+infixl iff: $<->$ prec 25;

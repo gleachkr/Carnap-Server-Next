@@ -1,0 +1,178 @@
+-- forallx: Calgary, 2019 edition and later — the surface language of the
+-- model and translation exercise types, as one artifact.
+--
+-- Carnap's own spec. Ported from the worked example of the same name in
+-- @aufbau/syntax and free to diverge from it: that library publishes code,
+-- not a catalogue of textbooks, and which conventions a course teaches is
+-- this program's subject matter, not the parser's.
+--
+-- The declarations are ordinary MM0: sorts, constructors, coercions, and
+-- notations (several per constructor — the last declared is the canonical
+-- spelling a printer uses; the rest are accepted input). The lexicon is
+-- ordinary MM0 too: each letter is a declared term, and the variables ride
+-- the engine's own `@vars` annotation. The `@syntax` annotations carry
+-- only what MM0 cannot say: which bracket pairs group, that the
+-- conditional rung refuses to chain, forallx's two refusal conventions,
+-- and that a missing argument sequence is the elided `snil` — which is
+-- how one seq-taking declaration per letter covers both the sentence
+-- letter `P` and the variadic predicate `P(a,b)`, and both the constant
+-- `f` and the function `f(x)`.
+--
+-- One known divergence from the incumbent `exercises/first-order/dialect.ts`,
+-- to be settled when the exercise types swap over rather than discovered from
+-- a student: that table lists `s` and `t` as function letters as well as
+-- variable letters, so `s(x)` parses there and does not here. A letter is
+-- either a variable pool member or a declared term, not both.
+
+-- The surface delimiter set: where one chunk of student input ends and the
+-- next begins, fixed before anything is looked up. The lexicon letters are
+-- listed so `AxF(x)` reads without spaces, the operator spellings so `P->Q`
+-- does. Nothing here may be a string the vocabulary cannot answer to, and
+-- no lexicon name may be split by it; the reader checks both.
+--| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
+--| @syntax delimiter $ a b c d e f g h i j k l m n o p q r s t u v w x y z $
+--| @syntax delimiter $ ( ) [ ] , $
+--| @syntax delimiter $ - ~ ¬ /\ ^ & ∧ \/ | ∨ $
+--| @syntax delimiter $ -> => ⊃ > → <-> <=> <> ≡ ↔ $
+--| @syntax delimiter $ @ 3 ∀ ∃ = != ≠ !? _|_ ⊥ ⊤ $
+--| @syntax brackets ( ) [ ]
+--| @syntax assoc-none 20
+--| @syntax lint parenthesize-binary-only
+--| @syntax lint closed-sentences
+--| @syntax display drop-outer-parens
+delimiter $ ( ) [ ] , $;
+
+provable sort wff;
+
+--| @vars s t u v w x y z
+sort var;
+sort tm;
+sort seq;
+
+term v2t (x: var): tm;
+coercion v2t: var > tm;
+term t2s (t: tm): seq;
+coercion t2s: tm > seq;
+
+-- Argument sequences, so a predicate or function letter is variadic:
+-- F(a), R(a,b), R(a,b,c) share one letter shape. The empty sequence is
+-- elided: writing it is optional, printing it is suppressed.
+--| @syntax elided
+term snil: seq;
+term scomma (s t: seq): seq;
+infixl scomma: $,$ prec 10;
+
+-- The predicate letters; nullary use (a sentence letter) is the elided
+-- empty sequence.
+term A (s: seq): wff;
+term B (s: seq): wff;
+term C (s: seq): wff;
+term D (s: seq): wff;
+term E (s: seq): wff;
+term F (s: seq): wff;
+term G (s: seq): wff;
+term H (s: seq): wff;
+term I (s: seq): wff;
+term J (s: seq): wff;
+term K (s: seq): wff;
+term L (s: seq): wff;
+term M (s: seq): wff;
+term N (s: seq): wff;
+term O (s: seq): wff;
+term P (s: seq): wff;
+term Q (s: seq): wff;
+term R (s: seq): wff;
+term S (s: seq): wff;
+term T (s: seq): wff;
+term U (s: seq): wff;
+term V (s: seq): wff;
+term W (s: seq): wff;
+term X (s: seq): wff;
+term Y (s: seq): wff;
+term Z (s: seq): wff;
+
+-- The function letters; nullary use (a constant) likewise.
+term a (s: seq): tm;
+term b (s: seq): tm;
+term c (s: seq): tm;
+term d (s: seq): tm;
+term e (s: seq): tm;
+term f (s: seq): tm;
+term g (s: seq): tm;
+term h (s: seq): tm;
+term i (s: seq): tm;
+term j (s: seq): tm;
+term k (s: seq): tm;
+term l (s: seq): tm;
+term m (s: seq): tm;
+term n (s: seq): tm;
+term o (s: seq): tm;
+term p (s: seq): tm;
+term q (s: seq): tm;
+term r (s: seq): tm;
+
+--| @syntax role negation
+term not (p: wff): wff;
+prefix not: $-$ prec 40;
+prefix not: $~$ prec 40;
+prefix not: $¬$ prec 40;
+
+--| @syntax role conjunction
+term and (p q: wff): wff;
+infixl and: $/\$ prec 30;
+infixl and: $^$ prec 30;
+infixl and: $&$ prec 30;
+infixl and: $∧$ prec 30;
+
+--| @syntax role disjunction
+term or (p q: wff): wff;
+infixl or: $\/$ prec 30;
+infixl or: $|$ prec 30;
+infixl or: $∨$ prec 30;
+
+--| @syntax role conditional
+term imp (p q: wff): wff;
+infixr imp: $->$ prec 20;
+infixr imp: $=>$ prec 20;
+infixr imp: $⊃$ prec 20;
+infixr imp: $>$ prec 20;
+infixr imp: $→$ prec 20;
+
+--| @syntax role biconditional
+term iff (p q: wff): wff;
+infixr iff: $<->$ prec 20;
+infixr iff: $<=>$ prec 20;
+infixr iff: $<>$ prec 20;
+infixr iff: $≡$ prec 20;
+infixr iff: $↔$ prec 20;
+
+--| @syntax role forall
+term all {x: var} (p: wff x): wff;
+prefix all: $A$ prec 40;
+prefix all: $@$ prec 40;
+prefix all: $∀$ prec 40;
+
+--| @syntax role exists
+term ex {x: var} (p: wff x): wff;
+prefix ex: $E$ prec 40;
+prefix ex: $3$ prec 40;
+prefix ex: $∃$ prec 40;
+
+--| @syntax role identity
+term ideq (s t: tm): wff;
+infixl ideq: $=$ prec 50;
+
+--| @syntax role inequality
+def neq (s t: tm): wff = $ ¬ (s = t) $;
+infixl neq: $!=$ prec 50;
+infixl neq: $≠$ prec 50;
+
+--| @syntax role falsum
+term bot: wff;
+notation bot: wff = ($!?$:max);
+notation bot: wff = ($_|_$:max);
+notation bot: wff = ($⊥$:max);
+
+--| @syntax role verum
+term top: wff;
+notation top: wff = ($⊤$:max);
