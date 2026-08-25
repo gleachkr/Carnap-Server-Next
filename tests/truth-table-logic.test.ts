@@ -49,8 +49,12 @@ describe("parseFormula", () => {
     expect(parse("P")).toEqual({ name: "P", type: "atom" });
   });
 
-  test("parses subscripted atoms", () => {
-    expect(parse("P12")).toEqual({ name: "P12", type: "atom" });
+  test("a subscripted atom is no longer part of the lexicon", () => {
+    // The hand parser read `P12`; the vocabulary is now an MM0 signature, so
+    // it is 52 single letters and nothing else. Deliberate, 2026-08-24.
+    const result = parseFormula("P12");
+
+    expect(result.ok).toBe(false);
   });
 
   test("parses negation as a prefix", () => {
@@ -142,12 +146,8 @@ describe("collectAtoms", () => {
     ]);
   });
 
-  test("orders subscripts numerically, not lexically", () => {
-    expect(collectAtoms([parse("P10 /\\ P2 /\\ P1")])).toEqual([
-      "P1",
-      "P2",
-      "P10",
-    ]);
+  test("uppercase sorts before lowercase, as the letters do", () => {
+    expect(collectAtoms([parse("q /\\ P /\\ p")])).toEqual(["P", "p", "q"]);
   });
 });
 

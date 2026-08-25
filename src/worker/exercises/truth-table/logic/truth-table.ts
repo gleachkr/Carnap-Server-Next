@@ -54,32 +54,6 @@ export type TruthTableResult =
   | { readonly ok: true; readonly table: TruthTable }
   | { readonly ok: false; readonly errors: readonly TruthTableBuildError[] };
 
-/** Split an atom into its letter stem and numeric subscript for ordering. */
-function atomOrderKey(atom: string): { stem: string; subscript: number } {
-  const match = /^([A-Za-z]+)([0-9]*)$/.exec(atom);
-
-  if (match === null) {
-    return { stem: atom, subscript: -1 };
-  }
-
-  const digits = match[2] ?? "";
-  return {
-    stem: match[1] ?? atom,
-    subscript: digits === "" ? -1 : Number(digits),
-  };
-}
-
-function compareAtoms(a: string, b: string): number {
-  const left = atomOrderKey(a);
-  const right = atomOrderKey(b);
-
-  if (left.stem !== right.stem) {
-    return left.stem < right.stem ? -1 : 1;
-  }
-
-  return left.subscript - right.subscript;
-}
-
 function collectAtomsInto(formula: Formula, into: Set<string>): void {
   switch (formula.type) {
     case "atom":
@@ -102,7 +76,11 @@ export function collectAtoms(formulas: readonly Formula[]): string[] {
     collectAtomsInto(formula, atoms);
   }
 
-  return [...atoms].sort(compareAtoms);
+  // A plain string sort. The atoms are whatever the spec declares, and
+  // `carnap-prop` declares 52 single letters — the numeric-aware comparator
+  // that used to sit here existed for the hand parser's unbounded subscripts
+  // (`P2` before `P10`), which an MM0 signature cannot spell.
+  return [...atoms].sort();
 }
 
 /**
