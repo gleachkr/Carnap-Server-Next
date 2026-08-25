@@ -296,6 +296,8 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   /** The theory's turnstile; artifacts compiled before `sequent=` existed have
    *  no `sequentSymbol`, so this default stands in for them. */
   private sequentSymbol = "⊢";
+  /** The theory's context separator, on the same terms as `sequentSymbol`. */
+  private contextSymbol = ",";
   private editor: EditorView | null = null;
   private proofText = "";
   private fitchText = "";
@@ -331,6 +333,9 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     this.assumptionRule = data.assumptionRule;
     if (typeof data.sequentSymbol === "string" && data.sequentSymbol !== "") {
       this.sequentSymbol = data.sequentSymbol;
+    }
+    if (typeof data.contextSymbol === "string" && data.contextSymbol !== "") {
+      this.contextSymbol = data.contextSymbol;
     }
 
     const container = root.querySelector<HTMLElement>(".proof");
@@ -493,6 +498,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       this.goalName,
       this.assumptionRule,
       this.sequentSymbol,
+      this.contextSymbol,
     );
   }
 

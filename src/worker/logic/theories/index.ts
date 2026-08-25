@@ -7,6 +7,17 @@
  * directly. An `:::aufbau-mm0` block names one by its path instead of carrying
  * three hundred lines of MM0 in the lesson source.
  *
+ * **A theory may also be a language.** `forallx-calgary-2019.mm0` carries
+ * `@syntax` annotations and is registered by `../specs` under the language id
+ * of the same stem, so `system=` on a model or translation exercise and `src=`
+ * on a proof exercise's theory block name the same bytes and cannot disagree
+ * about what `A` means. Two things follow for anyone reading these files. The annotations
+ * are *not* the engine's — `compileAufbauMm0` strips them where it freezes a
+ * theory, and anything else handing this text to the compiler must too. And a
+ * file that plays both roles cannot spell its context separator `,`, because
+ * the comma is the student's argument separator; it says so itself with
+ * `@syntax role context-join`, which is what the proof types read.
+ *
  * **Everything is named by a URL.** These paths are real: the route at
  * {@link THEORY_ROUTE_PREFIX} serves this same text, so an author can open one
  * and read the rule names and the commentary that ships with them. The
@@ -31,12 +42,13 @@
  * compiler and verifier.
  */
 
+import carnapProp from "./carnap-prop.mm0" with { type: "text" };
 import forallxCalgary2019 from "./forallx-calgary-2019.mm0" with {
   type: "text",
 };
 import gentzenLk from "./gentzen-lk.mm0" with { type: "text" };
 
-/** Every built-in theory URL begins here, which is what the route matches on. */
+/** Every built-in artifact's URL begins here, which is what the route matches on. */
 export const THEORY_ROUTE_PREFIX = "/theories/";
 
 /**
@@ -45,6 +57,7 @@ export const THEORY_ROUTE_PREFIX = "/theories/";
  * authored `src=` hand back — one string to compare, no stem to reconstruct.
  */
 export const THEORY_SOURCES: Readonly<Record<string, string>> = {
+  "carnap-prop.mm0": carnapProp,
   "forallx-calgary-2019.mm0": forallxCalgary2019,
   "gentzen-lk.mm0": gentzenLk,
 };

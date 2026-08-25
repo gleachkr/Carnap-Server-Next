@@ -12,8 +12,10 @@
  * and the citations. It never reasons about the logic:
  *
  *  - Each non-blank line emits one `.auf` line, in order: step `k` → label `lk`.
- *  - Contexts are sequents `Γ ⊢ φ` with a comma-separated ACUI context. Every
- *    line — assumption or derived — carries its **ambient** context: every
+ *  - Contexts are sequents `Γ ⊢ φ` over an ACUI context whose separator the
+ *    theory names (`,` in most, `;` where the comma already separates a
+ *    predicate's arguments — see `contextSymbol`). Every line — assumption or
+ *    derived — carries its **ambient** context: every
  *    assumption of every scope on its open scope path. In a linear Fitch proof
  *    that is exactly the textbook accessibility set (a closed sibling box is
  *    off the path, so nothing from it can leak — the cross-branch pollution
@@ -24,9 +26,9 @@
  *    empty context.
  *  - Ambient contexts presume the house theory convention: every rule joins a
  *    **slack** context variable into its conclusion (implicit weakening, as in
- *    `ax`'s `g , a ⊢ a` and `reit`), so a nested line may cite shallower lines
- *    and still state its conclusion in its own larger scope. Without slack the
- *    conclusion could only be the exact join of the cited contexts.
+ *    `ax`'s `ga ; ph ⊢ ph` and `reit`), so a nested line may cite shallower
+ *    lines and still state its conclusion in its own larger scope. Without
+ *    slack the conclusion could only be the exact join of the cited contexts.
  *  - A ref `n` becomes `ln`; a range `a-b` becomes `lb` (the subproof's last
  *    line, whose context still carries the assumption being discharged).
  *  - Citations are checked for **accessibility**: a plain ref must lie on the
@@ -357,16 +359,27 @@ function walkFitch(
 /**
  * Translate Fitch `fitchText` into `.auf` for `goalName`, treating a line that
  * cites `assumptionRule` with no earlier premises as an assumption, and writing
- * `sequentSymbol` as the turnstile of every emitted sequent (the theory's own
- * notation — not every theory spells it `⊢`). Returns the assembled proof text,
- * a source-line map for diagnostics, and any structural diagnostics
- * (best-effort `proofText` is still returned when they are present).
+ * `sequentSymbol` as the turnstile of every emitted sequent and
+ * `contextSymbol` between the formulas of a context — both the theory's own
+ * notations, since not every theory spells them `⊢` and `,`.
+ *
+ * The context separator defaults to `,` because that is what a theory whose
+ * only sequence is the context spells it, which was every theory until one
+ * file became both the proof system and the *language*: there the comma is
+ * already the student's argument separator in `R(a,b)`, and MM0 gives a math
+ * token one meaning, so the context takes `;` instead. See
+ * `logic/theories/forallx-calgary-2019.mm0`.
+ *
+ * Returns the assembled proof text, a source-line map for diagnostics, and any
+ * structural diagnostics (best-effort `proofText` is still returned when they
+ * are present).
  */
 export function fitchToAuf(
   fitchText: string,
   goalName: string,
   assumptionRule: string,
   sequentSymbol: string,
+  contextSymbol = ",",
 ): TranslatedFitchProof {
   const {
     diagnostics,
@@ -466,7 +479,8 @@ export function fitchToAuf(
       }
     }
 
-    const contextText = formulas.length === 0 ? "_" : formulas.join(" , ");
+    const contextText =
+      formulas.length === 0 ? "_" : formulas.join(` ${contextSymbol} `);
     const refText = line.refs.map((ref) => `l${ref.label}`).join(", ");
     bodyLines.push(
       `l${index + 1}: $ ${contextText} ${sequentSymbol} ${line.formula} $ by ${line.rule} [${refText}]`,

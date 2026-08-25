@@ -30,7 +30,7 @@ export const DEFAULT_LANGUAGE_ID = "forallx-calgary-2019";
 /**
  * The languages an author may name in `system=`.
  *
- * Not every spec in `logic/specs/` qualifies. These two types quantify, form
+ * Not every spec `logic/specs` registers qualifies. These two types quantify, form
  * identities and interpret predicates, so a spec they can be set in has to
  * declare the roles that means — `carnap-prop` ships beside forallx and has
  * none of them. Widening this is a matter of adding an id once a spec earns

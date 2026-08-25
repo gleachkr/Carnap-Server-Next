@@ -82,9 +82,13 @@ the translator at compile time; it need not prove anything.
 Attributes match the siblings: `theory` (required, a declared `aufbau-mm0` name
 earlier in the document), `id`, `title`, `points`, `exam`, `feedback`,
 `options`,
-`assumption=` naming the theory's assumption axiom (`ax` by default), and
+`assumption=` naming the theory's assumption axiom (`ax` by default),
 `sequent=` naming its turnstile notation (`⊢` by default; emitted in every
-translated sequent and stripped from pasted starter lines).
+translated sequent and stripped from pasted starter lines), and `context=`
+naming the separator between a context's formulas (`,` by default). The last
+two are read off the theory itself where it declares them (`@syntax role
+turnstile`, `@syntax role context-join`), so they are an override rather than
+something to write on every exercise.
 
 ## Files
 

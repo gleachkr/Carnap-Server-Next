@@ -1,311 +1,672 @@
--- The natural-deduction system of *forallx: Calgary* as an Aufbau sequent
--- theory — the full first-order fragment (FOL), not just TFL. Carnap ships it:
--- an author names this file's path on an `aufbau-mm0` block rather than
--- pasting three hundred lines of MM0 above every exercise.
+-- forallx: Calgary (2019 edition and later) as one artifact: the language a
+-- student writes *and* the natural-deduction system they write proofs in. A
+-- model or translation exercise and a Fitch proof set from this file cannot
+-- disagree about what `A` means, because there is only one declaration of it.
 --
--- Its sibling `src/worker/logic/specs/forallx-calgary-2019.mm0` is the same
--- textbook's *language* — what a student may type into a truth table or a model
--- exercise. Same stem on purpose: one file is the language, the other the proof
--- system built over it, and they are meant to converge into one artifact.
+-- Served at `/theories/forallx-calgary-2019.mm0`, which is what an
+-- `:::aufbau-mm0` block names with `src=`; the same text is registered as the
+-- language id `forallx-calgary-2019`, which is what a `system=` names.
 --
--- Each object connective (∧ ∨ → ↔ ¬ ⊥) is a `wff` term, and `wff` is *not*
--- provable: the only assertable sort is `judgement`, which `⊢` produces. So a
--- bare formula is not a theorem statement, and — the point of the split — a
--- sequent cannot appear where a sentence goes, which is what lets the same file
--- serve as the language a student writes in. The equational layer moves with
--- it: `≡` relates two formulas and `≐` two terms, both landing in `judgement`,
--- while the object `↔` and `=` stay ordinary connectives students can type.
--- The judgement is a sequent `Γ ⊢ φ` over an ACUI comma-context, so the Fitch
--- translator can map indentation to contexts. The rule set is forallx's primitive basic rules —
--- the ones the textbook introduces as the proof system itself, not the derived
--- rules (DS, MT, LEM, DeMorgan, …), which are provable from these. Beyond the
--- textbook statement, every rule's conclusion joins one extra *slack* context
--- variable — implicit weakening, required by the Fitch translator's ambient
--- contexts and inert for dependency-context emitters; see the comment at the
--- structural rules below.
+-- ## What the sorts do
 --
--- forallx rule → axiom name:
+-- `judgement` is where the proof system lives: `⊢` produces one, and so does
+-- every member of the equational layer. Student input is read at `wff`. So a
+-- sequent cannot be built where a sentence belongs — checkable, not merely
+-- declared, and it is what lets one file play both roles.
+--
+-- `wff` carries `provable` even though nothing asserts a bare formula. The
+-- surface printer's notion of a connective is "an infix constructor closed over
+-- a provable sort", which is how it knows to space and bracket `∧` but not the
+-- argument comma; take `provable` off `wff` and a student's formula prints as
+-- `P→Q∧R`. The parse target does not depend on it: `@syntax role sentence`
+-- below names `wff` outright, and the reader passes it.
+--
+-- Quantifiable variables and proper names are distinct sorts, both coercing
+-- into `tm`, after gleachkr/Aufbau's `zach` fixture. The eigenvariable provisos
+-- on ∀I and ∃E are then not side conditions but MM0 dependency typing: the
+-- context and conclusion binders simply may not depend on `{a: name}`.
+--
+-- ## The lexicon
+--
+-- The lowercase alphabet is partitioned, and the partition is forced: the
+-- engine refuses a `@vars` token that is also a declared term.
+--   a–e  names      (@vars at `name`; can be an eigenvariable, takes no args)
+--   f–r  functions  (declared at `tm`; `f` is a constant, `f(x)` an application)
+--   s–z  variables  (@vars at `var`; what a quantifier binds)
+-- Carnap's own 2019 Calgary options draw constants from a–r and functions from
+-- a–t, overlapping deliberately and resolved by parser try-order; a declared
+-- lexicon cannot overlap, so the ranges are cut instead. A bare `f` is still a
+-- constant, so the only thing an f–r letter cannot do is serve as ∀I's
+-- eigenvariable, and the only thing an a–e letter cannot do is take arguments.
+--
+-- Predicates and functions take an argument *sequence*, so one letter covers
+-- every arity: `F`, `F(a)`, `R(a,b)`. The empty sequence is elided.
+--
+-- Two consequences of one file that a course arriving from the two-file version
+-- should read once. **The context join is `;`, not `,`** — the comma is the
+-- student's argument separator and MM0 gives a math token one meaning, so a
+-- goal statement reads `$ F(a) ; G(a) ⊢ F(a) $` and the proof translators emit
+-- the same. And **axiom binders are spelled with two letters** (`ph`, `ga`,
+-- `sq`, `te`), because every single lowercase letter is now lexicon.
+--
+-- The equational layer never touches the object language. `⟺` relates two
+-- formulas, `≐` two terms, `≗` two argument sequences, `≜` two contexts, and
+-- `⟚` two judgements — all landing in `judgement`, so none of them can be
+-- nested under a connective. The object `↔` and `=` stay ordinary wff-valued
+-- connectives a student can type. Only the judgement bundle carries a transport
+-- member: a bare formula is not asserted anywhere, so there is nothing to
+-- transport to. Reading this file as a language warns that these tokens are not
+-- surface-delimited, which is the correct report: they are engine-only.
+--
+-- ## forallx rule → axiom name
+--
 --   R (reiteration) .......... reit        ∧I / ∧E ........ and_intro / and_elim_l/r
 --   →I / →E .................. imp_intro / imp_elim        ∨I / ∨E .. or_intro_l/r / or_elim
 --   ↔I / ↔E ................. iff_intro / iff_elim_l/r     ¬I ....... neg_intro
 --   ¬E (A,¬A ⊢ ⊥) ........... neg_elim     X (explosion) .. explosion  IP ... ip
 --   =I ....................... eq_intro_nd  =E ............. eq_replace
 --   ∀I / ∀E .................. all_intro / all_elim        ∃I / ∃E .. ex_intro / ex_elim
--- The assumption/premise rule (the Fitch `assumption` axiom) is `ax`.
+-- The assumption/premise rule (the Fitch `assumption` axiom) is `ax`. These are
+-- forallx's primitive basic rules — the ones the textbook introduces as the
+-- proof system itself, not the derived rules (DS, MT, LEM, DeMorgan, …), which
+-- are provable from these.
 --
--- ## The first-order fragment and eigenvariables
+-- ## Eigenvariables, and why a rule's binder list is the whole proviso
 --
--- Quantifiers are MM0 binders: `term all {x: tm} (p: wff x)` declares `∀ x p`
--- where the body `p` *may* mention the bound term-variable `x`. A predicate
--- applied to a term is a `wff` mentioning that term (`F x`), and instantiation
--- is the substitution term `[x/t] p` (with `subst x / t a` for the term level).
--- The eigenvariable side condition rides on MM0's binder dependency types: in
--- `all_intro (g: ctx) {x: tm} (p: wff x)` the *raw* `g: ctx` may not depend on
--- `x`, which is exactly "the name being generalized does not occur in any
--- undischarged assumption". The verifier re-checks that dependency against the
--- MMB, so the constraint is enforced by the trust boundary, not by the
--- compiler.
+-- In `all_intro {x: var} {a: name} (ga de: ctx x) (ph: wff x)` the raw `ga`,
+-- `de` and `ph` may depend on `x` but not on `a`, which is exactly "the name
+-- being generalized occurs in no undischarged assumption and not in the
+-- generalized formula". The verifier re-checks that dependency against the MMB,
+-- so the constraint is enforced by the trust boundary, not by the compiler.
 --
--- A rule's dependency list is the whole proviso, so read it twice. Both ∃E
--- rules once declared contexts that were allowed to mention the eigenvariable
--- (`ex_elim_sub` had `(g h i: ctx x u)`, `ex_elim` had `(g h i: ctx x)`), which
--- left the proviso binding only the conclusion. That is enough to prove
--- `∃x G(x) , F(u) ⊢ ∃x (G(x) ∧ F(x))` — invalid on D = {1,2}, G = {2}, F = {1},
--- u = 1 — and the MMB passed `verifyMmb`, so it was through the trust boundary,
--- not merely past the compiler. `tests/helpers/forallx-cases.ts` pins both paths
--- shut with the `smuggle` / `smugglex` refusal cases.
+-- Read such a list twice. Under the two-file version both ∃E rules once
+-- declared contexts that were allowed to mention the eigenvariable, which left
+-- the proviso binding only the conclusion — enough to prove
+-- `∃x G(x) ; F(u) ⊢ ∃x (G(x) ∧ F(x))`, invalid on D = {1,2}, G = {2}, F = {1},
+-- u = 1, and it passed `verifyMmb`, so it was through the trust boundary and
+-- not merely past the compiler. `tests/helpers/forallx-cases.ts` pins that shut
+-- with the `smuggle` refusal case. Separating names from variables by sort is
+-- what makes the current statement hard to get wrong: a variable can never
+-- occur free in a sentence, so "mentions x" and "mentions the eigenvariable"
+-- cannot be confused, and no @freshen or @fallback rule is needed.
 --
 -- The compiler's elaboration annotations let a proof cite these rules with
--- concrete formulas and have the witness / eigenvariable *inferred* rather than
--- annotated inline: `@view`/`@recover` recover the witness `t` (∀E, ∃I) or the
--- eigenvariable `u` (the `_sub` fallbacks) from the concrete before/after
--- sequents; `@freshen` alpha-renames harmless bound-variable collisions; the
--- `@fallback` forms handle the textbook case where the eigenvariable name
--- differs from the ∀/∃ binder; `@abstract`/`@fresh` drive =E's Leibniz
--- replacement. This is why the theory-agnostic Fitch translator — which only
--- ever emits `Γ ⊢ φ by rule [refs]` — produces `.auf` the engine accepts for FOL
--- with no quantifier-specific code: the intelligence lives in these
--- annotations.
+-- concrete formulas and have the witness or eigenvariable *inferred* rather than
+-- annotated inline: `@view`/`@recover` recover the witness `te` (∀E, ∃I) or the
+-- eigenvariable `a` (∀I, ∃E) from the concrete before/after sequents;
+-- `@abstract`/`@fresh` drive =E's Leibniz replacement. This is why the
+-- theory-agnostic Fitch, Prawitz and tree translators — which only ever emit
+-- `Γ ⊢ φ by rule [refs]` — produce `.auf` the engine accepts for FOL with no
+-- quantifier-specific code: the intelligence lives in these annotations.
 --
--- The signature is small and fixed — unary `F`, `G`; binary `R` — so worked
--- problems read naturally (`∀ x (F x → G x)`, `R x y`). A course that needs its
--- own predicates or names declares them for itself; see the `aufbau-mm0`
--- section of `docs/carnap-markdown-v1.md`.
+-- The signature is the textbook's whole alphabet, so a course needs to declare
+-- nothing to set an exercise; one that wants its own predicate names appends
+-- them, as the `aufbau-mm0` section of `docs/carnap-markdown-v1.md` describes.
 
-delimiter $ ( ) [ / ] $;
-sort wff;
+-- The surface delimiter set: where one chunk of student input ends and the next
+-- begins, fixed before anything is looked up. The lexicon letters are listed so
+-- `AxF(x)` reads without spaces, the operator spellings so `P->Q` does.
+--| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
+--| @syntax delimiter $ a b c d e f g h i j k l m n o p q r s t u v w x y z $
+--| @syntax delimiter $ ( ) [ ] , $
+--| @syntax delimiter $ - ~ ¬ /\ ^ & ∧ \/ | ∨ $
+--| @syntax delimiter $ -> => ⊃ > → <-> <=> <> ≡ ↔ $
+--| @syntax delimiter $ @ 3 ∀ ∃ = != ≠ !? _|_ ⊥ ⊤ $
+--| @syntax brackets ( ) [ ]
+--| @syntax assoc-none 20
+--| @syntax lint parenthesize-binary-only
+--| @syntax lint closed-sentences
+--| @syntax display drop-outer-parens
+delimiter $ ( ) [ ] , ; / { } $;
+
+-- `sentence` is uninterpreted metadata to @aufbau/syntax — it records which sort
+-- *this application* reads student input at, so the reader can name it instead
+-- of guessing from declaration order. See the note on `provable` in the header.
+--| @syntax role sentence
+provable sort wff;
 sort ctx;
 provable sort judgement;
 
 --| @vars s t u v w x y z
+sort var;
+--| @vars a b c d e
+sort name;
 sort tm;
+sort seq;
 
-term imp (a b: wff): wff;
-infixr imp: $→$ prec 25;
-term and (a b: wff): wff;
+term v2t (x: var): tm;
+coercion v2t: var > tm;
+term n2t (a: name): tm;
+coercion n2t: name > tm;
+term t2s (te: tm): seq;
+coercion t2s: tm > seq;
+
+-- Argument sequences, so a predicate or function letter is variadic: F(a),
+-- R(a,b), R(a,b,c) share one letter. The combiner is associative and nothing
+-- else — argument order and multiplicity are meaning-bearing — while contexts,
+-- which really are unordered, keep the full ACUI treatment. The empty sequence
+-- is elided: writing it is optional, printing it is suppressed.
+--| @syntax elided
+term snil: seq;
+--| @acui seq_assoc _ snil _
+term scomma (sq tq: seq): seq;
+infixl scomma: $,$ prec 10;
+
+-- The predicate letters; nullary use (a sentence letter) is the elided
+-- empty sequence.
+term A (sq: seq): wff;
+term B (sq: seq): wff;
+term C (sq: seq): wff;
+term D (sq: seq): wff;
+term E (sq: seq): wff;
+term F (sq: seq): wff;
+term G (sq: seq): wff;
+term H (sq: seq): wff;
+term I (sq: seq): wff;
+term J (sq: seq): wff;
+term K (sq: seq): wff;
+term L (sq: seq): wff;
+term M (sq: seq): wff;
+term N (sq: seq): wff;
+term O (sq: seq): wff;
+term P (sq: seq): wff;
+term Q (sq: seq): wff;
+term R (sq: seq): wff;
+term S (sq: seq): wff;
+term T (sq: seq): wff;
+term U (sq: seq): wff;
+term V (sq: seq): wff;
+term W (sq: seq): wff;
+term X (sq: seq): wff;
+term Y (sq: seq): wff;
+term Z (sq: seq): wff;
+
+-- The function letters; nullary use (a proper name in every respect but
+-- eigenvariable duty) likewise.
+term f (sq: seq): tm;
+term g (sq: seq): tm;
+term h (sq: seq): tm;
+term i (sq: seq): tm;
+term j (sq: seq): tm;
+term k (sq: seq): tm;
+term l (sq: seq): tm;
+term m (sq: seq): tm;
+term n (sq: seq): tm;
+term o (sq: seq): tm;
+term p (sq: seq): tm;
+term q (sq: seq): tm;
+term r (sq: seq): tm;
+
+--| @syntax role negation
+term not (ph: wff): wff;
+prefix not: $-$ prec 40;
+prefix not: $~$ prec 40;
+prefix not: $¬$ prec 40;
+
+--| @syntax role conjunction
+term and (ph ps: wff): wff;
+infixl and: $/\$ prec 30;
+infixl and: $^$ prec 30;
+infixl and: $&$ prec 30;
 infixl and: $∧$ prec 30;
-term or (a b: wff): wff;
-infixl or: $∨$ prec 28;
-term neg (a: wff): wff;
-prefix neg: $¬$ prec 45;
+
+--| @syntax role disjunction
+term or (ph ps: wff): wff;
+infixl or: $\/$ prec 30;
+infixl or: $|$ prec 30;
+infixl or: $∨$ prec 30;
+
+--| @syntax role conditional
+term imp (ph ps: wff): wff;
+infixr imp: $->$ prec 20;
+infixr imp: $=>$ prec 20;
+infixr imp: $⊃$ prec 20;
+infixr imp: $>$ prec 20;
+infixr imp: $→$ prec 20;
+
+--| @syntax role biconditional
+term iff (ph ps: wff): wff;
+infixr iff: $<->$ prec 20;
+infixr iff: $<=>$ prec 20;
+infixr iff: $<>$ prec 20;
+infixr iff: $≡$ prec 20;
+infixr iff: $↔$ prec 20;
+
+-- `A` and `E` are Carnap's ASCII quantifier spellings, and they are also
+-- predicate letters. Carnap's parser resolves that by try-order; an MM0 math
+-- string cannot, so declaring `A` as a notation would make the predicate `A`
+-- unwritable in a goal statement. They stay student spellings through the
+-- elaboration layer instead, which is stripped before the engine sees the
+-- file, and are marked input-only so `∀` remains what a formula displays as.
+--| @syntax elab $ A ?x:var $ => $ ∀ ?x $ input-only
+--| @syntax elab $ E ?x:var $ => $ ∃ ?x $ input-only
+
+--| @syntax role forall
+term all {x: var} (ph: wff x): wff;
+prefix all: $@$ prec 40;
+prefix all: $∀$ prec 40;
+
+--| @syntax role exists
+term ex {x: var} (ph: wff x): wff;
+prefix ex: $3$ prec 40;
+prefix ex: $∃$ prec 40;
+
+--| @syntax role identity
+term ideq (te ue: tm): wff;
+infixl ideq: $=$ prec 50;
+
+--| @syntax role inequality
+def neq (te ue: tm): wff = $ ¬ (te = ue) $;
+infixl neq: $!=$ prec 50;
+infixl neq: $≠$ prec 50;
+
+--| @syntax role falsum
 term bot: wff;
+notation bot: wff = ($!?$:max);
+notation bot: wff = ($_|_$:max);
 notation bot: wff = ($⊥$:max);
 
-term iff (a b: wff): wff;
-infixr iff: $↔$ prec 20;
-term ctx_eq (g h: ctx): judgement;
+--| @syntax role verum
+term top: wff;
+notation top: wff = ($⊤$:max);
+
+-- Substitution as an ordinary term, pushed through the syntax by the @rewrite
+-- equations below so the normalizer can compute the instances the quantifier
+-- rules produce.
+term sb_t {x: var} (te: tm x) (ue: tm x): tm;
+notation sb_t {x: var} (te: tm x) (ue: tm x): tm =
+  ($tsub$:41) x ($/$:0) te ue;
+term sb_s {x: var} (te: tm x) (sq: seq x): seq;
+notation sb_s {x: var} (te: tm x) (sq: seq x): seq =
+  ($subst$:41) x ($/$:0) te sq;
+term sb_f {x: var} (te: tm x) (ph: wff x): wff;
+notation sb_f {x: var} (te: tm x) (ph: wff x): wff =
+  (${$:41) x ($/$:0) te ($}$:0) ph;
+
+-- The judgement layer. Nothing below is student-writable: every one of these
+-- lands in `judgement`, and student input is read at `wff`.
 term emp: ctx;
 notation emp: ctx = ($_$:max);
-
--- First-order syntax: quantifiers (MM0 binders), identity, a small signature,
--- and the substitution terms instantiation is written with.
-term all {x: tm} (p: wff x): wff;
-prefix all: $∀$ prec 46;
-term ex {x: tm} (p: wff x): wff;
-prefix ex: $∃$ prec 46;
-term eq (a b: tm): wff;
-infixl eq: $=$ prec 50;
-
-term F (x: tm): wff;
-term G (x: tm): wff;
-term R (x y: tm): wff;
-
-term sb_t {x: tm} (t: tm x) (a: tm x): tm;
-notation sb_t {x: tm} (t: tm x) (a: tm x): tm =
-  ($subst$:41) x ($/$:0) t a;
-term sb_f {x: tm} (t: tm x) (p: wff x): wff;
-notation sb_f {x: tm} (t: tm x) (p: wff x): wff =
-  ($[$:41) x ($/$:0) t ($]$:0) p;
-
+-- `context-join` and `turnstile` are how the proof exercise types learn to
+-- write a sequent in *this* theory's notation rather than the house default.
+-- The join is `;` because the comma is already the student's argument
+-- separator above and MM0 gives a math token one meaning; a theory that is
+-- only a theory has no such collision and keeps `,`, which is why the default
+-- is what it is. Both are uninterpreted to @aufbau/syntax, like every role.
+--| @syntax role context-join
 --| @acui ctx_assoc ctx_comm emp ctx_idem
-term join (g h: ctx): ctx;
-infixl join: $,$ prec 5;
-term hyp (a: wff): ctx;
+term join (ga de: ctx): ctx;
+infixl join: $;$ prec 5;
+term hyp (ph: wff): ctx;
 coercion hyp: wff > ctx;
-term nd (g: ctx) (a: wff): judgement;
+--| @syntax role turnstile
+term nd (ga: ctx) (ph: wff): judgement;
 infixl nd: $⊢$ prec 0;
-term teq (a b: tm): judgement;
+
+term weq (ph ps: wff): judgement;
+infixl weq: $⟺$ prec 1;
+term teq (te ue: tm): judgement;
 infixl teq: $≐$ prec 1;
-term weq (a b: wff): judgement;
-infixl weq: $≡$ prec 1;
-term jeq (s t: judgement): judgement;
+term sqeq (sq tq: seq): judgement;
+infixl sqeq: $≗$ prec 1;
+term ctx_eq (ga de: ctx): judgement;
+infixl ctx_eq: $≜$ prec 1;
+term jeq (jj kk: judgement): judgement;
 infixl jeq: $⟚$ prec 1;
 
+-- The equational layer: one @relation bundle per sort. Only `judgement` carries
+-- a transport member, since it is the only provable sort; a rewrite inside a
+-- formula lifts through hyp_congr and nd_congr to a `⟚` the transport can use.
 --| @relation wff weq weq_refl weq_trans weq_sym _
-axiom weq_refl (a: wff): $ a ≡ a $;
-axiom weq_trans (a b c: wff): $ a ≡ b $ > $ b ≡ c $ > $ a ≡ c $;
-axiom weq_sym (a b: wff): $ a ≡ b $ > $ b ≡ a $;
+axiom weq_refl (ph: wff): $ ph ⟺ ph $;
+axiom weq_trans (ph ps ch: wff): $ ph ⟺ ps $ > $ ps ⟺ ch $ > $ ph ⟺ ch $;
+axiom weq_sym (ph ps: wff): $ ph ⟺ ps $ > $ ps ⟺ ph $;
 
---| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
-axiom jeq_refl (s: judgement): $ s ⟚ s $;
-axiom jeq_trans (s t u: judgement): $ s ⟚ t $ > $ t ⟚ u $ > $ s ⟚ u $;
-axiom jeq_sym (s t: judgement): $ s ⟚ t $ > $ t ⟚ s $;
-axiom jeq_mp (s t: judgement): $ s ⟚ t $ > $ s $ > $ t $;
+--| @relation tm teq teq_refl teq_trans teq_sym _
+axiom teq_refl (te: tm): $ te ≐ te $;
+axiom teq_trans (te ue ve: tm): $ te ≐ ue $ > $ ue ≐ ve $ > $ te ≐ ve $;
+axiom teq_sym (te ue: tm): $ te ≐ ue $ > $ ue ≐ te $;
+
+--| @relation seq sqeq sqeq_refl sqeq_trans sqeq_sym _
+axiom sqeq_refl (sq: seq): $ sq ≗ sq $;
+axiom sqeq_trans (sq tq uq: seq): $ sq ≗ tq $ > $ tq ≗ uq $ > $ sq ≗ uq $;
+axiom sqeq_sym (sq tq: seq): $ sq ≗ tq $ > $ tq ≗ sq $;
+axiom seq_assoc (sq tq uq: seq): $ ((sq , tq) , uq) ≗ (sq , (tq , uq)) $;
 
 --| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
-axiom ctx_refl (g: ctx): $ ctx_eq g g $;
-axiom ctx_trans (g h i: ctx): $ ctx_eq g h $ > $ ctx_eq h i $ > $ ctx_eq g i $;
-axiom ctx_sym (g h: ctx): $ ctx_eq g h $ > $ ctx_eq h g $;
-axiom ctx_assoc (g h i: ctx): $ ctx_eq ((g , h) , i) (g , (h , i)) $;
-axiom ctx_comm (g h: ctx): $ ctx_eq (g , h) (h , g) $;
-axiom ctx_idem (g: ctx): $ ctx_eq (g , g) g $;
-axiom ctx_unit (g: ctx): $ ctx_eq (emp , g) g $;
+axiom ctx_refl (ga: ctx): $ ctx_eq ga ga $;
+axiom ctx_trans (ga de si: ctx):
+  $ ctx_eq ga de $ > $ ctx_eq de si $ > $ ctx_eq ga si $;
+axiom ctx_sym (ga de: ctx): $ ctx_eq ga de $ > $ ctx_eq de ga $;
+axiom ctx_assoc (ga de si: ctx):
+  $ ctx_eq ((ga ; de) ; si) (ga ; (de ; si)) $;
+axiom ctx_comm (ga de: ctx): $ ctx_eq (ga ; de) (de ; ga) $;
+axiom ctx_idem (ga: ctx): $ ctx_eq (ga ; ga) ga $;
+axiom ctx_unit (ga: ctx): $ ctx_eq (_ ; ga) ga $;
 
--- Identity is an equivalence relation on terms (the rewriting equality the
--- compiler uses to normalise substitutions; the ND rules =I / =E are below).
---| @relation tm teq teq_refl teq_trans teq_sym _
-axiom teq_refl (a: tm): $ a ≐ a $;
-axiom teq_trans (a b c: tm): $ a ≐ b $ > $ b ≐ c $ > $ a ≐ c $;
-axiom teq_sym (a b: tm): $ a ≐ b $ > $ b ≐ a $;
+--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
+axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
+axiom jeq_trans (jj kk ll: judgement): $ jj ⟚ kk $ > $ kk ⟚ ll $ > $ jj ⟚ ll $;
+axiom jeq_sym (jj kk: judgement): $ jj ⟚ kk $ > $ kk ⟚ jj $;
+axiom jeq_mp (jj kk: judgement): $ jj ⟚ kk $ > $ jj $ > $ kk $;
 
 --| @congr
-axiom join_congr (g1 g2 h1 h2: ctx): $ ctx_eq g1 g2 $ > $ ctx_eq h1 h2 $ > $ ctx_eq (g1 , h1) (g2 , h2) $;
+axiom join_congr (ga de si ta: ctx):
+  $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ ctx_eq (ga ; si) (de ; ta) $;
 --| @congr
-axiom hyp_congr (a b: wff): $ a ≡ b $ > $ ctx_eq (hyp a) (hyp b) $;
+axiom hyp_congr (ph ps: wff): $ ph ⟺ ps $ > $ ctx_eq (hyp ph) (hyp ps) $;
 --| @congr
-axiom nd_congr (g h: ctx) (a b: wff): $ ctx_eq g h $ > $ a ≡ b $ > $ (g ⊢ a) ⟚ (h ⊢ b) $;
+axiom nd_congr (ga de: ctx) (ph ps: wff):
+  $ ctx_eq ga de $ > $ ph ⟺ ps $ > $ (ga ⊢ ph) ⟚ (de ⊢ ps) $;
 --| @congr
-axiom imp_congr (a b c d: wff): $ a ≡ b $ > $ c ≡ d $ > $ (a → c) ≡ (b → d) $;
+axiom scomma_congr (sq tq uq vq: seq):
+  $ sq ≗ tq $ > $ uq ≗ vq $ > $ (sq , uq) ≗ (tq , vq) $;
 --| @congr
-axiom and_congr (a b c d: wff): $ a ≡ b $ > $ c ≡ d $ > $ (a ∧ c) ≡ (b ∧ d) $;
+axiom t2s_congr (te ue: tm): $ te ≐ ue $ > $ (t2s te) ≗ (t2s ue) $;
 --| @congr
-axiom or_congr (a b c d: wff): $ a ≡ b $ > $ c ≡ d $ > $ (a ∨ c) ≡ (b ∨ d) $;
+axiom not_congr (ph ps: wff): $ ph ⟺ ps $ > $ ¬ ph ⟺ ¬ ps $;
 --| @congr
-axiom neg_congr (a b: wff): $ a ≡ b $ > $ ¬ a ≡ ¬ b $;
+axiom and_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ∧ ch) ⟺ (ps ∧ th) $;
 --| @congr
-axiom eq_congr (a b c d: tm): $ a ≐ b $ > $ c ≐ d $ > $ (a = c) ≡ (b = d) $;
+axiom or_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ∨ ch) ⟺ (ps ∨ th) $;
 --| @congr
-axiom F_congr (a b: tm): $ a ≐ b $ > $ F a ≡ F b $;
+axiom imp_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph → ch) ⟺ (ps → th) $;
 --| @congr
-axiom G_congr (a b: tm): $ a ≐ b $ > $ G a ≡ G b $;
+axiom iff_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ↔ ch) ⟺ (ps ↔ th) $;
 --| @congr
-axiom R_congr (a b c d: tm): $ a ≐ b $ > $ c ≐ d $ > $ R a c ≡ R b d $;
+axiom ideq_congr (te ue ve we: tm):
+  $ te ≐ ue $ > $ ve ≐ we $ > $ (te = ve) ⟺ (ue = we) $;
 --| @congr
-axiom all_congr {x: tm} (p q: wff x): $ p ≡ q $ > $ ∀ x p ≡ ∀ x q $;
+axiom all_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∀ x ph ⟺ ∀ x ps $;
 --| @congr
-axiom ex_congr {x: tm} (p q: wff x): $ p ≡ q $ > $ ∃ x p ≡ ∃ x q $;
+axiom ex_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∃ x ph ⟺ ∃ x ps $;
+--| @congr
+axiom A_congr (sq tq: seq): $ sq ≗ tq $ > $ A sq ⟺ A tq $;
+--| @congr
+axiom B_congr (sq tq: seq): $ sq ≗ tq $ > $ B sq ⟺ B tq $;
+--| @congr
+axiom C_congr (sq tq: seq): $ sq ≗ tq $ > $ C sq ⟺ C tq $;
+--| @congr
+axiom D_congr (sq tq: seq): $ sq ≗ tq $ > $ D sq ⟺ D tq $;
+--| @congr
+axiom E_congr (sq tq: seq): $ sq ≗ tq $ > $ E sq ⟺ E tq $;
+--| @congr
+axiom F_congr (sq tq: seq): $ sq ≗ tq $ > $ F sq ⟺ F tq $;
+--| @congr
+axiom G_congr (sq tq: seq): $ sq ≗ tq $ > $ G sq ⟺ G tq $;
+--| @congr
+axiom H_congr (sq tq: seq): $ sq ≗ tq $ > $ H sq ⟺ H tq $;
+--| @congr
+axiom I_congr (sq tq: seq): $ sq ≗ tq $ > $ I sq ⟺ I tq $;
+--| @congr
+axiom J_congr (sq tq: seq): $ sq ≗ tq $ > $ J sq ⟺ J tq $;
+--| @congr
+axiom K_congr (sq tq: seq): $ sq ≗ tq $ > $ K sq ⟺ K tq $;
+--| @congr
+axiom L_congr (sq tq: seq): $ sq ≗ tq $ > $ L sq ⟺ L tq $;
+--| @congr
+axiom M_congr (sq tq: seq): $ sq ≗ tq $ > $ M sq ⟺ M tq $;
+--| @congr
+axiom N_congr (sq tq: seq): $ sq ≗ tq $ > $ N sq ⟺ N tq $;
+--| @congr
+axiom O_congr (sq tq: seq): $ sq ≗ tq $ > $ O sq ⟺ O tq $;
+--| @congr
+axiom P_congr (sq tq: seq): $ sq ≗ tq $ > $ P sq ⟺ P tq $;
+--| @congr
+axiom Q_congr (sq tq: seq): $ sq ≗ tq $ > $ Q sq ⟺ Q tq $;
+--| @congr
+axiom R_congr (sq tq: seq): $ sq ≗ tq $ > $ R sq ⟺ R tq $;
+--| @congr
+axiom S_congr (sq tq: seq): $ sq ≗ tq $ > $ S sq ⟺ S tq $;
+--| @congr
+axiom T_congr (sq tq: seq): $ sq ≗ tq $ > $ T sq ⟺ T tq $;
+--| @congr
+axiom U_congr (sq tq: seq): $ sq ≗ tq $ > $ U sq ⟺ U tq $;
+--| @congr
+axiom V_congr (sq tq: seq): $ sq ≗ tq $ > $ V sq ⟺ V tq $;
+--| @congr
+axiom W_congr (sq tq: seq): $ sq ≗ tq $ > $ W sq ⟺ W tq $;
+--| @congr
+axiom X_congr (sq tq: seq): $ sq ≗ tq $ > $ X sq ⟺ X tq $;
+--| @congr
+axiom Y_congr (sq tq: seq): $ sq ≗ tq $ > $ Y sq ⟺ Y tq $;
+--| @congr
+axiom Z_congr (sq tq: seq): $ sq ≗ tq $ > $ Z sq ⟺ Z tq $;
+--| @congr
+axiom f_congr (sq tq: seq): $ sq ≗ tq $ > $ f sq ≐ f tq $;
+--| @congr
+axiom g_congr (sq tq: seq): $ sq ≗ tq $ > $ g sq ≐ g tq $;
+--| @congr
+axiom h_congr (sq tq: seq): $ sq ≗ tq $ > $ h sq ≐ h tq $;
+--| @congr
+axiom i_congr (sq tq: seq): $ sq ≗ tq $ > $ i sq ≐ i tq $;
+--| @congr
+axiom j_congr (sq tq: seq): $ sq ≗ tq $ > $ j sq ≐ j tq $;
+--| @congr
+axiom k_congr (sq tq: seq): $ sq ≗ tq $ > $ k sq ≐ k tq $;
+--| @congr
+axiom l_congr (sq tq: seq): $ sq ≗ tq $ > $ l sq ≐ l tq $;
+--| @congr
+axiom m_congr (sq tq: seq): $ sq ≗ tq $ > $ m sq ≐ m tq $;
+--| @congr
+axiom n_congr (sq tq: seq): $ sq ≗ tq $ > $ n sq ≐ n tq $;
+--| @congr
+axiom o_congr (sq tq: seq): $ sq ≗ tq $ > $ o sq ≐ o tq $;
+--| @congr
+axiom p_congr (sq tq: seq): $ sq ≗ tq $ > $ p sq ≐ p tq $;
+--| @congr
+axiom q_congr (sq tq: seq): $ sq ≗ tq $ > $ q sq ≐ q tq $;
+--| @congr
+axiom r_congr (sq tq: seq): $ sq ≗ tq $ > $ r sq ≐ r tq $;
 
--- Alpha-renaming, used by @freshen when a context already binds the same
--- variable a quantifier rule is trying to bind.
+-- Alpha-renaming, for @freshen when a context already binds the variable a
+-- quantifier rule wants.
 --| @alpha x y
-axiom all_alpha {x y: tm} (p: wff x y): $ ∀ x p ≡ ∀ y ([x/y] p) $;
+axiom all_alpha {x y: var} (ph: wff x y): $ ∀ x ph ⟺ ∀ y ({x/y} ph) $;
 --| @alpha x y
-axiom ex_alpha {x y: tm} (p: wff x y): $ ∃ x p ≡ ∃ y ([x/y] p) $;
+axiom ex_alpha {x y: var} (ph: wff x y): $ ∃ x ph ⟺ ∃ y ({x/y} ph) $;
 
--- Substitution rewriting: push [x/t] through the syntactic operators so the
--- compiler's @rewrite automation can normalise the substitutions that arise
--- from all_elim / ex_intro / eq_replace into concrete atoms.
+-- Push {x/te} through the syntax. At a predicate or function the substitution
+-- moves onto the argument sequence, then distributes over `,` one at a time.
 --| @rewrite
-axiom sb_f_imp {x: tm} (t: tm x) (p q: wff x): $ [x/t] (p → q) ≡ ([x/t] p → [x/t] q) $;
+axiom sb_f_not {x: var} (te: tm x) (ph: wff x): $ {x/te} (¬ ph) ⟺ ¬ ({x/te} ph) $;
 --| @rewrite
-axiom sb_f_and {x: tm} (t: tm x) (p q: wff x): $ [x/t] (p ∧ q) ≡ ([x/t] p ∧ [x/t] q) $;
+axiom sb_f_and {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph ∧ ps) ⟺ ({x/te} ph ∧ {x/te} ps) $;
 --| @rewrite
-axiom sb_f_or {x: tm} (t: tm x) (p q: wff x): $ [x/t] (p ∨ q) ≡ ([x/t] p ∨ [x/t] q) $;
+axiom sb_f_or {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph ∨ ps) ⟺ ({x/te} ph ∨ {x/te} ps) $;
 --| @rewrite
-axiom sb_f_neg {x: tm} (t: tm x) (p: wff x): $ [x/t] (¬ p) ≡ ¬ ([x/t] p) $;
+axiom sb_f_imp {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph → ps) ⟺ ({x/te} ph → {x/te} ps) $;
 --| @rewrite
-axiom sb_f_iff {x: tm} (t: tm x) (p q: wff x): $ [x/t] (p ↔ q) ≡ ([x/t] p ↔ [x/t] q) $;
+axiom sb_f_iff {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph ↔ ps) ⟺ ({x/te} ph ↔ {x/te} ps) $;
 --| @rewrite
-axiom sb_f_bot {x: tm} (t: tm x): $ [x/t] ⊥ ≡ ⊥ $;
+axiom sb_f_bot {x: var} (te: tm x): $ {x/te} ⊥ ⟺ ⊥ $;
 --| @rewrite
-axiom sb_f_eq {x: tm} (t: tm x) (a b: tm x): $ [x/t] (a = b) ≡ (subst x / t a) = (subst x / t b) $;
+axiom sb_f_top {x: var} (te: tm x): $ {x/te} ⊤ ⟺ ⊤ $;
 --| @rewrite
-axiom sb_f_F {x: tm} (t: tm x) (a: tm x): $ [x/t] (F a) ≡ F (subst x / t a) $;
+axiom sb_f_ideq {x: var} (te: tm x) (ue ve: tm x):
+  $ {x/te} (ue = ve) ⟺ ((tsub x / te ue) = (tsub x / te ve)) $;
 --| @rewrite
-axiom sb_f_G {x: tm} (t: tm x) (a: tm x): $ [x/t] (G a) ≡ G (subst x / t a) $;
+axiom sb_f_all {x y: var} (te: tm x) (ph: wff x y):
+  $ {x/te} (∀ y ph) ⟺ ∀ y ({x/te} ph) $;
 --| @rewrite
-axiom sb_f_R {x: tm} (t: tm x) (a b: tm x): $ [x/t] (R a b) ≡ R (subst x / t a) (subst x / t b) $;
+axiom sb_f_ex {x y: var} (te: tm x) (ph: wff x y):
+  $ {x/te} (∃ y ph) ⟺ ∃ y ({x/te} ph) $;
 --| @rewrite
-axiom sb_f_all {x y: tm} (t: tm x) (p: wff x y): $ [x/t] (∀ y p) ≡ ∀ y ([x/t] p) $;
+axiom sb_f_id {x: var} (ph: wff x): $ {x/x} ph ⟺ ph $;
 --| @rewrite
-axiom sb_f_ex {x y: tm} (t: tm x) (p: wff x y): $ [x/t] (∃ y p) ≡ ∃ y ([x/t] p) $;
+axiom sb_f_irrel {x: var} (te: tm x) (ph: wff): $ {x/te} ph ⟺ ph $;
 --| @rewrite
-axiom sb_f_id {x: tm} (p: wff x): $ [x/x] p ≡ p $;
+axiom sb_f_A {x: var} (te: tm x) (sq: seq x): $ {x/te} (A sq) ⟺ A (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_irrel {x: tm} (t: tm x) (p: wff): $ [x/t] p ≡ p $;
+axiom sb_f_B {x: var} (te: tm x) (sq: seq x): $ {x/te} (B sq) ⟺ B (subst x / te sq) $;
 --| @rewrite
-axiom sb_t_var {x: tm} (t: tm x): $ (subst x / t x) ≐ t $;
+axiom sb_f_C {x: var} (te: tm x) (sq: seq x): $ {x/te} (C sq) ⟺ C (subst x / te sq) $;
 --| @rewrite
-axiom sb_t_irrel {x: tm} (t: tm x) (a: tm): $ (subst x / t a) ≐ a $;
+axiom sb_f_D {x: var} (te: tm x) (sq: seq x): $ {x/te} (D sq) ⟺ D (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_E {x: var} (te: tm x) (sq: seq x): $ {x/te} (E sq) ⟺ E (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_F {x: var} (te: tm x) (sq: seq x): $ {x/te} (F sq) ⟺ F (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_G {x: var} (te: tm x) (sq: seq x): $ {x/te} (G sq) ⟺ G (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_H {x: var} (te: tm x) (sq: seq x): $ {x/te} (H sq) ⟺ H (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_I {x: var} (te: tm x) (sq: seq x): $ {x/te} (I sq) ⟺ I (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_J {x: var} (te: tm x) (sq: seq x): $ {x/te} (J sq) ⟺ J (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_K {x: var} (te: tm x) (sq: seq x): $ {x/te} (K sq) ⟺ K (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_L {x: var} (te: tm x) (sq: seq x): $ {x/te} (L sq) ⟺ L (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_M {x: var} (te: tm x) (sq: seq x): $ {x/te} (M sq) ⟺ M (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_N {x: var} (te: tm x) (sq: seq x): $ {x/te} (N sq) ⟺ N (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_O {x: var} (te: tm x) (sq: seq x): $ {x/te} (O sq) ⟺ O (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_P {x: var} (te: tm x) (sq: seq x): $ {x/te} (P sq) ⟺ P (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Q {x: var} (te: tm x) (sq: seq x): $ {x/te} (Q sq) ⟺ Q (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_R {x: var} (te: tm x) (sq: seq x): $ {x/te} (R sq) ⟺ R (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_S {x: var} (te: tm x) (sq: seq x): $ {x/te} (S sq) ⟺ S (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_T {x: var} (te: tm x) (sq: seq x): $ {x/te} (T sq) ⟺ T (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_U {x: var} (te: tm x) (sq: seq x): $ {x/te} (U sq) ⟺ U (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_V {x: var} (te: tm x) (sq: seq x): $ {x/te} (V sq) ⟺ V (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_W {x: var} (te: tm x) (sq: seq x): $ {x/te} (W sq) ⟺ W (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_X {x: var} (te: tm x) (sq: seq x): $ {x/te} (X sq) ⟺ X (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Y {x: var} (te: tm x) (sq: seq x): $ {x/te} (Y sq) ⟺ Y (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Z {x: var} (te: tm x) (sq: seq x): $ {x/te} (Z sq) ⟺ Z (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_f {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (f sq)) ≐ f (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_g {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (g sq)) ≐ g (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_h {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (h sq)) ≐ h (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_i {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (i sq)) ≐ i (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_j {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (j sq)) ≐ j (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_k {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (k sq)) ≐ k (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_l {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (l sq)) ≐ l (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_m {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (m sq)) ≐ m (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_n {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (n sq)) ≐ n (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_o {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (o sq)) ≐ o (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_p {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (p sq)) ≐ p (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_q {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (q sq)) ≐ q (subst x / te sq) $;
+--| @rewrite
+axiom sb_t_r {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (r sq)) ≐ r (subst x / te sq) $;
+--| @rewrite
+axiom sb_s_comma {x: var} (te: tm x) (sq tq: seq x):
+  $ (subst x / te (sq , tq)) ≗ ((subst x / te sq) , (subst x / te tq)) $;
+--| @rewrite
+axiom sb_s_t2s {x: var} (te: tm x) (ue: tm x):
+  $ (subst x / te (t2s ue)) ≗ (t2s (tsub x / te ue)) $;
+--| @rewrite
+axiom sb_t_var {x: var} (te: tm x): $ (tsub x / te x) ≐ te $;
+--| @rewrite
+axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 
--- Structural: the assumption/premise rule, plus reiteration (weakening).
--- Every rule below joins one extra "slack" context variable into its
--- conclusion (the last ctx binder): implicit weakening, so a line may state
--- its conclusion in a larger ambient scope than its premises inhabit — the
--- Fitch translator's ambient contexts depend on it, and dependency-context
--- emitters (Prawitz/tree) simply bind it empty. ax and reit are the pattern.
-axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
-axiom reit (g h: ctx) (a: wff): $ g ⊢ a $ > $ g , h ⊢ a $;
+-- The rules of forallx: Calgary's basic proof system — the primitive rules the
+-- textbook introduces, not the derived ones (DS, MT, LEM, DeMorgan, …), which
+-- are provable from these. Beyond the textbook statement, every rule's
+-- conclusion joins one extra *slack* context binder: implicit weakening, so a
+-- line may state its conclusion in a larger ambient scope than its premises
+-- inhabit. The Fitch translator's ambient contexts depend on it; the
+-- dependency-context emitters (Prawitz, tree) simply bind it empty.
+axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
+axiom reit (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph $;
 
 -- Conditional (→)
-axiom imp_intro (g h: ctx) (a b: wff): $ g , a ⊢ b $ > $ g , h ⊢ a → b $;
-axiom imp_elim (g h i: ctx) (a b: wff): $ g ⊢ a → b $ > $ h ⊢ a $ > $ g , h , i ⊢ b $;
+axiom imp_intro (ga de: ctx) (ph ps: wff):
+  $ ga ; ph ⊢ ps $ > $ ga ; de ⊢ ph → ps $;
+axiom imp_elim (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph → ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
 
 -- Conjunction (∧)
-axiom and_intro (g h i: ctx) (a b: wff): $ g ⊢ a $ > $ h ⊢ b $ > $ g , h , i ⊢ a ∧ b $;
-axiom and_elim_l (g h: ctx) (a b: wff): $ g ⊢ a ∧ b $ > $ g , h ⊢ a $;
-axiom and_elim_r (g h: ctx) (a b: wff): $ g ⊢ a ∧ b $ > $ g , h ⊢ b $;
+axiom and_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
+axiom and_elim_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ph $;
+axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps $;
 
 -- Disjunction (∨)
-axiom or_intro_l (g h: ctx) (a b: wff): $ g ⊢ a $ > $ g , h ⊢ a ∨ b $;
-axiom or_intro_r (g h: ctx) (a b: wff): $ g ⊢ b $ > $ g , h ⊢ a ∨ b $;
-axiom or_elim (g h i j: ctx) (a b c: wff): $ g ⊢ a ∨ b $ > $ h , a ⊢ c $ > $ i , b ⊢ c $ > $ g , h , i , j ⊢ c $;
+axiom or_intro_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph ∨ ps $;
+axiom or_intro_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ph ∨ ps $;
+axiom or_elim (ga de si ta: ctx) (ph ps ch: wff):
+  $ ga ⊢ ph ∨ ps $ > $ de ; ph ⊢ ch $ > $ si ; ps ⊢ ch $ >
+  $ ga ; de ; si ; ta ⊢ ch $;
 
 -- Biconditional (↔)
-axiom iff_intro (g h i: ctx) (a b: wff): $ g , a ⊢ b $ > $ h , b ⊢ a $ > $ g , h , i ⊢ a ↔ b $;
-axiom iff_elim_l (g h i: ctx) (a b: wff): $ g ⊢ a ↔ b $ > $ h ⊢ a $ > $ g , h , i ⊢ b $;
-axiom iff_elim_r (g h i: ctx) (a b: wff): $ g ⊢ a ↔ b $ > $ h ⊢ b $ > $ g , h , i ⊢ a $;
+axiom iff_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ; ph ⊢ ps $ > $ de ; ps ⊢ ph $ > $ ga ; de ; si ⊢ ph ↔ ps $;
+axiom iff_elim_l (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ↔ ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
+axiom iff_elim_r (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ↔ ps $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph $;
 
 -- Negation, contradiction, explosion, indirect proof
-axiom neg_intro (g h: ctx) (a: wff): $ g , a ⊢ ⊥ $ > $ g , h ⊢ ¬ a $;
-axiom neg_elim (g h i: ctx) (a: wff): $ g ⊢ a $ > $ h ⊢ ¬ a $ > $ g , h , i ⊢ ⊥ $;
-axiom explosion (g h: ctx) (a: wff): $ g ⊢ ⊥ $ > $ g , h ⊢ a $;
-axiom ip (g h: ctx) (a: wff): $ g , ¬ a ⊢ ⊥ $ > $ g , h ⊢ a $;
+axiom neg_intro (ga de: ctx) (ph: wff): $ ga ; ph ⊢ ⊥ $ > $ ga ; de ⊢ ¬ ph $;
+axiom neg_elim (ga de si: ctx) (ph: wff):
+  $ ga ⊢ ph $ > $ de ⊢ ¬ ph $ > $ ga ; de ; si ⊢ ⊥ $;
+axiom explosion (ga de: ctx) (ph: wff): $ ga ⊢ ⊥ $ > $ ga ; de ⊢ ph $;
+axiom ip (ga de: ctx) (ph: wff): $ ga ; ¬ ph ⊢ ⊥ $ > $ ga ; de ⊢ ph $;
 
 -- Identity (=I is reflexivity under ⊢; =E is Leibniz replacement)
-axiom eq_intro_nd (g: ctx) (a: tm): $ g ⊢ a = a $;
+axiom eq_intro_nd (ga: ctx) (te: tm): $ ga ⊢ te = te $;
 
---| @view (g h i: ctx) {z: tm} (a b: tm) (p: wff z) (q r: wff): $ g ⊢ a = b $ > $ h ⊢ q $ > $ g , h , i ⊢ r $
---| @abstract p q r z a b
+--| @view (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z) (ps ch: wff): $ ga ⊢ te = ue $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ch $
+--| @abstract ph ps ch z te ue
 --| @fresh z
-axiom eq_replace (g h i: ctx) {z: tm} (a b: tm) (p: wff z):
-  $ g ⊢ a = b $ > $ h ⊢ [z/a] p $ > $ g , h , i ⊢ [z/b] p $;
+axiom eq_replace (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z):
+  $ ga ⊢ te = ue $ > $ de ⊢ {z/te} ph $ > $ ga ; de ; si ⊢ {z/ue} ph $;
 
--- Universal quantifier. The raw `g: ctx` binder is the eigenvariable side
--- condition: g may not depend on x. The @fallback handles the textbook case
--- where the subproof names the eigenvariable (u) differently from the ∀ binder.
---| @view {x u: tm} (g h: ctx x) (p q: wff x): $ g ⊢ q $ > $ g , h ⊢ ∀ x p $
---| @recover u q p x
-axiom all_intro_sub {x u: tm} (g h: ctx x) (p: wff x):
-  $ g ⊢ [x/u] p $ > $ g , h ⊢ ∀ x p $;
+-- Quantifiers. ∀I in textbook form: from Γ ⊢ P(a) conclude Γ ⊢ ∀x P(x),
+-- provided the name a occurs in neither Γ nor P. That proviso is dependency
+-- typing — ga, de and ph carry an x-dependency but no a-dependency, and the
+-- omission *is* the eigenvariable condition. Because a var can never occur free
+-- in a sentence, "mentions x" and "mentions the eigenvariable" are separated by
+-- sort, so no @freshen or @fallback rule is needed.
+--| @view {x: var} {a: name} (ga de: ctx x) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∀ x ph $
+--| @recover a ps ph x
+axiom all_intro {x: var} {a: name} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ {x/a} ph $ > $ ga ; de ⊢ ∀ x ph $;
 
---| @freshen g x
---| @freshen h x
---| @fallback all_intro_sub
-axiom all_intro (g h: ctx) {x: tm} (p: wff x):
-  $ g ⊢ p $ > $ g , h ⊢ ∀ x p $;
+--| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ ps $
+--| @recover te ps ph x
+axiom all_elim {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
+  $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ {x/te} ph $;
 
---| @view {x: tm} (g h: ctx x) (t: tm x) (p: wff x) (q: wff): $ g ⊢ ∀ x p $ > $ g , h ⊢ q $
---| @recover t q p x
-axiom all_elim {x: tm} (g h: ctx x) (t: tm x) (p: wff x):
-  $ g ⊢ ∀ x p $ > $ g , h ⊢ [x/t] p $;
+--| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∃ x ph $
+--| @recover te ps ph x
+axiom ex_intro {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
+  $ ga ⊢ {x/te} ph $ > $ ga ; de ⊢ ∃ x ph $;
 
--- Existential quantifier. ∃I recovers the witness t; ∃E's raw `c: wff` binder
--- is the eigenvariable side condition (c may not depend on x, u), with a
--- @fallback for the textbook eigenvariable-renaming case.
---| @view {x: tm} (g h: ctx x) (t: tm x) (p: wff x) (q: wff): $ g ⊢ q $ > $ g , h ⊢ ∃ x p $
---| @recover t q p x
-axiom ex_intro {x: tm} (g h: ctx x) (t: tm x) (p: wff x):
-  $ g ⊢ [x/t] p $ > $ g , h ⊢ ∃ x p $;
-
---| @view {x u: tm} (g h i: ctx x) (p: wff x) (q c: wff): $ g ⊢ ∃ x p $ > $ h , q ⊢ c $ > $ g , h , i ⊢ c $
---| @recover u q p x
---| @freshen c x
---| @freshen c u
-axiom ex_elim_sub {x u: tm} (g h i: ctx x) (p: wff x) (c: wff):
-  $ g ⊢ ∃ x p $ > $ h , [x/u] p ⊢ c $ > $ g , h , i ⊢ c $;
-
---| @freshen c x
---| @fallback ex_elim_sub
-axiom ex_elim {x: tm} (g h i: ctx) (p: wff x) (c: wff):
-  $ g ⊢ ∃ x p $ > $ h , p ⊢ c $ > $ g , h , i ⊢ c $;
+--| @view {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ps: wff) (ch: wff x): $ ga ⊢ ∃ x ph $ > $ de ; ps ⊢ ch $ > $ ga ; de ; si ⊢ ch $
+--| @recover a ps ph x
+axiom ex_elim {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ch: wff x):
+  $ ga ⊢ ∃ x ph $ > $ de ; {x/a} ph ⊢ ch $ > $ ga ; de ; si ⊢ ch $;

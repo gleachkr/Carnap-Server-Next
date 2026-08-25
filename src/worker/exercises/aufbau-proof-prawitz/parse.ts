@@ -268,6 +268,7 @@ export function serializePrawitzStarter(
   root: PrawitzProofNode,
   assumptionRule: string,
   sequentSymbol: string,
+  contextSymbol = ",",
 ): string {
   const byId = new Map<string, PrawitzProofNode>();
   const index = (node: PrawitzProofNode): void => {
@@ -283,6 +284,7 @@ export function serializePrawitzStarter(
     "starter",
     assumptionRule,
     sequentSymbol,
+    contextSymbol,
   );
   return translated.lineSpans
     .map((span) => {

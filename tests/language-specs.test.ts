@@ -6,11 +6,19 @@ import {
   LANGUAGE_SPEC_SOURCES,
   languageById,
 } from "../src/worker/logic/specs";
+import { sentenceSort } from "../src/worker/logic/specs/roles";
+import { THEORY_SOURCES } from "../src/worker/logic/theories";
 
 /**
- * The specs in `src/worker/logic/specs` are build-time artifacts of ours, so
- * every one of them has to read clean — `languageById` throws rather than
- * degrading, and this is what keeps that throw unreachable.
+ * The specs `languageById` serves are build-time artifacts of ours, so every
+ * one of them has to read clean — it throws rather than degrading, and this is
+ * what keeps that throw unreachable.
+ *
+ * None of them are files in `src/worker/logic/specs`: every MM0 artifact lives
+ * in `logic/theories`, whether it is a proof system, a language, or — as
+ * forallx: Calgary is — both. That is the whole point of the convergence, since
+ * it is what makes `system=` and a proof block's `src=` resolve to the same
+ * bytes, so the pairing is asserted here directly.
  *
  * The behavioral cases below are not a re-test of `@aufbau/syntax`, which has
  * its own corpus. They pin that *these copies* are still the languages the
@@ -63,26 +71,79 @@ function refusal(id: string, source: string): readonly string[] {
 }
 
 describe("language specs", () => {
-  test("every shipped spec reads without a diagnostic", () => {
+  test("every shipped spec reads without an error", () => {
     const ids = Object.keys(LANGUAGE_SPEC_SOURCES);
 
     // Cheap proof this test is not vacuous.
     expect(ids.length).toBeGreaterThan(0);
 
     for (const id of ids) {
-      const { diagnostics } = parseSpec(LANGUAGE_SPEC_SOURCES[id] ?? "");
+      const errors = parseSpec(LANGUAGE_SPEC_SOURCES[id] ?? "")
+        .diagnostics.filter((one) => one.severity === "error")
+        .map((one) => one.id);
 
-      expect({ id, diagnostics }).toEqual({ id, diagnostics: [] });
+      expect({ errors, id }).toEqual({ errors: [], id });
     }
   });
 
-  test("every `.mm0` in the directory is registered under its own name", async () => {
-    const files = (await readdir(SPECS_DIR))
-      .filter((name) => name.endsWith(".mm0"))
-      .map((name) => name.slice(0, -".mm0".length))
-      .sort();
+  /**
+   * The one warning a spec is allowed, and only where it is the truth: a file
+   * that is also a proof theory declares notations — the turnstile, the
+   * equational layer, the substitution terms — that no student can type, so
+   * they are not in the surface delimiter set and the reader says so. Pinning
+   * the *tokens* rather than the count is what keeps this from becoming a
+   * licence to leave a real one unread: a connective drifting into this list
+   * would fail here.
+   */
+  test("a spec's only warnings name its engine-only notations", () => {
+    const engineOnly: Readonly<Record<string, readonly string[]>> = {
+      "carnap-prop": [],
+      "forallx-calgary-2019": [
+        "tsub",
+        "subst",
+        "_",
+        "⊢",
+        "⟺",
+        "≐",
+        "≗",
+        "≜",
+        "⟚",
+      ],
+    };
 
-    expect(files).toEqual(Object.keys(LANGUAGE_SPEC_SOURCES).sort());
+    for (const [id, tokens] of Object.entries(engineOnly)) {
+      const warnings = parseSpec(LANGUAGE_SPEC_SOURCES[id] ?? "").diagnostics;
+
+      expect({
+        id,
+        seen: warnings.map((one) => [one.id, one.params.token]),
+      }).toEqual({
+        id,
+        seen: tokens.map((token) => ["delimiter_token_not_delimited", token]),
+      });
+    }
+  });
+
+  /**
+   * The artifacts all live in one directory, so an id is a file's stem and its
+   * text is that file's — no second copy, no second home, and nothing for a
+   * language and the proof system built over it to disagree about. Asserting
+   * it byte for byte is what keeps a well-meaning "just inline this one" from
+   * reintroducing the split.
+   */
+  test("a language id is an artifact's stem, and its text is that file's", () => {
+    for (const [id, source] of Object.entries(LANGUAGE_SPEC_SOURCES)) {
+      expect({ id, source }).toEqual({
+        id,
+        source: THEORY_SOURCES[`${id}.mm0`] ?? "",
+      });
+    }
+  });
+
+  test("nothing but the reading end is left in `logic/specs`", async () => {
+    expect(
+      (await readdir(SPECS_DIR)).filter((name) => name.endsWith(".mm0")),
+    ).toEqual([]);
   });
 
   test("an id no spec ships under is `null`, not a throw", () => {
@@ -151,6 +212,23 @@ describe("language specs", () => {
       expect(refusal(id, "F(x)")).toContain("free_variable");
     });
 
+    /**
+     * The whole reason one file can be both a language and a proof system. The
+     * theory's judgements live in a sort of their own, student input is read
+     * at the sort `@syntax role sentence` names, and so a sequent cannot be
+     * built where a sentence belongs — checkable rather than merely intended.
+     */
+    test("a sequent is not a sentence, and the spec says which sort is", () => {
+      const lang = language(id);
+
+      expect(sentenceSort(lang)).toBe("wff");
+      expect(
+        lang.parse("P ⊢ Q", { sort: "wff" }).ok ? "parsed" : "refused",
+      ).toBe("refused");
+      // A proof widget reading the same file at the judgement sort gets one.
+      expect(lang.parse("P ; Q ⊢ P", { sort: "judgement" }).ok).toBe(true);
+    });
+
     test("engine mode writes the elided argument sequence out", () => {
       const lang = language(id);
       const result = lang.parse("P /\\ F(a)");
@@ -159,8 +237,20 @@ describe("language specs", () => {
         throw new Error("expected 'P /\\ F(a)' to parse");
       }
 
+      // `a` is a `@vars` token at the `name` sort, not a letter with an
+      // argument sequence of its own, so it writes out bare — the constants
+      // and the function letters part company at f.
       expect(printTerm(lang, result.term, "engine")).toBe(
-        "((P (snil)) ∧ (F (a (snil))))",
+        "((P (snil)) ∧ (F (a)))",
+      );
+      const applied = lang.parse("P /\\ F(f)");
+
+      if (!applied.ok) {
+        throw new Error("expected 'P /\\ F(f)' to parse");
+      }
+
+      expect(printTerm(lang, applied.term, "engine")).toBe(
+        "((P (snil)) ∧ (F (f (snil))))",
       );
     });
   });

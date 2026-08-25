@@ -155,22 +155,35 @@ rows the table has, so no given can be sure of covering it.
 ## Notation: forallx: Calgary 2019
 
 Carnap's `thomasBolducAndZachFOL2019ParserOptions` over `calgary2019OpTable`,
-written as `src/worker/logic/specs/forallx-calgary-2019.mm0` — an MM0 signature
-with `@syntax` annotations, read by `@aufbau/syntax`. Everything below is in
-that file rather than in any TypeScript, and `system=` names it.
+written as `src/worker/logic/theories/forallx-calgary-2019.mm0` — an MM0
+signature with `@syntax` annotations, read by `@aufbau/syntax`. Everything
+below is in that file rather than in any TypeScript, and `system=` names it.
+
+That file is also the *proof system* a Fitch or Prawitz exercise names as its
+`theory`, which is why a model exercise and a proof from the same course cannot
+disagree about the notation. `logic/specs/index.ts` registers its text under
+the language id; only a language with no proof system behind it (`carnap-prop`)
+is a file in that directory.
 
 - **Predicates** any of the 26 uppercase letters, with parentheses: `F(x)`,
   `R(x,y)`. A bare uppercase letter is a **sentence letter**. A symbol's
   **arity is part of its identity**, so `F(a)` and `F(a,b)` are two different
   predicates with two separate fields.
-- **Variables** `s`–`z`; **constants and function symbols** `a`–`r`, a
-  function when parentheses follow and a constant when they do not.
+- **Variables** `s`–`z`; **names** `a`–`e`; **function symbols** `f`–`r`, a
+  function when parentheses follow and a constant when they do not. Names and
+  variables are separate *sorts*, which is what lets the proof system state
+  ∀I's eigenvariable proviso as MM0 dependency typing; the price is that the
+  pools cannot overlap, so `a` takes no arguments.
 - **The vocabulary is finite**, because an MM0 signature is: those letters and
   no others. There are no subscripts — the hand parser this replaced read an
   unbounded `F_12`, and that went with it (2026-08-24). Note also that `s` and
-  `t` are variables *only*, where the old table listed them as function letters
-  as well: a letter is a `@vars` pool member or a declared term, never both.
+  `t` are variables *only*, and `a`–`e` names only, where the old table listed
+  both as function letters as well: a letter is a `@vars` pool member or a
+  declared term, never both.
 - **Quantifiers** `A` `E` `∀` `∃` `@` `3`, immediately followed by a variable.
+  `A` and `E` are elaboration rules rather than notations, because they are
+  predicate letters too and one file cannot declare a token as both; the
+  difference shows only in what `Aa` complains about.
 - **Connectives** `~ /\ \/ -> <->`, plus the aliases `- ¬`, `∧ ^ &`, `∨ |`,
   `=> > → ⊃`, `<=> <> ↔ ≡`.
 - **Identity** `=`; **inequality** `!=` or `≠`, which is sugar for `~(t = t')`.

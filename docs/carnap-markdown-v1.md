@@ -750,12 +750,13 @@ block is one line and no body:
 
 These paths are real. Open one in a browser and you get the theory itself — the
 axiom names your students will cite, and the commentary that ships with them.
-Two are available:
+Three are available:
 
 | Path | System |
 | --- | --- |
-| `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment. Sequents `Γ ⊢ φ`; the Fitch and Prawitz surfaces are built for it. |
+| `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment. Sequents `Γ ; φ ⊢ ψ`; the Fitch and Prawitz surfaces are built for it. Also the language `system="forallx-calgary-2019"` names. |
 | `/theories/gentzen-lk.mm0` | Classical LK, a multi-conclusion sequent calculus with both sides comma-separated. An LK derivation is a tree, so this is the tree surface's system. |
+| `/theories/carnap-prop.mm0` | Carnap's default `prop` — a propositional *signature* with no rules of its own, which is what the truth-table type reads. Name it here and add your own rules in the block body to build a system over its notation. |
 
 A `src` must be a path this site serves. A theory kept on another server is not
 supported: the text is frozen into the exercise when you save, and putting a
@@ -867,18 +868,27 @@ not let you write `(P)`). Two ship, and `system=` names one of them by id:
 | `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — the model and translation types. |
 | `carnap-prop` | Carnap's default `prop` — the truth-table type, ASCII connectives and 52 sentence letters. |
 
-They live in `src/worker/logic/specs/`, and being MM0 is not a formality: an
-exercise type reads one by asking what role each constructor plays
-(`@syntax role conjunction`), so nothing in the server knows that this book
-calls conjunction `/\` or that book calls it `∧`. Adding a textbook's notation
-is a file, not a code change — which is what has to be true before an
-instructor can bring their own.
+They live in `src/worker/logic/theories/` alongside the proof systems, and are
+served at `/theories/<id>.mm0` like them — a language and a proof system are the
+same kind of artifact, and forallx: Calgary is one file playing both parts.
+Being MM0 is not a formality: an exercise type reads one by asking what role
+each constructor plays (`@syntax role conjunction`), so nothing in the server
+knows that this book calls conjunction `/\` or that book calls it `∧`. Adding a
+textbook's notation is a file, not a code change — which is what has to be true
+before an instructor can bring their own.
 
 **The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
-predicate letters and 18 constant/function letters; `carnap-prop` gives you 52
-sentence letters. Subscripted letters (`F_12`, `P0`) are *not* available: the
+predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters
+`f`–`r`, and eight variables `s`–`z`; `carnap-prop` gives you 52 sentence
+letters. Subscripted letters (`F_12`, `P0`) are *not* available: the
 hand-written parsers these replaced read an unbounded subscript, and that was
 given up in the move (2026-08-24) rather than hold the unification for it.
+
+**A name is not a variable and cannot be one.** They are separate sorts, which
+is what lets forallx's proof system state ∀I's eigenvariable proviso as MM0
+dependency typing rather than as a side condition nobody checks. The cost is
+that the pools cannot overlap the way Carnap's own dialect table let them:
+`a` takes no arguments, and `f` cannot be an eigenvariable.
 
 **One written form, not two.** A formula is stored in the spec's canonical
 spelling of each symbol — its last-declared notation — and that is also what a
@@ -886,12 +896,23 @@ reader is shown. For forallx that is the glyphs (`∀x(F(x) → G(x))`); for
 `carnap-prop`, which declares nothing but ASCII, it is the ASCII you typed.
 Either way it is text the parser accepts back.
 
-What is still two files rather than one is the *pairing*:
-`logic/theories/forallx-calgary-2019.mm0` and
-`logic/specs/forallx-calgary-2019.mm0` are the same textbook under the same
-stem, deliberately, and merging them waits on a way to mark the fragment a
-student may write in — in the theory, `Γ ⊢ φ` is itself a formula, and a truth
-table over it would accept a sequent as a sentence.
+**A language and a proof system can be one file, and for forallx they are.**
+`system="forallx-calgary-2019"` on a model or translation exercise and
+`src="/theories/forallx-calgary-2019.mm0"` on an `aufbau-mm0` block resolve to
+the same bytes, so a course cannot set a model exercise and a Fitch proof that
+disagree about what `A` means. What made it possible is a sort: `⊢` yields a
+`judgement`, student input is read at `wff`, and so a sequent cannot be built
+where a sentence goes — checkable rather than merely intended.
+
+Two things follow for anyone writing goals against that theory. Its context
+separator is `;`, not `,`, because the comma is already the student's argument
+separator in `R(a,b)` and MM0 gives a math token one meaning — the theory says
+so itself (`@syntax role context-join`), so the proof types pick it up and no
+exercise has to repeat it. And the ASCII quantifiers `A`/`E` are student
+spellings only: `A` is also a predicate letter, one file cannot declare it as
+both, so the notation comes off and an elaboration rule puts the spelling back
+for input. `∀`, `∃`, `@` and `3` are unaffected, and a *proof* — which is engine
+text, not surface text — must spell quantifiers `∀ x` with the space.
 
 ## Aufbau-proof-tree directive
 
@@ -998,10 +1019,15 @@ a → a       :imp_intro 1-1
 Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
 `options` attributes it takes the required `theory` and an optional `assumption` naming the theory's
 assumption axiom (default `ax`) — the rule the translator treats as introducing a
-context formula — and an optional `sequent` naming the theory's turnstile
-notation (default `⊢`), written into every sequent the translator emits. The
-student's Fitch source never spells the turnstile, so an ASCII theory only needs
-`sequent="|-"` on the directive. The submitted answer carries `{ mmb, proofText, fitchText }`;
+context formula — plus two attributes naming how this theory spells a sequent:
+`sequent` its turnstile (default `⊢`) and `context` the separator between a
+context's formulas (default `,`), both written into every sequent the translator
+emits. The student's Fitch source never spells either, so an ASCII theory only
+needs `sequent="|-"` on the directive. **You will rarely write them.** A theory
+that carries `@syntax role turnstile` / `role context-join` says so itself and
+the exercise picks it up — which is why forallx's `;` needs no attribute
+anywhere; these are the override for one that does not.
+The submitted answer carries `{ mmb, proofText, fitchText }`;
 review pages show the submitted Fitch source. Because the `:<rule>` justification
 uses a colon, the Fitch body is treated as raw text (not Markdown), and formulas
 whose own notation uses a colon still parse — the justification is taken after the
@@ -1071,11 +1097,14 @@ compile, since the student could never fix it.
 
 Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
 `options` attributes
-it takes the required `theory` and two optional notational attributes:
+it takes the required `theory` and three optional notational attributes:
 `assumption` names the theory's assumption axiom (default `ax`), exactly as
-`aufbau-proof-fitch` does, and `sequent` names the theory's turnstile notation
+`aufbau-proof-fitch` does; `sequent` names the theory's turnstile notation
 (default `⊢`) — used in every sequent the translator emits and stripped from
-pasted starter lines, so a theory with ASCII notation can say `sequent="|-"`.
+pasted starter lines, so a theory with ASCII notation can say `sequent="|-"`;
+and `context` names the separator between a context's formulas (default `,`).
+As with the Fitch type, a theory that declares its own notations under
+`@syntax role turnstile` / `role context-join` needs neither written out.
 
 One caveat when setting goals: a tree cannot discharge **vacuously**. Every
 assumption stands somewhere in the tree, so a goal like `a ⊢ b → a` — where

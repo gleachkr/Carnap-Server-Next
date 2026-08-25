@@ -487,7 +487,11 @@ export async function compileCarnapMarkdown(
         }
 
         if (theory.show) {
-          nodes.push({ kind: "theory", mm0: theory.mm0, name: theory.name });
+          nodes.push({
+            kind: "theory",
+            mm0: theory.source,
+            name: theory.name,
+          });
         }
       }
 

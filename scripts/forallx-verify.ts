@@ -30,7 +30,7 @@ const compiler = await loadCompiler({ wasmBytes });
 let passed = 0;
 for (const testCase of FORALLX_CASES) {
   const mm0 = `${FORALLX_THEORY_MM0}\n${testCase.theoremDecl}`;
-  const translation = fitchToAuf(testCase.fitch, testCase.goalName, "ax", "⊢");
+  const translation = fitchToAuf(testCase.fitch, testCase.goalName, "ax", "⊢", ";");
 
   if (translation.diagnostics.length > 0 && testCase.shouldFail !== true) {
     console.log(`✗ ${testCase.goalName}`);

@@ -12,8 +12,8 @@ is the untrusted convenience; the verifier is the arbiter.
 ## The idea: translate indentation into sequent contexts
 
 The target theories are sequent/ND systems with a turnstile judgement (`⊢` by
-default, spelled by the `sequent=` attribute otherwise) and a
-comma-separated **ACUI** context (associative, commutative, unit `_`, idempotent),
+default) and a separated **ACUI** context (associative, commutative, unit `_`,
+idempotent) whose separator is `,` by default,
 where `ax` proves `g , a ⊢ a` (built-in weakening) and discharge rules like
 `imp_intro` strip an assumption. [`translate.ts`](./translate.ts) (`fitchToAuf`)
 turns the Fitch text into the exact linear `.auf` the other proof types produce —
@@ -120,10 +120,20 @@ underline separates it, then the starter Fitch proof (which may be empty).
 Attributes match `aufbau-proof` (`theory`, `id`, `title`, `points`, `exam`,
 `feedback`,
 `options`) plus an optional **`assumption`** naming the theory's assumption axiom
-(default `ax`) and an optional **`sequent`** naming its turnstile notation
-(default `⊢`) — the symbol the translator writes into every emitted sequent, so
-an ASCII theory authors with `sequent="|-"`. The student's Fitch source never
-spells the turnstile, so nothing about the input surface changes with it.
+(default `ax`), an optional **`sequent`** naming its turnstile notation
+(default `⊢`), and an optional **`context`** naming the separator between a
+context's formulas (default `,`) — the symbols the translator writes into every
+emitted sequent, so an ASCII theory authors with `sequent="|-"`. The student's
+Fitch source never spells either, so nothing about the input surface changes
+with them.
+
+Both are usually unnecessary. A theory that says how it spells them — `@syntax
+role turnstile` and `@syntax role context-join` on the constructors — is read
+for them at authoring time, and the attributes exist to override that or to
+serve a theory that says nothing. `logic/theories/forallx-calgary-2019.mm0`
+needs the context separator `;` (its comma is the student's argument separator,
+since that file is also the course's language) and no exercise set from it
+writes `context=` anywhere.
 Each proof line is `<formula> :<rule> <refs>`; the justification
 is taken after the line's *last* colon, so formulas whose notation uses `:` (e.g.
 a modal `w : a`) still parse.

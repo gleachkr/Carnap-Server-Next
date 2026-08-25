@@ -28,6 +28,7 @@ import {
   AUFBAU_PROOF_FITCH_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
   DEFAULT_ASSUMPTION_RULE,
+  DEFAULT_CONTEXT_SYMBOL,
   DEFAULT_SEQUENT_SYMBOL,
 } from "./types";
 
@@ -38,6 +39,7 @@ const UNDERLINE = /^\s*-{3,}\s*$/;
 const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "assumption",
+  "context",
   "options",
   "sequent",
   "theory",
@@ -51,10 +53,13 @@ const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
  * the editor opens with. The `assumption=` attribute names the theory's
  * assumption axiom (`ax` by default) so the translator can tell which lines
  * introduce a context formula; `sequent=` names its turnstile notation (`⊢` by
- * default), which the translator writes into every emitted sequent — the
- * student's Fitch source never spells it. Grading is identical to the linear type: the
- * translated Fitch text compiles to `.auf`, and the worker verifies the MMB
- * against this frozen mm0.
+ * default) and `context=` the separator between a context's formulas (`,` by
+ * default, `;` in a theory that is also a language and has spent the comma on
+ * `R(a,b)`), both of which the translator writes into every emitted sequent —
+ * the student's Fitch source never spells either. In practice neither is
+ * written: a theory that declares its own notations is read for them. Grading
+ * is identical to the linear type: the translated Fitch text compiles to
+ * `.auf`, and the worker verifies the MMB against this frozen mm0.
  */
 export async function compileAufbauProofFitch(
   block: DirectiveBlock,
@@ -77,7 +82,6 @@ export async function compileAufbauProofFitch(
   const title = block.attrs.title?.trim();
   const assumptionRule =
     block.attrs.assumption?.trim() || DEFAULT_ASSUMPTION_RULE;
-  const sequentSymbol = block.attrs.sequent?.trim() || DEFAULT_SEQUENT_SYMBOL;
   const header = parseTheoremHeader(block, diagnostics);
 
   if (id !== null) {
@@ -96,6 +100,18 @@ export async function compileAufbauProofFitch(
       ),
     );
   }
+
+  // A sequent's two notations, in order of who knows best: the author, then
+  // the theory's own `@syntax role turnstile` / `role context-join`, then the
+  // house convention. See {@link AufbauTheory}.
+  const sequentSymbol =
+    block.attrs.sequent?.trim() ||
+    theory?.sequentSymbol ||
+    DEFAULT_SEQUENT_SYMBOL;
+  const contextSymbol =
+    block.attrs.context?.trim() ||
+    theory?.contextSymbol ||
+    DEFAULT_CONTEXT_SYMBOL;
 
   // The goal header must be followed by a '----' underline; the starter Fitch
   // proof (which may be empty) is everything after it.
@@ -145,6 +161,7 @@ export async function compileAufbauProofFitch(
 
   const publicData: AufbauProofFitchPublicData = {
     assumptionRule,
+    contextSymbol,
     goalName: header.goalName,
     mm0: `${theory.mm0}\n${header.theoremDecl}`,
     options,

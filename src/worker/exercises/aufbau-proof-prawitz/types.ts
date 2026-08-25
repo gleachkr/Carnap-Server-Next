@@ -34,6 +34,9 @@ export const DEFAULT_ASSUMPTION_RULE = "ax";
 /** The theory's sequent (turnstile) symbol, absent an author override. See `sequent=`. */
 export const DEFAULT_SEQUENT_SYMBOL = "⊢";
 
+/** The theory's context separator, absent an author override. See `context=`. */
+export const DEFAULT_CONTEXT_SYMBOL = ",";
+
 /**
  * One node of a Prawitz proof tree: a `formula` justified by a `rule` citing
  * its child `premises`. A node whose rule is the exercise's assumption axiom is
@@ -72,12 +75,18 @@ export interface PrawitzProofNode {
  *                      context left of it. Optional because artifacts compiled
  *                      before it existed are still served from `compiled_json`;
  *                      read it as `?? DEFAULT_SEQUENT_SYMBOL`
+ *   - `contextSymbol`  the theory's context separator (`,` by default): the
+ *                      translator writes it between the formulas of a context.
+ *                      A theory that is also a language spends the comma on a
+ *                      predicate's arguments and spells this `;`. Optional on
+ *                      the same terms as `sequentSymbol`
  *   - `starterTree`    an optional pre-populated tree the editor seeds from
  *                      instead of a blank canvas (parsed from the author's
  *                      starter lines, discharge labels included)
  */
 export interface AufbauProofPrawitzPublicData {
   readonly assumptionRule: string;
+  readonly contextSymbol?: string;
   readonly goalFormula: string;
   readonly goalName: string;
   readonly mm0: string;
@@ -132,6 +141,8 @@ export function isAufbauProofPrawitzPublicData(
     typeof value.promptHtml === "string" &&
     (value.sequentSymbol === undefined ||
       typeof value.sequentSymbol === "string") &&
+    (value.contextSymbol === undefined ||
+      typeof value.contextSymbol === "string") &&
     (value.starterTree === undefined ||
       isPrawitzProofNode(value.starterTree)) &&
     isObject(value.options) &&

@@ -2,13 +2,14 @@
  * First-order syntax for the exercise types that read formulas — the model and
  * the translation.
  *
- * The language is not written here. It is `logic/specs/forallx-calgary-2019.mm0`,
- * an ordinary MM0 signature with `@syntax` annotations, read by
- * `@aufbau/syntax`; this module only converts what that parser returns into the
- * {@link Formula} tree the two types evaluate, and writes one back out. The
- * notation table, the precedence ladder, the bracket conventions and the
- * refusals all live in the spec, which is the same kind of artifact a proof
- * exercise's `theory=` names.
+ * The language is not written here. It is a spec `logic/specs` registers — for
+ * forallx that is `logic/theories/forallx-calgary-2019.mm0`, the same file the
+ * proof exercises name as their theory — an ordinary MM0 signature with
+ * `@syntax` annotations, read by `@aufbau/syntax`; this module only converts
+ * what that parser returns into the {@link Formula} tree the two types
+ * evaluate, and writes one back out. The notation table, the precedence
+ * ladder, the bracket conventions and the refusals all live in the spec, which
+ * is quite literally the same artifact a proof exercise's `theory=` names.
  *
  * DOM-free and imported by BOTH the worker (to compile an exercise and grade
  * authoritatively) and the client elements (for the local Check), so it must
@@ -30,7 +31,7 @@
 import type { SurfaceLanguage, Term as SurfaceTerm } from "@aufbau/syntax";
 import type { FormulaParseError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
-import { roleIndex } from "../../logic/specs/roles";
+import { roleIndex, sentenceSort } from "../../logic/specs/roles";
 
 export type BinaryConnective = "and" | "or" | "if" | "iff";
 
@@ -85,7 +86,7 @@ export type ParseResult =
  * A spec node this module cannot read as a formula.
  *
  * Only reachable through a spec that gives a constructor a role we have no
- * case for — an authoring mistake in `logic/specs/`, not something a student
+ * case for — an authoring mistake in the spec, not something a student
  * can type — so it is reported rather than thrown, and
  * `tests/language-specs.test.ts` is where a spec that would do it gets caught.
  */
@@ -150,8 +151,15 @@ function sequence(node: SurfaceTerm, lang: SurfaceLanguage): SurfaceTerm[] {
 function readTerm(node: SurfaceTerm, lang: SurfaceLanguage): Term {
   const inner = bare(node, lang);
 
+  // A lexicon token of a sort no quantifier binds is a proper name, not a
+  // variable. forallx: Calgary draws the two from separate `@vars` pools —
+  // `a`–`e` at `name`, `s`–`z` at `var` — because its proof system needs the
+  // eigenvariable provisos to be MM0 dependency typing rather than a side
+  // condition, and a name is precisely what cannot be captured.
   if (inner.kind === "variable") {
-    return { name: inner.name, type: "variable" };
+    return lang.bindableSorts.has(inner.sort)
+      ? { name: inner.name, type: "variable" }
+      : { name: inner.name, type: "constant" };
   }
 
   const args = (
@@ -319,7 +327,8 @@ export function parseFormula(
   source: string,
   lang: SurfaceLanguage,
 ): ParseResult {
-  const result = lang.parse(source);
+  const sort = sentenceSort(lang);
+  const result = lang.parse(source, sort === undefined ? {} : { sort });
 
   if (!result.ok) {
     return { errors: formulaParseErrors(result.diagnostics), ok: false };

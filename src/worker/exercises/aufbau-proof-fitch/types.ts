@@ -32,6 +32,9 @@ export const DEFAULT_ASSUMPTION_RULE = "ax";
 /** The theory's sequent (turnstile) symbol, absent an author override. See `sequent=`. */
 export const DEFAULT_SEQUENT_SYMBOL = "⊢";
 
+/** The theory's context separator, absent an author override. See `context=`. */
+export const DEFAULT_CONTEXT_SYMBOL = ",";
+
 /**
  * Everything the widget and grader need, frozen at authoring time.
  *   - `assumptionRule` the theory's assumption axiom (`ax` by default): the
@@ -49,10 +52,16 @@ export const DEFAULT_SEQUENT_SYMBOL = "⊢";
  *                      context and formula. Optional because artifacts compiled
  *                      before it existed are still served from `compiled_json`;
  *                      read it as `?? DEFAULT_SEQUENT_SYMBOL`
+ *   - `contextSymbol`  the theory's context separator (`,` by default): the
+ *                      translator writes it between the formulas of a context.
+ *                      A theory that is also a language spends the comma on a
+ *                      predicate's arguments and spells this `;`. Optional on
+ *                      the same terms as `sequentSymbol`
  *   - `starterBody`    the seed Fitch proof text the editor opens with
  */
 export interface AufbauProofFitchPublicData {
   readonly assumptionRule: string;
+  readonly contextSymbol?: string;
   readonly goalName: string;
   readonly mm0: string;
   readonly options: AufbauProofOptions;
@@ -89,6 +98,8 @@ export function isAufbauProofFitchPublicData(
     typeof value.starterBody === "string" &&
     (value.sequentSymbol === undefined ||
       typeof value.sequentSymbol === "string") &&
+    (value.contextSymbol === undefined ||
+      typeof value.contextSymbol === "string") &&
     isObject(value.options) &&
     typeof value.options.allowAuto === "boolean" &&
     typeof value.options.allowCompletion === "boolean"

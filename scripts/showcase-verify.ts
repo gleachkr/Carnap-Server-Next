@@ -61,6 +61,7 @@ function lower(
       publicData.goalName,
       publicData.assumptionRule,
       publicData.sequentSymbol ?? "⊢",
+      publicData.contextSymbol ?? ",",
     );
 
     if (translated.diagnostics.length > 0) {
@@ -141,6 +142,7 @@ for (const node of compiled.artifact.document.nodes) {
       publicData.goalName,
       publicData.assumptionRule,
       publicData.sequentSymbol ?? "⊢",
+      publicData.contextSymbol ?? ",",
     );
 
     if (

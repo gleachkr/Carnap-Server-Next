@@ -12,7 +12,8 @@ import {
  * What the model and translation types accept as a formula, and what they show
  * back.
  *
- * The language is `logic/specs/forallx-calgary-2019.mm0` and the parser is
+ * The language is `logic/theories/forallx-calgary-2019.mm0` — registered as a
+ * spec under the same name, since that file is both — and the parser is
  * `@aufbau/syntax`; what is tested here is the pairing — that *this* spec, read
  * by *that* parser, is still the forallx of the 2019 Calgary edition, and that
  * a parse becomes the {@link Formula} tree the evaluators want. The library has
@@ -265,15 +266,29 @@ describe("quantifiers", () => {
   });
 
   test("a variable must follow the quantifier symbol", () => {
-    // `a` is a constant, not a variable. The ambiguous letter `A` and the
-    // unambiguous `∀` now give the same complaint, where the hand parser said
-    // "Unexpected “a”" for the first — it read `A` as the sentence letter and
-    // then met a stray term. Naming the real problem is the better message.
-    for (const source of ["AaF(a)", "∀aF(a)"]) {
+    // `a` is a name, not a variable.
+    for (const source of ["∀aF(a)", "@aF(a)"]) {
       expect(failure(source).message).toBe(
         "Expected a variable after the quantifier.",
       );
     }
+  });
+
+  test("the ASCII quantifier `A` says less, because it is also a letter", () => {
+    // `A` is a predicate letter *and* forallx's ASCII ∀, and one file cannot
+    // declare it as both — MM0 gives a math token one meaning, and the term
+    // `A` has to stay writable in the theory's own congruence axioms. So the
+    // notation comes off and an elaboration rule puts the spelling back:
+    // `A` followed by a variable becomes `∀`, and `A` followed by anything
+    // else stays the letter. `Aa` is therefore the sentence letter `A` with a
+    // stray name after it, which is what this says — a real cost of the
+    // convergence, and the reason `∀`/`@` are worth teaching alongside it.
+    expect(failure("AaF(a)")).toEqual({
+      message: "Unexpected “{token}”.",
+      params: { token: "a" },
+      position: 1,
+    });
+    expect(show("AxF(x)")).toBe("∀xF(x)");
   });
 });
 

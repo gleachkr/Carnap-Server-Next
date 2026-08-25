@@ -7,7 +7,7 @@
       "dependencies": {
         "@aufbau/compiler": "0.0.7",
         "@aufbau/lsp": "0.0.7",
-        "@aufbau/syntax": "0.0.2",
+        "@aufbau/syntax": "0.0.3",
         "@aufbau/verifier": "0.0.7",
         "@codemirror/commands": "^6.10.4",
         "@codemirror/language": "^6.12.4",
@@ -71,7 +71,7 @@
 
     "@aufbau/lsp": ["@aufbau/lsp@0.0.7", "", {}, "sha512-0oJatR9WRbHlsUvV08RkF+mEfs4mjszvPUFQDItmKEiZWtNPHygFPDPDsNBD9q2neqz7DAbbvj1yO8CYU1IDtA=="],
 
-    "@aufbau/syntax": ["@aufbau/syntax@0.0.2", "", {}, "sha512-C+vE/QZujRI7tSl6kvKt4XR4idEGA350NN023jOTqQw/+spPHyVwaBle8LqzVQpuAlDPFny2yEdMV42NCO0ltw=="],
+    "@aufbau/syntax": ["@aufbau/syntax@0.0.3", "", {}, "sha512-tFBFzRXSoDFW9Lu3ErCIAe1VNmeI2lYNW0RQ3F9tfyHXey7ft+wC4oLYlwX/wzaH0t1NbTxAnF4F1K7JKoAcgg=="],
 
     "@aufbau/verifier": ["@aufbau/verifier@0.0.7", "", {}, "sha512-kLxdl9LYkzmukIS9GIq/a+lsQZgiwq9G26gI/qu1IvDXvAkdDgWTafyUqbuuiHoHBsc6cOD+PPy618GjjQTK0A=="],
 

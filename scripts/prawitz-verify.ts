@@ -31,7 +31,13 @@ const compiler = await loadCompiler({ wasmBytes });
 let passed = 0;
 for (const testCase of PRAWITZ_CASES) {
   const mm0 = `${FORALLX_THEORY_MM0}\n${testCase.theoremDecl}`;
-  const translation = prawitzToAuf(testCase.root, testCase.goalName, "ax", "⊢");
+  const translation = prawitzToAuf(
+    testCase.root,
+    testCase.goalName,
+    "ax",
+    "⊢",
+    ";",
+  );
 
   if (translation.diagnostics.length > 0) {
     console.log(`✗ ${testCase.name}`);

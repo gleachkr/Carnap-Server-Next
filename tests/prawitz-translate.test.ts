@@ -36,9 +36,13 @@ function caseByName(name: string) {
   return found;
 }
 
+// `;` is forallx: Calgary's own context separator, which every case here is
+// written against — the comma belongs to a predicate's arguments in that
+// theory. The translator's default is `,`, and the exercise types read the
+// theory's `@syntax role context-join` rather than being told.
 function translate(name: string): string {
   const c = caseByName(name);
-  const result = prawitzToAuf(c.root, c.goalName, "ax", "⊢");
+  const result = prawitzToAuf(c.root, c.goalName, "ax", "⊢", ";");
   expect(result.diagnostics).toEqual([]);
   return result.proofText;
 }
@@ -62,7 +66,7 @@ describe("prawitzToAuf — engine-verified shapes", () => {
         "----",
         "l1: $ a → b ⊢ a → b $ by ax []",
         "l2: $ a ⊢ a $ by ax []",
-        "l3: $ a → b , a ⊢ b $ by imp_elim [l1, l2]",
+        "l3: $ a → b ; a ⊢ b $ by imp_elim [l1, l2]",
       ].join("\n"),
     );
   });
@@ -89,7 +93,7 @@ describe("prawitzToAuf — engine-verified shapes", () => {
         "----",
         "l1: $ a ⊢ a $ by ax []",
         "l2: $ ¬ a ⊢ ¬ a $ by ax []",
-        "l3: $ a , ¬ a ⊢ ⊥ $ by neg_elim [l1, l2]",
+        "l3: $ a ; ¬ a ⊢ ⊥ $ by neg_elim [l1, l2]",
         "l4: $ a ⊢ ¬ ¬ a $ by neg_intro [l3]",
       ].join("\n"),
     );
@@ -102,8 +106,8 @@ describe("prawitzToAuf — engine-verified shapes", () => {
         "----",
         "l1: $ b ⊢ b $ by ax []",
         "l2: $ a ⊢ a $ by ax []",
-        "l3: $ b , a ⊢ b ∧ a $ by and_intro [l1, l2]",
-        "l4: $ b , a ⊢ a $ by and_elim_r [l3]",
+        "l3: $ b ; a ⊢ b ∧ a $ by and_intro [l1, l2]",
+        "l4: $ b ; a ⊢ a $ by and_elim_r [l3]",
         "l5: $ a ⊢ b → a $ by imp_intro [l4]",
       ].join("\n"),
     );
@@ -114,13 +118,13 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "exelim",
         "----",
-        "l1: $ ∃ x (F x) ⊢ ∃ x (F x) $ by ax []",
-        "l2: $ ∀ x (F x → G x) ⊢ ∀ x (F x → G x) $ by ax []",
-        "l3: $ ∀ x (F x → G x) ⊢ F y → G y $ by all_elim [l2]",
-        "l4: $ F y ⊢ F y $ by ax []",
-        "l5: $ ∀ x (F x → G x) , F y ⊢ G y $ by imp_elim [l3, l4]",
-        "l6: $ ∀ x (F x → G x) , F y ⊢ ∃ x (G x) $ by ex_intro [l5]",
-        "l7: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $ by ex_elim [l1, l6]",
+        "l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by ax []",
+        "l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by ax []",
+        "l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by all_elim [l2]",
+        "l4: $ F(b) ⊢ F(b) $ by ax []",
+        "l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by imp_elim [l3, l4]",
+        "l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ex_intro [l5]",
+        "l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ex_elim [l1, l6]",
       ].join("\n"),
     );
   });
@@ -130,11 +134,11 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "eigenpollute",
         "----",
-        "l1: $ ∀ x (F x) ⊢ ∀ x (F x) $ by ax []",
-        "l2: $ ∀ x (F x) ⊢ F u $ by all_elim [l1]",
-        "l3: $ ∀ x (F x) ⊢ ∀ x (F x) $ by all_intro [l2]",
-        "l4: $ G u ⊢ G u $ by ax []",
-        "l5: $ ∀ x (F x) , G u ⊢ (∀ x (F x)) ∧ G u $ by and_intro [l3, l4]",
+        "l1: $ ∀ x F(x) ⊢ ∀ x F(x) $ by ax []",
+        "l2: $ ∀ x F(x) ⊢ F(a) $ by all_elim [l1]",
+        "l3: $ ∀ x F(x) ⊢ ∀ x F(x) $ by all_intro [l2]",
+        "l4: $ G(a) ⊢ G(a) $ by ax []",
+        "l5: $ ∀ x F(x) ; G(a) ⊢ (∀ x F(x)) ∧ G(a) $ by and_intro [l3, l4]",
       ].join("\n"),
     );
   });

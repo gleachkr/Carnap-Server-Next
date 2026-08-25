@@ -42,8 +42,18 @@ export interface FormulaParseError extends TranslatableMessage {
  * ever arises where a letter's arguments go, so what the writer actually put
  * in the wrong place is a term; naming the sequence would describe the
  * encoding rather than the mistake.
+ *
+ * `name` reads as "term" for the same reason. A spec that is also a proof
+ * theory splits the constants off into their own sort so that ∀I's
+ * eigenvariable proviso can be MM0 dependency typing — a distinction that
+ * earns its keep inside the engine and means nothing to someone who has just
+ * written `a` where a sentence belongs. `judgement` is named outright, though:
+ * a student who typed a turnstile did mean one, and "sequent" is the word for
+ * what they wrote.
  */
 const SORT_WORDS: Readonly<Record<string, string>> = {
+  judgement: "sequent",
+  name: "term",
   seq: "term",
   tm: "term",
   var: "variable",

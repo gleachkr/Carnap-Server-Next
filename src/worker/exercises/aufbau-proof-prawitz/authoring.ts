@@ -33,6 +33,7 @@ import {
   AUFBAU_PROOF_PRAWITZ_KIND,
   AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
   DEFAULT_ASSUMPTION_RULE,
+  DEFAULT_CONTEXT_SYMBOL,
   DEFAULT_SEQUENT_SYMBOL,
 } from "./types";
 
@@ -81,6 +82,7 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "assumption",
   "options",
+  "context",
   "sequent",
   "theory",
 ] as const;
@@ -101,7 +103,9 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
  *
  * The `assumption=` attribute names the theory's assumption axiom (`ax` by
  * default) so the translator can tell assumption leaves from rule nodes and
- * emit every leaf through it; `sequent=` names the theory's turnstile notation
+ * emit every leaf through it; `context=` names the separator between a
+ * context's formulas (`,` by default, `;` in a theory that is also a language);
+ * `sequent=` names the theory's turnstile notation
  * (`⊢` by default). Grading is identical to the sibling proof types: the
  * translated tree compiles to `.auf` in the browser, and the resulting MMB
  * certificate is verified against this frozen mm0.
@@ -126,7 +130,6 @@ export async function compileAufbauProofPrawitz(
   );
   const assumptionRule =
     block.attrs.assumption?.trim() || DEFAULT_ASSUMPTION_RULE;
-  const sequentSymbol = block.attrs.sequent?.trim() || DEFAULT_SEQUENT_SYMBOL;
   const title = block.attrs.title?.trim();
   const header = parseTheoremHeader(block, diagnostics);
 
@@ -146,6 +149,18 @@ export async function compileAufbauProofPrawitz(
       ),
     );
   }
+
+  // A sequent's two notations, in order of who knows best: the author, then
+  // the theory's own `@syntax role turnstile` / `role context-join`, then the
+  // house convention. See {@link AufbauTheory}.
+  const sequentSymbol =
+    block.attrs.sequent?.trim() ||
+    theory?.sequentSymbol ||
+    DEFAULT_SEQUENT_SYMBOL;
+  const contextSymbol =
+    block.attrs.context?.trim() ||
+    theory?.contextSymbol ||
+    DEFAULT_CONTEXT_SYMBOL;
 
   if (header !== null && header.goalFormula.length === 0) {
     diagnostics.push(
@@ -199,6 +214,7 @@ export async function compileAufbauProofPrawitz(
       header.goalName,
       assumptionRule,
       sequentSymbol,
+      contextSymbol,
     ).diagnostics;
     if (structural.length > 0) {
       for (const problem of structural) {
@@ -216,6 +232,7 @@ export async function compileAufbauProofPrawitz(
 
   const publicData: AufbauProofPrawitzPublicData = {
     assumptionRule,
+    contextSymbol,
     goalFormula: header.goalFormula,
     goalName: header.goalName,
     mm0: `${theory.mm0}\n${header.theoremDecl}`,

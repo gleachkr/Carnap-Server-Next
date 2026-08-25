@@ -48,6 +48,28 @@ export interface RoleIndex {
   termFor(role: string): string | null;
 }
 
+/**
+ * The sort a student's formula is read at: the one carrying
+ * `@syntax role sentence`, or `undefined` where the spec says nothing.
+ *
+ * `undefined` is not a failure — `parse` then reads at the first sort the file
+ * marks `provable`, which is the whole story for a language-only spec like
+ * `carnap-prop` with exactly one. It is a file that is *also* a proof theory
+ * that has a choice to make: forallx: Calgary declares both `wff` and the
+ * `judgement` that `⊢` yields, and a model exercise asking for a formula must
+ * not be handed a sequent. Naming the sort is how it says which, and the library
+ * reads the role no further than this — it interprets none of them.
+ */
+export function sentenceSort(lang: SurfaceLanguage): string | undefined {
+  for (const info of lang.spec.sorts.values()) {
+    if (info.roles.includes("sentence")) {
+      return info.name;
+    }
+  }
+
+  return undefined;
+}
+
 /** Built once per language, like the language's own tables. */
 const indexes = new WeakMap<SurfaceLanguage, RoleIndex>();
 

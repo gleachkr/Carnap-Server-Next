@@ -47,7 +47,7 @@ export const PRAWITZ_CASES: readonly PrawitzCase[] = [
   },
   {
     name: "mp (→E, two undischarged leaves)",
-    theoremDecl: "theorem mp (a b: wff): $ (a → b) , a ⊢ b $;",
+    theoremDecl: "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
     goalName: "mp",
     root: node({
       formula: "b",
@@ -206,20 +206,21 @@ export const PRAWITZ_CASES: readonly PrawitzCase[] = [
   },
   {
     name: "unidist (∀I eigenvariable, no discharge)",
-    theoremDecl: "theorem unidist {x: tm}: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x) $;",
+    theoremDecl:
+      "theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $;",
     goalName: "unidist",
     root: node({
-      formula: "∀ x (F x)",
+      formula: "∀ x F(x)",
       rule: "all_intro",
       premises: [
         node({
-          formula: "F x",
+          formula: "F(a)",
           rule: "and_elim_l",
           premises: [
             node({
-              formula: "F x ∧ G x",
+              formula: "F(a) ∧ G(a)",
               rule: "all_elim",
-              premises: [leaf("∀ x (F x ∧ G x)")],
+              premises: [leaf("∀ x (F(x) ∧ G(x))")],
             }),
           ],
         }),
@@ -229,28 +230,28 @@ export const PRAWITZ_CASES: readonly PrawitzCase[] = [
   {
     name: "exelim (∃E eigenvariable + discharge)",
     theoremDecl:
-      "theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $;",
+      "theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $;",
     goalName: "exelim",
     root: node({
-      formula: "∃ x (G x)",
+      formula: "∃ x G(x)",
       rule: "ex_elim",
       discharge: ["1"],
       premises: [
-        leaf("∃ x (F x)"),
+        leaf("∃ x F(x)"),
         node({
-          formula: "∃ x (G x)",
+          formula: "∃ x G(x)",
           rule: "ex_intro",
           premises: [
             node({
-              formula: "G y",
+              formula: "G(b)",
               rule: "imp_elim",
               premises: [
                 node({
-                  formula: "F y → G y",
+                  formula: "F(b) → G(b)",
                   rule: "all_elim",
-                  premises: [leaf("∀ x (F x → G x)")],
+                  premises: [leaf("∀ x (F(x) → G(x))")],
                 }),
-                leaf("F y", "1"),
+                leaf("F(b)", "1"),
               ],
             }),
           ],
@@ -259,30 +260,31 @@ export const PRAWITZ_CASES: readonly PrawitzCase[] = [
     }),
   },
   {
-    // The reason contexts are dependency sets and not ambient: G u mentions the
-    // ∀I's eigenvariable but lives in the OTHER branch, so it must not enter
-    // the ∀I line's context — an ambient translation imports it and spuriously
-    // trips all_intro's "context may not depend on the eigenvariable" proviso.
+    // The reason contexts are dependency sets and not ambient: G(a) mentions
+    // the ∀I's eigenvariable but lives in the OTHER branch, so it must not
+    // enter the ∀I line's context — an ambient translation imports it and
+    // spuriously trips all_intro's "context may not depend on the
+    // eigenvariable" proviso.
     name: "eigenpollute (∀I beside a premise naming its eigenvariable)",
     theoremDecl:
-      "theorem eigenpollute {x u: tm}: $ ∀ x (F x) , G u ⊢ (∀ x (F x)) ∧ G u $;",
+      "theorem eigenpollute {x: var} {a: name}: $ ∀ x F(x) ; G(a) ⊢ (∀ x F(x)) ∧ G(a) $;",
     goalName: "eigenpollute",
     root: node({
-      formula: "(∀ x (F x)) ∧ G u",
+      formula: "(∀ x F(x)) ∧ G(a)",
       rule: "and_intro",
       premises: [
         node({
-          formula: "∀ x (F x)",
+          formula: "∀ x F(x)",
           rule: "all_intro",
           premises: [
             node({
-              formula: "F u",
+              formula: "F(a)",
               rule: "all_elim",
-              premises: [leaf("∀ x (F x)")],
+              premises: [leaf("∀ x F(x)")],
             }),
           ],
         }),
-        leaf("G u"),
+        leaf("G(a)"),
       ],
     }),
   },

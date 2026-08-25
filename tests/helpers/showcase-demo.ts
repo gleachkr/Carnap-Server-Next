@@ -33,13 +33,13 @@ in ascii. Here is the correspondence with the textbook's names:
 \`\`\`
 forallx                identifier(s)                  form
 ─────────────────────  ─────────────────────────────  ──────────────────────
-premise / assumption   ax                             Γ, A ⊢ A
-R (reiteration)        reit                           Γ ⊢ A  ⟹  Γ, Δ ⊢ A
+premise / assumption   ax                             Γ ; A ⊢ A
+R (reiteration)        reit                           Γ ⊢ A  ⟹  Γ ; Δ ⊢ A
 ∧I  /  ∧E              and_intro / and_elim_l, and_elim_r
 ∨I  /  ∨E              or_intro_l, or_intro_r / or_elim
 →I  /  →E              imp_intro / imp_elim
 ↔I  /  ↔E              iff_intro / iff_elim_l, iff_elim_r
-¬I  /  ¬E              neg_intro / neg_elim           A, ¬A ⊢ ⊥
+¬I  /  ¬E              neg_intro / neg_elim           A ; ¬A ⊢ ⊥
 X (explosion)          explosion
 IP (indirect proof)    ip
 =I  /  =E              eq_intro_nd / eq_replace
@@ -363,24 +363,24 @@ already, so it should show its ✓ at once.
 :::aufbau-proof{theory="forallx" id="pf_lines" title="Distributing ∀" points="2"}
 Read the proof, then submit it. Try breaking a line to see the engine complain.
 
-theorem unidist {x: tm}: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x) $
+theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
 ----
-l1: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x ∧ G x) $ by ax []
-l2: $ ∀ x (F x ∧ G x) ⊢ F x ∧ G x $ by all_elim [l1]
-l3: $ ∀ x (F x ∧ G x) ⊢ F x $ by and_elim_l [l2]
-l4: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x) $ by all_intro [l3]
+l1: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x (F(x) ∧ G(x)) $ by ax []
+l2: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) ∧ G(a) $ by all_elim [l1]
+l3: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) $ by and_elim_l [l2]
+l4: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $ by all_intro [l3]
 :::
 \`\`\`
 
 :::aufbau-proof{theory="forallx" id="pf_lines" title="Distributing ∀" points="2"}
 Read the proof, then submit it. Try breaking a line to see the engine complain.
 
-theorem unidist {x: tm}: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x) $
+theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
 ----
-l1: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x ∧ G x) $ by ax []
-l2: $ ∀ x (F x ∧ G x) ⊢ F x ∧ G x $ by all_elim [l1]
-l3: $ ∀ x (F x ∧ G x) ⊢ F x $ by and_elim_l [l2]
-l4: $ ∀ x (F x ∧ G x) ⊢ ∀ x (F x) $ by all_intro [l3]
+l1: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x (F(x) ∧ G(x)) $ by ax []
+l2: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) ∧ G(a) $ by all_elim [l1]
+l3: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) $ by and_elim_l [l2]
+l4: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $ by all_intro [l3]
 :::
 
 ## 13. The same proof, as a tree
@@ -395,12 +395,12 @@ compiler reads that back into a tree.
 The tree below is complete. Click a line to select it; the toolbar adds a
 premise, adds a hypothesis, or deletes a subtree.
 
-theorem treeunimp {x y: tm}: $ ∀ x (F x → G x) , F y ⊢ G y $
+theorem treeunimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
 ----
-l1: $ ∀ x (F x → G x) , F y ⊢ ∀ x (F x → G x) $ by ax []
-l2: $ ∀ x (F x → G x) , F y ⊢ F y $ by ax []
-l3: $ ∀ x (F x → G x) , F y ⊢ F y → G y $ by all_elim [l1]
-l4: $ ∀ x (F x → G x) , F y ⊢ G y $ by imp_elim [l3, l2]
+l1: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ ∀ x (F(x) → G(x)) $ by ax []
+l2: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) $ by ax []
+l3: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) → G(a) $ by all_elim [l1]
+l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by imp_elim [l3, l2]
 :::
 \`\`\`
 
@@ -408,12 +408,12 @@ l4: $ ∀ x (F x → G x) , F y ⊢ G y $ by imp_elim [l3, l2]
 The tree below is complete. Click a line to select it; the toolbar adds a
 premise, adds a hypothesis, or deletes a subtree.
 
-theorem treeunimp {x y: tm}: $ ∀ x (F x → G x) , F y ⊢ G y $
+theorem treeunimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
 ----
-l1: $ ∀ x (F x → G x) , F y ⊢ ∀ x (F x → G x) $ by ax []
-l2: $ ∀ x (F x → G x) , F y ⊢ F y $ by ax []
-l3: $ ∀ x (F x → G x) , F y ⊢ F y → G y $ by all_elim [l1]
-l4: $ ∀ x (F x → G x) , F y ⊢ G y $ by imp_elim [l3, l2]
+l1: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ ∀ x (F(x) → G(x)) $ by ax []
+l2: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) $ by ax []
+l3: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) → G(a) $ by all_elim [l1]
+l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by imp_elim [l3, l2]
 :::
 
 ## 14. The same proof, Fitch style
@@ -432,30 +432,30 @@ engine, not by the editor.
 :::aufbau-proof-fitch{theory="forallx" id="pf_fitch" title="Existential elimination" points="3"}
 A worked ∃E. Re-indent line 3 and watch the scope line — and the ✓ — react.
 
-theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $
+theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-∃ x (F x)          :ax
-∀ x (F x → G x)    :ax
-    F y            :ax
-    F y → G y      :all_elim 2
-    G y            :imp_elim 4 3
-    ∃ x (G x)      :ex_intro 5
-∃ x (G x)          :ex_elim 1 3-6
+∃ x F(x)              :ax
+∀ x (F(x) → G(x))     :ax
+    F(b)              :ax
+    F(b) → G(b)       :all_elim 2
+    G(b)              :imp_elim 4 3
+    ∃ x G(x)          :ex_intro 5
+∃ x G(x)              :ex_elim 1 3-6
 :::
 \`\`\`
 
 :::aufbau-proof-fitch{theory="forallx" id="pf_fitch" title="Existential elimination" points="3"}
 A worked ∃E. Re-indent line 3 and watch the scope line — and the ✓ — react.
 
-theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $
+theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-∃ x (F x)          :ax
-∀ x (F x → G x)    :ax
-    F y            :ax
-    F y → G y      :all_elim 2
-    G y            :imp_elim 4 3
-    ∃ x (G x)      :ex_intro 5
-∃ x (G x)          :ex_elim 1 3-6
+∃ x F(x)              :ax
+∀ x (F(x) → G(x))     :ax
+    F(b)              :ax
+    F(b) → G(b)       :all_elim 2
+    G(b)              :imp_elim 4 3
+    ∃ x G(x)          :ex_intro 5
+∃ x G(x)              :ex_elim 1 3-6
 :::
 
 ## 15. Your turn

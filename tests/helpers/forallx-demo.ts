@@ -21,9 +21,13 @@ The connective rules are: \`ax\` (assumption/premise), \`reit\` (reiteration),
 \`iff_elim_r\`, \`neg_intro\` / \`neg_elim\`, \`explosion\`, and \`ip\` (indirect
 proof). The first-order rules are \`all_intro\` / \`all_elim\` (∀I / ∀E),
 \`ex_intro\` / \`ex_elim\` (∃I / ∃E), and \`eq_intro_nd\` / \`eq_replace\` (=I / =E).
-Terms are written with the small signature \`F\`, \`G\` (one-place), \`R\`
-(two-place); the names and variables are \`x\`, \`y\`, \`z\`. The editor checks
-your proof as you type; a ✓ means it verifies.
+Predicate letters are \`A\`–\`Z\` and take their arguments in parentheses:
+\`P\` is a sentence letter, \`F(a)\` and \`R(a,b)\` are the same letters applied.
+The lowercase alphabet is split three ways — \`a\`–\`e\` are **names**,
+\`f\`–\`r\` are function letters, and \`s\`–\`z\` are the **variables** a
+quantifier binds. A sequent's premises are separated by \`;\`, because the
+comma already separates a predicate's arguments. The editor checks your proof
+as you type; a ✓ means it verifies.
 
 :::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
 :::
@@ -36,7 +40,7 @@ A first proof, already filled in. From \`P → Q\` and \`P\`, conclude \`Q\` wit
 :::aufbau-proof-fitch{theory="forallx" id="mp" points="1"}
 Derive \`Q\` from \`P → Q\` and \`P\`.
 
-theorem mp (P Q: wff): $ (P → Q) , P ⊢ Q $
+theorem mp (P Q: wff): $ (P → Q) ; P ⊢ Q $
 ----
 P → Q   :ax
 P       :ax
@@ -85,32 +89,32 @@ theorem dne (P: wff): $ ¬ ¬ P ⊢ P $
 
 ## 5. Universal instantiation
 
-Now for quantifiers. Instantiate \`∀ x (F x → G x)\` at the name \`y\` with
+Now for quantifiers. Instantiate \`∀ x (F(x) → G(x))\` at the name \`a\` with
 \`all_elim\`, then finish with \`imp_elim\`. \`all_elim\` reads the name to use off
-the formula you write, so just state \`F y → G y\`.
+the formula you write, so just state \`F(a) → G(a)\`.
 
 :::aufbau-proof-fitch{theory="forallx" id="unimp" points="2"}
-From \`∀ x (F x → G x)\` and \`F y\`, derive \`G y\`.
+From \`∀ x (F(x) → G(x))\` and \`F(a)\`, derive \`G(a)\`.
 
-theorem unimp {x y: tm}: $ ∀ x (F x → G x) , F y ⊢ G y $
+theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
 ----
-∀ x (F x → G x)   :ax
-F y               :ax
+∀ x (F(x) → G(x))   :ax
+F(a)                :ax
 :::
 
 ## 6. Existential elimination
 
 The ∃E rule works like ∨E: open a subproof, assume an instance for a **fresh
-name** (\`F y :ax\`), derive the goal inside, then discharge with \`ex_elim\`
-citing the existential line and the subproof range. The name \`y\` may not appear
-in the conclusion — that is the eigenvariable side condition, and the engine
-enforces it.
+name** (\`F(b) :ax\`), derive the goal inside, then discharge with \`ex_elim\`
+citing the existential line and the subproof range. The name \`b\` may not appear
+in the conclusion or in any premise still standing — that is the eigenvariable
+side condition, and the engine enforces it.
 
 :::aufbau-proof-fitch{theory="forallx" id="exelim" points="3"}
-From \`∃ x (F x)\` and \`∀ x (F x → G x)\`, derive \`∃ x (G x)\`.
+From \`∃ x F(x)\` and \`∀ x (F(x) → G(x))\`, derive \`∃ x G(x)\`.
 
-theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $
+theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-∃ x (F x)          :ax
-∀ x (F x → G x)    :ax
+∃ x F(x)              :ax
+∀ x (F(x) → G(x))     :ax
 :::`;

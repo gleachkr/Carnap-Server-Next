@@ -32,7 +32,7 @@
  * must not overlap the goal's own binders, or witness invention silently stops
  * working. {@link SPARE_VARS} explains why.
  *
- * Adding a language (modal, say) means a spec in `logic/specs/` for the
+ * Adding a language (modal, say) means an artifact in `logic/theories/` for the
  * surface syntax, and a rule set here whose sequent rules axiomatize its
  * consequence relation.
  */

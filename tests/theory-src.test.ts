@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import type { AufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { isAufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
 
@@ -17,6 +19,15 @@ const FORALLX = "/theories/forallx-calgary-2019.mm0";
 
 const FORALLX_SOURCE = THEORY_SOURCES["forallx-calgary-2019.mm0"] ?? "";
 
+/**
+ * What the engine gets. forallx: Calgary is one artifact serving as both the
+ * proof theory and the course's language, so it carries `@syntax` annotations;
+ * they are the surface parser's and the engine rejects an annotation that is
+ * not its own, so freezing strips them. That is a property of the freeze, not
+ * of this theory — an author's own extension is stripped on the same terms.
+ */
+const FORALLX_FROZEN = stripSyntaxAnnotations(FORALLX_SOURCE);
+
 function lesson(theoryBlock: string, goal = "andcomm"): string {
   return `${theoryBlock}
 
@@ -27,6 +38,26 @@ theorem ${goal} (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
 ----
 P ∧ Q   :ax
 :::`;
+}
+
+async function publicDataOf(
+  source: string,
+): Promise<AufbauProofFitchPublicData> {
+  const compiled = await compileCarnapMarkdown(source);
+
+  if (!compiled.ok) {
+    throw new Error(
+      `compile failed: ${compiled.diagnostics.map((one) => one.code).join(", ")}`,
+    );
+  }
+
+  const item = compiled.artifact.manifest.find((entry) => entry.id === "ex1");
+
+  if (item === undefined || !isAufbauProofFitchPublicData(item.publicData)) {
+    throw new Error("no aufbau-proof-fitch exercise 'ex1'");
+  }
+
+  return item.publicData;
 }
 
 async function frozenMm0(source: string): Promise<string> {
@@ -61,8 +92,10 @@ describe("aufbau-mm0 src", () => {
 
     // Cheap proof the fixture is not empty, which would make the rest vacuous.
     expect(FORALLX_SOURCE.length).toBeGreaterThan(1000);
+    expect(FORALLX_SOURCE).toContain("--| @syntax");
+    expect(FORALLX_FROZEN).not.toContain("--| @syntax");
     expect(mm0).toBe(
-      `${FORALLX_SOURCE}\ntheorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $;`,
+      `${FORALLX_FROZEN}\ntheorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $;`,
     );
   });
 
@@ -77,7 +110,7 @@ axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
     );
 
     expect(mm0).toBe(
-      `${FORALLX_SOURCE}
+      `${FORALLX_FROZEN}
 term Cube (x: tm): wff;
 
 --| @congr
@@ -97,6 +130,59 @@ term and (a b: wff): wff;
     expect(mm0).toBe(
       "provable sort wff;\nterm and (a b: wff): wff;\ntheorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $;",
     );
+  });
+
+  /**
+   * A theory that is also a language cannot spell its context separator `,` —
+   * the comma is the student's argument separator in `R(a,b)` and MM0 gives a
+   * math token one meaning — so forallx spells it `;`. The alternative to
+   * reading that off the artifact is every exercise ever set from the theory
+   * repeating `context=";"`, and forgetting once produces `.auf` the engine
+   * rejects for reasons that point nowhere near the mistake.
+   */
+  test("a theory's own notations reach the exercise with no attribute", async () => {
+    const data = await publicDataOf(
+      lesson(`:::aufbau-mm0{name="forallx" src="${FORALLX}"}\n:::`),
+    );
+
+    expect({
+      context: data.contextSymbol,
+      sequent: data.sequentSymbol,
+    }).toEqual({ context: ";", sequent: "⊢" });
+  });
+
+  test("an attribute overrides what the theory says", async () => {
+    const data = await publicDataOf(
+      `:::aufbau-mm0{name="forallx" src="${FORALLX}"}
+:::
+
+:::aufbau-proof-fitch{theory="forallx" id="ex1" context="," sequent="|-"}
+Take it apart and put it back.
+
+theorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
+----
+P ∧ Q   :ax
+:::`,
+    );
+
+    expect({
+      context: data.contextSymbol,
+      sequent: data.sequentSymbol,
+    }).toEqual({ context: ",", sequent: "|-" });
+  });
+
+  test("a theory that says nothing leaves the house defaults", async () => {
+    const data = await publicDataOf(
+      lesson(`:::aufbau-mm0{name="forallx"}
+provable sort wff;
+term and (a b: wff): wff;
+:::`),
+    );
+
+    expect({
+      context: data.contextSymbol,
+      sequent: data.sequentSymbol,
+    }).toEqual({ context: ",", sequent: "⊢" });
   });
 
   test("a path no theory answers to says so, and lists what does", async () => {
@@ -180,6 +266,9 @@ term Cube (x: tm): wff;
       (node) => node.kind === "theory",
     );
 
+    // The panel shows the artifact as authored and as the route serves it,
+    // `@syntax` and all — a file that is also the course's language says so
+    // there, and a reader shown only the engine half is shown half of it.
     expect(panel).toEqual({
       kind: "theory",
       mm0: `${FORALLX_SOURCE}\nterm Cube (x: tm): wff;`,

@@ -258,7 +258,7 @@ is a compile error.
 | conditional   | `->`   | right-associative              |
 | biconditional | `<->`  |                                |
 
-The table above is `src/worker/logic/specs/carnap-prop.mm0` — an MM0 signature
+The table above is `src/worker/logic/theories/carnap-prop.mm0` — an MM0 signature
 with `@syntax` annotations, read by `@aufbau/syntax` — rather than anything in
 TypeScript. Sentence letters are the 52 single Roman letters it declares, of
 either case: `P`, `Q`, `p`, `q`. The vocabulary is finite because an MM0

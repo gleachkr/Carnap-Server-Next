@@ -112,7 +112,11 @@ function dischargeLabels(node: PrawitzProofNode): string[] {
 /**
  * Translate `root` (the node proving the goal) into `.auf` text for `goalName`,
  * treating a node whose rule is `assumptionRule` as an assumption leaf and
- * writing `sequentSymbol` as the theory's turnstile in every emitted sequent.
+ * writing `sequentSymbol` as the theory's turnstile in every emitted sequent
+ * and `contextSymbol` between the formulas of a context. Both are the theory's
+ * own notations; the separator defaults to `,` and is `;` in a theory that is
+ * also a language, where the comma already separates a predicate's arguments
+ * (see `aufbau-proof-fitch/translate.ts`, which says the same at length).
  * Returns the assembled proof text, a char-space map from each generated line
  * to its source node, the inferred per-node contexts, and any structural
  * diagnostics (best-effort `proofText` is still returned when they are
@@ -123,6 +127,7 @@ export function prawitzToAuf(
   goalName: string,
   assumptionRule: string,
   sequentSymbol: string,
+  contextSymbol = ",",
 ): TranslatedPrawitzProof {
   const diagnostics: PrawitzDiagnostic[] = [];
 
@@ -277,7 +282,8 @@ export function prawitzToAuf(
 
     const formulas = contextFormulas(entries);
     contexts.set(walked.node.id, formulas);
-    const contextText = formulas.length === 0 ? "_" : formulas.join(" , ");
+    const contextText =
+      formulas.length === 0 ? "_" : formulas.join(` ${contextSymbol} `);
 
     counter += 1;
     const label = `l${counter}`;

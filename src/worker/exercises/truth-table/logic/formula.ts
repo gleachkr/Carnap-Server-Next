@@ -1,7 +1,8 @@
 /**
  * Formula syntax for the truth-table exercise type.
  *
- * The language is not written here. It is `logic/specs/carnap-prop.mm0` — an
+ * The language is not written here. It is `logic/theories/carnap-prop.mm0`,
+ * registered as a language by `logic/specs` — an
  * ordinary MM0 signature with `@syntax` annotations, read by `@aufbau/syntax`
  * — and this module only converts what that parser returns into the
  * {@link Formula} tree a table is built from, and writes one back out. The
@@ -65,7 +66,7 @@ const PROP_LANGUAGE_ID = "carnap-prop";
  * A spec node this module cannot read as a propositional formula.
  *
  * Only reachable through a spec that gives a constructor a role we have no
- * case for — an authoring mistake in `logic/specs/`, not something a student
+ * case for — an authoring mistake in the spec, not something a student
  * can type.
  */
 class Unreadable extends Error {}

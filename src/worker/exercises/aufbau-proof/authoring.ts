@@ -1,3 +1,8 @@
+import {
+  parseSpec,
+  SurfaceLanguage,
+  stripSyntaxAnnotations,
+} from "@aufbau/syntax";
 import type {
   CompiledExercise,
   CompilerDiagnostic,
@@ -17,6 +22,7 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import { roleIndex } from "../../logic/specs/roles";
 import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
 import type { AufbauProofOptions, AufbauProofPublicData } from "./types";
 import {
@@ -26,12 +32,63 @@ import {
   AUFBAU_PROOF_SCHEMA_VERSION,
 } from "./types";
 
-/** A theory name and the MM0 text an `:::aufbau-mm0` block declares. */
+/**
+ * A theory name and the MM0 text an `:::aufbau-mm0` block declares.
+ *
+ * The two texts differ by the `@syntax` annotations, and which one a caller
+ * wants is not a detail. `mm0` is engine input — what a goal declaration is
+ * appended to and what a certificate is verified against — and the engine
+ * rejects an annotation that is not its own. `source` is the artifact as
+ * written and as the route serves it, which is what the `show` panel puts in
+ * front of a reader: a file that is also a course's *language* says so in
+ * those annotations, and hiding them would show a reader half of it.
+ */
 export interface AufbauTheory {
+  /**
+   * How this theory spells a context separator and a turnstile, where it says
+   * so — `@syntax role context-join` and `@syntax role turnstile` on the
+   * constructors. `null` for a theory that says nothing, which leaves the
+   * house defaults (`,` and `⊢`) standing.
+   *
+   * The proof types write sequents; a theory that is also a course's language
+   * cannot always spell one the house way, because the notation a student
+   * needs may already own the token. Reading it off the artifact is the point
+   * of the artifact: `sequent=` and `context=` remain as per-exercise
+   * overrides, but nobody should have to repeat a theory's own notation on
+   * every exercise set from it.
+   */
+  readonly contextSymbol: string | null;
   readonly mm0: string;
   readonly name: string;
+  readonly sequentSymbol: string | null;
   /** Whether the author asked (`show`) for the source to appear in the lesson. */
   readonly show: boolean;
+  readonly source: string;
+}
+
+/**
+ * The notations a theory names for itself, or nulls.
+ *
+ * Reading the theory as a *spec* is what makes the roles visible, and an
+ * author's extension can make that reading fail in ways that have nothing to
+ * do with the question being asked — a name the delimiters split, an
+ * annotation we do not know. None of that should stop an exercise compiling,
+ * so anything unexpected simply leaves the defaults in place.
+ */
+function declaredNotations(source: string): {
+  readonly contextSymbol: string | null;
+  readonly sequentSymbol: string | null;
+} {
+  try {
+    const index = roleIndex(new SurfaceLanguage(parseSpec(source).spec));
+
+    return {
+      contextSymbol: index.spellingFor("context-join"),
+      sequentSymbol: index.spellingFor("turnstile"),
+    };
+  } catch {
+    return { contextSymbol: null, sequentSymbol: null };
+  }
 }
 
 /** A `theorem <name>` header line and its structural parts. */
@@ -314,6 +371,13 @@ function resolveTheorySrc(
  * a theory further down this file, so nothing new is being invented — the
  * author's lines simply arrive last, and the engine reads the result as one
  * theory.
+ *
+ * The result is stripped of `@syntax` annotations, because what comes back is
+ * engine input and `@syntax` is not the engine's — it rejects an annotation it
+ * does not know. A built-in theory carries them when it is also the *language*
+ * a course teaches (forallx: Calgary is one file for both), and an author is
+ * free to write them in an extension for the same reason; either way they are
+ * read by `@aufbau/syntax` from the artifact and never reach the compiler.
  */
 export function compileAufbauMm0(
   block: DirectiveBlock,
@@ -352,18 +416,24 @@ export function compileAufbauMm0(
     return null;
   }
 
-  const mm0 =
+  const source =
     base === null
       ? extension
       : extension.length === 0
         ? base
         : `${base}\n${extension}`;
 
-  if (mm0.length === 0) {
+  if (source.length === 0) {
     return null;
   }
 
-  return { mm0, name, show };
+  return {
+    ...declaredNotations(source),
+    mm0: stripSyntaxAnnotations(source),
+    name,
+    show,
+    source,
+  };
 }
 
 /** What `::::aufbau-proof{…}` accepts beyond the shared exercise set. */
