@@ -365,6 +365,23 @@ export function buildDiagnosticStrings(i18n: Translator) {
       i18n.t(
         "Parentheses may only enclose a sentence joined by a two-place connective.",
       ),
+    // The last resort of `logic/specs/diagnostics.ts`: a parse failure whose
+    // id that table has no entry for. Nothing says it today.
+    "This formula could not be read.": i18n.t(
+      "This formula could not be read.",
+    ),
+    "This is a {actual} where a {expected} is needed.": i18n.t(
+      "This is a {actual} where a {expected} is needed.",
+      placeholders("actual", "expected"),
+    ),
+    "This is a {kind}, not a complete sentence.": i18n.t(
+      "This is a {kind}, not a complete sentence.",
+      placeholders("kind"),
+    ),
+    "“{chunk}” is not part of this language.": i18n.t(
+      "“{chunk}” is not part of this language.",
+      placeholders("chunk"),
+    ),
     "“{name}” is a free variable; every formula must be a sentence.": i18n.t(
       "“{name}” is a free variable; every formula must be a sentence.",
       placeholders("name"),
@@ -372,6 +389,10 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "“{operator}” cannot be chained; add parentheses to group it.": i18n.t(
       "“{operator}” cannot be chained; add parentheses to group it.",
       placeholders("operator"),
+    ),
+    "“{token}” binds too loosely here; parenthesize it.": i18n.t(
+      "“{token}” binds too loosely here; parenthesize it.",
+      placeholders("token"),
     ),
 
     // The three proof types, whose theory and goal headers are shared.

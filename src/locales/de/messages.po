@@ -18,6 +18,10 @@ msgid "—/{worth} (not released)"
 msgstr "—/{worth} (nicht freigegeben)"
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "“{chunk}” is not part of this language."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only."
 msgstr "„{formula}“ ist nicht aussagenlogisch; eine prop-Übersetzung verwendet nur Satzbuchstaben und Junktoren."
 
@@ -33,6 +37,10 @@ msgstr "„{operator}“ kann nicht verkettet werden; setzen Sie Klammern, um di
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "“{token}” binds too loosely here; parenthesize it."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
@@ -3761,6 +3769,10 @@ msgid "This exercise wants a propositional sentence: sentence letters and connec
 msgstr "Diese Aufgabe verlangt einen aussagenlogischen Satz: nur Satzbuchstaben und Junktoren."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "This formula could not be read."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "This formula could not be typeset: {detail}"
 msgstr "Diese Formel konnte nicht gesetzt werden: {detail}"
 
@@ -3771,6 +3783,14 @@ msgstr "Diese Vorgabe setzt {pinned} in eine Zelle, deren berechneter Wert {expe
 #: src/worker/application/gradebook.ts
 msgid "This grade has not been released."
 msgstr "Diese Note ist noch nicht freigegeben."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This is a {actual} where a {expected} is needed."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This is a {kind}, not a complete sentence."
+msgstr ""
 
 #: src/worker/application/submissions.ts
 msgid "This item does not record work."

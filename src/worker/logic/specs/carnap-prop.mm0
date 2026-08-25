@@ -7,6 +7,11 @@
 -- Carnap's own spec. Ported from the worked example of the same name in
 -- @aufbau/syntax and free to diverge from it, as its sibling explains.
 --
+-- The `@syntax role` annotations are what let the truth-table type read a
+-- parse without knowing that this book calls conjunction `and`: the library
+-- has no connective set of its own, by design, and a role is the channel it
+-- offers instead. See `logic/specs/roles.ts`.
+--
 -- The atoms are ordinary nullary declarations — MM0's finite vocabulary;
 -- the incumbent `truth-table/logic/formula.ts` also accepts a bare-digit
 -- subscript (`P0`), which this spec cannot spell and which is a deliberate
@@ -77,17 +82,22 @@ term x: wff;
 term y: wff;
 term z: wff;
 
+--| @syntax role negation
 term not (p: wff): wff;
 prefix not: $~$ prec 50;
 
+--| @syntax role conjunction
 term and (p q: wff): wff;
 infixl and: $/\$ prec 40;
 
+--| @syntax role disjunction
 term or (p q: wff): wff;
 infixl or: $\/$ prec 35;
 
+--| @syntax role conditional
 term imp (p q: wff): wff;
 infixr imp: $->$ prec 30;
 
+--| @syntax role biconditional
 term iff (p q: wff): wff;
 infixl iff: $<->$ prec 25;
