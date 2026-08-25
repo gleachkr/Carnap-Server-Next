@@ -12,10 +12,10 @@
 -- has no connective set of its own, by design, and a role is the channel it
 -- offers instead. See `logic/specs/roles.ts`.
 --
--- The atoms are ordinary nullary declarations — MM0's finite vocabulary;
--- the incumbent `truth-table/logic/formula.ts` also accepts a bare-digit
--- subscript (`P0`), which this spec cannot spell and which is a deliberate
--- casualty of a letter lexicon.
+-- The atoms are ordinary nullary declarations — MM0's finite vocabulary. The
+-- hand parser this replaced also read a bare-digit subscript (`P0`, `R12`),
+-- which no signature can spell; it went when the truth-table type swapped onto
+-- this file (2026-08-24), deliberately.
 
 -- The surface delimiter set: where one chunk of student input ends and the
 -- next begins, fixed before anything is looked up. The lexicon letters are

@@ -628,8 +628,8 @@ fixes `f(0) = 1` and leaves every other argument to the student — so under
 ```
 
 Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
-attributes it accepts `variant` (`simple` | `validity` | `constraint`), `system` (a notation system id;
-only `forallx-calgary-2019` today), `counterexample-to` (`validity`/`tautology` |
+attributes it accepts `variant` (`simple` | `validity` | `constraint`), `system` (a language spec id;
+only `forallx-calgary-2019` today — see "Languages and theories" below), `counterexample-to` (`validity`/`tautology` |
 `equivalence` | `inconsistency`/`contradiction` — the property the targeted
 sentences must have, defaulting to all-true for `simple` and `constraint` and
 all-false for `validity`), `check` (`on` | `off` — this type's older spelling
@@ -717,7 +717,8 @@ Nothing is not bananas.
 and `options` takes `nocheck` (this type's spelling of `feedback="none"`) and
 `checksyntax` (refuse to submit text that does not parse). The common `id`,
 `title`, `points`, `exam`, and `feedback` attributes apply as everywhere, and
-`system` names the notation system (only `forallx-calgary-2019` today).
+`system` names the language spec (only `forallx-calgary-2019` today — see
+"Languages and theories" below).
 
 The full reference — the check's architecture, the rewrite theory and its
 known gaps, the answer shape — lives next to the code in
@@ -844,6 +845,53 @@ applications, `auto?`) is documented in the engine repository's `docs/proof.md`.
 v1 is a plain text editor; richer GUIs on the same engine may follow. The
 `auto?`/completion wiring is not implemented yet. The full reference lives next
 to the code in `src/worker/exercises/aufbau-proof/README.md`.
+
+## Languages and theories
+
+`theory=` on a proof exercise and `system=` on a truth table, a model, or a
+translation now name the same *kind* of thing: an MM0 file. That is the whole
+of this section, and it is worth stating plainly because it used to be false.
+
+A **theory** is what a proof is built from — sorts, terms, axioms, the rules a
+student cites by name. It is what `/theories/forallx-calgary-2019.mm0` serves,
+and what an `aufbau-mm0` block declares.
+
+A **language spec** is what a formula is written in — the same sorts and terms,
+plus `@syntax` annotations saying how a student *spells* them: which brackets
+group, which spellings of `∧` are accepted, which of them is canonical, and
+which conventions the book refuses (forallx will not read `P → Q → R`, and will
+not let you write `(P)`). Two ship, and `system=` names one of them by id:
+
+| Id | Language |
+| --- | --- |
+| `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — the model and translation types. |
+| `carnap-prop` | Carnap's default `prop` — the truth-table type, ASCII connectives and 52 sentence letters. |
+
+They live in `src/worker/logic/specs/`, and being MM0 is not a formality: an
+exercise type reads one by asking what role each constructor plays
+(`@syntax role conjunction`), so nothing in the server knows that this book
+calls conjunction `/\` or that book calls it `∧`. Adding a textbook's notation
+is a file, not a code change — which is what has to be true before an
+instructor can bring their own.
+
+**The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
+predicate letters and 18 constant/function letters; `carnap-prop` gives you 52
+sentence letters. Subscripted letters (`F_12`, `P0`) are *not* available: the
+hand-written parsers these replaced read an unbounded subscript, and that was
+given up in the move (2026-08-24) rather than hold the unification for it.
+
+**One written form, not two.** A formula is stored in the spec's canonical
+spelling of each symbol — its last-declared notation — and that is also what a
+reader is shown. For forallx that is the glyphs (`∀x(F(x) → G(x))`); for
+`carnap-prop`, which declares nothing but ASCII, it is the ASCII you typed.
+Either way it is text the parser accepts back.
+
+What is still two files rather than one is the *pairing*:
+`logic/theories/forallx-calgary-2019.mm0` and
+`logic/specs/forallx-calgary-2019.mm0` are the same textbook under the same
+stem, deliberately, and merging them waits on a way to mark the fragment a
+student may write in — in the theory, `Γ ⊢ φ` is itself a formula, and a truth
+table over it would accept a sequent as a sentence.
 
 ## Aufbau-proof-tree directive
 

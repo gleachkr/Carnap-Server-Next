@@ -258,8 +258,13 @@ is a compile error.
 | conditional   | `->`   | right-associative              |
 | biconditional | `<->`  |                                |
 
-Sentence letters are a single Roman letter with an optional numeric subscript:
-`P`, `Q`, `P0`, `R12`. Precedence, loosest to tightest:
+The table above is `src/worker/logic/specs/carnap-prop.mm0` — an MM0 signature
+with `@syntax` annotations, read by `@aufbau/syntax` — rather than anything in
+TypeScript. Sentence letters are the 52 single Roman letters it declares, of
+either case: `P`, `Q`, `p`, `q`. The vocabulary is finite because an MM0
+signature is; the hand parser this replaced also read a bare-digit subscript
+(`P0`, `R12`), and that went with it (2026-08-24). Precedence, loosest to
+tightest:
 `<->` < `->` < `\/` < `/\` < `~`. `/\`, `\/`, and `<->` are left-associative;
 `->` is right-associative. Use parentheses to override. A table may use at most
 `MAX_TABLE_ATOMS` (12) distinct atoms.
@@ -268,7 +273,7 @@ Sentence letters are a single Roman letter with an optional numeric subscript:
 
 | File | Role |
 |------|------|
-| `logic/` | DOM-free `prop` core: `formula.ts` (tokenizer + parser + AST), `truth-table.ts` (atoms, 2ⁿ valuations, evaluator, sub-formula columns, `buildTruthTable`), `layout.ts` (written-out formula → parens + cells). Imported by **both** the worker and the client. |
+| `logic/` | DOM-free `prop` core: `formula.ts` (spec parse → AST, and back), `truth-table.ts` (atoms, 2ⁿ valuations, evaluator, sub-formula columns, `buildTruthTable`), `layout.ts` (written-out formula → parens + cells). Imported by **both** the worker and the client. |
 | `types.ts` | Kind/answer/component constants and the public-data, options, and answer-grid shapes. |
 | `grading.ts` | DOM-free grading shared by the worker (score + review marks) and the client (Check): resolve the table, fill mask, correct grid, per-cell verdicts, score fraction, structural guards. |
 | `authoring.ts` | Compiles the directive → a `CompiledExercise` (parses formulas, validates attributes/options). |

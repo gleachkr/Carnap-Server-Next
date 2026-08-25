@@ -154,15 +154,22 @@ rows the table has, so no given can be sure of covering it.
 
 ## Notation: forallx: Calgary 2019
 
-Carnap's `thomasBolducAndZachFOL2019ParserOptions` over `calgary2019OpTable`.
+Carnap's `thomasBolducAndZachFOL2019ParserOptions` over `calgary2019OpTable`,
+written as `src/worker/logic/specs/forallx-calgary-2019.mm0` — an MM0 signature
+with `@syntax` annotations, read by `@aufbau/syntax`. Everything below is in
+that file rather than in any TypeScript, and `system=` names it.
 
-- **Predicates** any uppercase letter with parentheses and an optional `_n`
-  subscript: `F(x)`, `R(x,y)`, `F_1(a)`. A bare uppercase letter is a
-  **sentence letter**. A symbol's **arity is part of its identity**, so `F(a)`
-  and `F(a,b)` are two different predicates with two separate fields.
-- **Variables** `s`–`z`; **constants** `a`–`r`; **function symbols** `a`–`t`,
-  always with parentheses. A lowercase letter followed by `(` is a function,
-  otherwise a variable if in `s`–`z` and a constant if in `a`–`r`.
+- **Predicates** any of the 26 uppercase letters, with parentheses: `F(x)`,
+  `R(x,y)`. A bare uppercase letter is a **sentence letter**. A symbol's
+  **arity is part of its identity**, so `F(a)` and `F(a,b)` are two different
+  predicates with two separate fields.
+- **Variables** `s`–`z`; **constants and function symbols** `a`–`r`, a
+  function when parentheses follow and a constant when they do not.
+- **The vocabulary is finite**, because an MM0 signature is: those letters and
+  no others. There are no subscripts — the hand parser this replaced read an
+  unbounded `F_12`, and that went with it (2026-08-24). Note also that `s` and
+  `t` are variables *only*, where the old table listed them as function letters
+  as well: a letter is a `@vars` pool member or a declared term, never both.
 - **Quantifiers** `A` `E` `∀` `∃` `@` `3`, immediately followed by a variable.
 - **Connectives** `~ /\ \/ -> <->`, plus the aliases `- ¬`, `∧ ^ &`, `∨ |`,
   `=> > → ⊃`, `<=> <> ↔ ≡`.
@@ -171,23 +178,27 @@ Carnap's `thomasBolducAndZachFOL2019ParserOptions` over `calgary2019OpTable`.
 
 ### Input, and display
 
-Those are the spellings a formula is **typed** in. A formula is **shown** in
-logical symbols, which is what the original does (`rewriteWith opts . show`):
-`∀ ∃ ¬ ∧ ∨ → ↔ ⊤ ⊥`, identity closed up, a quantifier or negation written
-straight onto what follows it, and every binary compound parenthesized *except*
-the outermost pair — Carnap's fixed `Schematizable` output under the 2019 Calgary
-systems' `dropOuterParens` rewriter.
+Those are the spellings a formula is **typed** in. A formula is **written back
+out** in logical symbols, which is what the original does (`rewriteWith opts .
+show`): `∀ ∃ ¬ ∧ ∨ → ↔ ⊤ ⊥`, identity closed up, a quantifier or negation
+written straight onto what follows it, and every binary compound parenthesized
+*except* the outermost pair — `@syntax display drop-outer-parens` in the spec.
 
-| Stored as | Shown as |
+Those symbols are the spec's **last** notation for each connective, which is
+the one convention `@aufbau/syntax` fixes: ASCII spellings first, the glyph
+last, and the last is canonical. So there is one written form, not two — what a
+reader sees is also what a compiled exercise stores.
+
+| Typed | Stored, and shown |
 |---|---|
 | `AxAyf(x,y) = f(y,x)` | `∀x∀yf(x,y)=f(y,x)` |
 | `P /\ Q \/ R` | `(P ∧ Q) ∨ R` |
 | `Ax(F(x) -> G(x))` | `∀x(F(x) → G(x))` |
 | `a != b` | `¬a=b` |
 
-The display form is itself legal input, which is not a coincidence: forallx
-brackets exactly the compounds its parenthesization rule permits brackets
-around, so printing and reading agree.
+That form is itself legal input, which is not a coincidence: forallx brackets
+exactly the compounds its parenthesization rule permits brackets around, so
+printing and reading agree.
 
 Three things surprise people, and all three are the original's behaviour:
 

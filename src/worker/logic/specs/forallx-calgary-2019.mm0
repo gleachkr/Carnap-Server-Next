@@ -18,11 +18,19 @@
 -- letter `P` and the variadic predicate `P(a,b)`, and both the constant
 -- `f` and the function `f(x)`.
 --
--- One known divergence from the incumbent `exercises/first-order/dialect.ts`,
--- to be settled when the exercise types swap over rather than discovered from
--- a student: that table lists `s` and `t` as function letters as well as
--- variable letters, so `s(x)` parses there and does not here. A letter is
--- either a variable pool member or a declared term, not both.
+-- Two things went when the model and translation types swapped onto this file
+-- (2026-08-24), both deliberate and both recorded so a course meeting them
+-- knows they are not bugs. **Subscripted letters** (`F_12`, `x_1`) are gone:
+-- an MM0 signature is a finite vocabulary, so the letters below are all of
+-- them. And **`s` and `t` are variables only** — the table this replaced
+-- listed them as function letters as well, so `s(x)` parsed there; a letter is
+-- a `@vars` pool member or a declared term, never both, and forallx's own text
+-- puts them in the variable pool.
+--
+-- The sibling `theories/forallx-calgary-2019.mm0` is the same textbook's
+-- proof system under the same stem. Merging the two is the remaining step, and
+-- waits on a way to mark the fragment a student may write in: there, `Γ ⊢ φ`
+-- is itself a formula.
 
 -- The surface delimiter set: where one chunk of student input ends and the
 -- next begins, fixed before anything is looked up. The lexicon letters are
