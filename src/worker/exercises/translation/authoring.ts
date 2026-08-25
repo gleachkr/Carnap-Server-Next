@@ -1,3 +1,4 @@
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type {
   CompiledExercise,
   CompilerDiagnostic,
@@ -16,11 +17,10 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
-import type { FirstOrderDialect } from "../first-order";
 import {
-  DEFAULT_DIALECT_ID,
-  dialectById,
-  FORALLX_CALGARY_2019,
+  DEFAULT_LANGUAGE_ID,
+  FIRST_ORDER_LANGUAGE_IDS,
+  firstOrderLanguage,
   formulaToString,
   parseFormula,
   splitFormulaList,
@@ -74,15 +74,28 @@ function parseVariant(
   return "prop";
 }
 
-function parseDialect(
+/**
+ * The language the exercise is written in, and the id it is stored under.
+ *
+ * Both travel together because they are stored apart: `publicData.dialect`
+ * holds the id, and every reader resolves the spec from it again — a parsed
+ * language is tables, not data.
+ */
+interface ResolvedLanguage {
+  readonly id: string;
+  readonly language: SurfaceLanguage;
+}
+
+function parseLanguage(
   value: string | undefined,
   line: number,
   diagnostics: CompilerDiagnostic[],
-): FirstOrderDialect {
-  const dialect = dialectById(value ?? DEFAULT_DIALECT_ID);
+): ResolvedLanguage {
+  const id = value ?? DEFAULT_LANGUAGE_ID;
+  const language = firstOrderLanguage(id);
 
-  if (dialect !== null) {
-    return dialect;
+  if (language !== null) {
+    return { id, language };
   }
 
   diagnostics.push(
@@ -90,11 +103,19 @@ function parseDialect(
       line,
       "unsupported_translation_system",
       "The system attribute must name a notation system this server knows: {systems}.",
-      { params: { systems: DEFAULT_DIALECT_ID } },
+      { params: { systems: FIRST_ORDER_LANGUAGE_IDS.join(", ") } },
     ),
   );
 
-  return FORALLX_CALGARY_2019;
+  const fallback = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+
+  if (fallback === null) {
+    throw new Error(
+      `the ${DEFAULT_LANGUAGE_ID} spec is no longer registered`,
+    );
+  }
+
+  return { id: DEFAULT_LANGUAGE_ID, language: fallback };
 }
 
 interface OptionFlags {
@@ -184,7 +205,7 @@ interface TranslationBody {
  */
 function parseBody(
   block: DirectiveBlock,
-  dialect: FirstOrderDialect,
+  language: SurfaceLanguage,
   variant: TranslationVariant,
   diagnostics: CompilerDiagnostic[],
 ): TranslationBody {
@@ -218,7 +239,7 @@ function parseBody(
         continue;
       }
 
-      const parsed = parseFormula(trimmed, dialect);
+      const parsed = parseFormula(trimmed, language);
 
       if (!parsed.ok) {
         diagnostics.push(
@@ -249,7 +270,7 @@ function parseBody(
         continue;
       }
 
-      solutions.push(formulaToString(parsed.formula, dialect));
+      solutions.push(formulaToString(parsed.formula, language));
     }
   }
 
@@ -276,7 +297,11 @@ export async function compileTranslation(
   const id = requireAttribute(block, "id", diagnostics);
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
-  const dialect = parseDialect(block.attrs.system, block.line, diagnostics);
+  const { id: languageId, language } = parseLanguage(
+    block.attrs.system,
+    block.line,
+    diagnostics,
+  );
   const flags = parseOptionFlags(
     block.attrs.options,
     block.line,
@@ -291,7 +316,7 @@ export async function compileTranslation(
   const title = block.attrs.title?.trim();
   const exam = parseExamAttribute(block.attrs.exam, block.line, diagnostics);
   const starter = block.attrs.starter;
-  const body = parseBody(block, dialect, variant, diagnostics);
+  const body = parseBody(block, language, variant, diagnostics);
 
   if (id === null) {
     return null;
@@ -317,7 +342,7 @@ export async function compileTranslation(
 
   const publicData: TranslationPublicData = {
     checksyntax: flags.checksyntax,
-    dialect: dialect.id,
+    dialect: languageId,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,

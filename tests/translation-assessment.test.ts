@@ -85,7 +85,9 @@ describe("authoring", () => {
       throw new Error("bad publicData");
     }
     expect(item.publicData.variant).toBe("prop");
-    expect(item.publicData.solutions).toEqual(["P /\\ Q"]);
+    // Canonical means the spec's canonical spelling; carnap-prop would keep
+    // the ASCII, forallx keeps the glyph.
+    expect(item.publicData.solutions).toEqual(["P ∧ Q"]);
     expect(item.publicData.checksyntax).toBe(false);
     expect(item.publicData.tests).toEqual([]);
   });

@@ -19,14 +19,15 @@ import type { LoadedCompiler } from "@aufbau/compiler";
 import { loadCompiler } from "@aufbau/compiler";
 import type { LspServer } from "@aufbau/lsp";
 import { loadLspServer } from "@aufbau/lsp";
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { LoadedVerifier } from "@aufbau/verifier";
 import { loadVerifier } from "@aufbau/verifier";
-
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import type { Formula } from "../src/worker/exercises/first-order";
 import {
-  FORALLX_CALGARY_2019,
+  DEFAULT_LANGUAGE_ID,
+  firstOrderLanguage,
   parseFormula,
 } from "../src/worker/exercises/first-order";
 import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
@@ -128,8 +129,21 @@ function applyEdits(text: string, edits: readonly LspTextEdit[]): string {
   return lines.join("\n");
 }
 
+/** The forallx spec, resolved once — a language is tables, not data. */
+function calgary(): SurfaceLanguage {
+  const found = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+
+  if (found === null) {
+    throw new Error(`no first-order language under ${DEFAULT_LANGUAGE_ID}`);
+  }
+
+  return found;
+}
+
+const CALGARY = calgary();
+
 function parse(source: string): Formula {
-  const result = parseFormula(source, FORALLX_CALGARY_2019);
+  const result = parseFormula(source, CALGARY);
   if (!result.ok) {
     throw new Error(`parse failed for ${source}`);
   }
@@ -312,16 +326,19 @@ describe("emission", () => {
     expect(sources.mm0).toContain("(∀ v0 (∃ v1 (p_H_2 v0 v1)))");
   });
 
-  test("subscripted and multi-arity symbols mangle apart", () => {
+  test("one letter at two arities mangles apart", () => {
+    // Keying by arity is what keeps these from colliding: `F` one-place and
+    // `F` two-place are different symbols, and a pair using both is simply
+    // inequivalent over them rather than invalid MM0.
     const sources = buildEquivalenceCheck(
       parse("F(a)/\\F(a,b)"),
-      parse("F_2(a_2)"),
+      parse("G(b)"),
     );
     expect(sources.mm0).toContain("term p_F_1 (a0: obj): form;");
     expect(sources.mm0).toContain("term p_F_2 (a0 a1: obj): form;");
-    expect(sources.mm0).toContain("term p_Fs2_1 (a0: obj): form;");
+    expect(sources.mm0).toContain("term p_G_1 (a0: obj): form;");
     expect(sources.mm0).toContain("term c_a: obj;");
-    expect(sources.mm0).toContain("term c_as2: obj;");
+    expect(sources.mm0).toContain("term c_b: obj;");
   });
 
   test("a purely propositional pair gets no first-order machinery", () => {

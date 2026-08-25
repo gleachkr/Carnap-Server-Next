@@ -1,25 +1,44 @@
 import { describe, expect, test } from "bun:test";
-import type { FirstOrderDialect } from "../src/worker/exercises/first-order/dialect";
+import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { Formula } from "../src/worker/exercises/first-order";
 import {
-  DEFAULT_DIALECT_ID,
-  dialectById,
-  FORALLX_CALGARY_2019,
-  operatorSpellings,
-} from "../src/worker/exercises/first-order/dialect";
-import type { Formula } from "../src/worker/exercises/first-order/formula";
-import {
-  formulaToDisplay,
+  DEFAULT_LANGUAGE_ID,
+  firstOrderLanguage,
   formulaToString,
   parseFormula,
-} from "../src/worker/exercises/first-order/formula";
+} from "../src/worker/exercises/first-order";
 
-const CALGARY = FORALLX_CALGARY_2019;
+/**
+ * What the model and translation types accept as a formula, and what they show
+ * back.
+ *
+ * The language is `logic/specs/forallx-calgary-2019.mm0` and the parser is
+ * `@aufbau/syntax`; what is tested here is the pairing — that *this* spec, read
+ * by *that* parser, is still the forallx of the 2019 Calgary edition, and that
+ * a parse becomes the {@link Formula} tree the evaluators want. The library has
+ * its own corpus for the parser itself.
+ *
+ * **Subscripted letters (`F_12`, `x_1`) are gone**, deliberately. The lexicon is
+ * an MM0 signature, so the vocabulary is finite: 26 predicate letters and 18
+ * function letters, no more. The hand parser this replaced lexed an unbounded
+ * subscript, and Graham's call on 2026-08-24 was to accept the loss rather than
+ * hold the unification for a library feature to restore it.
+ */
 
-function parse(
-  source: string,
-  dialect: FirstOrderDialect = CALGARY,
-): Formula {
-  const result = parseFormula(source, dialect);
+const CALGARY = language(DEFAULT_LANGUAGE_ID);
+
+function language(id: string): SurfaceLanguage {
+  const found = firstOrderLanguage(id);
+
+  if (found === null) {
+    throw new Error(`no first-order language under the id ${id}`);
+  }
+
+  return found;
+}
+
+function parse(source: string, lang: SurfaceLanguage = CALGARY): Formula {
+  const result = parseFormula(source, lang);
 
   if (!result.ok) {
     throw new Error(
@@ -30,14 +49,14 @@ function parse(
   return result.formula;
 }
 
-function failure(source: string, dialect: FirstOrderDialect = CALGARY) {
-  const result = parseFormula(source, dialect);
+function failure(source: string, lang: SurfaceLanguage = CALGARY) {
+  const result = parseFormula(source, lang);
 
   if (result.ok) {
     throw new Error(
       `Expected '${source}' to fail, got ${formulaToString(
         result.formula,
-        dialect,
+        lang,
       )}`,
     );
   }
@@ -51,42 +70,38 @@ function failure(source: string, dialect: FirstOrderDialect = CALGARY) {
   return error;
 }
 
-/** Canonical source, for comparing readings without asserting on AST shape. */
-function show(source: string, dialect: FirstOrderDialect = CALGARY): string {
-  return formulaToString(parse(source, dialect), dialect);
+/**
+ * A formula written back out. There is one such form now: what a reader sees
+ * *is* what a compiled exercise stores, because both are the spec's canonical
+ * spelling of every symbol. The hand parser had two, and nothing but habit
+ * kept the two tables agreeing.
+ */
+function show(source: string, lang: SurfaceLanguage = CALGARY): string {
+  return formulaToString(parse(source, lang), lang);
 }
 
-/** The reader-facing form: logical symbols, as the original prints them. */
-function display(
-  source: string,
-  dialect: FirstOrderDialect = CALGARY,
-): string {
-  return formulaToDisplay(parse(source, dialect), dialect);
-}
-
-describe("the dialect table", () => {
-  test("the default dialect is registered under its id", () => {
-    expect(dialectById(DEFAULT_DIALECT_ID)).toBe(CALGARY);
-    expect(dialectById("firstOrder")).toBeNull();
+describe("the language registry", () => {
+  test("the default language is one of ours; a stray id is not", () => {
+    expect(firstOrderLanguage(DEFAULT_LANGUAGE_ID)).not.toBeNull();
+    expect(firstOrderLanguage("firstOrder")).toBeNull();
   });
 
-  test("operator spellings are offered longest first", () => {
-    const spellings = operatorSpellings(CALGARY);
-    const lengths = spellings.map((entry) => entry.text.length);
-
-    expect(lengths).toEqual([...lengths].sort((a, b) => b - a));
+  test("a spec that ships but does not quantify is refused here", () => {
+    // `carnap-prop` reads fine as a language — it is the truth-table type's —
+    // and is still not something a model exercise may be set in.
+    expect(firstOrderLanguage("carnap-prop")).toBeNull();
   });
 
   test("every overlapping spelling resolves to the longer operator", () => {
     // `->` over `-`, `=>` over `=`, `<->` over `<>`, `!=` over `!?`: each pair
-    // would silently mis-parse if the tokenizer took the shorter match.
-    expect(show("P -> Q")).toBe("P -> Q");
-    expect(show("-P")).toBe("~P");
-    expect(show("a = b")).toBe("a = b");
-    expect(show("P => Q")).toBe("P -> Q");
-    expect(show("P <-> Q")).toBe("P <-> Q");
-    expect(show("P <> Q")).toBe("P <-> Q");
-    expect(show("a != b")).toBe("~a = b");
+    // would silently mis-parse if segmentation took the shorter match.
+    expect(show("P -> Q")).toBe("P → Q");
+    expect(show("-P")).toBe("¬P");
+    expect(show("a = b")).toBe("a=b");
+    expect(show("P => Q")).toBe("P → Q");
+    expect(show("P <-> Q")).toBe("P ↔ Q");
+    expect(show("P <> Q")).toBe("P ↔ Q");
+    expect(show("a != b")).toBe("¬a=b");
   });
 });
 
@@ -104,29 +119,27 @@ describe("atoms and terms", () => {
       name: "R",
       type: "predicate",
     });
-    // Subscripts reach variables too, and bind as one name.
-    expect(parse("Ax_1R(x_1,a)")).toEqual({
+    expect(parse("AxR(x,a)")).toEqual({
       body: {
         args: [
-          { name: "x_1", type: "variable" },
+          { name: "x", type: "variable" },
           { name: "a", type: "constant" },
         ],
         name: "R",
         type: "predicate",
       },
       type: "forall",
-      variable: "x_1",
+      variable: "x",
     });
   });
 
-  test("a subscript needs digits, and joins the symbol's name", () => {
-    expect(parse("F_12(a)")).toEqual({
-      args: [{ name: "a", type: "constant" }],
-      name: "F_12",
-      type: "predicate",
-    });
-    // A lone underscore is not a subscript, so `F_` is `F` then a stray `_`.
-    expect(failure("F_").message).toBe("Unexpected character “{character}”.");
+  test("a subscript is no longer part of the lexicon", () => {
+    // The casualty named at the top of this file. `_` is not a token of the
+    // language at all, so it is reported as what it is rather than mis-read.
+    const error = failure("F_1(a)");
+
+    expect(error.message).toBe("“{chunk}” is not part of this language.");
+    expect(error.params).toEqual({ chunk: "_1" });
   });
 
   test("a lowercase letter is a function only when arguments follow", () => {
@@ -139,7 +152,8 @@ describe("atoms and terms", () => {
       right: { name: "b", type: "constant" },
       type: "identity",
     });
-    // `f` is in both the constant and the function range; bare, it is a constant.
+    // One declaration covers both: bare, with the argument sequence elided,
+    // `f` is a constant.
     expect(parse("f = b")).toEqual({
       left: { name: "f", type: "constant" },
       right: { name: "b", type: "constant" },
@@ -148,10 +162,29 @@ describe("atoms and terms", () => {
   });
 
   test("functions nest", () => {
-    expect(show("f(g(a),b) = c")).toBe("f(g(a),b) = c");
+    expect(show("f(g(a),b) = c")).toBe("f(g(a),b)=c");
+  });
+
+  test("s and t are variables, and only variables", () => {
+    // The one divergence the spec's header left open: the hand parser's table
+    // listed `s` and `t` in the function letters *and* the variable letters, so
+    // `s(x)` parsed. A letter is a `@vars` pool member or a declared term, not
+    // both, and the pool is what forallx's own text says it is.
+    expect(parse("AsF(s)")).toEqual({
+      body: {
+        args: [{ name: "s", type: "variable" }],
+        name: "F",
+        type: "predicate",
+      },
+      type: "forall",
+      variable: "s",
+    });
+    expect(parseFormula("s(x) = a", CALGARY).ok).toBe(false);
   });
 
   test("inequality is sugar for a negated identity", () => {
+    // `≠` is a `def` in the spec, and unfolding it here is what keeps the
+    // formula tree free of a node whose only content is the shorter spelling.
     expect(parse("a != b")).toEqual({
       operand: {
         left: { name: "a", type: "constant" },
@@ -196,18 +229,11 @@ describe("quantifiers", () => {
   });
 
   test("a quantifier letter with no variable after it is a sentence letter", () => {
-    // `A` and `E` are also predicate letters. The disambiguation is whether a
-    // variable follows, which is how Carnap's ordered alternatives resolve it.
+    // `A` and `E` are also predicate letters, and the parser resolves the
+    // ambiguity by backtracking — notation first, letter second.
     expect(parse("A")).toEqual({ args: [], name: "A", type: "predicate" });
-    expect(show("A /\\ E")).toBe("A /\\ E");
-    expect(parse("A_1(b)")).toEqual({
-      args: [{ name: "b", type: "constant" }],
-      name: "A_1",
-      type: "predicate",
-    });
+    expect(show("A /\\ E")).toBe("A ∧ E");
     // `E(x)` is the predicate E — parentheses mean arguments, not a quantifier.
-    // No brackets around the body: it is an atom, and this dialect brackets
-    // only two-place compounds.
     expect(parse("ExE(x)")).toEqual({
       body: {
         args: [{ name: "x", type: "variable" }],
@@ -222,34 +248,32 @@ describe("quantifiers", () => {
   test("a quantifier's scope is the primary that follows it, not the rest", () => {
     // The forallx reading: `AxF(x) -> G(a)` is a conditional whose antecedent is
     // quantified, NOT a quantified conditional.
-    const parsed = parse("AxF(x) -> G(a)");
-
-    expect(parsed.type).toBe("if");
-    // Printing back adds no brackets around the quantified antecedent, because
-    // this dialect would reject them — and it does not need them, since the
-    // quantifier could not have reached past `F(x)` anyway.
-    expect(show("AxF(x) -> G(a)")).toBe("AxF(x) -> G(a)");
-    expect(show("Ax(F(x) -> G(a))")).toBe("Ax(F(x) -> G(a))");
+    expect(parse("AxF(x) -> G(a)").type).toBe("if");
+    expect(show("AxF(x) -> G(a)")).toBe("∀xF(x) → G(a)");
+    expect(show("Ax(F(x) -> G(a))")).toBe("∀x(F(x) → G(a))");
   });
 
   test("quantifiers and negations stack without parentheses", () => {
-    expect(show("AxEy~R(x,y)")).toBe("AxEy~R(x,y)");
-    expect(show("~~P")).toBe("~~P");
-    expect(show("~AxF(x)")).toBe("~AxF(x)");
+    expect(show("AxEy~R(x,y)")).toBe("∀x∃y¬R(x,y)");
+    expect(show("~~P")).toBe("¬¬P");
+    expect(show("~AxF(x)")).toBe("¬∀xF(x)");
   });
 
   test("negation scopes over a primary only", () => {
-    expect(show("~P /\\ Q")).toBe("~P /\\ Q");
+    expect(show("~P /\\ Q")).toBe("¬P ∧ Q");
     expect(parse("~P /\\ Q").type).toBe("and");
   });
 
   test("a variable must follow the quantifier symbol", () => {
-    // `Aa` — `a` is a constant, not a variable, so this is not a quantifier at
-    // all: it lexes as the sentence letter A followed by a stray term.
-    expect(failure("AaF(a)").message).toBe("Unexpected “{token}”.");
-    expect(failure("∀aF(a)").message).toBe(
-      "Expected a variable after the quantifier.",
-    );
+    // `a` is a constant, not a variable. The ambiguous letter `A` and the
+    // unambiguous `∀` now give the same complaint, where the hand parser said
+    // "Unexpected “a”" for the first — it read `A` as the sentence letter and
+    // then met a stray term. Naming the real problem is the better message.
+    for (const source of ["AaF(a)", "∀aF(a)"]) {
+      expect(failure(source).message).toBe(
+        "Expected a variable after the quantifier.",
+      );
+    }
   });
 });
 
@@ -266,43 +290,27 @@ describe("free variables", () => {
 
   test("a variable is free outside the quantifier that binds it", () => {
     expect(() => parse("AxF(x) /\\ G(x)")).toThrow();
-    expect(show("AxF(x) /\\ AxG(x)")).toBe("AxF(x) /\\ AxG(x)");
-  });
-
-  test("a dialect that permits open formulas accepts them", () => {
-    // Guarding the flag itself: the evaluator has no universal-closure step, so
-    // nothing may set this false until that lands.
-    const open: FirstOrderDialect = {
-      ...CALGARY,
-      requiresClosedFormulas: false,
-    };
-
-    expect(parse("F(x)", open)).toEqual({
-      args: [{ name: "x", type: "variable" }],
-      name: "F",
-      type: "predicate",
-    });
+    expect(show("AxF(x) /\\ AxG(x)")).toBe("∀xF(x) ∧ ∀xG(x)");
   });
 });
 
 describe("precedence and association", () => {
   test("conjunction and disjunction share one rung, left-associatively", () => {
     // Not a precedence claim: in forallx neither binds tighter than the other,
-    // so the grouping is purely positional. Our propositional `prop` parser
-    // reads the second of these the other way, which is why the model type has
-    // its own parser rather than reusing that one.
-    expect(show("P /\\ Q \\/ R")).toBe("(P /\\ Q) \\/ R");
-    expect(show("P \\/ Q /\\ R")).toBe("(P \\/ Q) /\\ R");
-    expect(show("P /\\ Q /\\ R")).toBe("(P /\\ Q) /\\ R");
+    // so the grouping is purely positional. `carnap-prop` reads the second of
+    // these the other way, which is why they are two specs.
+    expect(show("P /\\ Q \\/ R")).toBe("(P ∧ Q) ∨ R");
+    expect(show("P \\/ Q /\\ R")).toBe("(P ∨ Q) ∧ R");
+    expect(show("P /\\ Q /\\ R")).toBe("(P ∧ Q) ∧ R");
   });
 
   test("negation binds tighter than any two-place connective", () => {
-    expect(show("~P \\/ Q")).toBe("~P \\/ Q");
+    expect(show("~P \\/ Q")).toBe("¬P ∨ Q");
     expect(parse("~P \\/ Q").type).toBe("or");
   });
 
   test("a conditional binds looser than conjunction", () => {
-    expect(show("P /\\ Q -> R")).toBe("(P /\\ Q) -> R");
+    expect(show("P /\\ Q -> R")).toBe("(P ∧ Q) → R");
   });
 
   test("conditionals and biconditionals refuse to chain", () => {
@@ -312,7 +320,7 @@ describe("precedence and association", () => {
       "“{operator}” cannot be chained; add parentheses to group it.",
     );
     expect(error.params).toEqual({ operator: "->" });
-    expect(show("P -> (Q -> R)")).toBe("P -> (Q -> R)");
+    expect(show("P -> (Q -> R)")).toBe("P → (Q → R)");
     expect(failure("P <-> Q <-> R").params).toEqual({ operator: "<->" });
     // The two share a rung, so mixing them does not chain either.
     expect(failure("P -> Q <-> R").params).toEqual({ operator: "<->" });
@@ -321,8 +329,8 @@ describe("precedence and association", () => {
 
 describe("parenthesization", () => {
   test("brackets may enclose a two-place compound", () => {
-    expect(show("(P /\\ Q)")).toBe("P /\\ Q");
-    expect(show("[P /\\ Q]")).toBe("P /\\ Q");
+    expect(show("(P /\\ Q)")).toBe("P ∧ Q");
+    expect(show("[P /\\ Q]")).toBe("P ∧ Q");
   });
 
   test("brackets around anything else are a mistake, not noise", () => {
@@ -348,12 +356,12 @@ describe("parenthesization", () => {
 
   test("argument lists are not subject to the binary-only rule", () => {
     expect(show("R(a,b)")).toBe("R(a,b)");
-    expect(show("Ax(R(x,a) -> F(x))")).toBe("Ax(R(x,a) -> F(x))");
+    expect(show("Ax(R(x,a) -> F(x))")).toBe("∀x(R(x,a) → F(x))");
   });
 });
 
 describe("round-tripping", () => {
-  test("canonical source parses back to the same formula", () => {
+  test("what is stored parses back to the same formula", () => {
     for (const source of [
       "AxF(x)",
       "Ax(F(x) -> G(x))",
@@ -368,6 +376,7 @@ describe("round-tripping", () => {
     ]) {
       const once = show(source);
 
+      expect(parseFormula(once, CALGARY).ok, once).toBe(true);
       expect(show(once)).toBe(once);
     }
   });
@@ -416,17 +425,27 @@ describe("errors an author will actually hit", () => {
     expect(error.position).toBe(4);
   });
 
-  test("a term where a formula belongs asks for the identity sign", () => {
-    expect(failure("a").message).toBe(
-      "Expected “{operator}” after this term.",
-    );
+  test("a term where a formula belongs says so in words", () => {
+    // The library says "this has sort tm"; `logic/specs/diagnostics.ts` is
+    // where that becomes a sentence about terms and sentences.
+    const error = failure("a");
+
+    expect(error.message).toBe("This is a {kind}, not a complete sentence.");
+    expect(error.params).toEqual({ kind: "term" });
+  });
+
+  test("a sentence where a term belongs says so too", () => {
+    expect(failure("F(P)").params).toEqual({
+      actual: "sentence",
+      expected: "term",
+    });
   });
 
   test("an unknown character is named", () => {
     const error = failure("P # Q");
 
-    expect(error.message).toBe("Unexpected character “{character}”.");
-    expect(error.params).toEqual({ character: "#" });
+    expect(error.message).toBe("“{chunk}” is not part of this language.");
+    expect(error.params).toEqual({ chunk: "#" });
     expect(error.position).toBe(2);
   });
 
@@ -434,78 +453,53 @@ describe("errors an author will actually hit", () => {
     // The English word operators collide with the constant and function letters,
     // so they are not accepted; `^n` arity annotations are not either.
     for (const source of ["P and Q", "P or Q", "not P", "F^2(a,b)"]) {
-      expect(parseFormula(source, CALGARY).ok).toBe(false);
+      expect(parseFormula(source, CALGARY).ok, source).toBe(false);
     }
   });
 
-  test("a juxtaposed-predicate dialect fails loudly rather than mis-parsing", () => {
-    const juxtaposed: FirstOrderDialect = {
-      ...CALGARY,
-      predicatesTakeParens: false,
-    };
-
-    expect(parseFormula("Fx", juxtaposed).ok).toBe(false);
+  test("juxtaposed predicates are the other edition, and fail loudly", () => {
+    // `Fab` is pre-2019 forallx. Reading it would need that book's spec, which
+    // declares the juxtaposition rather than inheriting it by accident.
+    expect(parseFormula("Fab", CALGARY).ok).toBe(false);
   });
 });
 
-describe("how a formula is shown to a reader", () => {
+describe("how a formula is written back out", () => {
   /**
    * Every expectation here was taken from the original rather than reasoned out:
    * the combinator structure of Carnap's parser and the `Schematizable`
    * instances it prints through were replicated in Haskell and run (GHC, parsec
-   * 3.1.16), and these are its outputs. The display symbols are fixed in Carnap
-   * — every system shares them — and `dropOuterParens` is the rewriter the 2019
-   * Calgary systems put on top.
+   * 3.1.16), and these are its outputs. What used to be a hardcoded symbol table
+   * is now the spec's last-declared notation for each role, and `dropOuterParens`
+   * is `@syntax display drop-outer-parens` in the same file.
    */
   test("connectives and quantifiers are logical symbols, not ascii", () => {
-    expect(display("~~P")).toBe("¬¬P");
-    expect(display("P <-> Q")).toBe("P ↔ Q");
-    expect(display("AxEy~R(x,y)")).toBe("∀x∃y¬R(x,y)");
-    expect(display("⊥ \\/ ⊤")).toBe("⊥ ∨ ⊤");
+    expect(show("~~P")).toBe("¬¬P");
+    expect(show("P <-> Q")).toBe("P ↔ Q");
+    expect(show("AxEy~R(x,y)")).toBe("∀x∃y¬R(x,y)");
+    expect(show("⊥ \\/ ⊤")).toBe("⊥ ∨ ⊤");
   });
 
   test("every binary compound is parenthesized, except the outermost", () => {
-    // `schematize` brackets every binary; `dropOuterParens` takes off the one
-    // redundant pair that leaves around the whole formula, and only that one.
-    expect(display("P /\\ Q")).toBe("P ∧ Q");
-    expect(display("P /\\ Q \\/ R")).toBe("(P ∧ Q) ∨ R");
-    expect(display("AxF(x) -> G(a)")).toBe("∀xF(x) → G(a)");
-    expect(display("Ax(F(x) -> G(x))")).toBe("∀x(F(x) → G(x))");
-    expect(display("~(P /\\ Q)")).toBe("¬(P ∧ Q)");
+    expect(show("P /\\ Q")).toBe("P ∧ Q");
+    expect(show("P /\\ Q \\/ R")).toBe("(P ∧ Q) ∨ R");
+    expect(show("AxF(x) -> G(a)")).toBe("∀xF(x) → G(a)");
+    expect(show("Ax(F(x) -> G(x))")).toBe("∀x(F(x) → G(x))");
+    expect(show("~(P /\\ Q)")).toBe("¬(P ∧ Q)");
   });
 
   test("a quantifier or a negation is written straight onto what follows", () => {
-    expect(display("AxAyf(x,y) = f(y,x)")).toBe("∀x∀yf(x,y)=f(y,x)");
-    expect(display("ExEy~x = y")).toBe("∃x∃y¬x=y");
+    expect(show("AxAyf(x,y) = f(y,x)")).toBe("∀x∀yf(x,y)=f(y,x)");
+    expect(show("ExEy~x = y")).toBe("∃x∃y¬x=y");
   });
 
   test("identity closes up and inequality is a negated identity", () => {
-    expect(display("a = b")).toBe("a=b");
-    expect(display("a != b")).toBe("¬a=b");
+    expect(show("a = b")).toBe("a=b");
+    expect(show("a != b")).toBe("¬a=b");
   });
 
   test("predicates keep their parentheses; a sentence letter has none", () => {
-    expect(display("R(a,b)")).toBe("R(a,b)");
-    expect(display("P")).toBe("P");
-    expect(display("F_12(a)")).toBe("F_12(a)");
-  });
-
-  test("the display form is itself legal input", () => {
-    // Not a coincidence: forallx brackets exactly the compounds its own
-    // parenthesization rule permits brackets around, so printing and reading
-    // agree. It also means a displayed formula round-trips.
-    for (const source of [
-      "P /\\ Q \\/ R",
-      "Ax(F(x) -> G(x))",
-      "~(P /\\ Q)",
-      "AxAyf(x,y) = f(y,x)",
-      "ExEy~x = y",
-      "a != b",
-    ]) {
-      const shown = display(source);
-
-      expect(parseFormula(shown, CALGARY).ok, shown).toBe(true);
-      expect(display(shown)).toBe(shown);
-    }
+    expect(show("R(a,b)")).toBe("R(a,b)");
+    expect(show("P")).toBe("P");
   });
 });

@@ -19,12 +19,12 @@
  *     by spelling. Distinct names also keep MM0's dependency discipline —
  *     which is what enforces the eigenvariable side condition — from ever
  *     aliasing two different binders.
- *   - **Surface symbols are mangled with their arity** (`p_Fs2_1` for `F_2`
- *     used one-place). A dialect name is a single letter plus an optional
- *     numeric subscript, so encoding `_` as `s` is collision-free, and keying
- *     by arity keeps a formula pair that uses one letter at two arities from
- *     emitting a duplicate declaration — such a pair is simply inequivalent
- *     over distinct symbols, never invalid MM0.
+ *   - **Surface symbols are mangled with their arity** (`p_F_1` for `F` used
+ *     one-place). Keying by arity keeps a formula pair that uses one letter at
+ *     two arities from emitting a duplicate declaration — such a pair is simply
+ *     inequivalent over distinct symbols, never invalid MM0. `_` is still
+ *     encoded as `s`, which costs nothing and is what a spec declaring a
+ *     subscripted letter of its own would need.
  *
  * The signature's own symbols are applied by bare prefix application
  * (`(p_F_1 c_a)`); the calculus's connectives use the notation the theory

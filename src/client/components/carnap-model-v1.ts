@@ -455,7 +455,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       describeVerdict(
         verdict,
         {
-          dialect: resolved.dialect,
+          language: resolved.language,
           required: resolved.task.required,
           target: resolved.task.target,
           targeted: resolved.task.targeted,

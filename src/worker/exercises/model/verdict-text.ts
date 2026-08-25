@@ -13,14 +13,14 @@
  * simple one about formulas.
  */
 
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type {
-  FirstOrderDialect,
   Formula,
   ModelProblem,
   ModelTarget,
   ModelVerdict,
 } from "./logic";
-import { formulaToDisplay } from "./logic";
+import { formulaToString } from "./logic";
 import type { ModelStringId, ModelStrings } from "./strings";
 import type { ModelVariant } from "./types";
 
@@ -32,12 +32,12 @@ import type { ModelVariant } from "./types";
 function nameFormulas(
   formulas: readonly Formula[],
   indices: readonly number[],
-  dialect: FirstOrderDialect,
+  language: SurfaceLanguage,
 ): string {
   return indices
     .map((index) => {
       const formula = formulas[index];
-      return formula === undefined ? "" : formulaToDisplay(formula, dialect);
+      return formula === undefined ? "" : formulaToString(formula, language);
     })
     .filter((source) => source !== "")
     .join(", ");
@@ -112,7 +112,7 @@ function targetMessageId(
 }
 
 export interface VerdictContext {
-  readonly dialect: FirstOrderDialect;
+  readonly language: SurfaceLanguage;
   readonly required: readonly Formula[];
   readonly target: ModelTarget;
   readonly targeted: readonly Formula[];
@@ -148,7 +148,7 @@ export function describeVerdict(
         formulas: nameFormulas(
           context.required,
           verdict.requiredFalse,
-          context.dialect,
+          context.language,
         ),
       }),
     );
@@ -160,7 +160,7 @@ export function describeVerdict(
         formulas: nameFormulas(
           context.targeted,
           verdict.targetOffenders,
-          context.dialect,
+          context.language,
         ),
       }),
     );

@@ -24,17 +24,15 @@
  * student is told nothing.
  */
 
-import type {
-  FirstOrderDialect,
-  Formula,
-} from "../../worker/exercises/first-order";
+import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { Formula } from "../../worker/exercises/first-order";
 import {
-  dialectById,
-  formulaToDisplay,
+  firstOrderLanguage,
   formulaToString,
   parseFormula,
 } from "../../worker/exercises/first-order";
 import { buildEquivalenceCheck } from "../../worker/exercises/translation/logic/mm0";
+import { verbatimSolutionIndex } from "../../worker/exercises/translation/logic/solutions";
 import type { TranslationTestFailure } from "../../worker/exercises/translation/logic/tests";
 import { runTranslationTests } from "../../worker/exercises/translation/logic/tests";
 import { isPropositional } from "../../worker/exercises/translation/logic/variant";
@@ -58,7 +56,7 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
   private data: TranslationPublicData | null = null;
-  private dialect: FirstOrderDialect | null = null;
+  private language: SurfaceLanguage | null = null;
   private input: HTMLInputElement | null = null;
   private preview: HTMLParagraphElement | null = null;
 
@@ -82,7 +80,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     }
 
     this.data = data;
-    this.dialect = dialectById(data.dialect);
+    this.language = firstOrderLanguage(data.dialect);
     this.input = root.querySelector<HTMLInputElement>(
       'input[data-role="text"]',
     );
@@ -91,7 +89,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     );
 
     const input = this.input;
-    if (input === null || this.dialect === null) {
+    if (input === null || this.language === null) {
       return;
     }
 
@@ -176,10 +174,10 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
 
   private parseCurrent(): ReturnType<typeof parseFormula> | null {
     const text = this.input?.value.trim() ?? "";
-    if (text === "" || this.dialect === null) {
+    if (text === "" || this.language === null) {
       return null;
     }
-    return parseFormula(text, this.dialect);
+    return parseFormula(text, this.language);
   }
 
   /**
@@ -189,7 +187,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
    */
   private updatePreview(): void {
     const preview = this.preview;
-    if (preview === null || this.dialect === null) {
+    if (preview === null || this.language === null) {
       return;
     }
     const parsed = this.parseCurrent();
@@ -200,7 +198,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     }
     if (parsed.ok) {
       preview.textContent = this.t("Reads as {formula}", {
-        formula: formulaToDisplay(parsed.formula, this.dialect),
+        formula: formulaToString(parsed.formula, this.language),
       });
       delete preview.dataset.mood;
       return;
@@ -230,10 +228,10 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
       }
     };
     const data = this.data;
-    const dialect = this.dialect;
+    const language = this.language;
     const parsed = this.parseCurrent();
 
-    if (data === null || dialect === null || parsed === null) {
+    if (data === null || language === null || parsed === null) {
       this.setMark("idle");
       return;
     }
@@ -264,8 +262,11 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
       return;
     }
 
-    const canonical = formulaToString(formula, dialect);
-    const solutionAt = data.solutions.indexOf(canonical);
+    const solutionAt = verbatimSolutionIndex(
+      formula,
+      data.solutions,
+      language,
+    );
 
     if (solutionAt >= 0) {
       // Verbatim (canonically): correct in every variant, no certificate
@@ -292,7 +293,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     }
 
     this.setMark("working");
-    void this.searchForCertificate(token, explicit, formula, data, dialect);
+    void this.searchForCertificate(token, explicit, formula, data, language);
   }
 
   /** The equivalence hunt: each solution in turn until a certificate lands. */
@@ -301,7 +302,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     explicit: boolean,
     formula: Formula,
     data: TranslationPublicData,
-    dialect: FirstOrderDialect,
+    language: SurfaceLanguage,
   ): Promise<void> {
     if (data.variant === "exact") {
       return;
@@ -309,7 +310,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
 
     try {
       for (const [index, source] of data.solutions.entries()) {
-        const solution = parseFormula(source, dialect);
+        const solution = parseFormula(source, language);
         if (!solution.ok) {
           continue;
         }

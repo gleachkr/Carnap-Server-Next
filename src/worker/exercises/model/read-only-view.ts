@@ -22,7 +22,7 @@ import {
 import type { Formula, ModelField, ModelVerdict } from "./logic";
 import {
   DOMAIN_FIELD_LABEL,
-  formulaToDisplay,
+  formulaToString,
   functionTableLayout,
   parseDomain,
   tupleKey,
@@ -76,7 +76,7 @@ export function modelGoalText(
     resolved === null
       ? fallback.join(", ")
       : formulas
-          .map((formula) => formulaToDisplay(formula, resolved.dialect))
+          .map((formula) => formulaToString(formula, resolved.language))
           .join(", ");
   const targeted = show(resolved?.task.targeted ?? [], publicData.targeted);
 
@@ -315,7 +315,7 @@ export function renderModelReview(
       : describeVerdict(
           review.verdict,
           {
-            dialect: resolved.dialect,
+            language: resolved.language,
             required: resolved.task.required,
             target: resolved.task.target,
             targeted: resolved.task.targeted,

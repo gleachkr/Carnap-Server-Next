@@ -108,7 +108,9 @@ describe("compiling a model directive", () => {
     expect(data.variant).toBe("simple");
     expect(data.dialect).toBe("forallx-calgary-2019");
     expect(data.required).toEqual([]);
-    expect(data.targeted).toEqual(["AxF(x)", "ExG(x)"]);
+    // Stored in the spec's canonical spelling, which is the one a reader
+    // sees: what an author types is ASCII, what is kept is the glyph.
+    expect(data.targeted).toEqual(["∀xF(x)", "∃xG(x)"]);
     // A simple exercise asks for a model that makes its formulas true, which is
     // Carnap's `truthful` default.
     expect(data.target).toBe("all-true");
@@ -135,8 +137,8 @@ describe("compiling a model directive", () => {
       ),
     );
 
-    expect(data.required).toEqual(["AxEyR(x,y)"]);
-    expect(data.targeted).toEqual(["ExAyR(y,x)"]);
+    expect(data.required).toEqual(["∀x∃yR(x,y)"]);
+    expect(data.targeted).toEqual(["∃x∀yR(y,x)"]);
     // A counterexample to validity: premises true, conclusions false.
     expect(data.target).toBe("all-false");
   });
@@ -151,8 +153,8 @@ describe("compiling a model directive", () => {
       ),
     );
 
-    expect(data.required).toEqual(["ExEy~x = y"]);
-    expect(data.targeted).toEqual(["AxAyF(x,y)"]);
+    expect(data.required).toEqual(["∃x∃y¬x=y"]);
+    expect(data.targeted).toEqual(["∀x∀yF(x,y)"]);
     expect(data.target).toBe("all-true");
     // The prose colon is prose: only a list item is read as the separator.
     expect(data.promptHtml).toContain("note this");
@@ -279,7 +281,7 @@ describe("compiling a model directive", () => {
       ),
     );
 
-    expect(data.required).toEqual(["ExEy~x = y"]);
+    expect(data.required).toEqual(["∃x∃y¬x=y"]);
   });
 
   test("a directive in the prompt is still reported", async () => {

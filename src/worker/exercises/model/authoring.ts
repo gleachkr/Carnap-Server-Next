@@ -1,3 +1,4 @@
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type {
   CompiledExercise,
   CompilerDiagnostic,
@@ -17,11 +18,11 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
-import type { FirstOrderDialect, ModelField, ModelTarget } from "./logic";
+import type { ModelField, ModelTarget } from "./logic";
 import {
-  DEFAULT_DIALECT_ID,
-  dialectById,
-  FORALLX_CALGARY_2019,
+  DEFAULT_LANGUAGE_ID,
+  FIRST_ORDER_LANGUAGE_IDS,
+  firstOrderLanguage,
   formulaToString,
   modelSignature,
   parseDomain,
@@ -54,7 +55,7 @@ const TURNSTILE = ":|-:";
  * A givens line: `| Domain : 0,1,2`.
  *
  * Keyed on a *leading* `|` rather than on containing one, because unlike the
- * propositional profile a first-order dialect may spell disjunction `|`. No
+ * propositional profile a first-order language may spell disjunction `|`. No
  * formula can begin with it, so the leading position is unambiguous.
  */
 const GIVEN_LINE = /^\s*\|\s*([^:]+?)\s*:\s*(.*)$/;
@@ -104,15 +105,28 @@ function parseVariant(
   return "simple";
 }
 
-function parseDialect(
+/**
+ * The language the exercise is written in, and the id it is stored under.
+ *
+ * Both travel together because they are stored apart: `publicData.dialect`
+ * holds the id, and every reader resolves the spec from it again — a parsed
+ * language is tables, not data.
+ */
+interface ResolvedLanguage {
+  readonly id: string;
+  readonly language: SurfaceLanguage;
+}
+
+function parseLanguage(
   value: string | undefined,
   line: number,
   diagnostics: CompilerDiagnostic[],
-): FirstOrderDialect {
-  const dialect = dialectById(value ?? DEFAULT_DIALECT_ID);
+): ResolvedLanguage {
+  const id = value ?? DEFAULT_LANGUAGE_ID;
+  const language = firstOrderLanguage(id);
 
-  if (dialect !== null) {
-    return dialect;
+  if (language !== null) {
+    return { id, language };
   }
 
   diagnostics.push(
@@ -120,11 +134,24 @@ function parseDialect(
       line,
       "unsupported_model_system",
       "The system attribute must name a notation system this server knows: {systems}.",
-      { params: { systems: DEFAULT_DIALECT_ID } },
+      { params: { systems: FIRST_ORDER_LANGUAGE_IDS.join(", ") } },
     ),
   );
 
-  return FORALLX_CALGARY_2019;
+  return fallbackLanguage();
+}
+
+/** The default spec, which ships and therefore reads. */
+function fallbackLanguage(): ResolvedLanguage {
+  const language = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+
+  if (language === null) {
+    throw new Error(
+      `the ${DEFAULT_LANGUAGE_ID} spec is no longer registered`,
+    );
+  }
+
+  return { id: DEFAULT_LANGUAGE_ID, language };
 }
 
 interface OptionFlags {
@@ -270,7 +297,7 @@ function parseTarget(
 
 function parseFormulaList(
   source: string,
-  dialect: FirstOrderDialect,
+  language: SurfaceLanguage,
   line: number,
   diagnostics: CompilerDiagnostic[],
 ): string[] {
@@ -283,10 +310,10 @@ function parseFormulaList(
       continue;
     }
 
-    const parsed = parseFormula(trimmed, dialect);
+    const parsed = parseFormula(trimmed, language);
 
     if (parsed.ok) {
-      formulas.push(formulaToString(parsed.formula, dialect));
+      formulas.push(formulaToString(parsed.formula, language));
     } else {
       diagnostics.push(
         diagnostic(
@@ -319,7 +346,7 @@ interface ModelBody {
 /** Prose, then `- formula` list items, then any givens. */
 function parseSimpleBody(
   block: DirectiveBlock,
-  dialect: FirstOrderDialect,
+  language: SurfaceLanguage,
   diagnostics: CompilerDiagnostic[],
 ): ModelBody {
   const promptLines: string[] = [];
@@ -353,7 +380,7 @@ function parseSimpleBody(
     }
 
     targeted.push(
-      ...parseFormulaList(match[1] ?? "", dialect, lineNumber, diagnostics),
+      ...parseFormulaList(match[1] ?? "", language, lineNumber, diagnostics),
     );
   }
 
@@ -363,7 +390,7 @@ function parseSimpleBody(
 /** Prose, then one `premises :|-: conclusions` line, then any givens. */
 function parseValidityBody(
   block: DirectiveBlock,
-  dialect: FirstOrderDialect,
+  language: SurfaceLanguage,
   diagnostics: CompilerDiagnostic[],
 ): ModelBody {
   const promptLines: string[] = [];
@@ -432,13 +459,13 @@ function parseValidityBody(
 
   const required = parseFormulaList(
     parts[0] ?? "",
-    dialect,
+    language,
     sequent.line,
     diagnostics,
   );
   const targeted = parseFormulaList(
     parts[1] ?? "",
-    dialect,
+    language,
     sequent.line,
     diagnostics,
   );
@@ -475,7 +502,7 @@ function parseValidityBody(
  */
 function parseConstraintBody(
   block: DirectiveBlock,
-  dialect: FirstOrderDialect,
+  language: SurfaceLanguage,
   diagnostics: CompilerDiagnostic[],
 ): ModelBody {
   const promptLines: string[] = [];
@@ -525,13 +552,13 @@ function parseConstraintBody(
   const separator = split.text.indexOf(":");
   const required = parseFormulaList(
     split.text.slice(0, separator),
-    dialect,
+    language,
     split.line,
     diagnostics,
   );
   const targeted = parseFormulaList(
     split.text.slice(separator + 1),
-    dialect,
+    language,
     split.line,
     diagnostics,
   );
@@ -700,7 +727,11 @@ export async function compileModel(
   const id = requireAttribute(block, "id", diagnostics);
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
-  const dialect = parseDialect(block.attrs.system, block.line, diagnostics);
+  const { id: languageId, language } = parseLanguage(
+    block.attrs.system,
+    block.line,
+    diagnostics,
+  );
   const flags = parseOptionFlags(
     block.attrs.options,
     block.line,
@@ -710,10 +741,10 @@ export async function compileModel(
   const exam = parseExamAttribute(block.attrs.exam, block.line, diagnostics);
   const body =
     variant === "validity"
-      ? parseValidityBody(block, dialect, diagnostics)
+      ? parseValidityBody(block, language, diagnostics)
       : variant === "constraint"
-        ? parseConstraintBody(block, dialect, diagnostics)
-        : parseSimpleBody(block, dialect, diagnostics);
+        ? parseConstraintBody(block, language, diagnostics)
+        : parseSimpleBody(block, language, diagnostics);
 
   if (id === null) {
     return null;
@@ -757,7 +788,7 @@ export async function compileModel(
   // The givens are checked against the fields the formulas ask for, so the
   // signature has to be derived here even though it is not stored.
   const parsed = [...body.required, ...body.targeted].flatMap((source) => {
-    const result = parseFormula(source, dialect);
+    const result = parseFormula(source, language);
     return result.ok ? [result.formula] : [];
   });
   const givens = parseGivens(
@@ -767,7 +798,7 @@ export async function compileModel(
   );
 
   const publicData: ModelPublicData = {
-    dialect: dialect.id,
+    dialect: languageId,
     ...(Object.keys(givens).length > 0 ? { givens } : {}),
     options,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {

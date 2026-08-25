@@ -17,12 +17,12 @@ import type { JsonValue } from "../../domain/json";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import type { Formula } from "../first-order";
 import {
-  dialectById,
-  formulaToDisplay,
+  firstOrderLanguage,
   formulaToString,
   parseFormula,
 } from "../first-order";
 import { buildEquivalenceCheck } from "./logic/mm0";
+import { verbatimSolutionIndex } from "./logic/solutions";
 import { runTranslationTests } from "./logic/tests";
 import { isPropositional } from "./logic/variant";
 import { renderTranslationReview } from "./read-only-view";
@@ -63,20 +63,20 @@ function decodeBase64(value: string): Uint8Array | null {
 
 /**
  * The student's submission as the grader sees it: parsed in the exercise's
- * dialect, restricted to the variant's language. `null` is "this cannot be
+ * language, restricted to the variant's fragment. `null` is "this cannot be
  * correct", never "this cannot be graded".
  */
 function readSubmission(
   publicData: TranslationPublicData,
   text: string,
 ): Formula | null {
-  const dialect = dialectById(publicData.dialect);
+  const language = firstOrderLanguage(publicData.dialect);
 
-  if (dialect === null) {
+  if (language === null) {
     return null;
   }
 
-  const parsed = parseFormula(text, dialect);
+  const parsed = parseFormula(text, language);
 
   if (!parsed.ok) {
     return null;
@@ -227,9 +227,9 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       return incorrect("unreadable");
     }
 
-    const dialect = dialectById(publicData.dialect);
+    const language = firstOrderLanguage(publicData.dialect);
 
-    if (dialect === null) {
+    if (language === null) {
       return { ...base, awardedScore: 0, status: "error" };
     }
 
@@ -237,7 +237,6 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       return incorrect("failed-tests");
     }
 
-    const canonical = formulaToString(formula, dialect);
     const correct = (): AutomaticEvaluation => ({
       ...base,
       awardedScore: declaration.nominalPoints,
@@ -246,7 +245,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
 
     // Typing a solution verbatim (canonically) is correct in every variant,
     // and for `exact` it is the whole question.
-    if (publicData.solutions.includes(canonical)) {
+    if (verbatimSolutionIndex(formula, publicData.solutions, language) >= 0) {
       return correct();
     }
 
@@ -267,7 +266,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       return incorrect("no-certificate");
     }
 
-    const solution = parseFormula(solutionSource, dialect);
+    const solution = parseFormula(solutionSource, language);
 
     if (!solution.ok) {
       return { ...base, awardedScore: 0, status: "error" };
@@ -305,11 +304,12 @@ export class TranslationExerciseType implements AssessmentExerciseType {
     // evaluation's story: equivalence cannot be recomputed here (the check
     // runs a search this page has no engine for), so unlike the model this
     // review asserts nothing the seal would need to hide.
-    const dialect = dialectById(declaration.publicData.dialect);
-    const parsed = dialect === null ? null : parseFormula(data.text, dialect);
+    const language = firstOrderLanguage(declaration.publicData.dialect);
+    const parsed =
+      language === null ? null : parseFormula(data.text, language);
     const display =
-      dialect !== null && parsed?.ok
-        ? formulaToDisplay(parsed.formula, dialect)
+      language !== null && parsed?.ok
+        ? formulaToString(parsed.formula, language)
         : data.text;
 
     return {

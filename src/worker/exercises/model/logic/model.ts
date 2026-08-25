@@ -9,7 +9,7 @@
  *
  * Domain elements are naturals, as in the original, and identity is numeric
  * equality on them (`satisfies m TermEq = \t1 t2 -> Form (t1 == t2)`). Nothing
- * here is dialect-specific: a formula is a formula once parsed.
+ * here is language-specific: a formula is a formula once parsed.
  */
 
 import type { Formula, Term } from "../../first-order";
@@ -32,7 +32,7 @@ export interface FiniteModel {
 /**
  * The value of a term under an assignment to the variables.
  *
- * An unbound variable throws: every shipping dialect requires closed formulas,
+ * An unbound variable throws: every shipping spec requires closed sentences,
  * so reaching this means a formula got past the parser that should not have.
  * Carnap answers the same way — "it doesn't make sense to ask for the semantic
  * value of an unbound variable" — and both are internal-error paths, not

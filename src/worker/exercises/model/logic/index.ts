@@ -9,23 +9,16 @@
  */
 
 export type {
-  Associativity,
   BinaryConnective,
-  ConnectiveSpellings,
-  DisplayNotation,
-  FirstOrderDialect,
   Formula,
   ParseError,
   ParseResult,
-  PrecedenceLevel,
   Term,
 } from "../../first-order";
 export {
-  DEFAULT_DIALECT_ID,
-  dialectById,
-  FIRST_ORDER_DIALECTS,
-  FORALLX_CALGARY_2019,
-  formulaToDisplay,
+  DEFAULT_LANGUAGE_ID,
+  FIRST_ORDER_LANGUAGE_IDS,
+  firstOrderLanguage,
   formulaToString,
   parseFormula,
   splitFormulaList,

@@ -32,9 +32,9 @@
  * must not overlap the goal's own binders, or witness invention silently stops
  * working. {@link SPARE_VARS} explains why.
  *
- * Adding a language (modal, say) means a dialect entry in
- * `exercises/first-order/dialect.ts` for the surface syntax, and a rule set
- * here whose sequent rules axiomatize its consequence relation.
+ * Adding a language (modal, say) means a spec in `logic/specs/` for the
+ * surface syntax, and a rule set here whose sequent rules axiomatize its
+ * consequence relation.
  */
 
 /** Everything the generated theory needs to know about the two formulas: the

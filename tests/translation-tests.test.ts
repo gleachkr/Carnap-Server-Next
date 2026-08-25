@@ -4,10 +4,11 @@
  */
 
 import { describe, expect, test } from "bun:test";
-
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { Formula } from "../src/worker/exercises/first-order";
 import {
-  FORALLX_CALGARY_2019,
+  DEFAULT_LANGUAGE_ID,
+  firstOrderLanguage,
   parseFormula,
 } from "../src/worker/exercises/first-order";
 import {
@@ -15,8 +16,21 @@ import {
   runTranslationTests,
 } from "../src/worker/exercises/translation/logic/tests";
 
+/** The forallx spec, resolved once — a language is tables, not data. */
+function calgary(): SurfaceLanguage {
+  const found = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+
+  if (found === null) {
+    throw new Error(`no first-order language under ${DEFAULT_LANGUAGE_ID}`);
+  }
+
+  return found;
+}
+
+const CALGARY = calgary();
+
 function parse(source: string): Formula {
-  const result = parseFormula(source, FORALLX_CALGARY_2019);
+  const result = parseFormula(source, CALGARY);
   if (!result.ok) {
     throw new Error(`parse failed for ${source}`);
   }

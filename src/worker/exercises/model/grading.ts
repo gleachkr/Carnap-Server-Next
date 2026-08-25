@@ -10,16 +10,11 @@
  * data to run its local Check.
  */
 
-import type {
-  FirstOrderDialect,
-  Formula,
-  ModelField,
-  ModelTarget,
-  ModelTask,
-} from "./logic";
+import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { Formula, ModelField, ModelTarget, ModelTask } from "./logic";
 import {
   DOMAIN_FIELD_LABEL,
-  dialectById,
+  firstOrderLanguage,
   formatFunctionTable,
   modelSignature,
   parseFormula,
@@ -28,9 +23,9 @@ import {
 } from "./logic";
 import type { ModelAnswerData, ModelPublicData, ModelVariant } from "./types";
 
-/** A resolved exercise: its dialect, its parsed formulas, and its field list. */
+/** A resolved exercise: its language, its parsed formulas, and its field list. */
 export interface ResolvedModel {
-  readonly dialect: FirstOrderDialect;
+  readonly language: SurfaceLanguage;
   readonly signature: readonly ModelField[];
   readonly task: ModelTask;
 }
@@ -93,7 +88,7 @@ export function isModelAnswerData(value: unknown): value is ModelAnswerData {
 /**
  * Parse the stored formulas and work out which fields they ask for.
  *
- * `null` when the stored data no longer resolves — an unknown dialect id, or a
+ * `null` when the stored data no longer resolves — an unknown language id, or a
  * formula that will not parse. Neither can happen for data this compiler wrote;
  * both are how a revision authored against a future version fails safely rather
  * than being graded against half a signature.
@@ -101,9 +96,9 @@ export function isModelAnswerData(value: unknown): value is ModelAnswerData {
 export function resolveModel(
   publicData: ModelPublicData,
 ): ResolvedModel | null {
-  const dialect = dialectById(publicData.dialect);
+  const language = firstOrderLanguage(publicData.dialect);
 
-  if (dialect === null) {
+  if (language === null) {
     return null;
   }
 
@@ -111,7 +106,7 @@ export function resolveModel(
     const formulas: Formula[] = [];
 
     for (const source of sources) {
-      const parsed = parseFormula(source, dialect);
+      const parsed = parseFormula(source, language);
 
       if (!parsed.ok) {
         return null;
@@ -131,7 +126,7 @@ export function resolveModel(
   }
 
   return {
-    dialect,
+    language,
     signature: modelSignature([...required, ...targeted]),
     task: { required, target: publicData.target, targeted },
   };

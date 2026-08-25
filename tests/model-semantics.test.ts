@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type {
   FiniteModel,
   Formula,
@@ -8,8 +9,9 @@ import type {
 } from "../src/worker/exercises/model/logic";
 import {
   checkModel,
+  DEFAULT_LANGUAGE_ID,
   DOMAIN_FIELD_LABEL,
-  FORALLX_CALGARY_2019,
+  firstOrderLanguage,
   formatFunctionTable,
   functionTableLayout,
   MAX_DOMAIN_SIZE,
@@ -25,7 +27,18 @@ import {
   tuplesOver,
 } from "../src/worker/exercises/model/logic";
 
-const CALGARY = FORALLX_CALGARY_2019;
+/** The forallx spec, resolved once — a language is tables, not data. */
+function calgary(): SurfaceLanguage {
+  const found = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+
+  if (found === null) {
+    throw new Error(`no first-order language under ${DEFAULT_LANGUAGE_ID}`);
+  }
+
+  return found;
+}
+
+const CALGARY = calgary();
 
 function parse(source: string): Formula {
   const result = parseFormula(source, CALGARY);
