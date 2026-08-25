@@ -28,9 +28,10 @@
 -- puts them in the variable pool.
 --
 -- The sibling `theories/forallx-calgary-2019.mm0` is the same textbook's
--- proof system under the same stem. Merging the two is the remaining step, and
--- waits on a way to mark the fragment a student may write in: there, `Γ ⊢ φ`
--- is itself a formula.
+-- proof system under the same stem. Merging the two is the remaining step. What
+-- blocked it — that `Γ ⊢ φ` was itself a formula there, so a language read off
+-- the theory would accept a sequent as a sentence — is gone: that file now
+-- keeps its judgements in a separate provable sort.
 
 -- The surface delimiter set: where one chunk of student input ends and the
 -- next begins, fixed before anything is looked up. The lexicon letters are

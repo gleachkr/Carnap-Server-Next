@@ -3,10 +3,14 @@
 -- Carnap ships it: an author names this file's path on an `aufbau-mm0` block
 -- rather than pasting two hundred lines of MM0 above every exercise.
 --
--- Taken verbatim from gleachkr/Aufbau's `tests/proof_cases/gentzen.mm0`, with
--- the trailing `theorem` goals dropped — an exercise appends its own goal
+-- Taken from gleachkr/Aufbau's `tests/proof_cases/gentzen.mm0`, with the
+-- trailing `theorem` goals dropped — an exercise appends its own goal
 -- declaration, which is what binds a submitted certificate to the statement the
--- author wrote.
+-- author wrote — and with the judgement layer lifted out of `wff`: `==>`, `↔`
+-- and `ctx_eq` produce the provable sort `judgement`, and `⟚` is the judgement
+-- equivalence the congruences conclude in. That follows the shape of Aufbau's
+-- own natural-deduction chapter, and it means no bare formula is assertable and
+-- no sequent can be built where a sentence belongs.
 --
 -- Sequents are `Γ ==> Δ` with *both* sides comma-separated ACUI contexts, so
 -- exchange and contraction are baked into the context and the only explicit
@@ -20,8 +24,9 @@
 -- carries a full sequent and `flattenProofTree` copies it through unchanged.
 
 delimiter $ ( ) , $;
-provable sort wff;
+sort wff;
 sort ctx;
+provable sort judgement;
 --| @vars z w
 sort obj;
 
@@ -49,10 +54,10 @@ term Q (t: obj): wff;
 prefix Q: $Q$ prec 50;
 term sb (t: obj) {x: obj} (p: wff x): wff;
 
-term iff (a b: wff): wff;
+term iff (a b: wff): judgement;
 infixr iff: $↔$ prec 20;
 infixr iff: $<->$ prec 20;
-term ctx_eq (g h: ctx): wff;
+term ctx_eq (g h: ctx): judgement;
 term emp: ctx;
 notation emp: ctx = ($_$:max);
 
@@ -61,19 +66,26 @@ term join (g h: ctx): ctx;
 infixl join: $,$ prec 5;
 term hyp (a: wff): ctx;
 coercion hyp: wff > ctx;
-term seq (g d: ctx): wff;
+term seq (g d: ctx): judgement;
 infixl seq: $==>$ prec 0;
+term jeq (s t: judgement): judgement;
+infixl jeq: $⟚$ prec 1;
 
 -- Contexts are ACUI collections of formulas. This bakes in exchange and
 -- contraction, so the only explicit structural rules below are identity,
 -- weakening, and cut.
 
---| @relation wff iff iff_refl iff_trans iff_sym iff_mp
+--| @relation wff iff iff_refl iff_trans iff_sym _
 axiom iff_refl (a: wff): $ a ↔ a $;
 axiom iff_trans (a b c: wff):
   $ a ↔ b $ > $ b ↔ c $ > $ a ↔ c $;
 axiom iff_sym (a b: wff): $ a ↔ b $ > $ b ↔ a $;
-axiom iff_mp (a b: wff): $ a ↔ b $ > $ a $ > $ b $;
+--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
+axiom jeq_refl (s: judgement): $ s ⟚ s $;
+axiom jeq_trans (s t u: judgement):
+  $ s ⟚ t $ > $ t ⟚ u $ > $ s ⟚ u $;
+axiom jeq_sym (s t: judgement): $ s ⟚ t $ > $ t ⟚ s $;
+axiom jeq_mp (s t: judgement): $ s ⟚ t $ > $ s $ > $ t $;
 
 --| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
 axiom ctx_refl (g: ctx): $ ctx_eq g g $;
@@ -96,7 +108,7 @@ axiom hyp_congr (a b: wff): $ a ↔ b $ > $ ctx_eq (hyp a) (hyp b) $;
 
 --| @congr
 axiom seq_congr (g1 g2 d1 d2: ctx):
-  $ ctx_eq g1 g2 $ > $ ctx_eq d1 d2 $ > $ (g1 ==> d1) ↔ (g2 ==> d2) $;
+  $ ctx_eq g1 g2 $ > $ ctx_eq d1 d2 $ > $ (g1 ==> d1) ⟚ (g2 ==> d2) $;
 
 --| @congr
 axiom imp_congr (a b c d: wff):
