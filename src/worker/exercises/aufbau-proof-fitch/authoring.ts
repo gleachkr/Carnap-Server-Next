@@ -20,7 +20,11 @@ import type { AufbauTheory } from "../aufbau-proof/authoring";
 import {
   parseProofOptions,
   parseTheoremHeader,
+  starterFormulaReader,
+  unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
+import { frozenTheoryText } from "../aufbau-proof/formulas";
+import { fitchToAuf } from "./translate";
 import type { AufbauProofFitchPublicData } from "./types";
 import {
   AUFBAU_PROOF_FITCH_ANSWER_KIND,
@@ -116,9 +120,9 @@ export async function compileAufbauProofFitch(
   // The goal header must be followed by a '----' underline; the starter Fitch
   // proof (which may be empty) is everything after it.
   let starterBody = "";
+  let underlineIndex = -1;
   if (header !== null) {
     const lines = block.bodyLines;
-    let underlineIndex = -1;
 
     for (
       let index = header.headerIndex + 1;
@@ -159,11 +163,41 @@ export async function compileAufbauProofFitch(
     return null;
   }
 
+  // The starter is the text the editor opens with, so a line the theory's
+  // language refuses is a proof the student is handed already broken. Read it
+  // through the translator rather than line by line here, so the author's
+  // diagnostic and the student's squiggle come from one walk of the source.
+  if (starterBody.length > 0) {
+    const starterLine = block.bodyStartLine + underlineIndex + 1;
+    const translated = fitchToAuf(
+      starterBody,
+      header.goalName,
+      assumptionRule,
+      sequentSymbol,
+      contextSymbol,
+      starterFormulaReader(theory, header.theoremDecl, "sentence"),
+    );
+
+    for (const problem of translated.formulaProblems) {
+      diagnostics.push(
+        unreadableStarterFormula(
+          starterLine + problem.sourceLine,
+          problem.formula,
+          problem.error,
+        ),
+      );
+    }
+
+    if (translated.formulaProblems.length > 0) {
+      return null;
+    }
+  }
+
   const publicData: AufbauProofFitchPublicData = {
     assumptionRule,
     contextSymbol,
     goalName: header.goalName,
-    mm0: `${theory.mm0}\n${header.theoremDecl}`,
+    ...frozenTheoryText(theory, header.theoremDecl),
     options,
     promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
       ...renderOptions,

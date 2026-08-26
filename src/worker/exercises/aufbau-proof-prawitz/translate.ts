@@ -40,12 +40,26 @@
  * theories the premises live in the goal sequent's context, not in theorem
  * hypotheses, so there is no analogue of the tree type's line-less `#n` leaves.
  *
+ * A node's formula is not necessarily emitted as typed. `readFormula` reads it
+ * in the theory's own language and gives back the engine spelling, so a
+ * student may write `~Ax F(x)` where the compiler needs `(¬ (∀ x (F (x))))`.
+ * That happens before anything else here, which also means two assumptions
+ * spelled differently but meaning the same thing answer to one discharge mark.
+ * A theory that is not a language passes every node through untouched — see
+ * `aufbau-proof/formulas.ts`.
+ *
  * Structural problems (a discharge mark no assumption answers to, mixed
  * formulas under one mark, an assumption with premises) are returned as
- * diagnostics keyed to the offending node; logical errors come from the
- * compiler and are attributed back through `lineSpans`.
+ * diagnostics keyed to the offending node; a formula that will not read comes
+ * back in `formulaProblems`, worded by the parser; logical errors come from
+ * the compiler and are attributed back through `lineSpans`.
  */
 
+import type {
+  NodeFormulaProblem,
+  ProofFormulaReader,
+} from "../aufbau-proof/formulas";
+import { ENGINE_TEXT, readNodeFormulas } from "../aufbau-proof/formulas";
 import type { PrawitzProofNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
@@ -88,6 +102,9 @@ export interface TranslatedPrawitzProof {
    *  editor surfaces these live, and tests pin them. */
   readonly contexts: ReadonlyMap<string, readonly string[]>;
   readonly diagnostics: readonly PrawitzDiagnostic[];
+  /** Nodes whose formula the theory's language refused; empty where the proof
+   *  is written in engine text and nothing reads it. */
+  readonly formulaProblems: readonly NodeFormulaProblem[];
   /** Char-space map from each generated line back to its source node. */
   readonly lineSpans: readonly PrawitzLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
@@ -128,8 +145,15 @@ export function prawitzToAuf(
   assumptionRule: string,
   sequentSymbol: string,
   contextSymbol = ",",
+  readFormula: ProofFormulaReader = ENGINE_TEXT,
 ): TranslatedPrawitzProof {
   const diagnostics: PrawitzDiagnostic[] = [];
+  // Read every formula before anything looks at one. Discharge resolution
+  // below decides which leaves a mark answers to by comparing their formulas
+  // as strings, so reading first is what makes `~P` under one mark and `¬P`
+  // under the same mark one assumption instead of a formula mismatch.
+  const read = readNodeFormulas(root, readFormula);
+  const formulaProblems = read.problems;
 
   // Preorder walk: parent pointers for discharge resolution, a stable index
   // per node, and the assumption leaves in discovery order.
@@ -160,7 +184,7 @@ export function prawitzToAuf(
     }
     return walked;
   }
-  const rootWalked = build(root, null);
+  const rootWalked = build(read.root, null);
 
   // Resolve each labeled leaf to its box: the subtree (as a set of preorder
   // indexes) of the child — of its nearest discharging ancestor — through
@@ -311,5 +335,5 @@ export function prawitzToAuf(
     offset += line.length + 1;
   }
 
-  return { contexts, diagnostics, lineSpans, proofText };
+  return { contexts, diagnostics, formulaProblems, lineSpans, proofText };
 }

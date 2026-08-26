@@ -11,7 +11,7 @@
  * that structure alone and emits the linear `.auf` the engine consumes; the
  * browser compiles it to an MMB certificate against the frozen theory. The
  * trust boundary is unchanged from the sibling types: the worker re-verifies
- * the MMB against `publicData.mm0`, never the student's tree. See
+ * the MMB against the frozen theory + goal, never the student's tree. See
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
@@ -63,9 +63,14 @@ export interface PrawitzProofNode {
  *                      emits every leaf through it
  *   - `goalFormula`    the goal's conclusion (inside `$ … $`)
  *   - `goalName`       the theorem name the root proves
- *   - `mm0`            the resolved theory plus the appended goal declaration
- *                      `theorem <goalName> …: $ … $;` — the sole verification
- *                      input
+ *   - `source`         the resolved theory plus the appended goal declaration
+ *                      `theorem <goalName> …: $ … $;`, `@syntax` intact — the
+ *                      language a node's formula is read in, and (once
+ *                      stripped) the sole verification input. Absent where the
+ *                      proof stays engine text; see {@link proofTheoryText}
+ *   - `mm0`            the same text already stripped, for artifacts compiled
+ *                      before `source` existed and for a schematic goal. Read
+ *                      the pair through {@link proofTheoryText}, never directly
  *   - `options`        the shared editor-assistance toggles (reused from the
  *                      linear proof type)
  *   - `promptHtml`     the rendered prose above the goal
@@ -89,10 +94,11 @@ export interface AufbauProofPrawitzPublicData {
   readonly contextSymbol?: string;
   readonly goalFormula: string;
   readonly goalName: string;
-  readonly mm0: string;
+  readonly mm0?: string;
   readonly options: AufbauProofOptions;
   readonly promptHtml: string;
   readonly sequentSymbol?: string;
+  readonly source?: string;
   readonly starterTree?: PrawitzProofNode;
 }
 
@@ -137,7 +143,9 @@ export function isAufbauProofPrawitzPublicData(
     typeof value.assumptionRule === "string" &&
     typeof value.goalFormula === "string" &&
     typeof value.goalName === "string" &&
-    typeof value.mm0 === "string" &&
+    // Either theory text will do, and exactly one is ever written; which of
+    // them arrived is what says whether the proof is read as surface text.
+    (typeof value.mm0 === "string" || typeof value.source === "string") &&
     typeof value.promptHtml === "string" &&
     (value.sequentSymbol === undefined ||
       typeof value.sequentSymbol === "string") &&

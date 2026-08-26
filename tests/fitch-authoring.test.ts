@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { CompiledContentArtifact } from "../src/worker/domain/content";
+import { proofTheoryText } from "../src/worker/exercises/aufbau-proof/formulas";
 import {
   type AufbauProofFitchPublicData,
   isAufbauProofFitchPublicData,
@@ -61,11 +61,12 @@ b       :imp_elim 1 2
     expect(publicData.goalName).toBe("mp");
     expect(publicData.assumptionRule).toBe("ax");
     expect(publicData.sequentSymbol).toBe("⊢");
-    // The frozen mm0 is the theory plus the appended goal declaration.
-    expect(publicData.mm0).toContain("axiom imp_elim");
-    expect(
-      publicData.mm0.endsWith("theorem mp (a b: wff): $ (a → b) , a ⊢ b $;"),
-    ).toBe(true);
+    // The frozen theory text is the theory plus the appended goal declaration.
+    const mm0 = proofTheoryText(publicData).mm0;
+    expect(mm0).toContain("axiom imp_elim");
+    expect(mm0.endsWith("theorem mp (a b: wff): $ (a → b) , a ⊢ b $;")).toBe(
+      true,
+    );
     expect(publicData.starterBody).toBe(
       ["a → b   :ax", "a       :ax", "b       :imp_elim 1 2"].join("\n"),
     );

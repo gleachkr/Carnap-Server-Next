@@ -18,6 +18,7 @@ msgid "—/{worth} (not released)"
 msgstr "—/{worth} (not released)"
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{chunk}” is not part of this language."
 msgstr "“{chunk}” is not part of this language."
 
@@ -26,12 +27,12 @@ msgid "“{formula}” is not propositional; a prop translation uses sentence le
 msgstr "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr "“{name}” is a free variable; every formula must be a sentence."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{operator}” cannot be chained; add parentheses to group it."
 msgstr "“{operator}” cannot be chained; add parentheses to group it."
 
@@ -40,6 +41,7 @@ msgid "“{path}” is not a path this site serves. A theory kept somewhere else
 msgstr "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{token}” binds too loosely here; parenthesize it."
 msgstr "“{token}” binds too loosely here; parenthesize it."
 
@@ -1654,7 +1656,7 @@ msgid "Expected '<->' (biconditional)."
 msgstr "Expected '<->' (biconditional)."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected “{bracket}”."
 msgstr "Expected “{bracket}”."
 
@@ -1664,12 +1666,12 @@ msgid "Expected “{operator}” after this term."
 msgstr "Expected “{operator}” after this term."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected a formula but found “{token}”."
 msgstr "Expected a formula but found “{token}”."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected a formula."
 msgstr "Expected a formula."
 
@@ -1679,7 +1681,7 @@ msgid "Expected a term but found “{token}”."
 msgstr "Expected a term but found “{token}”."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected a variable after the quantifier."
 msgstr "Expected a variable after the quantifier."
 
@@ -2614,7 +2616,7 @@ msgid "Page not found"
 msgstr "Page not found"
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Parentheses may only enclose a sentence joined by a two-place connective."
 msgstr "Parentheses may only enclose a sentence joined by a two-place connective."
 
@@ -3769,6 +3771,7 @@ msgid "This exercise wants a propositional sentence: sentence letters and connec
 msgstr "This exercise wants a propositional sentence: sentence letters and connectives only."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "This formula could not be read."
 msgstr "This formula could not be read."
 
@@ -3785,10 +3788,12 @@ msgid "This grade has not been released."
 msgstr "This grade has not been released."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "This is a {actual} where a {expected} is needed."
 msgstr "This is a {actual} where a {expected} is needed."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "This is a {kind}, not a complete sentence."
 msgstr "This is a {kind}, not a complete sentence."
 
@@ -4009,7 +4014,7 @@ msgid "Undo (Ctrl-Z)"
 msgstr "Undo (Ctrl-Z)"
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Unexpected “{token}”."
 msgstr "Unexpected “{token}”."
 

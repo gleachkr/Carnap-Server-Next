@@ -22,7 +22,11 @@ import {
   extractStarterBody,
   parseProofOptions,
   parseTheoremHeader,
+  starterFormulaReader,
+  unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
+import { frozenTheoryText } from "../aufbau-proof/formulas";
+import { flattenProofTree } from "./flatten";
 import { parseProofTree } from "./parse";
 import type { AufbauProofTreePublicData, ProofTreeNode } from "./types";
 import {
@@ -114,6 +118,34 @@ export async function compileAufbauProofTree(
   if (starter !== null && starter.starterBody.length > 0) {
     const parsed = parseProofTree(starter.starterBody);
     if (parsed.ok) {
+      // A node the theory's language refuses is a tree the student is handed
+      // already broken. `flattenProofTree` is what the widget will run over
+      // this same tree, so reading through it is what makes the author's
+      // diagnostic and the student's squiggle the same judgement.
+      const { formulaProblems } = flattenProofTree(
+        parsed.tree,
+        header.goalName,
+        starterFormulaReader(theory, header.theoremDecl, "sequent"),
+      );
+
+      for (const problem of formulaProblems) {
+        const bodyLine = parsed.bodyLineByLabel.get(problem.nodeId);
+        diagnostics.push(
+          unreadableStarterFormula(
+            block.bodyStartLine +
+              (bodyLine === undefined
+                ? starter.underlineIndex
+                : starter.underlineIndex + 1 + bodyLine),
+            problem.formula,
+            problem.error,
+          ),
+        );
+      }
+
+      if (formulaProblems.length > 0) {
+        return null;
+      }
+
       starterTree = parsed.tree;
     } else {
       const offset =
@@ -134,7 +166,7 @@ export async function compileAufbauProofTree(
   const publicData: AufbauProofTreePublicData = {
     goalFormula: header.goalFormula,
     goalName: header.goalName,
-    mm0: `${theory.mm0}\n${header.theoremDecl}`,
+    ...frozenTheoryText(theory, header.theoremDecl),
     options,
     promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
       ...renderOptions,

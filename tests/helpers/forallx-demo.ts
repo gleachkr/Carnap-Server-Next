@@ -3,7 +3,9 @@
  * the first-order fragment: the theory panel plus six Fitch exercises of rising
  * difficulty — a worked modus ponens, ∧ commutativity, ∨ commutativity through
  * ∨-elimination, double-negation by indirect proof, universal instantiation
- * (∀E + →E), and existential elimination (∃E). Shared by the authoring
+ * (∀E + →E), existential elimination (∃E), and one written in the ASCII the
+ * book uses, since the theory is also the language its lines are read in.
+ * Shared by the authoring
  * compile-check test and the local seed script (`scripts/seed-forallx-demo.ts`)
  * so the two never drift.
  */
@@ -117,4 +119,29 @@ theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ 
 ----
 ∃ x F(x)              :ax
 ∀ x (F(x) → G(x))     :ax
-:::`;
+:::
+
+## 7. Typing it the way the book writes it
+
+Every line above is spelled the way the *engine* wants it — \`∀ x\` with a
+space after the quantifier, \`→\` as a glyph. You do not have to type that.
+The system this course is set in is also its **language**, so a proof line is
+read exactly the way a translation exercise reads your answer: \`Ax\`, \`Ex\`,
+\`~\`, \`/\\\`, \`\\/\` and \`->\` all work, and nothing needs a space it does
+not want. \`AxF(x)\` and \`∀ x F(x)\` are the same line.
+
+:::aufbau-proof-fitch{theory="forallx" id="typing" points="2"}
+From \`∀ x (F(x) ∧ G(x))\`, derive \`∀ x F(x)\`. The first line is typed in
+ASCII; finish it with \`all_elim\`, \`and_elim_l\` and \`all_intro\`.
+
+theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
+----
+Ax(F(x) /\\ G(x))   :ax
+:::
+
+One convention of the book now applies to proofs as well as to translations:
+parentheses go around a two-place connective and nowhere else. Write
+\`∀ x x = x\`, not \`∀ x (x = x)\` — identity is not a connective, and the
+quantifier's scope is the sentence immediately after it, so the parentheses were
+never doing anything.
+`;

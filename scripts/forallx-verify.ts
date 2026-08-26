@@ -20,7 +20,7 @@ import { loadCompiler } from "@aufbau/compiler";
 import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { FORALLX_CASES } from "../tests/helpers/forallx-cases";
-import { FORALLX_THEORY_MM0 } from "../tests/helpers/forallx-theory";
+import { forallxExercise } from "../tests/helpers/forallx-theory";
 
 const wasmBytes = await Bun.file(
   "node_modules/@aufbau/compiler/compiler.wasm",
@@ -29,8 +29,25 @@ const compiler = await loadCompiler({ wasmBytes });
 
 let passed = 0;
 for (const testCase of FORALLX_CASES) {
-  const mm0 = `${FORALLX_THEORY_MM0}\n${testCase.theoremDecl}`;
-  const translation = fitchToAuf(testCase.fitch, testCase.goalName, "ax", "⊢", ";");
+  const { mm0, readSentence } = forallxExercise(testCase.theoremDecl);
+  const translation = fitchToAuf(
+    testCase.fitch,
+    testCase.goalName,
+    "ax",
+    "⊢",
+    ";",
+    readSentence,
+  );
+
+  if (translation.formulaProblems.length > 0 && testCase.shouldFail !== true) {
+    console.log(`✗ ${testCase.goalName}`);
+    console.log(
+      `    unreadable: ${translation.formulaProblems
+        .map((one) => `${one.error.message}@${one.sourceLine}`)
+        .join(", ")}`,
+    );
+    continue;
+  }
 
   if (translation.diagnostics.length > 0 && testCase.shouldFail !== true) {
     console.log(`✗ ${testCase.goalName}`);

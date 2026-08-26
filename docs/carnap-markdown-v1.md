@@ -567,8 +567,16 @@ Build a model in which both of these come out true.
 Notation is **forallx: Calgary, 2019 and later**: `Ax`/`Ex` (or `∀`/`∃`, `@`/`3`)
 immediately followed by a variable from `s`–`z`; predicates any uppercase letter
 with parentheses (`F(x)`, `R(x,y)`), a bare uppercase letter being a sentence
-letter; constants `a`–`r`; function symbols `a`–`t`, always with parentheses;
-`=` and `!=`/`≠`; connectives `~ /\ \/ -> <->` plus the usual symbol aliases.
+letter; names `a`–`e`; function letters `f`–`r`, a bare one being a constant and
+`f(x)` an application; `=` and `!=`/`≠`; connectives `~ /\ \/ -> <->` plus the
+usual symbol aliases.
+
+The lowercase alphabet is cut three ways because the artifact declares it that
+way, and the cut is what lets the proof system state ∀I's eigenvariable proviso
+by typing rather than as a side condition. Carnap's own Calgary options drew
+constants from `a`–`r` and functions from `a`–`t`, overlapping and resolved by
+parser try-order; a declared lexicon cannot overlap. See the header of
+`/theories/forallx-calgary-2019.mm0`.
 
 Those are the spellings an author *types*. A formula is *shown* in logical
 symbols — `∀x∀yf(x,y)=f(y,x)` for what is written `AxAyf(x,y) = f(y,x)`, and
@@ -911,8 +919,39 @@ so itself (`@syntax role context-join`), so the proof types pick it up and no
 exercise has to repeat it. And the ASCII quantifiers `A`/`E` are student
 spellings only: `A` is also a predicate letter, one file cannot declare it as
 both, so the notation comes off and an elaboration rule puts the spelling back
-for input. `∀`, `∃`, `@` and `3` are unaffected, and a *proof* — which is engine
-text, not surface text — must spell quantifiers `∀ x` with the space.
+for input. `∀`, `∃`, `@` and `3` are unaffected.
+
+### Formulas in a proof
+
+A Fitch, tree or Prawitz proof set in a theory that is also a language has its
+formulas **read in that language**, exactly as a model or translation exercise
+does. The student types `Ax(F(x) -> G(x))`; the widget reads it and hands the
+compiler `(∀ x ((F (x)) → (G (x))))`. Two things come with that:
+
+- A formula that will not read is caught in the widget, with the complaint
+  placed at the character that broke it, instead of arriving later as an engine
+  unification failure about a line nobody can connect to what they typed.
+- The book's refusals apply to proofs too. forallx admits parentheses only
+  around a two-place connective, so a line reading `∀ x (x = x)` is now an
+  error and must be written `∀ x x = x` — the identity is not a connective. The
+  same goes for `(∀ x F(x)) ∧ G(a)`, which is `∀ x F(x) ∧ G(a)`: a quantifier's
+  scope is the sentence immediately after it, so the parentheses were never
+  doing anything. Both spellings mean the same thing to the engine; only one is
+  the book's.
+
+**Two conditions, or the proof stays engine text.** The theory must be a
+language — `gentzen-lk` declares no `@syntax` at all, and proofs in it read as
+they always did. And the exercise's goal must not be *schematic*: a goal like
+`theorem mp (a b: wff): $ (a → b) ; a ⊢ b $` binds `a` and `b` as stand-ins for
+any sentence, which the theory's own lexicon (where `a`–`e` are names) knows
+nothing about. Those exercises keep engine text — `∀ x F(x)` with the space,
+no `Ax`, no `~` — which is what every proof did before this existed. Writing a
+goal about *particular* letters (`theorem unimp {x: var} {a: name}: …`) is what
+turns textbook notation on.
+
+A **starter** is read the same way at compile time, so an author who writes a
+line the language refuses is told while saving the revision rather than by a
+student who cannot get the editor to accept what it opened with.
 
 ## Aufbau-proof-tree directive
 

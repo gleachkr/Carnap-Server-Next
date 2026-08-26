@@ -18,6 +18,7 @@ msgid "—/{worth} (not released)"
 msgstr "—/{worth} (nicht freigegeben)"
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{chunk}” is not part of this language."
 msgstr ""
 
@@ -26,12 +27,12 @@ msgid "“{formula}” is not propositional; a prop translation uses sentence le
 msgstr "„{formula}“ ist nicht aussagenlogisch; eine prop-Übersetzung verwendet nur Satzbuchstaben und Junktoren."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr "„{name}“ ist eine freie Variable; jede Formel muss ein Satz sein."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{operator}” cannot be chained; add parentheses to group it."
 msgstr "„{operator}“ kann nicht verkettet werden; setzen Sie Klammern, um die Gruppierung anzugeben."
 
@@ -40,6 +41,7 @@ msgid "“{path}” is not a path this site serves. A theory kept somewhere else
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{token}” binds too loosely here; parenthesize it."
 msgstr ""
 
@@ -1654,7 +1656,7 @@ msgid "Expected '<->' (biconditional)."
 msgstr "'<->' (Bisubjunktion) erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected “{bracket}”."
 msgstr "„{bracket}“ erwartet."
 
@@ -1664,12 +1666,12 @@ msgid "Expected “{operator}” after this term."
 msgstr "„{operator}“ nach diesem Term erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected a formula but found “{token}”."
 msgstr "Formel erwartet, aber „{token}“ gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected a formula."
 msgstr "Formel erwartet."
 
@@ -1679,7 +1681,7 @@ msgid "Expected a term but found “{token}”."
 msgstr "Term erwartet, aber „{token}“ gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Expected a variable after the quantifier."
 msgstr "Variable nach dem Quantor erwartet."
 
@@ -2614,7 +2616,7 @@ msgid "Page not found"
 msgstr "Seite nicht gefunden"
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Parentheses may only enclose a sentence joined by a two-place connective."
 msgstr "Klammern dürfen nur einen Satz einschließen, dessen Hauptjunktor zweistellig ist."
 
@@ -3769,6 +3771,7 @@ msgid "This exercise wants a propositional sentence: sentence letters and connec
 msgstr "Diese Aufgabe verlangt einen aussagenlogischen Satz: nur Satzbuchstaben und Junktoren."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "This formula could not be read."
 msgstr ""
 
@@ -3785,10 +3788,12 @@ msgid "This grade has not been released."
 msgstr "Diese Note ist noch nicht freigegeben."
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "This is a {actual} where a {expected} is needed."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "This is a {kind}, not a complete sentence."
 msgstr ""
 
@@ -4009,7 +4014,7 @@ msgid "Undo (Ctrl-Z)"
 msgstr "Rückgängig (Strg-Z)"
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "Unexpected “{token}”."
 msgstr "Unerwartetes „{token}“."
 

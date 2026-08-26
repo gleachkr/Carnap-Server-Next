@@ -8,6 +8,7 @@
  * On narrow viewports the two split columns stack, so a Write/Preview switch
  * (revealed here — it is inert without JS) shows one at a time instead.
  */
+
 import type { EditorView } from "@codemirror/view";
 import { raw } from "hono/html";
 import type { CompilerDiagnostic } from "../worker/application/content/authoring-toolkit";
@@ -18,6 +19,7 @@ import {
   renderCompiledContent,
 } from "../worker/application/content/renderer";
 import type { CompiledContentArtifact } from "../worker/domain/content";
+import { proofTheoryText } from "../worker/exercises/aufbau-proof/formulas";
 import {
   AUFBAU_PROOF_KIND,
   type AufbauProofPublicData,
@@ -174,7 +176,8 @@ async function treeChecksFor(
   const compiler = await loadProofCompiler();
 
   return trees.map((tree) => {
-    const { goalName, mm0 } = tree.publicData;
+    const { goalName } = tree.publicData;
+    const { mm0 } = proofTheoryText(tree.publicData);
     try {
       const result = compiler.compile(mm0, `${goalName}\n----\n`);
       const message = firstDiagnostic(result);

@@ -34,6 +34,16 @@
 import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import type {
+  NodeFormulaProblem,
+  ProofFormulaReader,
+} from "../../worker/exercises/aufbau-proof/formulas";
+import {
+  ENGINE_TEXT,
+  hasTheoryText,
+  proofFormulaReader,
+  proofTheoryText,
+} from "../../worker/exercises/aufbau-proof/formulas";
 import { flattenProofTree } from "../../worker/exercises/aufbau-proof-tree/flatten";
 import type { AufbauProofTreeStringId } from "../../worker/exercises/aufbau-proof-tree/strings";
 import type {
@@ -124,7 +134,7 @@ function isTreePublicData(
   return (
     typeof value === "object" &&
     value !== null &&
-    typeof (value as { mm0?: unknown }).mm0 === "string" &&
+    hasTheoryText(value) &&
     typeof (value as { goalName?: unknown }).goalName === "string" &&
     typeof (value as { goalFormula?: unknown }).goalFormula === "string"
   );
@@ -652,6 +662,9 @@ function Editor(props: {
 
 class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
   private mm0 = "";
+  /** Reads a node's text in the theory's language; passes it through where
+   *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
+  private readFormula: ProofFormulaReader = ENGINE_TEXT;
   private goalName = "";
   private doc: Doc = {
     model: { formula: "", hyp: null, id: uid(), premises: [], rule: "" },
@@ -694,7 +707,9 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       return;
     }
 
-    this.mm0 = data.mm0;
+    const theory = proofTheoryText(data);
+    this.mm0 = theory.mm0;
+    this.readFormula = proofFormulaReader(theory.source, "sequent");
     this.goalName = data.goalName;
 
     const container = root.querySelector<HTMLElement>(".proof-tree");
@@ -1073,12 +1088,54 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     const flattened = flattenProofTree(
       serialize(this.doc.model),
       this.goalName,
+      this.readFormula,
     );
     this.proofText = flattened.proofText;
     this.lineSpans = flattened.lineSpans;
     this.mmb = "";
     this.syncAnswer();
+
+    // A node the language refused never reaches the compiler: the `.auf` it
+    // would produce is the text the student typed, and the unification failure
+    // that comes back names none of the characters they got wrong. Show the
+    // parser's own complaint against the node instead.
+    if (flattened.formulaProblems.length > 0) {
+      if (this.debounceHandle !== null) {
+        clearTimeout(this.debounceHandle);
+        this.debounceHandle = null;
+      }
+      this.setStatus({
+        mark: "idle",
+        markTitle: "",
+        nodeErrors: this.formulaNodeErrors(flattened.formulaProblems),
+      });
+      return;
+    }
+
     this.scheduleCompile();
+  }
+
+  /**
+   * The language's refusals as the same node-id → message map a compiler
+   * diagnostic produces, so the view draws one kind of squiggle. Withheld
+   * under `terse`/`none` on the same terms as {@link collectNodeErrors}: a
+   * refusal is a reason, and the two must not disagree about that.
+   */
+  private formulaNodeErrors(
+    problems: readonly NodeFormulaProblem[],
+  ): Record<string, string> {
+    if (!this.showsDetail) {
+      return {};
+    }
+
+    const errors: Record<string, string> = {};
+    for (const problem of problems) {
+      const said = this.t(problem.error.message, problem.error.params);
+      const already = errors[problem.nodeId];
+      errors[problem.nodeId] =
+        already === undefined ? said : `${already}\n${said}`;
+    }
+    return errors;
   }
 
   private scheduleCompile(): void {

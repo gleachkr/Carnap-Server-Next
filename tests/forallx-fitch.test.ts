@@ -4,6 +4,7 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { FORALLX_CASES } from "./helpers/forallx-cases";
 import { FORALLX_DEMO_SOURCE } from "./helpers/forallx-demo";
+import { forallxExercise } from "./helpers/forallx-theory";
 
 /**
  * The forallx: Calgary theory (full first-order fragment) and its Fitch encoding.
@@ -31,6 +32,83 @@ describe("forallx: Calgary theory", () => {
     }
   });
 
+  test("every worked case's lines read in the theory's own language", () => {
+    // Read as the widget reads them: through what the authoring compiler
+    // would have frozen for that goal, so a schematic case (`theorem mp
+    // (a b: wff)`, whose `a` and `b` the theory's lexicon does not know) is
+    // exercised on the engine-text path and a concrete one on the surface path.
+    for (const testCase of FORALLX_CASES) {
+      const { readSentence } = forallxExercise(testCase.theoremDecl);
+      const { formulaProblems } = fitchToAuf(
+        testCase.fitch,
+        testCase.goalName,
+        "ax",
+        "⊢",
+        ";",
+        readSentence,
+      );
+      expect(
+        formulaProblems.map((one) => one.error.message),
+        testCase.name,
+      ).toEqual([]);
+    }
+  });
+
+  test("a line typed in textbook notation reaches the compiler as engine text", () => {
+    const { readSentence } = forallxExercise(
+      "theorem t {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $;",
+    );
+    const { proofText, formulaProblems } = fitchToAuf(
+      "Ax(F(x)->G(x))   :ax",
+      "t",
+      "ax",
+      "⊢",
+      ";",
+      readSentence,
+    );
+
+    expect(formulaProblems).toEqual([]);
+    expect(proofText).toContain("(∀ x ((F (x)) → (G (x))))");
+  });
+
+  test("a formula the language refuses is named where it broke", () => {
+    const { readSentence } = forallxExercise(
+      "theorem t {a: name}: $ F(a) ⊢ F(a) $;",
+    );
+    const { formulaProblems } = fitchToAuf(
+      "F(a) /\\   :ax",
+      "t",
+      "ax",
+      "⊢",
+      ";",
+      readSentence,
+    );
+
+    expect(formulaProblems).toHaveLength(1);
+    expect(formulaProblems[0]?.sourceLine).toBe(0);
+    expect(formulaProblems[0]?.error.message).toBe("Expected a formula.");
+  });
+
+  test("a schematic goal leaves its lines alone", () => {
+    // `a` is a name in this theory's lexicon and a wff metavariable in this
+    // goal. Reading the line globally would refuse it — so the exercise is
+    // frozen without a language, and the line passes through as written.
+    const { readSentence } = forallxExercise(
+      "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
+    );
+    const { formulaProblems, proofText } = fitchToAuf(
+      "a → b   :ax",
+      "mp",
+      "ax",
+      "⊢",
+      ";",
+      readSentence,
+    );
+
+    expect(formulaProblems).toEqual([]);
+    expect(proofText).toContain("$ a → b ⊢ a → b $");
+  });
+
   test("the demo lesson compiles through the authoring pipeline", async () => {
     const compiled = await compileCarnapMarkdown(FORALLX_DEMO_SOURCE);
     expect(
@@ -49,6 +127,7 @@ describe("forallx: Calgary theory", () => {
       "dne",
       "unimp",
       "exelim",
+      "typing",
     ]);
   });
 });

@@ -270,7 +270,11 @@ export const PRAWITZ_CASES: readonly PrawitzCase[] = [
       "theorem eigenpollute {x: var} {a: name}: $ ∀ x F(x) ; G(a) ⊢ (∀ x F(x)) ∧ G(a) $;",
     goalName: "eigenpollute",
     root: node({
-      formula: "(∀ x F(x)) ∧ G(a)",
+      // `∀ x F(x) ∧ G(a)`, not `(∀ x F(x)) ∧ G(a)`: a quantifier's scope in
+      // forallx is the sentence immediately after it, so the parentheses buy
+      // nothing — and `parenthesize-binary-only` admits them only around a
+      // two-place connective. Both spellings print to the same term.
+      formula: "∀ x F(x) ∧ G(a)",
       rule: "and_intro",
       premises: [
         node({

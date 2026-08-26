@@ -40,6 +40,13 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
+import type { ProofFormulaReader } from "../../worker/exercises/aufbau-proof/formulas";
+import {
+  ENGINE_TEXT,
+  hasTheoryText,
+  proofFormulaReader,
+  proofTheoryText,
+} from "../../worker/exercises/aufbau-proof/formulas";
 import {
   type AufbauProofFitchStringId,
   FITCH_DIAGNOSTIC_MESSAGES,
@@ -106,13 +113,21 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+/** Whether the source has a problem of either kind, so nothing should compile. */
+function unreadable(translation: ReturnType<typeof fitchToAuf>): boolean {
+  return (
+    translation.diagnostics.length > 0 ||
+    translation.formulaProblems.length > 0
+  );
+}
+
 function isFitchPublicData(
   value: unknown,
 ): value is AufbauProofFitchPublicData {
   return (
     typeof value === "object" &&
     value !== null &&
-    typeof (value as { mm0?: unknown }).mm0 === "string" &&
+    hasTheoryText(value) &&
     typeof (value as { goalName?: unknown }).goalName === "string" &&
     typeof (value as { assumptionRule?: unknown }).assumptionRule === "string"
   );
@@ -291,6 +306,9 @@ const SHADOW_STYLES = shadowStyles;
 
 class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   private mm0 = "";
+  /** Reads a typed line in the theory's language; passes text through where
+   *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
+  private readFormula: ProofFormulaReader = ENGINE_TEXT;
   private goalName = "";
   private assumptionRule = "ax";
   /** The theory's turnstile; artifacts compiled before `sequent=` existed have
@@ -328,7 +346,9 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       return;
     }
 
-    this.mm0 = data.mm0;
+    const theory = proofTheoryText(data);
+    this.mm0 = theory.mm0;
+    this.readFormula = proofFormulaReader(theory.source, "sentence");
     this.goalName = data.goalName;
     this.assumptionRule = data.assumptionRule;
     if (typeof data.sequentSymbol === "string" && data.sequentSymbol !== "") {
@@ -362,7 +382,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     label.textContent = this.t("Prove");
     const decl = document.createElement("span");
     decl.className = "proof-goal-decl";
-    decl.textContent = goalDeclaration(data.mm0);
+    decl.textContent = goalDeclaration(this.mm0);
     goal.append(label, decl);
     container.insertBefore(goal, actionsSlot);
 
@@ -499,6 +519,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       this.assumptionRule,
       this.sequentSymbol,
       this.contextSymbol,
+      this.readFormula,
     );
   }
 
@@ -510,14 +531,15 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     this.mmb = "";
     this.syncAnswer();
 
-    if (translation.diagnostics.length > 0) {
-      // Structural problems: show them straight away, don't compile.
+    if (unreadable(translation)) {
+      // Structural problems, or a formula the language refused: show them
+      // straight away, don't compile.
       if (this.debounceHandle !== null) {
         clearTimeout(this.debounceHandle);
         this.debounceHandle = null;
       }
       this.setMark("idle");
-      this.applyStructuralDiagnostics(translation.diagnostics);
+      this.applyStructuralDiagnostics(translation);
       return;
     }
 
@@ -539,12 +561,12 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     const fitchText = this.currentText();
     const translation = this.translateFitch(fitchText);
 
-    if (translation.diagnostics.length > 0) {
+    if (unreadable(translation)) {
       this.fitchText = fitchText;
       this.proofText = translation.proofText;
       this.mmb = "";
       this.setMark("idle");
-      this.applyStructuralDiagnostics(translation.diagnostics);
+      this.applyStructuralDiagnostics(translation);
       this.syncAnswer();
       return;
     }
@@ -635,9 +657,16 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     editor.dispatch(setDiagnostics(editor.state, [diagnostic]));
   }
 
-  /** Translator structural problems, keyed straight to their source line. */
+  /**
+   * Everything wrong with the source before the compiler has seen it: the
+   * translator's structural problems, underlined across their whole line, and
+   * the language's refusals, underlined from the character that broke the
+   * formula. A structural code is worded from this widget's own map; a
+   * refusal arrives already worded by the parser, as a template plus its
+   * values, so it goes through the same `t` by a different route.
+   */
   private applyStructuralDiagnostics(
-    problems: ReturnType<typeof fitchToAuf>["diagnostics"],
+    translation: ReturnType<typeof fitchToAuf>,
   ): void {
     const editor = this.editor;
     if (editor === null) {
@@ -648,18 +677,39 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       return;
     }
 
-    const diagnostics: Diagnostic[] = problems.map((problem) => {
+    const diagnostics: Diagnostic[] = translation.diagnostics.map(
+      (problem) => {
+        const range = this.lineRange(problem.sourceLine);
+        return {
+          from: range.from,
+          message: this.t(
+            FITCH_DIAGNOSTIC_MESSAGES[problem.code],
+            problem.params,
+          ),
+          severity: "error" as const,
+          to: Math.max(range.to, range.from + 1),
+        };
+      },
+    );
+
+    for (const problem of translation.formulaProblems) {
       const range = this.lineRange(problem.sourceLine);
-      return {
-        from: range.from,
-        message: this.t(
-          FITCH_DIAGNOSTIC_MESSAGES[problem.code],
-          problem.params,
-        ),
-        severity: "error" as const,
-        to: Math.max(range.to, range.from + 1),
-      };
-    });
+      // The parser counts from the formula's first character; the formula
+      // starts `column` characters into its line. Clamped because a caret at
+      // the very end of a formula would otherwise sit past the line.
+      const at = clamp(
+        range.from + problem.column + problem.error.position,
+        range.from,
+        Math.max(range.to - 1, range.from),
+      );
+      diagnostics.push({
+        from: at,
+        message: this.t(problem.error.message, problem.error.params),
+        severity: "error",
+        to: Math.max(range.to, at + 1),
+      });
+    }
+
     editor.dispatch(setDiagnostics(editor.state, diagnostics));
   }
 

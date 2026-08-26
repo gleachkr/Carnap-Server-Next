@@ -13,8 +13,21 @@
  * (a reference to the goal theorem's n-th hypothesis) without emitting a line.
  * Premise order is preserved left-to-right because rules are order-sensitive
  * (e.g. `and_intro [l3, l2]`).
+ *
+ * A node's text is not necessarily emitted as typed. `readFormula` reads it in
+ * the theory's own language and gives back the engine spelling, so a student
+ * may state a node `Ax(F(x)->G(x)) |- G(a)` where the compiler needs it fully
+ * parenthesized and spaced. Unlike the Fitch and Prawitz types, whose lines
+ * are bare formulas the translator wraps in a sequent, a tree node carries the
+ * *whole* judgement — so its text is read at the sort the turnstile yields.
+ * A theory that is not a language passes every node through untouched.
  */
 
+import type {
+  NodeFormulaProblem,
+  ProofFormulaReader,
+} from "../aufbau-proof/formulas";
+import { ENGINE_TEXT, readNodeFormulas } from "../aufbau-proof/formulas";
 import type { ProofTreeNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
@@ -30,6 +43,9 @@ export interface ProofTreeLineSpan {
 }
 
 export interface FlattenedProofTree {
+  /** Nodes whose text the theory's language refused; empty where the proof is
+   *  written in engine text and nothing reads it. */
+  readonly formulaProblems: readonly NodeFormulaProblem[];
   /** Char-space map from generated line back to the node that produced it. */
   readonly lineSpans: readonly ProofTreeLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
@@ -44,10 +60,18 @@ export interface FlattenedProofTree {
 export function flattenProofTree(
   root: ProofTreeNode,
   goalName: string,
+  readFormula: ProofFormulaReader = ENGINE_TEXT,
 ): FlattenedProofTree {
   const lines: string[] = [];
   const owners: string[] = [];
   let counter = 0;
+  // A `hyp` leaf cites the goal's n-th hypothesis and emits no line at all, so
+  // whatever text it holds is never read and never reaches the compiler.
+  const read = readNodeFormulas(
+    root,
+    readFormula,
+    (node) => node.hyp === undefined,
+  );
 
   function visit(node: ProofTreeNode): string {
     if (node.hyp !== undefined) {
@@ -64,7 +88,7 @@ export function flattenProofTree(
     return label;
   }
 
-  visit(root);
+  visit(read.root);
 
   const proofText = `${goalName}${HEADER_SEPARATOR}${lines.join("\n")}`;
   const bodyStart = goalName.length + HEADER_SEPARATOR.length;
@@ -81,5 +105,5 @@ export function flattenProofTree(
     offset += line.length + 1;
   }
 
-  return { lineSpans, proofText };
+  return { formulaProblems: read.problems, lineSpans, proofText };
 }

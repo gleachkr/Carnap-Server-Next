@@ -177,10 +177,17 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
   // Every variable and name a proof mentions is bound on the goal — including
   // an eigenvariable the goal itself does not use, as in `unidist`. MM0 has no
   // implicit binding, and `@vars` says what a token *is*, not that a statement
-  // has one. And quantifiers are written with a space (`∀ x`, not `∀x`): this
-  // is engine text, lexed under the theory's own delimiters, where `∀x` is one
-  // unknown token. The surface language reads the tight form; a proof widget
-  // does not go through it.
+  // has one.
+  //
+  // These lines are written in engine text (`∀ x` with the space) and the two
+  // below them in the book's own ASCII, and both compile. A proof set on a
+  // *concrete* goal has its lines read in the theory's language before it
+  // reaches the engine (#250), which accepts either — so the corpus keeps one
+  // of each rather than converting, since the engine-text spelling is what
+  // every already-written starter uses and is the thing that must not break.
+  // A *schematic* goal (`theorem mp (a b: wff)`, and the TFL cases above) has
+  // no such reading and must still be engine text: its `a` is a metavariable
+  // the theory's lexicon, where `a` is a name, knows nothing about.
   {
     name: "unimp (∀E, →E)",
     theoremDecl:
@@ -230,9 +237,44 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     name: "eqrefl (=I, ∀I)",
     theoremDecl: "theorem eqrefl {x: var} {a: name}: $ _ ⊢ ∀ x (x = x) $;",
     goalName: "eqrefl",
-    fitch: ["a = a         :eq_intro_nd", "∀ x (x = x)   :all_intro 1"].join(
+    // `∀ x x = x`, not `∀ x (x = x)`: the parentheses would enclose an
+    // identity, and forallx's `parenthesize-binary-only` lint admits them
+    // only around a two-place *connective*. Before a proof's lines were read
+    // in the theory's language nothing here checked that, and the engine has
+    // no opinion — both spellings print to the same term.
+    fitch: ["a = a       :eq_intro_nd", "∀ x x = x   :all_intro 1"].join(
       "\n",
     ),
+  },
+  {
+    name: "unimp in textbook notation (→E, ∀E)",
+    theoremDecl:
+      "theorem unimpsurface {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $;",
+    goalName: "unimpsurface",
+    // The same proof as `unimp`, typed the way the book writes it: `Ax` for the
+    // quantifier, `->` for the conditional, and no space anywhere the engine
+    // would demand one. Nothing here compiles unless the line is read in the
+    // theory's language first, so this case is what pins that it is.
+    fitch: [
+      "Ax(F(x)->G(x))   :ax",
+      "F(a)             :ax",
+      "F(a)->G(a)       :all_elim 1",
+      "G(a)             :imp_elim 3 2",
+    ].join("\n"),
+  },
+  {
+    name: "ASCII connectives (∧I, ∧E, ¬)",
+    theoremDecl:
+      "theorem asciiconn {a: name}: $ F(a) ∧ ¬ G(a) ⊢ ¬ G(a) ∧ F(a) $;",
+    goalName: "asciiconn",
+    // `/\` and `~` rather than `∧` and `¬` — the aliases the artifact declares,
+    // which reach the compiler as its own canonical glyphs.
+    fitch: [
+      "F(a) /\\ ~G(a)   :ax",
+      "~G(a)           :and_elim_r 1",
+      "F(a)            :and_elim_l 1",
+      "~G(a) /\\ F(a)   :and_intro 2 3",
+    ].join("\n"),
   },
   {
     name: "eqreplace (=E)",

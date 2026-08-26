@@ -22,8 +22,15 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { roleIndex } from "../../logic/specs/roles";
 import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
+import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
+import {
+  frozenTheoryText,
+  proofFormulaReader,
+  proofTheoryText,
+} from "./formulas";
 import type { AufbauProofOptions, AufbauProofPublicData } from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
@@ -89,6 +96,48 @@ function declaredNotations(source: string): {
   } catch {
     return { contextSymbol: null, sequentSymbol: null };
   }
+}
+
+/**
+ * How this exercise's starter is read, given the theory it is set in and the
+ * goal it proves.
+ *
+ * The same two texts and the same decision the widget will make later, taken
+ * from {@link frozenTheoryText} so the two cannot part company: an author who
+ * writes a starter the language refuses learns it here, while compiling, and
+ * not from a student who cannot get the widget to accept what it opened with.
+ */
+export function starterFormulaReader(
+  theory: AufbauTheory,
+  theoremDecl: string,
+  shape: ProofFormulaShape,
+): ProofFormulaReader {
+  return proofFormulaReader(
+    proofTheoryText(frozenTheoryText(theory, theoremDecl)).source,
+    shape,
+  );
+}
+
+/**
+ * A starter formula the theory's language refused, said to its author.
+ *
+ * The same `invalid_formula` sentence a model or translation exercise reports
+ * for the same reason, with the parser's own complaint quoted inside it — which
+ * is why it goes through {@link diagnostic}'s params rather than being
+ * flattened here: the revision editor resolves the inner message in the
+ * viewer's language too.
+ */
+export function unreadableStarterFormula(
+  line: number,
+  formula: string,
+  error: SpecFormulaError,
+): CompilerDiagnostic {
+  return diagnostic(
+    line,
+    "invalid_formula",
+    "Could not parse formula “{formula}”: {detail}",
+    { params: { detail: error, formula } },
+  );
 }
 
 /** A `theorem <name>` header line and its structural parts. */

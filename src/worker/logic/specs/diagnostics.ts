@@ -20,6 +20,7 @@
 import type { Diagnostic } from "@aufbau/syntax";
 import type { DiagnosticMessageId } from "../../application/content/diagnostic-strings";
 import type { TranslatableMessage } from "../../i18n/translator";
+import type { FormulaParserStringId } from "./strings";
 
 /**
  * One reason a formula would not parse, addressed to whoever wrote it.
@@ -31,6 +32,26 @@ import type { TranslatableMessage } from "../../i18n/translator";
  */
 export interface FormulaParseError extends TranslatableMessage {
   readonly message: DiagnosticMessageId;
+  /** Zero-based character offset into the source where the problem was found. */
+  readonly position: number;
+}
+
+/**
+ * The subset of {@link FormulaParseError} this module can actually produce: a
+ * sentence the parser itself says, with string values only.
+ *
+ * Narrower on both counts, and both matter to a caller in the browser.
+ * `FormulaParseError` admits any authoring-compiler sentence, because a
+ * consumer may wrap one — the truth-table type reports its atom limit through
+ * the same shape — but a widget's string map holds only what it can say, and
+ * over the wide type every `t(error.message, …)` would need a cast to get
+ * there. The values are strings because {@link SAID} writes strings; the wide
+ * type allows a nested {@link TranslatableMessage}, which a browser-side `t`
+ * has no way to resolve.
+ */
+export interface SpecFormulaError {
+  readonly message: FormulaParserStringId;
+  readonly params?: Readonly<Record<string, string>>;
   /** Zero-based character offset into the source where the problem was found. */
   readonly position: number;
 }
@@ -52,6 +73,7 @@ export interface FormulaParseError extends TranslatableMessage {
  * what they wrote.
  */
 const SORT_WORDS: Readonly<Record<string, string>> = {
+  ctx: "context",
   judgement: "sequent",
   name: "term",
   seq: "term",
@@ -73,9 +95,9 @@ function word(sort: string | undefined): string {
 const SAID: Readonly<
   Record<
     string,
-    (params: Readonly<Record<string, string>>) => TranslatableMessage & {
-      readonly message: DiagnosticMessageId;
-    }
+    (
+      params: Readonly<Record<string, string>>,
+    ) => Omit<SpecFormulaError, "position">
   >
 > = {
   chain_refused: (params) => ({
@@ -124,10 +146,10 @@ const SAID: Readonly<
   }),
 };
 
-const UNREADABLE: DiagnosticMessageId = "This formula could not be read.";
+const UNREADABLE: FormulaParserStringId = "This formula could not be read.";
 
 /** One library diagnostic, said in Carnap's words and placed in the source. */
-export function formulaParseError(diagnostic: Diagnostic): FormulaParseError {
+export function formulaParseError(diagnostic: Diagnostic): SpecFormulaError {
   const say = SAID[diagnostic.id];
 
   if (say === undefined) {
@@ -144,7 +166,7 @@ export function formulaParseError(diagnostic: Diagnostic): FormulaParseError {
  */
 export function formulaParseErrors(
   diagnostics: readonly Diagnostic[],
-): readonly FormulaParseError[] {
+): readonly SpecFormulaError[] {
   return diagnostics
     .filter((one) => one.severity === "error")
     .map(formulaParseError);

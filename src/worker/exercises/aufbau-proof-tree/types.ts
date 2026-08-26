@@ -8,8 +8,8 @@
  * traversal ({@link ../aufbau-proof-tree/flatten flattenProofTree}) turns the
  * tree into the exact linear `.auf` the linear editor already produces, which
  * the browser compiles to an MMB certificate against the frozen theory. The
- * trust boundary is unchanged: the worker re-verifies the MMB against
- * `publicData.mm0` (the frozen theory + goal), never the student's tree. See
+ * trust boundary is unchanged: the worker re-verifies the MMB against the
+ * frozen theory + goal, never the student's tree. See
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
@@ -47,8 +47,14 @@ export interface ProofTreeNode {
  *   - `goalFormula` the goal's conclusion (inside `$ … $`), seeding the tree's
  *                   read-only root node
  *   - `goalName`    the theorem name the root proves
- *   - `mm0`         the resolved theory plus the appended goal declaration
- *                   `theorem <goalName> …: $ … $;` — the sole verification input
+ *   - `source`      the resolved theory plus the appended goal declaration
+ *                   `theorem <goalName> …: $ … $;`, `@syntax` intact — the
+ *                   language a node's sequent is read in, and (once stripped)
+ *                   the sole verification input. Absent where the proof stays
+ *                   engine text; see {@link proofTheoryText}
+ *   - `mm0`         the same text already stripped, for artifacts compiled
+ *                   before `source` existed and for a schematic goal. Read the
+ *                   pair through {@link proofTheoryText}, never directly
  *   - `options`     the shared editor-assistance toggles (reused from the linear
  *                   proof type)
  *   - `promptHtml`  the rendered prose above the goal
@@ -58,9 +64,10 @@ export interface ProofTreeNode {
 export interface AufbauProofTreePublicData {
   readonly goalFormula: string;
   readonly goalName: string;
-  readonly mm0: string;
+  readonly mm0?: string;
   readonly options: AufbauProofOptions;
   readonly promptHtml: string;
+  readonly source?: string;
   readonly starterTree?: ProofTreeNode;
 }
 
@@ -99,7 +106,9 @@ export function isAufbauProofTreePublicData(
     isObject(value) &&
     typeof value.goalFormula === "string" &&
     typeof value.goalName === "string" &&
-    typeof value.mm0 === "string" &&
+    // Either theory text will do, and exactly one is ever written; which of
+    // them arrived is what says whether the proof is read as surface text.
+    (typeof value.mm0 === "string" || typeof value.source === "string") &&
     typeof value.promptHtml === "string" &&
     (value.starterTree === undefined || isProofTreeNode(value.starterTree)) &&
     isObject(value.options) &&

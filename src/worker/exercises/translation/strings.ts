@@ -1,4 +1,5 @@
 import { placeholders, type Translator } from "../../i18n/translator";
+import { buildFormulaParserStrings } from "../../logic/specs/strings";
 
 /**
  * Every string the translation widget can show, in the viewer's language.
@@ -20,48 +21,26 @@ import { placeholders, type Translator } from "../../i18n/translator";
  */
 export function buildTranslationStrings(i18n: Translator) {
   return {
-    // ——— The parser's sentences, verbatim from
-    // `exercises/first-order/formula.ts`, so `t(error.message, params)` on the
-    // element resolves every complaint it can raise.
-    "Expected a formula.": i18n.t("Expected a formula."),
-    "Expected a formula but found “{token}”.": i18n.t(
-      "Expected a formula but found “{token}”.",
-      placeholders("token"),
-    ),
+    // ——— The parser's sentences, so `t(error.message, params)` on the element
+    // resolves every complaint `formulaParseErrors` can raise. One list, shared
+    // with the proof types, which read a typed formula the same way.
+    ...buildFormulaParserStrings(i18n),
+
+    // Three sentences the hand parser this replaced could produce and the spec
+    // parser cannot. Kept until something is known to have stopped asking for
+    // them, since a stored catalog entry costs nothing and a missing one shows
+    // a student English.
     "Expected a term but found “{token}”.": i18n.t(
       "Expected a term but found “{token}”.",
       placeholders("token"),
-    ),
-    "Expected a variable after the quantifier.": i18n.t(
-      "Expected a variable after the quantifier.",
-    ),
-    "Expected “{bracket}”.": i18n.t(
-      "Expected “{bracket}”.",
-      placeholders("bracket"),
     ),
     "Expected “{operator}” after this term.": i18n.t(
       "Expected “{operator}” after this term.",
       placeholders("operator"),
     ),
-    "Parentheses may only enclose a sentence joined by a two-place connective.":
-      i18n.t(
-        "Parentheses may only enclose a sentence joined by a two-place connective.",
-      ),
     "Unexpected character “{character}”.": i18n.t(
       "Unexpected character “{character}”.",
       placeholders("character"),
-    ),
-    "Unexpected “{token}”.": i18n.t(
-      "Unexpected “{token}”.",
-      placeholders("token"),
-    ),
-    "“{name}” is a free variable; every formula must be a sentence.": i18n.t(
-      "“{name}” is a free variable; every formula must be a sentence.",
-      placeholders("name"),
-    ),
-    "“{operator}” cannot be chained; add parentheses to group it.": i18n.t(
-      "“{operator}” cannot be chained; add parentheses to group it.",
-      placeholders("operator"),
     ),
 
     // ——— The widget's own chrome.

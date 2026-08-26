@@ -33,7 +33,13 @@ export interface ProofTreeParseIssue extends TranslatableMessage {
 }
 
 export type ProofTreeParseResult =
-  | { readonly ok: true; readonly tree: ProofTreeNode }
+  | {
+      readonly ok: true;
+      /** Where each label sat in the body, so a caller holding a node id (which
+       *  is its label) can put a diagnostic on the line that wrote it. */
+      readonly bodyLineByLabel: ReadonlyMap<string, number>;
+      readonly tree: ProofTreeNode;
+    }
   | { readonly ok: false; readonly issue: ProofTreeParseIssue };
 
 /** `<label>: $ <formula> $ by <rule> [<refs>]` — one proof line, one tree node. */
@@ -247,5 +253,12 @@ export function parseProofTree(body: string): ProofTreeParseResult {
     );
   }
 
-  return { ok: true, tree: built };
+  const bodyLineByLabel = new Map<string, number>();
+  for (const line of parsed) {
+    if (!bodyLineByLabel.has(line.label)) {
+      bodyLineByLabel.set(line.label, line.bodyLine);
+    }
+  }
+
+  return { bodyLineByLabel, ok: true, tree: built };
 }

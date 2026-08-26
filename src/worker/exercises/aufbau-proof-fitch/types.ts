@@ -41,9 +41,15 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *                      translator treats a line citing it with no premises as an
  *                      assumption, adding its formula to the active context
  *   - `goalName`       the theorem name the proof establishes
- *   - `mm0`            the resolved theory plus the appended goal declaration
- *                      `theorem <goalName> …: $ Γ ⊢ φ $;` — the sole verification
- *                      input
+ *   - `source`         the resolved theory plus the appended goal declaration
+ *                      `theorem <goalName> …: $ Γ ⊢ φ $;`, `@syntax` intact —
+ *                      the language a student's line is read in, and (once
+ *                      stripped) the sole verification input. Absent where the
+ *                      proof stays engine text; see {@link proofTheoryText}
+ *   - `mm0`            the same text already stripped. What artifacts compiled
+ *                      before `source` existed carry, and what one whose goal
+ *                      is schematic still carries. Never read directly — go
+ *                      through {@link proofTheoryText}, which resolves the two
  *   - `options`        the shared editor-assistance toggles (reused from the
  *                      linear proof type)
  *   - `promptHtml`     the rendered prose above the goal
@@ -63,10 +69,11 @@ export interface AufbauProofFitchPublicData {
   readonly assumptionRule: string;
   readonly contextSymbol?: string;
   readonly goalName: string;
-  readonly mm0: string;
+  readonly mm0?: string;
   readonly options: AufbauProofOptions;
   readonly promptHtml: string;
   readonly sequentSymbol?: string;
+  readonly source?: string;
   readonly starterBody: string;
 }
 
@@ -93,7 +100,9 @@ export function isAufbauProofFitchPublicData(
     isObject(value) &&
     typeof value.assumptionRule === "string" &&
     typeof value.goalName === "string" &&
-    typeof value.mm0 === "string" &&
+    // Either theory text will do, and exactly one is ever written; which of
+    // them arrived is what says whether the proof is read as surface text.
+    (typeof value.mm0 === "string" || typeof value.source === "string") &&
     typeof value.promptHtml === "string" &&
     typeof value.starterBody === "string" &&
     (value.sequentSymbol === undefined ||

@@ -17,6 +17,7 @@ import type { JsonValue } from "../../domain/json";
 // The certificate is the trust boundary, so the Fitch type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's Fitch text or the translated proof).
+import { proofTheoryText } from "../aufbau-proof/formulas";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofFitchReview } from "./read-only-view";
 import type { AufbauProofFitchAnswerData } from "./types";
@@ -187,7 +188,10 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
     // The certificate is verified against the frozen mm0 — never the student's
     // Fitch text or the translated proof — so a valid MMB proving the declared
     // goal is the definition of correct, however the proof was written.
-    const result = await verifyMmb(declaration.publicData.mm0, mmb);
+    const result = await verifyMmb(
+      proofTheoryText(declaration.publicData).mm0,
+      mmb,
+    );
 
     if (result.errored) {
       return {

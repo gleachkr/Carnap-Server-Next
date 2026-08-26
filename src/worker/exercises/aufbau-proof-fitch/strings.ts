@@ -1,4 +1,5 @@
 import { placeholders, type Translator } from "../../i18n/translator";
+import { buildFormulaParserStrings } from "../../logic/specs/strings";
 import { buildProofEngineStrings } from "../proof-engine-strings";
 import type { FitchDiagnosticCode } from "./translate";
 
@@ -20,6 +21,9 @@ export function buildAufbauProofFitchStrings(i18n: Translator) {
   return {
     ...buildProofEngineStrings(i18n),
     ...buildFitchDiagnosticStrings(i18n),
+    // A line's formula is read in the theory's language before it reaches the
+    // compiler, so the parser's complaints are the widget's to say.
+    ...buildFormulaParserStrings(i18n),
     /** Accessible name of the editor; see `Proof editor` in the linear widget. */
     "Fitch proof editor": i18n.t("Fitch proof editor"),
   };

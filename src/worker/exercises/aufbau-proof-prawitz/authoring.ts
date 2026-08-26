@@ -22,7 +22,10 @@ import {
   extractStarterBody,
   parseProofOptions,
   parseTheoremHeader,
+  starterFormulaReader,
+  unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
+import { frozenTheoryText } from "../aufbau-proof/formulas";
 import { parsePrawitzStarter } from "./parse";
 import type { PrawitzDiagnosticCode } from "./translate";
 import { prawitzToAuf } from "./translate";
@@ -209,13 +212,29 @@ export async function compileAufbauProofPrawitz(
       return null;
     }
 
-    const structural = prawitzToAuf(
+    const translated = prawitzToAuf(
       parsed.tree,
       header.goalName,
       assumptionRule,
       sequentSymbol,
       contextSymbol,
-    ).diagnostics;
+      starterFormulaReader(theory, header.theoremDecl, "sentence"),
+    );
+
+    // A node the theory's language refuses is a canvas the student is handed
+    // already broken, so the author hears about it here rather than nobody
+    // hearing about it until the widget refuses to compile.
+    for (const problem of translated.formulaProblems) {
+      diagnostics.push(
+        unreadableStarterFormula(
+          lineFor(parsed.bodyLineByLabel.get(problem.nodeId)),
+          problem.formula,
+          problem.error,
+        ),
+      );
+    }
+
+    const structural = translated.diagnostics;
     if (structural.length > 0) {
       for (const problem of structural) {
         diagnostics.push(
@@ -227,6 +246,10 @@ export async function compileAufbauProofPrawitz(
       }
       return null;
     }
+
+    if (translated.formulaProblems.length > 0) {
+      return null;
+    }
     starterTree = parsed.tree;
   }
 
@@ -235,7 +258,7 @@ export async function compileAufbauProofPrawitz(
     contextSymbol,
     goalFormula: header.goalFormula,
     goalName: header.goalName,
-    mm0: `${theory.mm0}\n${header.theoremDecl}`,
+    ...frozenTheoryText(theory, header.theoremDecl),
     options,
     promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
       ...renderOptions,

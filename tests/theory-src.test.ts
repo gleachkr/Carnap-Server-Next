@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import { proofTheoryText } from "../src/worker/exercises/aufbau-proof/formulas";
 import type { AufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { isAufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
@@ -75,7 +76,7 @@ async function frozenMm0(source: string): Promise<string> {
     throw new Error("no aufbau-proof-fitch exercise 'ex1'");
   }
 
-  return item.publicData.mm0;
+  return proofTheoryText(item.publicData).mm0;
 }
 
 async function codesFor(source: string): Promise<string[]> {

@@ -21,7 +21,7 @@ import { loadCompiler } from "@aufbau/compiler";
 import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
 import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
 import { PRAWITZ_CASES } from "../tests/helpers/prawitz-cases";
-import { FORALLX_THEORY_MM0 } from "../tests/helpers/forallx-theory";
+import { forallxExercise } from "../tests/helpers/forallx-theory";
 
 const wasmBytes = await Bun.file(
   "node_modules/@aufbau/compiler/compiler.wasm",
@@ -30,14 +30,25 @@ const compiler = await loadCompiler({ wasmBytes });
 
 let passed = 0;
 for (const testCase of PRAWITZ_CASES) {
-  const mm0 = `${FORALLX_THEORY_MM0}\n${testCase.theoremDecl}`;
+  const { mm0, readSentence } = forallxExercise(testCase.theoremDecl);
   const translation = prawitzToAuf(
     testCase.root,
     testCase.goalName,
     "ax",
     "⊢",
     ";",
+    readSentence,
   );
+
+  if (translation.formulaProblems.length > 0) {
+    console.log(`✗ ${testCase.name}`);
+    console.log(
+      `    unreadable: ${translation.formulaProblems
+        .map((one) => `${one.formula} — ${one.error.message}`)
+        .join(", ")}`,
+    );
+    continue;
+  }
 
   if (translation.diagnostics.length > 0) {
     console.log(`✗ ${testCase.name}`);

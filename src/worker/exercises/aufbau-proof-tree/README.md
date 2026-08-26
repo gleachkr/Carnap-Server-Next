@@ -60,6 +60,36 @@ cited by at most one other. Attributes match `aufbau-proof`: `theory` (required,
 declared `aufbau-mm0` name earlier in the document), `id`, `title`, `points`,
 `exam`, `feedback`, `options`.
 
+## Formulas are read in the theory's language
+
+Where the theory is also a *language* — it declares `@syntax role sentence`, as
+`forallx-calgary-2019` does — each node's *sequent* — a tree node states the whole judgement, so it is read at the sort the turnstile yields rather than at the sentence sort is parsed against that spec and re-printed
+in engine notation before it reaches the compiler. `Ax(F(x)->G(x)) ; F(a) ⊢ G(a)` goes in;
+`(((∀ x ((F (x)) → (G (x)))) ; (F (a))) ⊢ (G (a)))` comes out. The compiler's math parser wants every token
+whitespace-separated and every compound operand parenthesized; the book wants
+neither, and this is the layer where the two stop disagreeing (see
+[`../aufbau-proof/formulas.ts`](../aufbau-proof/formulas.ts)).
+
+It buys two things beyond notation. A formula that will not read is reported
+against the node that carries it, at the character that broke it, instead of arriving as an engine
+unification failure. And the spec's lints start applying to proofs: forallx
+admits parentheses only around a two-place connective, so `∀ x (x = x)` is now
+refused and must be written `∀ x x = x`.
+
+**Two conditions, and a proof stays engine text unless both hold.** The theory
+must be a language (`gentzen-lk` is not, and reads as it always did), and the
+goal must not be schematic. A goal binding a metavariable of a provable sort —
+`theorem mp (a b: wff): $ (a → b) ; a ⊢ b $` — states a rule about *any*
+sentences, and its `a` is not the theory's own `a`. Reading such a line
+globally would refuse it at best and silently mean something else at worst, so
+those exercises keep engine text. Which of the two applies is carried by *which
+theory text `publicData` holds*: `source` (the artifact `@syntax` and all) means
+read it, `mm0` (already stripped) means do not.
+
+The starter is read the same way at compile time, so an author hears about an
+unreadable line while saving rather than a student meeting an editor that will
+not accept what it opened with.
+
 ## Files
 
 - [`types.ts`](./types.ts) — `ProofTreeNode`, public/answer shapes, guards.

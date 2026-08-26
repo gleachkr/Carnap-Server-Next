@@ -41,6 +41,16 @@
 import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import type {
+  NodeFormulaProblem,
+  ProofFormulaReader,
+} from "../../worker/exercises/aufbau-proof/formulas";
+import {
+  ENGINE_TEXT,
+  hasTheoryText,
+  proofFormulaReader,
+  proofTheoryText,
+} from "../../worker/exercises/aufbau-proof/formulas";
 import type { AufbauProofPrawitzStringId } from "../../worker/exercises/aufbau-proof-prawitz/strings";
 import type { PrawitzDiagnostic } from "../../worker/exercises/aufbau-proof-prawitz/translate";
 import { prawitzToAuf } from "../../worker/exercises/aufbau-proof-prawitz/translate";
@@ -128,7 +138,7 @@ function isPrawitzPublicData(
   return (
     typeof value === "object" &&
     value !== null &&
-    typeof (value as { mm0?: unknown }).mm0 === "string" &&
+    hasTheoryText(value) &&
     typeof (value as { goalName?: unknown }).goalName === "string" &&
     typeof (value as { goalFormula?: unknown }).goalFormula === "string" &&
     typeof (value as { assumptionRule?: unknown }).assumptionRule === "string"
@@ -949,6 +959,9 @@ function Editor(props: {
 
 class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringId> {
   private mm0 = "";
+  /** Reads a node's text in the theory's language; passes it through where
+   *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
+  private readFormula: ProofFormulaReader = ENGINE_TEXT;
   private goalName = "";
   private goalFormula = "";
   private assumptionRule = "ax";
@@ -974,6 +987,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   private lineSpans: readonly { from: number; nodeId: string; to: number }[] =
     [];
   private structural: readonly PrawitzDiagnostic[] = [];
+  /** Nodes the theory's language refused; empty where nothing reads them. */
+  private formulaProblems: readonly NodeFormulaProblem[] = [];
   private mmb = "";
   private compileToken = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | null = null;
@@ -990,7 +1005,9 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       return;
     }
 
-    this.mm0 = data.mm0;
+    const theory = proofTheoryText(data);
+    this.mm0 = theory.mm0;
+    this.readFormula = proofFormulaReader(theory.source, "sentence");
     this.goalName = data.goalName;
     this.goalFormula = data.goalFormula;
     this.assumptionRule = data.assumptionRule;
@@ -1444,6 +1461,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         clearTimeout(this.debounceHandle);
       }
       this.compileToken += 1;
+      this.formulaProblems = [];
       this.setStatus({ mark: "idle", markTitle: "", nodeErrors: {} });
       this.syncAnswer();
       return;
@@ -1455,12 +1473,32 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       this.assumptionRule,
       this.sequentSymbol,
       this.contextSymbol,
+      this.readFormula,
     );
     this.proofText = translated.proofText;
     this.lineSpans = translated.lineSpans;
     this.structural = translated.diagnostics;
+    this.formulaProblems = translated.formulaProblems;
     this.mmb = "";
     this.syncAnswer();
+
+    // A node the language refused never reaches the compiler: what it would
+    // send is the text the student typed, and the unification failure that
+    // comes back names none of the characters they got wrong.
+    if (this.formulaProblems.length > 0) {
+      if (this.debounceHandle !== null) {
+        clearTimeout(this.debounceHandle);
+        this.debounceHandle = null;
+      }
+      this.compileToken += 1;
+      this.setStatus({
+        mark: "idle",
+        markTitle: "",
+        nodeErrors: this.structuralErrors(),
+      });
+      return;
+    }
+
     this.scheduleCompile();
   }
 
@@ -1540,7 +1578,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     if (
       result.ok === true &&
       result.mmbBytes !== undefined &&
-      this.structural.length === 0
+      this.structural.length === 0 &&
+      this.formulaProblems.length === 0
     ) {
       this.mmb = bytesToBase64(result.mmbBytes);
       this.setStatus({ mark: "ok", markTitle: "", nodeErrors });
@@ -1551,16 +1590,28 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     this.syncAnswer();
   }
 
-  /** The translator's structural diagnostics as a node-id → message map. */
+  /**
+   * Everything wrong with the tree before the compiler has seen it, as one
+   * node-id → message map: the translator's structural diagnostics, worded
+   * from this widget's own switch, and the language's refusals, which arrive
+   * already worded by the parser.
+   */
   private structuralErrors(): Record<string, string> {
     const errors: Record<string, string> = {};
-    for (const item of this.structural) {
-      const message = this.structuralMessage(item);
-      errors[item.nodeId] =
-        errors[item.nodeId] === undefined
+    const add = (nodeId: string, message: string): void => {
+      errors[nodeId] =
+        errors[nodeId] === undefined
           ? message
-          : `${errors[item.nodeId]}\n${message}`;
+          : `${errors[nodeId]}\n${message}`;
+    };
+
+    for (const item of this.structural) {
+      add(item.nodeId, this.structuralMessage(item));
     }
+    for (const item of this.formulaProblems) {
+      add(item.nodeId, this.t(item.error.message, item.error.params));
+    }
+
     return errors;
   }
 

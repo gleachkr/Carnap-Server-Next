@@ -138,7 +138,7 @@ describe("prawitzToAuf — engine-verified shapes", () => {
         "l2: $ ∀ x F(x) ⊢ F(a) $ by all_elim [l1]",
         "l3: $ ∀ x F(x) ⊢ ∀ x F(x) $ by all_intro [l2]",
         "l4: $ G(a) ⊢ G(a) $ by ax []",
-        "l5: $ ∀ x F(x) ; G(a) ⊢ (∀ x F(x)) ∧ G(a) $ by and_intro [l3, l4]",
+        "l5: $ ∀ x F(x) ; G(a) ⊢ ∀ x F(x) ∧ G(a) $ by and_intro [l3, l4]",
       ].join("\n"),
     );
   });

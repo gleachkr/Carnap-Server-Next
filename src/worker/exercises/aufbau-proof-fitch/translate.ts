@@ -39,11 +39,25 @@
  *    via a new assumption of the same formula) is sound yet still breaks the
  *    Fitch discipline, so the translator names it directly.
  *
+ * The formulas themselves stay opaque to all of that, but they do not
+ * necessarily reach the `.auf` as typed: `readFormula` reads each one in the
+ * theory's own language and gives back the engine spelling, so a student may
+ * write `Ax(F(x) -> G(x))` where the compiler needs `(∀ x ((F (x)) → (G (x))))`.
+ * A theory that is not a language passes them through untouched, which is
+ * what every proof did before the reader existed. See
+ * `aufbau-proof/formulas.ts` for the two conditions.
+ *
  * Structural problems (bad dedent, unknown/misordered/inaccessible references,
  * a subproof citation whose ends don't bracket one subproof, a line with no
- * justification) are returned as diagnostics keyed to the source line; logical
- * errors come from the compiler and are attributed back through `lineSpans`.
+ * justification) are returned as diagnostics keyed to the source line; a
+ * formula that will not read comes back in `formulaProblems`, worded by the
+ * parser; logical errors come from the compiler and are attributed back
+ * through `lineSpans`.
  */
+
+import type { SpecFormulaError } from "../../logic/specs/diagnostics";
+import type { ProofFormulaReader } from "../aufbau-proof/formulas";
+import { ENGINE_TEXT } from "../aufbau-proof/formulas";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
 const HEADER_SEPARATOR = "\n----\n";
@@ -76,6 +90,27 @@ export interface FitchDiagnostic {
   readonly sourceLine: number;
 }
 
+/**
+ * A line whose formula would not read in the theory's language.
+ *
+ * Kept apart from {@link FitchDiagnostic} because it is a different kind of
+ * complaint from a different author: a structural problem is this module's own
+ * and travels as a code the widget's string map words, while this one is the
+ * *parser's*, already worded as an English template plus its values, and it
+ * carries an offset *inside* the formula so the caret lands on the character
+ * that broke rather than on the line. A caller that gates compilation on
+ * "nothing wrong" has to look at both lists.
+ */
+export interface FitchFormulaProblem {
+  /** Character offset of the formula's first character within its source line. */
+  readonly column: number;
+  readonly error: SpecFormulaError;
+  /** The text that would not read, for a caller with no source to slice. */
+  readonly formula: string;
+  /** Zero-based index into the source `fitchText` split on newlines. */
+  readonly sourceLine: number;
+}
+
 /** Where a generated `.auf` line sits, and which source line produced it. */
 export interface FitchLineSpan {
   /** Character offset of the line start within `proofText`. */
@@ -88,6 +123,9 @@ export interface FitchLineSpan {
 
 export interface TranslatedFitchProof {
   readonly diagnostics: readonly FitchDiagnostic[];
+  /** Lines whose formula the theory's language refused; empty where the proof
+   *  is written in engine text and nothing reads it. */
+  readonly formulaProblems: readonly FitchFormulaProblem[];
   /** Char-space map from each generated line back to its source line. */
   readonly lineSpans: readonly FitchLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
@@ -228,14 +266,17 @@ function parseJustification(
 function walkFitch(
   fitchText: string,
   assumptionRule: string,
+  readFormula: ProofFormulaReader,
 ): {
   diagnostics: FitchDiagnostic[];
+  formulaProblems: FitchFormulaProblem[];
   lines: ParsedLine[];
   rawLineCount: number;
   scopeAssumptions: ReadonlyMap<number, readonly string[]>;
 } {
   const rawLines = fitchText.split("\n");
   const diagnostics: FitchDiagnostic[] = [];
+  const formulaProblems: FitchFormulaProblem[] = [];
 
   // Only non-blank lines are proof steps; blanks neither number nor emit.
   const proofLines = rawLines
@@ -303,6 +344,27 @@ function walkFitch(
       index + 1,
     );
 
+    // Surface text in, engine text out — and from here down the *engine*
+    // spelling is the line's formula, so a context built from an assumption
+    // and the conclusion that discharges it agree character for character
+    // however either was typed. A formula that will not read is reported and
+    // passed through untouched: the proof still assembles, the spans still
+    // line up, and the compiler remains the authority on what it means.
+    const reading = readFormula(justification.formula);
+    const formula = reading.ok ? reading.text : justification.formula;
+
+    if (!reading.ok) {
+      const column = leadingWidth(line.raw);
+      for (const error of reading.errors) {
+        formulaProblems.push({
+          column,
+          error,
+          formula: justification.formula,
+          sourceLine: line.sourceLine,
+        });
+      }
+    }
+
     // Sibling subproofs: inside a box (depth ≥ 1) that has already derived a
     // line, a new assumption at the same level opens a *new* box, so the two
     // subproofs of ∨-elimination / ↔-introduction each discharge only their own
@@ -331,7 +393,7 @@ function walkFitch(
       openedDeeper || siblingSplit ? columns.length - 1 : columns.length;
     parsed.push({
       columns,
-      formula: justification.formula,
+      formula,
       isAssumption: justification.isAssumption,
       openFrom,
       refs: justification.refs,
@@ -342,7 +404,7 @@ function walkFitch(
 
     if (justification.isAssumption) {
       const ownScope = scopePath[scopePath.length - 1] ?? 0;
-      scopeAssumptions.get(ownScope)?.push(justification.formula);
+      scopeAssumptions.get(ownScope)?.push(formula);
     } else {
       scopesWithDerived.add(scopeStack[scopeStack.length - 1] ?? 0);
     }
@@ -350,6 +412,7 @@ function walkFitch(
 
   return {
     diagnostics,
+    formulaProblems,
     lines: parsed,
     rawLineCount: rawLines.length,
     scopeAssumptions,
@@ -380,12 +443,14 @@ export function fitchToAuf(
   assumptionRule: string,
   sequentSymbol: string,
   contextSymbol = ",",
+  readFormula: ProofFormulaReader = ENGINE_TEXT,
 ): TranslatedFitchProof {
   const {
     diagnostics,
+    formulaProblems,
     lines: parsed,
     scopeAssumptions,
-  } = walkFitch(fitchText, assumptionRule);
+  } = walkFitch(fitchText, assumptionRule, readFormula);
 
   // A subproof citation `a-b` must name one genuine subproof: line `a` (the
   // assumption that opens it) and line `b` (its last line) at the same
@@ -501,7 +566,7 @@ export function fitchToAuf(
     offset += body.length + 1;
   }
 
-  return { diagnostics, lineSpans, proofText };
+  return { diagnostics, formulaProblems, lineSpans, proofText };
 }
 
 /**
@@ -571,7 +636,7 @@ export function fitchScopeGeometry(
   fitchText: string,
   assumptionRule: string,
 ): (FitchScopeLine | null)[] {
-  const walk = walkFitch(fitchText, assumptionRule);
+  const walk = walkFitch(fitchText, assumptionRule, ENGINE_TEXT);
   const geometry: (FitchScopeLine | null)[] = Array.from(
     { length: walk.rawLineCount },
     () => null,

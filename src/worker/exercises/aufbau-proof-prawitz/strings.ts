@@ -1,4 +1,5 @@
 import { placeholders, type Translator } from "../../i18n/translator";
+import { buildFormulaParserStrings } from "../../logic/specs/strings";
 import { buildExerciseHelpStrings } from "../help-strings";
 import { buildProofEngineStrings } from "../proof-engine-strings";
 
@@ -21,6 +22,9 @@ import { buildProofEngineStrings } from "../proof-engine-strings";
  */
 export function buildAufbauProofPrawitzStrings(i18n: Translator) {
   return {
+    // A node's formula is read in the theory's language before it reaches
+    // the compiler, so the parser's complaints are the widget's to say.
+    ...buildFormulaParserStrings(i18n),
     ...buildProofEngineStrings(i18n),
     ...buildExerciseHelpStrings(i18n),
     "Add assumption above": i18n.t("Add assumption above"),

@@ -17,6 +17,7 @@ import type { JsonValue } from "../../domain/json";
 // The certificate is the trust boundary, so the Prawitz type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's tree).
+import { proofTheoryText } from "../aufbau-proof/formulas";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofPrawitzReview } from "./read-only-view";
 import type { AufbauProofPrawitzAnswerData } from "./types";
@@ -190,7 +191,10 @@ export class AufbauProofPrawitzExerciseType
     // The certificate is verified against the frozen mm0 — never the student's
     // tree or proofText — so a valid MMB proving the declared goal is the
     // definition of correct, however the tree that produced it was built.
-    const result = await verifyMmb(declaration.publicData.mm0, mmb);
+    const result = await verifyMmb(
+      proofTheoryText(declaration.publicData).mm0,
+      mmb,
+    );
 
     if (result.errored) {
       return {

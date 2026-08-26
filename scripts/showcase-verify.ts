@@ -19,6 +19,10 @@
 import { loadCompiler } from "@aufbau/compiler";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import {
+  proofFormulaReader,
+  proofTheoryText,
+} from "../src/worker/exercises/aufbau-proof/formulas";
 import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
@@ -46,10 +50,16 @@ const wasmBytes = await Bun.file(
 ).arrayBuffer();
 const compiler = await loadCompiler({ wasmBytes });
 
-/** Lower a proof exercise's starter to `.auf`, the way its editor would. */
+/**
+ * Lower a proof exercise's starter to `.auf`, the way its editor would —
+ * including reading each formula in the theory's language where the exercise
+ * was frozen with one, which is the whole of what the editor does before it
+ * compiles. Reading it any other way would verify a proof no student can type.
+ */
 function lower(
   assetId: string,
   publicData: Record<string, string & Record<string, unknown>>,
+  source: string | null,
 ): string | null {
   if (assetId === "carnap-aufbau-proof-v1") {
     return `${publicData.goalName}\n----\n${publicData.starterBody}`;
@@ -62,6 +72,7 @@ function lower(
       publicData.assumptionRule,
       publicData.sequentSymbol ?? "⊢",
       publicData.contextSymbol ?? ",",
+      proofFormulaReader(source, "sentence"),
     );
 
     if (translated.diagnostics.length > 0) {
@@ -69,13 +80,34 @@ function lower(
       return null;
     }
 
+    if (translated.formulaProblems.length > 0) {
+      console.log(
+        `    unreadable: ${translated.formulaProblems
+          .map((one) => `${one.formula} — ${one.error.message}`)
+          .join(", ")}`,
+      );
+      return null;
+    }
+
     return translated.proofText;
   }
 
-  return flattenProofTree(
+  const flattened = flattenProofTree(
     publicData.starterTree as never,
     publicData.goalName,
-  ).proofText;
+    proofFormulaReader(source, "sequent"),
+  );
+
+  if (flattened.formulaProblems.length > 0) {
+    console.log(
+      `    unreadable: ${flattened.formulaProblems
+        .map((one) => `${one.formula} — ${one.error.message}`)
+        .join(", ")}`,
+    );
+    return null;
+  }
+
+  return flattened.proofText;
 }
 
 /**
@@ -118,16 +150,22 @@ for (const node of compiled.artifact.document.nodes) {
     string & Record<string, unknown>
   >;
 
-  if (typeof publicData.mm0 !== "string") {
+  if (
+    typeof publicData.mm0 !== "string" &&
+    typeof publicData.source !== "string"
+  ) {
     continue;
   }
 
+  // One of the two theory texts is frozen, never both; which one decides
+  // whether the starter is read as surface text. See `aufbau-proof/formulas`.
+  const { mm0, source } = proofTheoryText(publicData);
   const label = `${node.exerciseId} (${node.render.assetId})`;
 
   if (node.exerciseId === UNFINISHED_ID) {
-    const starter = lower(node.render.assetId, publicData);
+    const starter = lower(node.render.assetId, publicData, source);
     const starterVerifies =
-      starter !== null && (await verify(publicData.mm0, starter, true));
+      starter !== null && (await verify(mm0, starter, true));
 
     if (starterVerifies) {
       console.log(
@@ -143,11 +181,13 @@ for (const node of compiled.artifact.document.nodes) {
       publicData.assumptionRule,
       publicData.sequentSymbol ?? "⊢",
       publicData.contextSymbol ?? ",",
+      proofFormulaReader(source, "sentence"),
     );
 
     if (
       translated.diagnostics.length > 0 ||
-      !(await verify(publicData.mm0, translated.proofText))
+      translated.formulaProblems.length > 0 ||
+      !(await verify(mm0, translated.proofText))
     ) {
       console.log(`✗ ${label} — the intended solution does not verify`);
       failed += 1;
@@ -158,9 +198,9 @@ for (const node of compiled.artifact.document.nodes) {
     continue;
   }
 
-  const proofText = lower(node.render.assetId, publicData);
+  const proofText = lower(node.render.assetId, publicData, source);
 
-  if (proofText === null || !(await verify(publicData.mm0, proofText))) {
+  if (proofText === null || !(await verify(mm0, proofText))) {
     console.log(`✗ ${label}`);
     failed += 1;
     continue;
