@@ -229,6 +229,25 @@ server, not just from the browser. Without the variable set, the LTI routes
 report themselves unconfigured and the passback sweep idles without spending
 queries.
 
+### How Carnap identifies itself to your LMS
+
+Every request Carnap makes to a platform — fetching its JWKS, trading a signed
+assertion for an access token, posting a score — carries a `User-Agent` naming
+this server. That is not decoration: Canvas rejects a request without one at its
+edge, with a 403 whose body is an HTML error page rather than the JSON an API
+client expects, so the header going missing would not read as a refused score.
+It would read as an LMS answering nonsense.
+
+Two details make this easy to get wrong if you fork the outbound code. Workers
+sends no `User-Agent` of its own, unlike curl or a browser, so the header exists
+only because `src/worker/user-agent.ts` supplies it. And the check is at the
+edge, ahead of routing, so it covers the LTI Advantage endpoints exactly as it
+covers `/api/v1` — being an LTI tool rather than an API client exempts nothing.
+
+If you rebrand your instance, change `OUTBOUND_USER_AGENT` there rather than at
+the call sites; it is one constant precisely so an admin reading their logs sees
+a single consistent name.
+
 ### Student IDs
 
 A launch may tell Carnap the identifier the institution knows the student by.

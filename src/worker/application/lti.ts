@@ -26,6 +26,7 @@ import {
   type Translator,
   translateMessage,
 } from "../i18n/translator";
+import { OUTBOUND_USER_AGENT } from "../user-agent";
 import type { AuthenticatedActor, AuthService, MintedSession } from "./auth";
 import { requireInstructor } from "./authorization";
 import { contentArtifactFromRevision } from "./content/artifact";
@@ -133,6 +134,13 @@ export type LtiPlatformKeyResolver = (
 
 const remoteKeySets = new Map<string, JWTVerifyGetKey>();
 
+/**
+ * The `User-Agent` is ours rather than the `jose/x.y.z` the library would
+ * otherwise send: a platform admin reading their logs should see the tool that
+ * is calling, not the JWT library it happens to be built on. Canvas rejects an
+ * agentless request outright, so this header is load-bearing either way — jose
+ * setting one of its own is the only reason launches were not already failing.
+ */
 export const defaultLtiKeyResolver: LtiPlatformKeyResolver = (platform) => {
   const cached = remoteKeySets.get(platform.jwksUri);
 
@@ -140,7 +148,9 @@ export const defaultLtiKeyResolver: LtiPlatformKeyResolver = (platform) => {
     return cached;
   }
 
-  const keySet = createRemoteJWKSet(new URL(platform.jwksUri));
+  const keySet = createRemoteJWKSet(new URL(platform.jwksUri), {
+    headers: { "User-Agent": OUTBOUND_USER_AGENT },
+  });
 
   remoteKeySets.set(platform.jwksUri, keySet);
 

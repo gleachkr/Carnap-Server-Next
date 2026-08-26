@@ -4,6 +4,7 @@ import type {
 } from "../../application/auth";
 import { AppHttpError } from "../../application/errors";
 import type { Env } from "../../env";
+import { withUserAgent } from "../../user-agent";
 
 interface ResendEmailResponse {
   readonly id?: unknown;
@@ -55,10 +56,10 @@ export class ResendLoginEmailSender implements LoginEmailSender {
         text: this.copy.text(input),
         to: [input.email],
       }),
-      headers: {
+      headers: withUserAgent({
         Authorization: `Bearer ${this.options.apiKey}`,
         "Content-Type": "application/json",
-      },
+      }),
       method: "POST",
     });
 

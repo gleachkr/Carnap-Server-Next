@@ -6,12 +6,23 @@ import type {
 } from "../../application/grade-passback";
 import { ScoreDeliveryError } from "../../application/grade-passback";
 import type { LtiGradeFailureReason, LtiPlatform } from "../../domain/lti";
+import { withUserAgent } from "../../user-agent";
 import type { LtiToolKey } from "./tool-key";
 
 type Fetcher = (
   input: RequestInfo | URL,
   init?: RequestInit,
 ) => Promise<Response>;
+
+/**
+ * What `send` accepts: headers as a plain record rather than `HeadersInit`, so
+ * the `User-Agent` can be merged in without narrowing a union first.
+ */
+interface AgsRequest {
+  readonly body: string;
+  readonly headers: Record<string, string>;
+  readonly method: string;
+}
 
 export const AGS_SCORE_SCOPE =
   "https://purl.imsglobal.org/spec/lti-ags/scope/score";
@@ -166,9 +177,18 @@ export class AgsClient implements LtiScoreSender {
     return accessToken;
   }
 
-  private async send(url: string, init: RequestInit): Promise<Response> {
+  /**
+   * The one place every outbound AGS request passes through, which is why the
+   * `User-Agent` is attached here rather than at each call site: Canvas rejects
+   * an agentless request at its edge with a 403, and a future request that
+   * forgot the header would fail in a way that looks nothing like its cause.
+   */
+  private async send(url: string, init: AgsRequest): Promise<Response> {
     try {
-      return await this.fetcher(url, init);
+      return await this.fetcher(url, {
+        ...init,
+        headers: withUserAgent(init.headers),
+      });
     } catch (error) {
       const detail = error instanceof Error ? error.message : "fetch failed";
 

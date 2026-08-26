@@ -10,6 +10,7 @@ import type { User } from "../src/worker/domain/users";
 import type { Env } from "../src/worker/env";
 import { AgsClient } from "../src/worker/infrastructure/lti/ags-client";
 import type { LtiToolKey } from "../src/worker/infrastructure/lti/tool-key";
+import { OUTBOUND_USER_AGENT } from "../src/worker/user-agent";
 import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
 import { registerTestPlatform, TEST_ISSUER } from "./helpers/lti";
@@ -539,6 +540,15 @@ describe("LTI grade passback", () => {
       expect(scoreRequest.headers["content-type"]).toBe(
         "application/vnd.ims.lis.v1.score+json",
       );
+
+      // Every request we make to the platform names us. Canvas rejects an
+      // agentless request at its edge with a 403 and an HTML body, so a
+      // dropped header would not read as "the LMS refused the score" — it
+      // would read as an LMS talking nonsense. Workers sends no User-Agent
+      // of its own, so nothing but this supplies one.
+      for (const request of lms.requests) {
+        expect(request.headers["user-agent"]).toBe(OUTBOUND_USER_AGENT);
+      }
 
       const scoreBody = JSON.parse(scoreRequest.body) as Record<
         string,

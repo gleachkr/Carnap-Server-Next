@@ -7,11 +7,18 @@ import {
 } from "jose";
 
 import { AuthService } from "../src/worker/application/auth";
-import { LtiService } from "../src/worker/application/lti";
+import {
+  defaultLtiKeyResolver,
+  LtiService,
+} from "../src/worker/application/lti";
 import type { AppStores } from "../src/worker/application/stores";
 import { hashAuthToken } from "../src/worker/application/tokens";
+import { createAppId } from "../src/worker/domain/ids";
+import type { LtiPlatform } from "../src/worker/domain/lti";
+import { timestampNow } from "../src/worker/domain/time";
 import type { Env } from "../src/worker/env";
 import type { WorkerApp } from "../src/worker/http";
+import { OUTBOUND_USER_AGENT } from "../src/worker/user-agent";
 import {
   beginTestLogin,
   CLAIM_CUSTOM,
@@ -1560,6 +1567,64 @@ describe("LTI 1.3 core launches", () => {
       expect((await symmetric.json()) as Record<string, unknown>).toEqual({
         keys: [],
       });
+    });
+  });
+
+  describe("fetching a platform's keys", () => {
+    test("the JWKS request names this server, not the JWT library", async () => {
+      const seen: Array<Record<string, string>> = [];
+      const realFetch = globalThis.fetch;
+
+      // A URL used by no other test: the resolver memoizes per JWKS URI for
+      // the process's lifetime, so a shared one would answer from the cache
+      // and never make the request this test is about.
+      const jwksUri = `${TEST_ISSUER}/jwks-user-agent-probe`;
+
+      globalThis.fetch = (async (
+        _input: RequestInfo | URL,
+        init?: RequestInit,
+      ) => {
+        const headers: Record<string, string> = {};
+
+        for (const [key, value] of new Headers(init?.headers).entries()) {
+          headers[key] = value;
+        }
+
+        seen.push(headers);
+
+        return Response.json({ keys: [] });
+      }) as typeof fetch;
+
+      const platform: LtiPlatform = {
+        authorizationEndpoint: `${TEST_ISSUER}/auth`,
+        clientId: TEST_CLIENT_ID,
+        createdAt: timestampNow(),
+        disabledAt: null,
+        id: createAppId(),
+        issuer: TEST_ISSUER,
+        jwksUri,
+        name: "User-Agent probe",
+        tokenEndpoint: `${TEST_ISSUER}/token`,
+        updatedAt: timestampNow(),
+      };
+
+      try {
+        const keySet = defaultLtiKeyResolver(platform);
+
+        // No key can match an empty set; the request is what is under test.
+        await expect(
+          keySet({ alg: "RS256" }, { payload: "", signature: "" }),
+        ).rejects.toThrow();
+      } finally {
+        globalThis.fetch = realFetch;
+      }
+
+      // jose would otherwise send `jose/x.y.z` here. Canvas rejects an
+      // agentless request outright, so this header has to be present; making
+      // it ours as well means an admin reading their logs sees the tool
+      // calling them rather than the JWT library it is built on.
+      expect(seen).toHaveLength(1);
+      expect(seen[0]?.["user-agent"]).toBe(OUTBOUND_USER_AGENT);
     });
   });
 });
