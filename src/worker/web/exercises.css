@@ -198,13 +198,11 @@
   margin-top: 0.6rem;
 }
 
-/* Formulas */
-
-.formula,
-.proof-formula {
-  font-family: Georgia, "Times New Roman", serif;
-  font-style: italic;
-}
+/* Formulas are set in --mono-font by the widget that shows them, each in its
+   own shadow styles. There was a `.formula, .proof-formula` rule here setting
+   them in Georgia italic; no markup has carried either class for as long as
+   the classes have existed, so it was a fourth opinion about the face that
+   nothing could act on. */
 
 /* Utilities */
 

@@ -3,7 +3,7 @@
   display: flex;
   flex-wrap: wrap;
   /* Fira Code first (loaded as a web font) so connective ligatures render. */
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-size: 0.9rem;
   gap: 0.4rem;
   margin: 0.5rem 0 0.4rem;
@@ -34,7 +34,7 @@
   opacity: 0.5;
 }
 .proof-editor .cm-content {
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-size: 0.9rem;
   /* Roomier lines so the scope struts read as a Fitch diagram and the
      assumption rule has clear air under each hypothesis. */

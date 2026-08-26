@@ -24,7 +24,7 @@
   border-bottom: 1px dashed transparent;
   /* Fira Code first (loaded as a web font) so its contextual ligatures turn
      typed connectives like -> and <-> into → and ↔ in the rendered proof. */
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   min-width: 1ch;
   outline: none;
   padding: 0 0.1rem;

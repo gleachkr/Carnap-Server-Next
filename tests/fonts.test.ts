@@ -7,7 +7,23 @@ import {
   UI_FONTS,
   uiFontFile,
   uiFontSource,
+  WHOLE_FONTS,
+  wholeFontFile,
 } from "../src/worker/web/ui-fonts";
+import { unpaintedBy } from "./helpers/woff2-cmap";
+
+/**
+ * The operators a student meets, gathered from `src/worker/logic/theories`:
+ * every connective and quantifier the built-in languages declare, the
+ * turnstile, and the arrows the chrome and the widgets' key hints use.
+ *
+ * Not in the list, and deliberately: `≐ ≗ ≜ ⟚`, MM0's own relations. Fira Code
+ * does not carry them and they appear in exactly one place — an `aufbau-mm0`
+ * block with `show`, quoting the artifact verbatim — so they fall back, and a
+ * reader who has opened the theory panel is reading MM0 source rather than
+ * their own language. Adding them here would be asking the wrong font.
+ */
+const OPERATORS = "¬∀∃∧∨→↔⊃≡≠⊢⊤⊥←↑↓";
 
 /**
  * The fonts are served from this origin, and these are the assertions that keep
@@ -50,6 +66,49 @@ describe("fonts", () => {
         expect(await Bun.file(source).exists()).toBe(true);
       }
     }
+
+    for (const font of WHOLE_FONTS) {
+      expect(await Bun.file(font.source).exists()).toBe(true);
+    }
+  });
+
+  test("a whole family has a face, and no range to narrow it", () => {
+    for (const font of WHOLE_FONTS) {
+      const href = `${FONT_ROUTE_PREFIX}${wholeFontFile(font)}`;
+      const face = faces.find((body) => body.includes(href));
+
+      expect(face).toBeDefined();
+      expect(face).toContain(`font-family: "${font.family}"`);
+      expect(face).toContain(`font-weight: ${font.weight}`);
+      expect(face).not.toContain("unicode-range:");
+    }
+  });
+
+  /**
+   * The reason Fira Code is served whole, stated as the thing that would break
+   * if it were not.
+   *
+   * Google's subsetter partitions by script and none of its scripts is
+   * mathematics, so `@fontsource-variable/fira-code` — which this platform did
+   * ship, for months — carries `¬` (U+00AC, along for the ride in Latin-1) and
+   * not one other operator. The effect is invisible to whoever chose the font:
+   * their machine has a system fallback, so the quantifiers render, in a face
+   * nobody picked and a different one per platform. Upstream Fira Code has all
+   * of them.
+   *
+   * This asserts the coverage rather than the package name, because coverage is
+   * what is actually wanted — a future move to a family that has the glyphs
+   * should pass, and a move back to one that does not should fail here rather
+   * than in a reader's browser.
+   */
+  test("the served families paint every operator a student can meet", async () => {
+    for (const font of WHOLE_FONTS) {
+      const file = await Bun.file(font.source).bytes();
+
+      expect(`${font.family}: ${unpaintedBy(file, OPERATORS)}`).toBe(
+        `${font.family}: `,
+      );
+    }
   });
 
   test("the shared layer asks no other origin for a font", () => {
@@ -66,9 +125,12 @@ describe("fonts", () => {
   });
 
   test("each served file is named once, and by version", () => {
-    const files = UI_FONTS.flatMap((font) =>
-      font.subsets.map((subset) => uiFontFile(font, subset)),
-    );
+    const files = [
+      ...UI_FONTS.flatMap((font) =>
+        font.subsets.map((subset) => uiFontFile(font, subset)),
+      ),
+      ...WHOLE_FONTS.map(wholeFontFile),
+    ];
 
     expect(new Set(files).size).toBe(files.length);
 
@@ -76,6 +138,10 @@ describe("fonts", () => {
       for (const subset of font.subsets) {
         expect(uiFontFile(font, subset)).toContain(font.version);
       }
+    }
+
+    for (const font of WHOLE_FONTS) {
+      expect(wholeFontFile(font)).toContain(font.version);
     }
   });
 });

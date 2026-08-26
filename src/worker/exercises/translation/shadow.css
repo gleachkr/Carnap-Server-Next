@@ -14,6 +14,10 @@
   gap: 0.5rem;
 }
 
+/* The box a student types ASCII into, and watches: with the face's ligatures
+   on, `->` becomes `→` under their cursor as they type it. The readback line
+   below still shows what the parser made of the whole formula, which is the
+   thing that says whether it was accepted. */
 .translation-input {
   background: var(--control-surface, #fbf7ef);
   border: 1px solid var(--rule, #d8d0c3);
@@ -21,6 +25,7 @@
   color: inherit;
   flex: 1 1 24ch;
   font: inherit;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   min-width: 12ch;
   padding: 0.25rem 0.45rem;
 }
@@ -32,12 +37,16 @@
 /* What the typed ASCII parses as, in logical symbols — or, while it does
    not parse, the parser's complaint. Same line, two moods. */
 .translation-preview {
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   margin: 0.35rem 0 0;
   min-height: 1.4em;
 }
 
+/* The complaint is a sentence about the formula rather than a formula, so it
+   goes back to the prose face — the mood is legible before it is read. */
 .translation-preview[data-mood="error"] {
   color: var(--red, #b42318);
+  font-family: inherit;
 }
 
 .translation-preview:empty {

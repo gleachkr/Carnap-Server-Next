@@ -1217,15 +1217,15 @@ a.score-uncounted {
    typed here is Markdown source, so it gets the same monospace treatment as
    the listings it produces: indentation lines up, a directive's attributes
    stay scannable, and an ASCII table in a code fence looks the way it will
-   render. Ligatures are off because the format's operators are written in
-   ascii and an author needs to see the characters they actually typed. */
+   render. Ligatures off, with the listings and against the exercises: an
+   author is editing the text, and needs the characters they actually typed. */
 [data-editor-source] {
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-variant-ligatures: none;
   /* Monospace runs wider than the body face at the same nominal size, and
      this field lives in a split column — a notch down keeps a full line of
      source visible without wrapping. */
   font-size: 0.9375rem;
-  font-variant-ligatures: none;
   line-height: 1.55;
   min-height: 12rem;
   overflow: hidden;
@@ -1262,7 +1262,7 @@ a.score-uncounted {
    source-field rules above rather than inheriting them: CodeMirror sets its
    own on .cm-content, and those win inside the view. */
 .markdown-source .cm-content {
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-size: 0.9375rem;
   font-variant-ligatures: none;
   line-height: 1.55;

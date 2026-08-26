@@ -1,6 +1,10 @@
 /**
  * The three families the interface is set in, served from this origin.
  *
+ * Two of them arrive pre-cut by Google, one whole. See `WHOLE_FONTS` below for
+ * why Fira Code is the exception: its cuts drop every logical operator, which
+ * on this platform is not a corner of Unicode but the subject matter.
+ *
  * They used to come from Google Fonts — two `preconnect`s and a render-blocking
  * stylesheet in every page's head. That is a dependency on a third party for
  * something the platform cannot do without, and it failed in all three of the
@@ -34,9 +38,13 @@
  * **Every subset the packages ship**, not just `latin`. `unicode-range` is what
  * makes that free: a browser fetches a subset only when the page actually puts
  * a character from it on screen, so a reader of English prose downloads the
- * same three files they would have from Google, and a lesson quoting Greek —
+ * same two files they would have from Google, and a lesson quoting Greek —
  * φ and ψ are ordinary metavariables here — or Cyrillic still gets real type.
  * Dropping a subset would be a silent regression against what Google served.
+ *
+ * Which is the caution `WHOLE_FONTS` answers from the other side: a subset can
+ * only be free when it is *complete*, and Google's are not. Fira Code is served
+ * whole for that reason, and the two lists below are the two answers.
  */
 
 import { fontHref } from "./fonts";
@@ -57,9 +65,6 @@ const SUBSET_RANGES = {
     "U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD",
   "latin-ext":
     "U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF",
-  /* Box drawing and the vertical-line pieces, which is what a proof widget
-     rules its scope lines with. */
-  symbols2: "U+2000-2001,U+2004-2008,U+200A,U+23B8-23BD,U+2500-259F",
   vietnamese:
     "U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+0300-0301,U+0303-0304,U+0308-0309,U+0323,U+0329,U+1EA0-1EF9,U+20AB",
 } as const;
@@ -97,13 +102,6 @@ export const UI_FONTS: readonly UiFont[] = [
     subsets: [...WESTERN_SUBSETS, "vietnamese"],
   },
   {
-    family: "Fira Code",
-    package: "fira-code",
-    version: "5.3.0",
-    weight: "300 700",
-    subsets: [...WESTERN_SUBSETS, "symbols2"],
-  },
-  {
     family: "Inter",
     package: "inter",
     version: "5.3.0",
@@ -111,6 +109,60 @@ export const UI_FONTS: readonly UiFont[] = [
     subsets: [...WESTERN_SUBSETS, "vietnamese"],
   },
 ];
+
+/**
+ * A family served as one file, because no useful cut of it exists.
+ *
+ * Google's subsetter partitions a font by script, and its ranges are the same
+ * seven in every family it cuts — none of which is mathematics. The consequence
+ * went unnoticed for as long as it did because it is invisible on a developer's
+ * machine: `¬` is U+00AC and rides along in Latin-1, so the *one* operator
+ * anybody checks looks right, while `∀ ∃ ∧ ∨ → ↔ ⊢ ⊤ ⊥ ⊃ ≡` live in
+ * U+2190–22FF and were painted by whatever the reader's system happened to
+ * offer. A quantifier drawn by Noto on one machine, DejaVu on another and a
+ * phone's emoji fallback on a third is not a typeface choice; it is the absence
+ * of one, in the glyphs this platform exists to show.
+ */
+export type WholeFont = {
+  /** The name stylesheets ask for, and the name a local install would have. */
+  readonly family: string;
+  /** The npm package, and the name under which its file is served. */
+  readonly package: string;
+  /** Checked against the installed package at build time. */
+  readonly version: string;
+  /** The variable font's weight axis, spelled as `font-weight` wants it. */
+  readonly weight: string;
+  /** Where the copy script reads it from, inside the installed package. */
+  readonly source: string;
+};
+
+export const WHOLE_FONTS: readonly WholeFont[] = [
+  /**
+   * Fira Code from its own project rather than from fontsource, which is the
+   * only way to get the operators: upstream carries all of them, Google's cut
+   * carries none. `tests/fonts.test.ts` holds that specific claim, because the
+   * temptation to "simplify" this back to a fontsource dependency will recur
+   * and the regression it causes is silent.
+   *
+   * The whole font is 110 KB against the 35 KB Latin cut it replaces, and it is
+   * a strict superset of all seven cuts — no script is lost by serving it, only
+   * their laziness. That trade is worth making here and nowhere else: Fira Code
+   * is asked for by formulas, source listings and the proof widgets, so a page
+   * that fetches it is a page that was going to show mathematics anyway.
+   */
+  {
+    family: "Fira Code",
+    package: "firacode",
+    version: "6.2.0",
+    weight: "300 700",
+    source: "node_modules/firacode/distr/woff2/FiraCode-VF.woff2",
+  },
+];
+
+/** What a whole family is served as: one file, with its version in the name. */
+export function wholeFontFile(font: WholeFont): string {
+  return `${font.package}-${font.version}.woff2`;
+}
 
 /** Where the copy script reads a subset from, inside the installed package. */
 export function uiFontSource(font: UiFont, subset: FontSubset): string {
@@ -135,9 +187,10 @@ export function uiFontFile(font: UiFont, subset: FontSubset): string {
  * cannot read at all, and because the fallbacks below each family are chosen to
  * be close enough that the swap is not a lurch.
  */
-export const UI_FONT_FACES = UI_FONTS.flatMap((font) =>
-  font.subsets.map(
-    (subset) => `
+export const UI_FONT_FACES = [
+  ...UI_FONTS.flatMap((font) =>
+    font.subsets.map(
+      (subset) => `
   @font-face {
     font-display: swap;
     font-family: "${font.family}";
@@ -145,8 +198,20 @@ export const UI_FONT_FACES = UI_FONTS.flatMap((font) =>
     src: url("${fontHref(uiFontFile(font, subset))}") format("woff2");
     unicode-range: ${SUBSET_RANGES[subset]};
   }`,
+    ),
   ),
-).join("\n");
+  // No `unicode-range`: there is one file, so a range could only narrow what
+  // the reader is allowed to see of a font they have already paid for.
+  ...WHOLE_FONTS.map(
+    (font) => `
+  @font-face {
+    font-display: swap;
+    font-family: "${font.family}";
+    font-weight: ${font.weight};
+    src: url("${fontHref(wholeFontFile(font))}") format("woff2");
+  }`,
+  ),
+].join("\n");
 
 /** The declared range for a subset, for the build-time check against fontsource. */
 export function subsetRange(subset: FontSubset): string {

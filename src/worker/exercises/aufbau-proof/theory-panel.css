@@ -70,9 +70,11 @@
   text-transform: uppercase;
 }
 
+/* The theory's name, which is an identifier rather than a formula — so it
+   keeps ligatures off, like the `<pre>` of MM0 the panel opens onto. */
 .aufbau-theory-name {
   color: var(--ink);
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-size: 0.85rem;
   font-variant-ligatures: none;
 }

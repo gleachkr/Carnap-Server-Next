@@ -19,8 +19,22 @@
   overflow-x: auto;
 }
 
+/*
+ * The whole grid in the shared monospace face, headings and cells alike. The
+ * headings are a formula split one chunk to a column and have to line up with
+ * the values under them; the values are a column of T and F that has to read
+ * as a column.
+ *
+ * Ligatures come with the face (see --mono-font), so a heading holding `->`
+ * is drawn `→`. This is the grid where that shows most, and it is deliberate.
+ * It is a substitution at the glyph level and nothing else: the heading's text
+ * is still the two characters, and so is the `aria-label` on every cell in the
+ * column under it, so what is read aloud and what is copied out are both the
+ * spelling the language declares.
+ */
 table.tt {
   border-collapse: collapse;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
 }
 

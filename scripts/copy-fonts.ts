@@ -20,17 +20,19 @@
  * Two kinds of check run here rather than at read time, because the failure
  * they prevent is a 404 or an unpainted character in a reader's browser and the
  * only place to notice it is the build: that each package is the version the
- * URL claims, and — for the interface families, whose subsetting is Google's
- * and not ours — that the `unicode-range` we serve is still the one the
- * installed package cuts the file to.
+ * URL claims, and — for the families fontsource cuts into subsets, whose
+ * subsetting is Google's and not ours — that the `unicode-range` we serve is
+ * still the one the installed package cuts the file to. Fira Code is served
+ * whole and so has no ranges to check; see `ui-fonts.ts` for why it is the
+ * exception, and `tests/fonts.test.ts` for the check that replaces this one.
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import garamondPackage from "../node_modules/@fontsource-variable/eb-garamond/package.json";
-import firaPackage from "../node_modules/@fontsource-variable/fira-code/package.json";
 import interPackage from "../node_modules/@fontsource-variable/inter/package.json";
 import stixPackage from "../node_modules/@fontsource/stix-two-math/package.json";
+import firaPackage from "../node_modules/firacode/package.json";
 import { NOSNIFF_HEADER } from "../src/worker/middleware/security-headers";
 import { FONT_CACHE_CONTROL, FONT_ROUTE_PREFIX } from "../src/worker/web/fonts";
 import { MATH_FONT_FILE, MATH_FONT_VERSION } from "../src/worker/web/math-font";
@@ -41,6 +43,9 @@ import {
   type UiFont,
   uiFontFile,
   uiFontSource,
+  WHOLE_FONTS,
+  type WholeFont,
+  wholeFontFile,
 } from "../src/worker/web/ui-fonts";
 
 const MATH_FONT_SOURCE =
@@ -50,7 +55,7 @@ const DESTINATION = join("public", FONT_ROUTE_PREFIX.replace(/^\//, ""));
 /** The installed versions, by package name as `ui-fonts.ts` spells it. */
 const INSTALLED_VERSIONS: Record<string, string> = {
   "eb-garamond": garamondPackage.version,
-  "fira-code": firaPackage.version,
+  firacode: firaPackage.version,
   inter: interPackage.version,
 };
 
@@ -124,6 +129,26 @@ async function copyUiFont(font: UiFont): Promise<void> {
   }
 }
 
+/**
+ * A whole family has no ranges to check, so the version is the whole of it —
+ * that, and the file being where the package says. What a version bump *can*
+ * silently change is which characters the file paints, and that is asserted in
+ * `tests/fonts.test.ts` against the operators our own theories emit, since it
+ * needs to read the font rather than the package metadata.
+ */
+async function copyWholeFont(font: WholeFont): Promise<void> {
+  const installed = INSTALLED_VERSIONS[font.package];
+
+  if (installed !== font.version) {
+    throw new Error(
+      `${font.package} is ${installed} but ui-fonts.ts says ${font.version}. ` +
+        "Update src/worker/web/ui-fonts.ts — the version is in the URL, so a stale one serves a 404.",
+    );
+  }
+
+  await copy(font.source, wholeFontFile(font));
+}
+
 if (stixPackage.version !== MATH_FONT_VERSION) {
   throw new Error(
     `@fontsource/stix-two-math is ${stixPackage.version} but MATH_FONT_VERSION says ${MATH_FONT_VERSION}. ` +
@@ -135,6 +160,10 @@ await copy(MATH_FONT_SOURCE, MATH_FONT_FILE);
 
 for (const font of UI_FONTS) {
   await copyUiFont(font);
+}
+
+for (const font of WHOLE_FONTS) {
+  await copyWholeFont(font);
 }
 
 // `nosniff` over everything under `/assets`, because these are the responses

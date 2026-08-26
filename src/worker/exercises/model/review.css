@@ -4,6 +4,7 @@
  */
 
 .model-review-goal {
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-weight: 560;
   margin: 0 0 0.4rem;
 }
@@ -26,9 +27,11 @@
 }
 
 .model-review-label {
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-weight: 560;
 }
 
 .model-review-value {
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-variant-numeric: tabular-nums;
 }

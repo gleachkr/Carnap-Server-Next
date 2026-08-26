@@ -83,9 +83,51 @@
      theme can still override it outright. */
   --fitch-scope: color-mix(in srgb, currentColor 72%, transparent);
   --logo-font: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
+  /* Fira Code sits in the body stack, after every sans face and before the
+     generic: prose here quotes ⊢ and ∀ mid-sentence, and Inter has neither
+     (nor does any system sans reliably). It is reached for one character at a
+     time, so a page of ordinary English never loads it — and a lesson that
+     does quote an operator was going to load it for its formulas anyway. */
   --body-font:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+    "Segoe UI", "Fira Code", sans-serif;
+  /*
+   * The face for everything that is language rather than prose about it: a
+   * truth-table grid, a model's goal and its field labels, a translation box
+   * and its readback, the proof editors, the theory panel, code listings, the
+   * revision editor's source field.
+   *
+   * One token because there was one face's worth of intent and four spellings
+   * of it — the grid drew its headings in Inter, the proof editors in Fira
+   * Code, the tree widgets in a serif math face, and `code` in a fourth stack
+   * with the same names in a different order. A student meeting the same
+   * connective in three exercises met three different letters.
+   *
+   * Monospace is not only for the resemblance to source. A truth-table column
+   * is a stack of one-character cells that has to read as a column, and a
+   * proof editor is a line editor whose indentation is its subproof structure.
+   *
+   * Ligatures follow one line, and it is not the boundary between widgets —
+   * it is between doing logic and quoting source.
+   *
+   * **Every exercise leaves them on.** Fira Code joins `->` into `→`, `/\`
+   * into `∧`, `\/` into `∨` through `calt`, so a student typing ascii watches
+   * it become the symbol they meant. The proof editors have always relied on
+   * that; the grid, the model fields and the translation box now do too, which
+   * is what stops the same connective from looking like two different things
+   * in two exercises on one page. It is a glyph substitution and nothing more:
+   * the DOM text, the `aria-label`s and anything copied out are still the
+   * spelling the language declares.
+   *
+   * **Anything quoting source switches them off** — `code` and `pre` below,
+   * the theory panel's `<pre>` along with them, and the revision editor's
+   * source field over in `chrome.css`. A lesson explaining that you type a
+   * hyphen and a greater-than cannot have the example drawn as an arrow, or
+   * the sentence becomes its own counterexample; an author editing Markdown
+   * needs the characters they actually typed. Those surfaces are about the
+   * text, not about the logic it spells.
+   */
+  --mono-font: "Fira Code", ui-monospace, monospace;
   /* Horizontal padding shared by the header, page shell, and footer, so
      their content edges align. */
   --shell-gutter: clamp(1.25rem, 4vw, 3.75rem);
@@ -514,17 +556,17 @@ th > .column-sort:hover {
 }
 
 /* Code, inline and in blocks: a lesson quoting a directive, a worked proof
-   shown as text, the app shell's own source listings. Fira Code is already
-   loaded for the editor's source field, so the same face carries here.
-   Ligatures are off for the same reason it is there: a lesson writing an
-   arrow or a turnstile in ascii must show the characters the author typed,
-   not a glyph standing in for them. Monospace runs wider than the body face
+   shown as text, the theory panel's verbatim MM0, the app shell's own source
+   listings. The same face as the exercises, and the one place it is asked to
+   stop drawing ligatures — see --mono-font. What is quoted here is the text
+   itself, so a lesson teaching that you type a hyphen and a greater-than must
+   show a hyphen and a greater-than. Monospace runs wider than the body face
    at one nominal size, so the notch down keeps a full line of source on
    screen — and both sizes are in rem, so a code element inside a pre does
    not shrink twice. */
 code,
 pre {
-  font-family: "Fira Code", ui-monospace, monospace;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-size: 0.9rem;
   font-variant-ligatures: none;
 }

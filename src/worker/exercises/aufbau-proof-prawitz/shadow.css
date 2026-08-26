@@ -16,8 +16,13 @@
   padding: 1.3rem 0;
 }
 
+/* The formulas, in the same face as every other exercise on the site — and,
+   more to the point, the same face the client editor puts in their place the
+   moment this widget hydrates (see `.tree-edit` / `.pz-edit`). The
+   server-rendered tree used to be set in STIX Two Math, so a reader watched
+   the proof change typeface as the page came alive. */
 proof-proposition {
-  font-family: "STIX Two Math", Cambria, Georgia, serif;
+  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
   font-size: 1.02rem;
 }
 
