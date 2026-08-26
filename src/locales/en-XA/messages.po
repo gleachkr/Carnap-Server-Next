@@ -3459,6 +3459,18 @@ msgid "The fill attribute must be all, connectives, or main."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal binds “{name}” as {sort}, and this theory reads “{name}” as a variable of sort {displacedSort}. Inside this exercise the binder wins."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal binds “{name}” as {sort}, and this theory spells a notation the same way. That spelling will not parse inside this exercise."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The goal header must be followed by a '----' underline, then the proof body."
 msgstr ""
 

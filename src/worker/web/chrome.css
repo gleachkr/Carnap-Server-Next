@@ -719,6 +719,14 @@ a.score-uncounted {
   margin-top: 1rem;
 }
 
+/* A warning does not refuse the save, so it must not read as something that
+   did. Gold is the same signal the banner uses for "worth knowing, not
+   wrong"; red stays the default so a diagnostic that forgets to say which it
+   is looks like the error it is treated as. */
+.diagnostics .warning {
+  color: var(--gold);
+}
+
 /* Per-proof engine checks under the editor: subtle, informational — a stub
    starter legitimately fails to verify, so these are not content errors. */
 .proof-checks {

@@ -258,6 +258,11 @@ function renderDiagnostics(
 
   for (const item of diagnostics) {
     const entry = document.createElement("li");
+    // Errors are unclassed: red is the list's own colour, so only the
+    // exception needs saying.
+    if (item.severity === "warning") {
+      entry.className = "warning";
+    }
     const code = document.createElement("code");
     code.textContent = item.code;
     // The same whole sentence the server-rendered list uses, split around the
@@ -404,6 +409,7 @@ function setUpPreview(
         compiled.diagnostics.map((item) => ({
           line: item.line,
           message: resolveMessage(item, resolve),
+          severity: item.severity,
         })),
       );
     }

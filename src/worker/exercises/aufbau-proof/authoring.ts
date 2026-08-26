@@ -28,6 +28,7 @@ import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
 import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
 import {
   frozenTheoryText,
+  goalBinderShadows,
   proofFormulaReader,
   proofTheoryText,
 } from "./formulas";
@@ -117,6 +118,71 @@ export function starterFormulaReader(
     shape,
     header.goalName,
   );
+}
+
+/**
+ * Every goal binder that displaces a meaning the theory's language already
+ * gave its name, as warnings on the goal declaration's own line.
+ *
+ * Warnings and not errors, deliberately. Shadowing is how a rule schema is
+ * *written* — `theorem mp (a b: wff)` has to call its metavariables
+ * something, and in a theory whose lexicon spends every letter there is
+ * nothing left to call them — so refusing it would refuse the textbook. What
+ * the compiler can honestly say is what the name meant before, which is the
+ * half it knows and the author may not; whether that matters is the author's
+ * call, and they are the only one who can make it.
+ *
+ * See {@link goalBinderShadows} for what counts: a binder that rebinds a name
+ * to the same reading it already had displaces nothing and is not reported.
+ */
+export function goalBinderWarnings(
+  theory: AufbauTheory,
+  header: TheoremHeader,
+  line: number,
+): CompilerDiagnostic[] {
+  const { source } = proofTheoryText(
+    frozenTheoryText(theory, header.theoremDecl),
+  );
+
+  return goalBinderShadows(source, header.goalName).map((shadow) => {
+    if (shadow.kind === "notation") {
+      return diagnostic(
+        line,
+        "goal_binder_shadows_notation",
+        "The goal binds “{name}” as {sort}, and this theory spells a notation the same way. That spelling will not parse inside this exercise.",
+        {
+          params: { name: shadow.name, sort: shadow.sort },
+          severity: "warning",
+        },
+      );
+    }
+
+    if (shadow.kind === "term") {
+      return diagnostic(
+        line,
+        "goal_binder_shadows_term",
+        "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term.",
+        {
+          params: { name: shadow.name, sort: shadow.sort },
+          severity: "warning",
+        },
+      );
+    }
+
+    return diagnostic(
+      line,
+      "goal_binder_shadows_variable",
+      "The goal binds “{name}” as {sort}, and this theory reads “{name}” as a variable of sort {displacedSort}. Inside this exercise the binder wins.",
+      {
+        params: {
+          displacedSort: shadow.displacedSort ?? "",
+          name: shadow.name,
+          sort: shadow.sort,
+        },
+        severity: "warning",
+      },
+    );
+  });
 }
 
 /**

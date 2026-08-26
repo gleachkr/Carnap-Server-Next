@@ -7,6 +7,7 @@ import {
   isAufbauProofFitchPublicData,
 } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { FITCH_THEORY_BLOCK } from "./helpers/fitch-theory";
+import { FORALLX_THEORY_BLOCK } from "./helpers/forallx-theory";
 
 function fitchSource(directive: string): string {
   return `${FITCH_THEORY_BLOCK}\n\n${directive}`;
@@ -27,6 +28,74 @@ function fitchPublicData(
   }
   return item.publicData;
 }
+
+describe("a goal binder that shadows the theory's language", () => {
+  /** One forallx exercise with the given goal, and the source it compiled. */
+  function goalSource(decl: string, body: string): string {
+    return `${FORALLX_THEORY_BLOCK}\n\n:::aufbau-proof-fitch{theory="forallx" id="g1" points="1"}\nProve it.\n\n${decl}\n----\n${body}\n:::\n`;
+  }
+
+  async function compileGoal(decl: string, body: string) {
+    return await compileCarnapMarkdown(goalSource(decl, body));
+  }
+
+  test("warns, and lets the save through", async () => {
+    // The whole point of the severity: shadowing is how a rule schema is
+    // written, so the author is told and not stopped.
+    const compiled = await compileGoal(
+      "theorem mp (a b: wff): $ a ⊢ a $;",
+      "a → a    :ax",
+    );
+
+    expect(compiled.ok).toBe(true);
+    expect(
+      compiled.diagnostics.map((entry) => [entry.code, entry.severity]),
+    ).toEqual([
+      ["goal_binder_shadows_variable", "warning"],
+      ["goal_binder_shadows_variable", "warning"],
+    ]);
+  });
+
+  test("the warning sits on the goal declaration's own line", async () => {
+    // Not the directive's line and not the starter's: the binder the author
+    // would have to rename is on the `theorem` line.
+    const decl = "theorem fc (f: tm): $ _ ⊢ f = f $;";
+    const compiled = await compileGoal(decl, "f = f    :eq_intro_nd");
+    // Found rather than computed: the arithmetic over a 600-line theory block
+    // is what would be wrong, and it is not what the test is about.
+    const goalLine =
+      goalSource(decl, "f = f    :eq_intro_nd").split("\n").indexOf(decl) + 1;
+
+    expect(compiled.diagnostics).toHaveLength(1);
+    expect(compiled.diagnostics[0]?.line).toBe(goalLine);
+    expect(compiled.diagnostics[0]?.params).toEqual({
+      name: "f",
+      sort: "tm",
+    });
+  });
+
+  test("a goal that displaces nothing says nothing", async () => {
+    const compiled = await compileGoal(
+      "theorem u {x: var} {a: name}: $ ∀ x F(x) ⊢ F(a) $;",
+      "∀ x F(x)    :ax",
+    );
+
+    expect(compiled.ok).toBe(true);
+    expect(compiled.diagnostics).toEqual([]);
+  });
+
+  test("a warning does not suppress an error in the same exercise", async () => {
+    const compiled = await compileGoal(
+      "theorem mp (a b: wff): $ a ⊢ a $;",
+      "a → →    :ax",
+    );
+
+    expect(compiled.ok).toBe(false);
+    expect(
+      compiled.diagnostics.some((entry) => entry.severity === "error"),
+    ).toBe(true);
+  });
+});
 
 describe("aufbau-proof-fitch authoring", () => {
   test("a theory + Fitch proof compiles, freezing goal, starter, and assumption", async () => {

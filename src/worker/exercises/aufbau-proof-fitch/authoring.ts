@@ -18,6 +18,7 @@ import {
 } from "../../application/content/authoring-toolkit";
 import type { AufbauTheory } from "../aufbau-proof/authoring";
 import {
+  goalBinderWarnings,
   parseProofOptions,
   parseTheoremHeader,
   starterFormulaReader,
@@ -162,6 +163,14 @@ export async function compileAufbauProofFitch(
   if (id === null || theory === undefined || header === null) {
     return null;
   }
+
+  const goalLine = block.bodyStartLine + header.headerIndex;
+
+  // The goal's binders shadow the theory's own lexicon for the length of the
+  // exercise (#253), which is how a rule schema is written and also how a
+  // letter quietly stops meaning what the author thinks. Warnings, so the
+  // author decides.
+  diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
   // The starter is the text the editor opens with, so a line the theory's
   // language refuses is a proof the student is handed already broken. Read it

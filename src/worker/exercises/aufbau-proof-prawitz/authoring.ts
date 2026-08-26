@@ -20,6 +20,7 @@ import {
 import type { AufbauTheory } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
+  goalBinderWarnings,
   parseProofOptions,
   parseTheoremHeader,
   starterFormulaReader,
@@ -183,6 +184,14 @@ export async function compileAufbauProofPrawitz(
   ) {
     return null;
   }
+
+  const goalLine = block.bodyStartLine + header.headerIndex;
+
+  // The goal's binders shadow the theory's own lexicon for the length of the
+  // exercise (#253), which is how a rule schema is written and also how a
+  // letter quietly stops meaning what the author thinks. Warnings, so the
+  // author decides.
+  diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
   // An optional `----` + starter body pre-populates the editor. A starter that
   // fails to parse — or whose discharge structure the translator rejects —

@@ -413,6 +413,25 @@ export function buildDiagnosticStrings(i18n: Translator) {
       "No theory is served at “{path}”. This site ships: {available}.",
       placeholders("available", "path"),
     ),
+    // Warnings, not errors: shadowing is usually deliberate — a rule schema
+    // has to name its metavariables something — and only the author knows.
+    // Each says what the name meant before, since that is the part the
+    // compiler knows and the author may not.
+    "The goal binds “{name}” as {sort}, and this theory spells a notation the same way. That spelling will not parse inside this exercise.":
+      i18n.t(
+        "The goal binds “{name}” as {sort}, and this theory spells a notation the same way. That spelling will not parse inside this exercise.",
+        placeholders("name", "sort"),
+      ),
+    "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term.":
+      i18n.t(
+        "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term.",
+        placeholders("name", "sort"),
+      ),
+    "The goal binds “{name}” as {sort}, and this theory reads “{name}” as a variable of sort {displacedSort}. Inside this exercise the binder wins.":
+      i18n.t(
+        "The goal binds “{name}” as {sort}, and this theory reads “{name}” as a variable of sort {displacedSort}. Inside this exercise the binder wins.",
+        placeholders("displacedSort", "name", "sort"),
+      ),
     "The goal header must be followed by a '----' underline, then the proof body.":
       i18n.t(
         "The goal header must be followed by a '----' underline, then the proof body.",

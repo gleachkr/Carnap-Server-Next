@@ -120,11 +120,26 @@ describe("forallx: Calgary theory", () => {
 
   test("the demo lesson compiles through the authoring pipeline", async () => {
     const compiled = await compileCarnapMarkdown(FORALLX_DEMO_SOURCE);
+    // Errors only. Every goal in these lessons is a rule schema, so each one
+    // warns that its metavariables shadow the theory's letters (#254) — which
+    // is the warning doing its job, not the lesson being broken.
     expect(
-      compiled.diagnostics.map((entry) => entry.code),
+      compiled.diagnostics
+        .filter((entry) => entry.severity === "error")
+        .map((entry) => entry.code),
       JSON.stringify(compiled.diagnostics),
     ).toEqual([]);
     expect(compiled.ok).toBe(true);
+    expect(
+      [
+        ...new Set(
+          compiled.diagnostics.map((entry) =>
+            entry.code.replace(/_[^_]+$/, ""),
+          ),
+        ),
+      ].filter((code) => code !== "goal_binder_shadows"),
+      "only binder-shadowing warnings are expected here",
+    ).toEqual([]);
     if (!compiled.ok) {
       return;
     }

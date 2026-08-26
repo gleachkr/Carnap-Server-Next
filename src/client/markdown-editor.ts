@@ -298,7 +298,11 @@ export function createMarkdownViewer(
  */
 export function showDiagnostics(
   view: EditorView,
-  diagnostics: readonly { line: number; message: string }[],
+  diagnostics: readonly {
+    line: number;
+    message: string;
+    severity?: "error" | "warning";
+  }[],
 ): void {
   const doc = view.state.doc;
   const marks: Diagnostic[] = [];
@@ -313,7 +317,9 @@ export function showDiagnostics(
     marks.push({
       from: line.from + (line.text.trim().length === 0 ? 0 : indent),
       message: item.message,
-      severity: "error",
+      // CodeMirror's lint severities are the compiler's own, so a warning
+      // gets the gutter's warning mark rather than an error squiggle.
+      severity: item.severity ?? "error",
       to: line.to,
     });
   }

@@ -952,6 +952,26 @@ the student may write `~(a \/ b)` there as readily as in a goal about
 particular letters. This is what the binders always meant to the engine; before
 it was said out loud, schematic exercises had to stay in engine text.
 
+**Shadowing is warned about, not refused.** Where a binder's name already means
+something in the theory, the compiler says so on the goal's line and compiles
+anyway — a rule schema has to call its metavariables *something*, and in a
+theory that spends every letter on its lexicon there is nothing left to call
+them, so only the author can tell whether a given collision was intended. A
+warning does not stop the save; it is listed under the editor in gold rather
+than red.
+
+Three kinds, by what was displaced. A binder over a **variable** of another
+sort (`(a: wff)` where `a` is a name) or over a **declared term** (`(f: tm)`
+where `f` is a function letter) simply wins, and the warning is a note. A
+binder over a **notation** — a token, or a letter an `@syntax elab` rule uses
+to spell something, as `A` spells `∀` in forallx — additionally takes that
+spelling away inside the exercise: a line reading `Ax F(x)` there will not
+parse. That is the one worth reading twice.
+
+Binding a name to the reading it already had is not shadowing and says nothing:
+`theorem unimp {x: var}` over an `s`–`z` variable pool is every first-order
+goal's normal shape.
+
 A **starter** is read the same way at compile time, so an author who writes a
 line the language refuses is told while saving the revision rather than by a
 student who cannot get the editor to accept what it opened with.

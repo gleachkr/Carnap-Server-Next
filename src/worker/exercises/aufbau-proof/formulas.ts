@@ -46,6 +46,7 @@ import {
   printTerm,
   SurfaceLanguage,
   stripSyntaxAnnotations,
+  surfaceVocabulary,
 } from "@aufbau/syntax";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
@@ -319,6 +320,90 @@ export function hasTheoryText(value: unknown): boolean {
   const data = value as { readonly mm0?: unknown; readonly source?: unknown };
 
   return typeof data.mm0 === "string" || typeof data.source === "string";
+}
+
+/** What a binder displaced, which decides how the warning is worded. */
+export type BinderShadowKind = "notation" | "term" | "variable";
+
+/** One goal binder that means something else in the theory's own language. */
+export interface BinderShadow {
+  /** For `variable`, the sort the name had before the goal bound it. */
+  readonly displacedSort?: string;
+  readonly kind: BinderShadowKind;
+  readonly name: string;
+  /** The binder's own sort. */
+  readonly sort: string;
+}
+
+/**
+ * The goal's binders that displace a meaning the theory's language already
+ * gave their name — what an author is warned about, and nothing more.
+ *
+ * A binder whose name is *not* spelled by the language displaces nothing and
+ * is not reported. Neither is one that reads, unscoped, to a variable of the
+ * binder's own sort: `theorem unimp {x: var}` over an `s`–`z` pool binds `x`
+ * to exactly what `x` already meant, and every first-order goal must bind the
+ * variables it quantifies over, so warning there would report something no
+ * author can avoid. Shadowing means a *different* meaning was pushed aside.
+ *
+ * At most one per binder, and a `notation` collision outranks a lexicon one:
+ * both are worth knowing, but a name that is also a notation or an elab
+ * literal takes that spelling away for the length of the exercise, which is
+ * the surprising half and the half that makes a line stop parsing.
+ */
+export function goalBinderShadows(
+  source: string | null | undefined,
+  goalName: string,
+): readonly BinderShadow[] {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+
+  if (read === null) {
+    return [];
+  }
+
+  const { spec } = read.language;
+  const vocabulary = surfaceVocabulary(spec);
+  const spellings = new Set(vocabulary.tokens);
+
+  for (const rule of spec.elabRules) {
+    for (const element of rule.pattern) {
+      if (element.kind === "literal") {
+        spellings.add(element.token);
+      }
+    }
+  }
+
+  const shadows: BinderShadow[] = [];
+
+  for (const [name, sort] of goalBinderScope(source, goalName)) {
+    if (spellings.has(name)) {
+      shadows.push({ kind: "notation", name, sort });
+      continue;
+    }
+
+    const existing = vocabulary.names.get(name);
+
+    if (existing === undefined) {
+      continue;
+    }
+
+    if (existing.kind === "term") {
+      shadows.push({ kind: "term", name, sort });
+      continue;
+    }
+
+    if (existing.sort !== sort) {
+      shadows.push({
+        displacedSort: existing.sort,
+        kind: "variable",
+        name,
+        sort,
+      });
+    }
+  }
+
+  return shadows;
 }
 
 /**

@@ -20,6 +20,7 @@ import {
 import type { AufbauTheory } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
+  goalBinderWarnings,
   parseProofOptions,
   parseTheoremHeader,
   starterFormulaReader,
@@ -110,6 +111,14 @@ export async function compileAufbauProofTree(
   ) {
     return null;
   }
+
+  const goalLine = block.bodyStartLine + header.headerIndex;
+
+  // The goal's binders shadow the theory's own lexicon for the length of the
+  // exercise (#253), which is how a rule schema is written and also how a
+  // letter quietly stops meaning what the author thinks. Warnings, so the
+  // author decides.
+  diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
   // An optional `----` + `.auf` body pre-populates the tree. A body that parses
   // to a graph (or is otherwise malformed) fails the compile with author feedback.

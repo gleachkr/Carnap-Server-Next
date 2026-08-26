@@ -5,6 +5,7 @@ import {
   ENGINE_TEXT,
   frozenTheoryText,
   goalBinderScope,
+  goalBinderShadows,
   hasTheoryText,
   proofFormulaReader,
   proofTheoryText,
@@ -210,6 +211,76 @@ describe("goalBinderScope", () => {
         testCase.name,
       ).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("goalBinderShadows", () => {
+  const shadowsOf = (theoremDecl: string, goalName: string) =>
+    goalBinderShadows(`${FORALLX_THEORY_SOURCE}\n${theoremDecl}`, goalName);
+
+  test("a binder over a lexicon variable of another sort", () => {
+    // `a` is a name in this theory (`@vars a b c d e` at sort `name`) and a
+    // sentence metavariable here — the shape 12 of the 19 rule cases take.
+    expect(shadowsOf(SCHEMATIC, "mp")).toEqual([
+      { displacedSort: "name", kind: "variable", name: "a", sort: "wff" },
+      { displacedSort: "name", kind: "variable", name: "b", sort: "wff" },
+    ]);
+  });
+
+  test("a binder over a declared term", () => {
+    // The case Graham raised against the old provable-sort gate: nothing
+    // about `tm` makes `f` safer than `P`.
+    expect(shadowsOf("theorem fc (f: tm): $ _ ⊢ f = f $;", "fc")).toEqual([
+      { kind: "term", name: "f", sort: "tm" },
+    ]);
+  });
+
+  test("a binder over a spelling outranks its lexicon reading", () => {
+    // `A` is at once a predicate letter and the elab literal that spells ∀.
+    // One warning per binder, and this is the one worth saying: the lexicon
+    // collision costs nothing a student can see, the lost spelling does.
+    expect(shadowsOf("theorem el (A: wff): $ A ⊢ A $;", "el")).toEqual([
+      { kind: "notation", name: "A", sort: "wff" },
+    ]);
+  });
+
+  test("rebinding a name to the reading it already had is not shadowing", () => {
+    // Every first-order goal must bind the variables it quantifies over, and
+    // `{x: var}` over an `s`–`z` pool displaces nothing. Warning here would
+    // report something no author can avoid, on every FOL exercise there is.
+    expect(shadowsOf(CONCRETE, "t")).toEqual([]);
+  });
+
+  test("a theory that is not a language has nothing to shadow", () => {
+    expect(
+      goalBinderShadows(`${GENTZEN}\ntheorem t (a b: wff): $ a ⊢ b $;`, "t"),
+    ).toEqual([]);
+  });
+
+  test("the whole forallx corpus, split by whether it shadows", () => {
+    // Pinned as a set so the warning's reach is visible: if a change makes it
+    // fire on the FOL cases, that shows up here rather than as noise in the
+    // author's editor.
+    const noisy = FORALLX_CASES.filter(
+      (one) => shadowsOf(one.theoremDecl, one.goalName).length > 0,
+    ).map((one) => one.goalName);
+
+    expect(noisy).toEqual([
+      "self",
+      "mp",
+      "reittest",
+      "andcomm",
+      "orcomm",
+      "exfalso",
+      "biconelim",
+      "andcommbicon",
+      "dni",
+      "dne",
+      "vacuous",
+      "nested",
+      "funcoll",
+      "schemdm",
+    ]);
   });
 });
 

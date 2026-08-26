@@ -626,7 +626,10 @@ export async function compileCarnapMarkdown(
     diagnostics.push(mathDiagnostic(failure));
   }
 
-  if (diagnostics.length > 0) {
+  // Errors alone decide. Warnings ride along on a *successful* compile — that
+  // is the whole point of them — so the editor can list what the author may
+  // want to know without the save refusing on their behalf.
+  if (diagnostics.some((entry) => entry.severity === "error")) {
     return { diagnostics, ok: false };
   }
 
