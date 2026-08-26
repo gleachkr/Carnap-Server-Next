@@ -535,8 +535,9 @@ const SHORTCUTS: readonly {
   { action: "Tick or untick the line", keys: ["Space"] },
   { action: "Edit the line's formula", keys: ["Enter"] },
   { action: "Edit the line's rule", keys: ["r"] },
-  { action: "Edit the assumption's label", keys: ["l"] },
-  { action: "Edit the rule's discharge marks", keys: ["d"] },
+  // One row, because one key: a line has a label or discharge marks, never
+  // both. See the `l` case in `onTreeKeyDown`.
+  { action: "Edit the line's label or discharge marks", keys: ["l"] },
   { action: "Leave the field and go back to the line", keys: ["Esc"] },
   { action: "New assumption", keys: ["a"] },
   { action: "Apply rule below", keys: ["b"] },
@@ -790,6 +791,8 @@ function Editor(props: {
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onRedo: () => void;
   readonly onSelect: (id: string, additive: boolean) => void;
+  /** An edit run from the toolbar: applies it and focuses the line it made. */
+  readonly onToolbarEdit: (action: Action) => void;
   readonly onUndo: () => void;
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
   readonly status: Status;
@@ -798,7 +801,7 @@ function Editor(props: {
   const { canRedo, canUndo, dispatch, doc, focusedId, goalFormula, t } =
     props;
   const { onFocusItem, onNodeKeyDown, onRedo, onSelect, onUndo } = props;
-  const { registerNode, status } = props;
+  const { onToolbarEdit, registerNode, status } = props;
   const single =
     doc.selected.length === 1
       ? locate(doc.trees, doc.selected[0] ?? "")
@@ -821,7 +824,7 @@ function Editor(props: {
       </p>
       <div class="pz-toolbar">
         <button
-          onClick={() => dispatch({ type: "addAssumption" })}
+          onClick={() => onToolbarEdit({ type: "addAssumption" })}
           title={t("New assumption (a)")}
           type="button"
         >
@@ -829,7 +832,7 @@ function Editor(props: {
         </button>
         <button
           disabled={!canApply}
-          onClick={() => dispatch({ type: "applyBelow" })}
+          onClick={() => onToolbarEdit({ type: "applyBelow" })}
           title={t("Apply rule below (b)")}
           type="button"
         >
@@ -837,7 +840,9 @@ function Editor(props: {
         </button>
         <button
           disabled={!canGrow}
-          onClick={() => dispatch({ assumption: false, type: "addAbove" })}
+          onClick={() =>
+            onToolbarEdit({ assumption: false, type: "addAbove" })
+          }
           title={t("Add premise above (p)")}
           type="button"
         >
@@ -845,7 +850,9 @@ function Editor(props: {
         </button>
         <button
           disabled={!canGrow}
-          onClick={() => dispatch({ assumption: true, type: "addAbove" })}
+          onClick={() =>
+            onToolbarEdit({ assumption: true, type: "addAbove" })
+          }
           title={t("Add assumption above (h)")}
           type="button"
         >
@@ -853,7 +860,7 @@ function Editor(props: {
         </button>
         <button
           disabled={!canDelete}
-          onClick={() => dispatch({ type: "delete" })}
+          onClick={() => onToolbarEdit({ type: "delete" })}
           title={t("Delete (Del)")}
           type="button"
         >
@@ -1162,6 +1169,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     if (next === previous) {
       return;
     }
+    const heldFocus = this.holdsFocus();
 
     if (next.trees !== previous.trees) {
       const key = coalesceKeyFor(action);
@@ -1176,6 +1184,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
 
     this.doc = next;
     this.rerender();
+    this.restoreFocusIfLost(heldFocus);
     if (next.trees !== previous.trees) {
       this.onModelChanged();
     }
@@ -1193,10 +1202,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     if (snapshot === undefined) {
       return;
     }
+    const heldFocus = this.holdsFocus();
     this.future.push(this.doc);
     this.doc = snapshot;
     this.coalesceKey = null;
     this.rerender();
+    this.restoreFocusIfLost(heldFocus);
     this.onModelChanged();
   };
 
@@ -1205,10 +1216,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     if (snapshot === undefined) {
       return;
     }
+    const heldFocus = this.holdsFocus();
     this.past.push(this.doc);
     this.doc = snapshot;
     this.coalesceKey = null;
     this.rerender();
+    this.restoreFocusIfLost(heldFocus);
     this.onModelChanged();
   };
 
@@ -1247,6 +1260,60 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     this.nodeRefs.get(id)?.focus();
   }
 
+  /** Is the reader's focus anywhere inside this exercise's shadow root? */
+  private holdsFocus(): boolean {
+    return (this.shadowRoot?.activeElement ?? null) !== null;
+  }
+
+  /** The line an edit just produced, or failing that any surviving line. */
+  private primaryLine(): string | undefined {
+    return this.doc.selected[0] ?? this.doc.trees[0]?.id;
+  }
+
+  /**
+   * Put the roving focus back on a line after an edit that took DOM focus with
+   * it.
+   *
+   * A structural edit re-renders the workspace, and one that removes the line
+   * the reader is standing on — an undo of the assumption they just added, a
+   * delete — leaves the browser with nowhere to put focus, so it drops to the
+   * document body. Nothing there is listening: from that point not one shortcut
+   * works, not even the Ctrl-Z that would undo the undo, and the only way back
+   * in is the mouse. So when the exercise held focus before the edit and holds
+   * none after, it takes focus back.
+   *
+   * Conditional on having lost it, deliberately: a Ctrl-Z typed while a formula
+   * field has focus rolls back that field's text, and yanking the caret out to
+   * the line would make editing unusable.
+   */
+  private restoreFocusIfLost(heldFocus: boolean): void {
+    if (!heldFocus || this.holdsFocus()) {
+      return;
+    }
+    const id = this.primaryLine();
+    if (id !== undefined) {
+      this.focusNode(id);
+    }
+  }
+
+  /**
+   * A toolbar edit: apply it, then stand the reader on the line it produced.
+   *
+   * The buttons duplicate the single-key gestures, which already leave focus on
+   * the line they made — and without this the click leaves focus on the button,
+   * where every one of those keys does nothing. It is also the only way into an
+   * empty workspace: before the first assumption there is no treeitem at all,
+   * so `New assumption` is the one control that can hand the keyboard a line to
+   * stand on.
+   */
+  private readonly toolbarEdit = (action: Action): void => {
+    this.dispatch(action);
+    const id = this.primaryLine();
+    if (id !== undefined) {
+      this.focusNode(id);
+    }
+  };
+
   private focusField(nodeId: string, selector: string): void {
     // Formula/label live inside the treeitem; rule/discharge live in the
     // sibling <proof-inference>, reached via the owning <proof-tree>.
@@ -1266,12 +1333,13 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
    * move within a tree (premises render *above* their parent, so Up steps
    * into the first premise and Down to the parent; Left/Right walk siblings,
    * or neighbouring roots at the top level). Enter edits the formula, r the
-   * rule, l the label, d the discharge marks; a / b / p / h mirror the
-   * toolbar; Delete removes the node (promoting its premises). The
-   * single-line gestures (p / h / l / d / Delete) first select the focused
-   * line — they act *here*, and for l / d the selection is also what reveals
-   * an empty label or discharge box so it can take focus. While editing a
-   * field only Escape is intercepted; everything else types normally.
+   * rule, l the discharge box — the assumption's label or the rule's marks,
+   * whichever this line has; a / b / p / h mirror the toolbar; Delete removes
+   * the node (promoting its premises). The single-line gestures (p / h / l /
+   * Delete) first select the focused line — they act *here*, and for l the
+   * selection is also what reveals an empty label or discharge box so it can
+   * take focus. While editing a field only Escape is intercepted; everything
+   * else types normally.
    */
   private onTreeKeyDown(event: KeyboardEvent, nodeId: string): void {
     const located = locate(this.doc.trees, nodeId);
@@ -1336,22 +1404,19 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         break;
       case "l":
       case "L":
-        if (node.isAssumption) {
-          event.preventDefault();
-          // Select first: an empty label box is hidden on unselected lines,
-          // and selecting rerenders synchronously, so it is visible (and
-          // focusable) by the next line.
-          this.selectNode(nodeId, false);
-          this.focusField(nodeId, ".pz-label");
-        }
-        break;
-      case "d":
-      case "D":
-        if (!node.isAssumption) {
-          event.preventDefault();
-          this.selectNode(nodeId, false);
-          this.focusField(nodeId, ".pz-discharge");
-        }
+        // One key for both ends of a discharge. An assumption carries the
+        // label, a rule the marks that answer it, and no line has both — so
+        // which box `l` opens is never ambiguous, and the student pressing it
+        // is doing one thing either way: naming the discharge they are making.
+        event.preventDefault();
+        // Select first: an empty label or discharge box is hidden on
+        // unselected lines, and selecting rerenders synchronously, so it is
+        // visible (and focusable) by the next line.
+        this.selectNode(nodeId, false);
+        this.focusField(
+          nodeId,
+          node.isAssumption ? ".pz-label" : ".pz-discharge",
+        );
         break;
       case "a":
       case "A":
@@ -1442,6 +1507,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         onNodeKeyDown={(event, id) => this.onTreeKeyDown(event, id)}
         onRedo={this.redo}
         onSelect={this.selectNode}
+        onToolbarEdit={this.toolbarEdit}
         onUndo={this.undo}
         registerNode={this.registerNode}
         status={this.status}

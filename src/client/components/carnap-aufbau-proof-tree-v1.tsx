@@ -585,6 +585,8 @@ function Editor(props: {
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onRedo: () => void;
   readonly onSelect: (id: string) => void;
+  /** An edit run from the toolbar: applies it and focuses the node it made. */
+  readonly onToolbarEdit: (action: Action) => void;
   readonly onUndo: () => void;
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
   readonly status: Status;
@@ -592,7 +594,7 @@ function Editor(props: {
 }): preact.JSX.Element {
   const { canRedo, canUndo, dispatch, doc, t } = props;
   const { onNodeKeyDown, onRedo, onSelect, onUndo } = props;
-  const { registerNode, status } = props;
+  const { onToolbarEdit, registerNode, status } = props;
   const selected = locate(doc.model, doc.selectedId);
   const canBranch = selected !== null && selected.node.hyp === null;
   const canDelete = selected !== null && selected.parentId !== null;
@@ -602,21 +604,21 @@ function Editor(props: {
       <div class="tree-toolbar">
         <button
           disabled={!canBranch}
-          onClick={() => dispatch({ hyp: null, type: "addPremise" })}
+          onClick={() => onToolbarEdit({ hyp: null, type: "addPremise" })}
           type="button"
         >
           {t("Add premise")}
         </button>
         <button
           disabled={!canBranch}
-          onClick={() => dispatch({ hyp: 1, type: "addPremise" })}
+          onClick={() => onToolbarEdit({ hyp: 1, type: "addPremise" })}
           type="button"
         >
           {t("Add hypothesis")}
         </button>
         <button
           disabled={!canDelete}
-          onClick={() => dispatch({ type: "delete" })}
+          onClick={() => onToolbarEdit({ type: "delete" })}
           type="button"
         >
           {t("Delete")}
@@ -865,6 +867,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     if (next === previous) {
       return;
     }
+    const heldFocus = this.holdsFocus();
 
     if (next.model !== previous.model) {
       // A real edit: record it for undo unless it coalesces with the last one
@@ -883,6 +886,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
 
     this.doc = next;
     this.rerender();
+    this.restoreFocusIfLost(heldFocus);
     if (next.model !== previous.model) {
       this.onModelChanged();
     }
@@ -900,10 +904,12 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     if (snapshot === undefined) {
       return;
     }
+    const heldFocus = this.holdsFocus();
     this.future.push(this.doc);
     this.doc = snapshot;
     this.coalesceKey = null;
     this.rerender();
+    this.restoreFocusIfLost(heldFocus);
     this.onModelChanged();
   };
 
@@ -912,10 +918,12 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     if (snapshot === undefined) {
       return;
     }
+    const heldFocus = this.holdsFocus();
     this.past.push(this.doc);
     this.doc = snapshot;
     this.coalesceKey = null;
     this.rerender();
+    this.restoreFocusIfLost(heldFocus);
     this.onModelChanged();
   };
 
@@ -939,6 +947,44 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     this.dispatch({ id, type: "select" });
     this.nodeRefs.get(id)?.focus();
   }
+
+  /** Is the reader's focus anywhere inside this exercise's shadow root? */
+  private holdsFocus(): boolean {
+    return (this.shadowRoot?.activeElement ?? null) !== null;
+  }
+
+  /**
+   * Put the roving focus back on a node after an edit that took DOM focus with
+   * it.
+   *
+   * Deleting a subtree, or undoing the premise just added, removes the node the
+   * reader is standing on: the browser has nowhere to put focus and drops it to
+   * the document body, where none of the shortcuts is listening — not even the
+   * Ctrl-Z that would undo the undo. So when the exercise held focus before the
+   * edit and holds none after, it takes focus back.
+   *
+   * Conditional on having lost it: a Ctrl-Z typed while a conclusion field has
+   * focus rolls back that field's text, and yanking the caret out to the node
+   * would make editing unusable.
+   */
+  private restoreFocusIfLost(heldFocus: boolean): void {
+    if (!heldFocus || this.holdsFocus()) {
+      return;
+    }
+    this.nodeRefs.get(this.doc.selectedId)?.focus();
+  }
+
+  /**
+   * A toolbar edit: apply it, then stand the reader on the node it produced.
+   *
+   * The buttons duplicate the single-key gestures, which already leave focus on
+   * the node they made — and without this the click leaves focus on the button,
+   * where every one of those keys does nothing.
+   */
+  private readonly toolbarEdit = (action: Action): void => {
+    this.dispatch(action);
+    this.nodeRefs.get(this.doc.selectedId)?.focus();
+  };
 
   /**
    * Keyboard model: a node's treeitem holds the roving focus. Arrows move
@@ -1079,6 +1125,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
         onNodeKeyDown={(event, id) => this.onTreeKeyDown(event, id)}
         onRedo={this.redo}
         onSelect={this.selectNode}
+        onToolbarEdit={this.toolbarEdit}
         onUndo={this.undo}
         registerNode={this.registerNode}
         status={this.status}

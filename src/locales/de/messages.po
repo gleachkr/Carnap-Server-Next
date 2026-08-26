@@ -1472,13 +1472,13 @@ msgid "Edit settings"
 msgstr "Einstellungen bearbeiten"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-msgid "Edit the assumption's label"
-msgstr "Bearbeitet die Marke der Annahme"
-
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Edit the line's formula"
 msgstr "Bearbeitet die Formel der Zeile"
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Edit the line's label or discharge marks"
+msgstr "Bearbeitet die Marke oder die Entlastungsmarken der Zeile"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
@@ -1488,10 +1488,6 @@ msgstr "Bearbeitet die Regel der Zeile"
 #: src/worker/web/assignment-detail.tsx
 msgid "Edit the override for {name}"
 msgstr "Abweichung für {name} bearbeiten"
-
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-msgid "Edit the rule's discharge marks"
-msgstr "Bearbeitet die Entlastungsmarken der Regel"
 
 #: src/worker/web/admin.tsx
 #: src/worker/web/auth.tsx

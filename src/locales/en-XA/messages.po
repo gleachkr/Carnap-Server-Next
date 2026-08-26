@@ -1472,12 +1472,12 @@ msgid "Edit settings"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-msgid "Edit the assumption's label"
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Edit the line's formula"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-#: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Edit the line's formula"
+msgid "Edit the line's label or discharge marks"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
@@ -1487,10 +1487,6 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Edit the override for {name}"
-msgstr ""
-
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-msgid "Edit the rule's discharge marks"
 msgstr ""
 
 #: src/worker/web/admin.tsx
