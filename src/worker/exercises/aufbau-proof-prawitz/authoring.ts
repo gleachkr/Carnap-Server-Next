@@ -218,7 +218,7 @@ export async function compileAufbauProofPrawitz(
       assumptionRule,
       sequentSymbol,
       contextSymbol,
-      starterFormulaReader(theory, header.theoremDecl, "sentence"),
+      starterFormulaReader(theory, header, "sentence"),
     );
 
     // A node the theory's language refuses is a canvas the student is handed

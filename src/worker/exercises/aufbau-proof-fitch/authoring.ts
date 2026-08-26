@@ -175,7 +175,7 @@ export async function compileAufbauProofFitch(
       assumptionRule,
       sequentSymbol,
       contextSymbol,
-      starterFormulaReader(theory, header.theoremDecl, "sentence"),
+      starterFormulaReader(theory, header, "sentence"),
     );
 
     for (const problem of translated.formulaProblems) {

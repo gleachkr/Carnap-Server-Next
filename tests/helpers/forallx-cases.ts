@@ -180,14 +180,16 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
   // has one.
   //
   // These lines are written in engine text (`∀ x` with the space) and the two
-  // below them in the book's own ASCII, and both compile. A proof set on a
-  // *concrete* goal has its lines read in the theory's language before it
-  // reaches the engine (#250), which accepts either — so the corpus keeps one
-  // of each rather than converting, since the engine-text spelling is what
-  // every already-written starter uses and is the thing that must not break.
-  // A *schematic* goal (`theorem mp (a b: wff)`, and the TFL cases above) has
-  // no such reading and must still be engine text: its `a` is a metavariable
-  // the theory's lexicon, where `a` is a name, knows nothing about.
+  // below them in the book's own ASCII, and both compile. Every proof's lines
+  // are read in the theory's language before they reach the engine (#250),
+  // and the reading accepts either — so the corpus keeps one of each rather
+  // than converting, since the engine-text spelling is what every
+  // already-written starter uses and is the thing that must not break.
+  //
+  // That holds for a *schematic* goal too, since #253: `theorem mp
+  // (a b: wff)` has its lines read in its own binders, so the `a` the
+  // theory's lexicon spells as a name is the metavariable here. `funcoll`
+  // and `schemdm` below are the cases that pin it.
   {
     name: "unimp (∀E, →E)",
     theoremDecl:
@@ -245,6 +247,39 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     fitch: ["a = a       :eq_intro_nd", "∀ x x = x   :all_intro 1"].join(
       "\n",
     ),
+  },
+  {
+    name: "funcoll (=I over a term metavariable spelled like a function letter)",
+    theoremDecl: "theorem funcoll (f: tm): $ _ ⊢ f = f $;",
+    goalName: "funcoll",
+    // The case #253 exists for, at a sort no quantifier binds and nothing
+    // provable. `f` is this goal's own term metavariable *and* one of the
+    // theory's variadic function letters, so a parse that does not know the
+    // binders reads the line as `(f snil) = (f snil)` — which is a perfectly
+    // good formula about a different thing, and no proof of this goal can
+    // close. Nothing about the letter's sort makes it safer than `P`.
+    fitch: ["f = f   :eq_intro_nd"].join("\n"),
+  },
+  {
+    name: "schematic de Morgan in textbook notation (¬I, ∨E, ∧I …)",
+    theoremDecl: "theorem schemdm (a b: wff): $ ¬ (a ∨ b) ⊢ ¬ a ∧ ¬ b $;",
+    goalName: "schemdm",
+    // A rule schema *and* the book's spelling in the same case — the pair
+    // that was unreachable before, since a schematic goal turned surface
+    // reading off wholesale. `a` and `b` are names in this theory's lexicon
+    // and metavariables here; `~`, `\\/` and `/\\` are the book's tokens.
+    fitch: [
+      "~(a \\/ b)        :ax",
+      "    a            :ax",
+      "    a \\/ b       :or_intro_l 2",
+      "    ⊥            :neg_elim 3 1",
+      "~a               :neg_intro 2-4",
+      "    b            :ax",
+      "    a \\/ b       :or_intro_r 6",
+      "    ⊥            :neg_elim 7 1",
+      "~b               :neg_intro 6-8",
+      "~a /\\ ~b         :and_intro 5 9",
+    ].join("\n"),
   },
   {
     name: "unimp in textbook notation (→E, ∀E)",

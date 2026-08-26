@@ -34,11 +34,15 @@ describe("forallx: Calgary theory", () => {
 
   test("every worked case's lines read in the theory's own language", () => {
     // Read as the widget reads them: through what the authoring compiler
-    // would have frozen for that goal, so a schematic case (`theorem mp
-    // (a b: wff)`, whose `a` and `b` the theory's lexicon does not know) is
-    // exercised on the engine-text path and a concrete one on the surface path.
+    // would have frozen for that goal, and in that goal's own binders — so a
+    // schematic case (`theorem mp (a b: wff)`, whose `a` and `b` the theory's
+    // lexicon does not know) is exercised on the same surface path as the
+    // rest, which since #253 is every one of them.
     for (const testCase of FORALLX_CASES) {
-      const { readSentence } = forallxExercise(testCase.theoremDecl);
+      const { readSentence } = forallxExercise(
+        testCase.goalName,
+        testCase.theoremDecl,
+      );
       const { formulaProblems } = fitchToAuf(
         testCase.fitch,
         testCase.goalName,
@@ -56,6 +60,7 @@ describe("forallx: Calgary theory", () => {
 
   test("a line typed in textbook notation reaches the compiler as engine text", () => {
     const { readSentence } = forallxExercise(
+      "t",
       "theorem t {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $;",
     );
     const { proofText, formulaProblems } = fitchToAuf(
@@ -73,6 +78,7 @@ describe("forallx: Calgary theory", () => {
 
   test("a formula the language refuses is named where it broke", () => {
     const { readSentence } = forallxExercise(
+      "t",
       "theorem t {a: name}: $ F(a) ⊢ F(a) $;",
     );
     const { formulaProblems } = fitchToAuf(
@@ -89,15 +95,18 @@ describe("forallx: Calgary theory", () => {
     expect(formulaProblems[0]?.error.message).toBe("Expected a formula.");
   });
 
-  test("a schematic goal leaves its lines alone", () => {
+  test("a schematic goal reads its lines in its own binders", () => {
     // `a` is a name in this theory's lexicon and a wff metavariable in this
-    // goal. Reading the line globally would refuse it — so the exercise is
-    // frozen without a language, and the line passes through as written.
+    // goal. A global-vocabulary parse would take the lexicon's answer, so
+    // before #253 the exercise was frozen without a language and the line
+    // passed through as written. Now the goal's binders shadow the lexicon
+    // and the line is read — textbook spelling and all.
     const { readSentence } = forallxExercise(
+      "mp",
       "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
     );
     const { formulaProblems, proofText } = fitchToAuf(
-      "a → b   :ax",
+      "a -> b   :ax",
       "mp",
       "ax",
       "⊢",
@@ -106,7 +115,7 @@ describe("forallx: Calgary theory", () => {
     );
 
     expect(formulaProblems).toEqual([]);
-    expect(proofText).toContain("$ a → b ⊢ a → b $");
+    expect(proofText).toContain("$ (a → b) ⊢ (a → b) $");
   });
 
   test("the demo lesson compiles through the authoring pipeline", async () => {

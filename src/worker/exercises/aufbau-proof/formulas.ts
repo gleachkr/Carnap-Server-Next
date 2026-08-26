@@ -19,23 +19,20 @@
  * discipline, its refusal of open sentences — start applying to proofs, having
  * previously applied only to the exercise types that parse.
  *
- * **Two conditions, and a proof stays engine text unless both hold.**
+ * **One condition: the theory must declare `@syntax role sentence`.** That is
+ * a file saying it is also a *language*, which is exactly the question being
+ * asked; `gentzen-lk` declares no `@syntax` at all and reads as it always did.
  *
- * The theory must declare `@syntax role sentence`. That is a file saying it is
- * also a *language*, which is exactly the question being asked; `gentzen-lk`
- * declares no `@syntax` at all and reads as it always did.
- *
- * And the exercise's goal must bind nothing at a provable sort — see
- * {@link goalIsSchematic}. This one is not a preference. A schematic goal
- * (`theorem mp (a b: wff): $ (a → b) ; a ⊢ b $`) binds metavariables that
- * shadow the theory's own lexicon for the length of that theorem, and the spec
- * knows nothing about them: 12 of the 19 forallx rule cases are written this
- * way, and a global-vocabulary parse refuses every one. The refusals are the
- * *safe* half. A goal binding `(P Q: wff)` — the way most textbooks state a
- * rule — parses fine against the lexicon and quietly turns the metavariable
- * `P` into the predicate letter `P (snil)`, breaking a proof that used to
- * compile. So a schematic goal turns surface reading off for that exercise,
- * and the student writes engine text there, as before.
+ * There used to be a second condition, and getting rid of it is what #253 was
+ * (see {@link goalBinderScope}). A goal that binds metavariables —
+ * `theorem mp (a b: wff): $ (a → b) ; a ⊢ b $`, which is how a textbook states
+ * a rule, and how 12 of the 19 forallx rule cases are written — shadows the
+ * theory's own lexicon for the length of that theorem. A parse that does not
+ * know the binders reads them as the lexicon's letters instead, and does it
+ * *quietly*: `P` becomes the predicate letter `P (snil)`, and no proof of that
+ * goal can close. #250 dealt with this by refusing to read such a goal at all;
+ * the scope deals with it by telling the parser what the engine already knows,
+ * which reads those 12 rather than declining them.
  *
  * DOM-free and catalog-free: the client editor compiles the `.auf` it submits,
  * so the browser runs this too, and its complaints travel as unfilled English
@@ -43,6 +40,7 @@
  * string map to word.
  */
 
+import type { AssertStatement, Scope } from "@aufbau/syntax";
 import {
   parseSpec,
   printTerm,
@@ -71,10 +69,16 @@ export type ProofFormulaReading =
 export type ProofFormulaReader = (text: string) => ProofFormulaReading;
 
 /**
- * Reading a ~30 KB artifact into notation tables is not something to do once
- * per widget, and a page sets several exercises from one theory. Keyed on the
- * frozen text, so an author's extension gets its own entry and two exercises
- * over the same theory share one.
+ * Reading a ~30 KB artifact into notation tables is not something to do twice
+ * for the same text, so it is done once and kept.
+ *
+ * The key is the frozen text, which carries the *goal declaration* appended to
+ * the theory — so two exercises over one theory do not in fact share an entry,
+ * and a page setting several from the same artifact parses it once each. That
+ * is the price of the goal being part of the text rather than beside it, which
+ * is also what {@link goalBinderScope} reads it back out of. Worth revisiting
+ * if a lesson ever gets big enough for it to show; nothing measured says it
+ * does.
  */
 const languages = new Map<string, ProofLanguage | null>();
 
@@ -152,10 +156,16 @@ export const ENGINE_TEXT: ProofFormulaReader = (text) => ({ ok: true, text });
  * engine input is derived from it by stripping (see {@link proofTheoryText});
  * a caller holding only the stripped text holds no language, and passes
  * `null`.
+ *
+ * `goalName` names the theorem the lines belong to, whose binders they are
+ * read in the scope of (see {@link goalBinderScope}). It is required rather
+ * than optional because forgetting it is not a failure anyone would notice:
+ * the parse still succeeds, against the wrong vocabulary.
  */
 export function proofFormulaReader(
   source: string | null | undefined,
   shape: ProofFormulaShape,
+  goalName: string,
 ): ProofFormulaReader {
   const read =
     source === null || source === undefined ? null : proofLanguage(source);
@@ -166,9 +176,10 @@ export function proofFormulaReader(
 
   const { language } = read;
   const sort = sortFor(read, shape);
+  const scope = goalBinderScope(source, goalName);
 
   return (text) => {
-    const result = language.parse(text, { sort });
+    const result = language.parse(text, { scope, sort });
 
     if (!result.ok) {
       return { errors: formulaParseErrors(result.diagnostics), ok: false };
@@ -190,11 +201,9 @@ export function proofFormulaReader(
  * both would put a second copy of a 30 KB artifact in the page for every
  * exercise set from it.
  *
- * A `source` of `null` is the honest state of two different artifacts: one
- * compiled before this existed, and one whose goal is schematic (the authoring
- * compiler withholds `source` rather than carrying a flag beside it — the
- * language a proof is read in and the fact that it is read at all are the same
- * fact). Both go on as engine text.
+ * A `source` of `null` is the honest state of an artifact whose theory is not
+ * a language — and of any artifact compiled before `source` existed, which is
+ * why the pass-through path stays. Both go on as engine text.
  */
 export function proofTheoryText(data: {
   readonly mm0?: string;
@@ -275,17 +284,15 @@ export function readNodeFormulas<
  * carried by *which field arrives* rather than by a flag beside it: `source`
  * means "read what the student types in this language", `mm0` means "the
  * student writes engine text", and there is no way to be told one and shown
- * the other. The two conditions are the module's own — the theory has to be a
- * language, and the goal must not be schematic.
+ * the other. One condition, the module's own: the theory has to be a language.
+ *
+ * The goal declaration is appended either way, and its binders are what
+ * {@link goalBinderScope} later reads back out of `source`.
  */
 export function frozenTheoryText(
   theory: { readonly mm0: string; readonly source: string },
   theoremDecl: string,
 ): { readonly mm0?: string; readonly source?: string } {
-  if (goalIsSchematic(theoremDecl, theory.source)) {
-    return { mm0: `${theory.mm0}\n${theoremDecl}` };
-  }
-
   if (proofLanguage(theory.source) === null) {
     return { mm0: `${theory.mm0}\n${theoremDecl}` };
   }
@@ -314,47 +321,50 @@ export function hasTheoryText(value: unknown): boolean {
   return typeof data.mm0 === "string" || typeof data.source === "string";
 }
 
-/** A `$ … $` math string, which a binder list must be read around. */
-const MATH_STRING = /\$[^$]*\$/g;
-
-/** One binder group: `(a b: wff)`, `{x: var}`, `{.y: var}`. */
-const BINDER_GROUP = /[({]\s*([^:(){}]+?)\s*:\s*([^:(){}]+?)\s*[)}]/g;
-
 /**
- * Whether a goal declaration binds a metavariable of a provable sort — which
- * is to say, whether it states a *rule schema* rather than a concrete claim.
+ * The goal theorem's binders, name to sort — the scope its proof's lines are
+ * read in.
  *
- * `theorem mp (a b: wff): $ (a → b) ; a ⊢ b $` does: `a` and `b` stand for
- * any sentences, and for the length of that theorem they mean something the
- * theory's lexicon (where `a`–`e` are names) does not know. `theorem unimp
- * {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $` does not: its
- * binders are drawn from sorts the lexicon already spells, and every letter in
- * the statement means what the spec says it means.
+ * A theorem's binders shadow the file's declarations for the length of that
+ * theorem, in the engine's math parser and so in the student's line too. The
+ * binder list is not re-parsed here: `source` is the theory *with the goal
+ * declaration appended*, so the spec reader has already read it, and reading
+ * the statement it produced is both cheaper and more honest than a regular
+ * expression over the same text — it splits `(a b: wff)` into two binders,
+ * takes the head of a dependent sort (`(ph: wff x)`), strips a dummy's dot
+ * (`{.y: var}`), and leaves a hypothesis binder (`(h: $ … $)`, which carries a
+ * formula rather than a type, and introduces no vocabulary) alone.
  *
- * Hypothesis binders (`(h: $ … $)`) introduce no vocabulary, and the math
- * strings are cleared first so a `$`-delimited hypothesis cannot be mistaken
- * for a sort name.
+ * The *last* declaration of the name wins, which is the one appended.
  */
-export function goalIsSchematic(
-  theoremDecl: string,
+export function goalBinderScope(
   source: string | null | undefined,
-): boolean {
+  goalName: string,
+): Scope {
   const read =
     source === null || source === undefined ? null : proofLanguage(source);
+  const scope = new Map<string, string>();
 
   if (read === null) {
-    return false;
+    return scope;
   }
 
-  const binders = theoremDecl.replace(MATH_STRING, " ");
+  let goal: AssertStatement | null = null;
 
-  for (const match of binders.matchAll(BINDER_GROUP)) {
-    const sort = (match[2] ?? "").trim();
-
-    if (read.language.isProvableSort(sort)) {
-      return true;
+  for (const statement of read.language.spec.statements) {
+    if (
+      (statement.kind === "theorem" || statement.kind === "axiom") &&
+      statement.name === goalName
+    ) {
+      goal = statement;
     }
   }
 
-  return false;
+  for (const binder of goal?.binders ?? []) {
+    if ("sort" in binder.type) {
+      scope.set(binder.name, binder.type.sort);
+    }
+  }
+
+  return scope;
 }

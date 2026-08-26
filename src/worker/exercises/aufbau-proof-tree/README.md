@@ -76,15 +76,16 @@ unification failure. And the spec's lints start applying to proofs: forallx
 admits parentheses only around a two-place connective, so `∀ x (x = x)` is now
 refused and must be written `∀ x x = x`.
 
-**Two conditions, and a proof stays engine text unless both hold.** The theory
-must be a language (`gentzen-lk` is not, and reads as it always did), and the
-goal must not be schematic. A goal binding a metavariable of a provable sort —
-`theorem mp (a b: wff): $ (a → b) ; a ⊢ b $` — states a rule about *any*
-sentences, and its `a` is not the theory's own `a`. Reading such a line
-globally would refuse it at best and silently mean something else at worst, so
-those exercises keep engine text. Which of the two applies is carried by *which
-theory text `publicData` holds*: `source` (the artifact `@syntax` and all) means
-read it, `mm0` (already stripped) means do not.
+**One condition: the theory must be a language** (`gentzen-lk` is not, and
+reads as it always did). It is carried by *which theory text `publicData`
+holds*: `source` (the artifact `@syntax` and all) means read it, `mm0` (already
+stripped) means do not.
+
+A goal stated as a rule schema is read in **its own binders**. `theorem mp
+(a b: wff): $ (a → b) ; a ⊢ b $` is about *any* sentences, and its `a` is not
+the theory's own `a`; the parser is given the goal's binder list, so it reads
+the metavariable rather than the lexicon's name. Before #253 there was no way
+to say that, and such exercises had to keep engine text.
 
 The starter is read the same way at compile time, so an author hears about an
 unreadable line while saving rather than a student meeting an editor that will

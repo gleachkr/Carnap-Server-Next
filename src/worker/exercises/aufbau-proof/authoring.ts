@@ -109,12 +109,13 @@ function declaredNotations(source: string): {
  */
 export function starterFormulaReader(
   theory: AufbauTheory,
-  theoremDecl: string,
+  header: { readonly goalName: string; readonly theoremDecl: string },
   shape: ProofFormulaShape,
 ): ProofFormulaReader {
   return proofFormulaReader(
-    proofTheoryText(frozenTheoryText(theory, theoremDecl)).source,
+    proofTheoryText(frozenTheoryText(theory, header.theoremDecl)).source,
     shape,
+    header.goalName,
   );
 }
 

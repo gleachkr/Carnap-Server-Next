@@ -939,15 +939,18 @@ compiler `(∀ x ((F (x)) → (G (x))))`. Two things come with that:
   doing anything. Both spellings mean the same thing to the engine; only one is
   the book's.
 
-**Two conditions, or the proof stays engine text.** The theory must be a
-language — `gentzen-lk` declares no `@syntax` at all, and proofs in it read as
-they always did. And the exercise's goal must not be *schematic*: a goal like
-`theorem mp (a b: wff): $ (a → b) ; a ⊢ b $` binds `a` and `b` as stand-ins for
-any sentence, which the theory's own lexicon (where `a`–`e` are names) knows
-nothing about. Those exercises keep engine text — `∀ x F(x)` with the space,
-no `Ax`, no `~` — which is what every proof did before this existed. Writing a
-goal about *particular* letters (`theorem unimp {x: var} {a: name}: …`) is what
-turns textbook notation on.
+**One condition, or the proof stays engine text: the theory must be a
+language.** `gentzen-lk` declares no `@syntax` at all, and proofs in it read as
+they always did.
+
+A goal stated as a *rule schema* is read too, in its own binders. `theorem mp
+(a b: wff): $ (a → b) ; a ⊢ b $` binds `a` and `b` as stand-ins for any
+sentence, and for the length of that theorem they mean something the theory's
+lexicon — where `a`–`e` are names — knows nothing about. The parser is told the
+binders, so `a` in a line of that proof is the metavariable, not the name, and
+the student may write `~(a \/ b)` there as readily as in a goal about
+particular letters. This is what the binders always meant to the engine; before
+it was said out loud, schematic exercises had to stay in engine text.
 
 A **starter** is read the same way at compile time, so an author who writes a
 line the language refuses is told while saving the revision rather than by a

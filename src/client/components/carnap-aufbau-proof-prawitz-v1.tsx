@@ -1007,7 +1007,11 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
 
     const theory = proofTheoryText(data);
     this.mm0 = theory.mm0;
-    this.readFormula = proofFormulaReader(theory.source, "sentence");
+    this.readFormula = proofFormulaReader(
+      theory.source,
+      "sentence",
+      data.goalName,
+    );
     this.goalName = data.goalName;
     this.goalFormula = data.goalFormula;
     this.assumptionRule = data.assumptionRule;

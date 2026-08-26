@@ -28,8 +28,18 @@ import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import { SHOWCASE_DEMO_SOURCE } from "../tests/helpers/showcase-demo";
 
-/** The `pf_yours` exercise as the prompt tells the student to solve it. */
-const UNFINISHED_ID = "pf_yours";
+/**
+ * The exercises the showcase deliberately leaves *unfinished*, and the proof
+ * their prompt tells the student to write. Both state the same task — `pf_yours`
+ * introduces the widget, `pf_sealed` demonstrates `feedback="none"` — so both
+ * open on the premise line alone and neither starter is meant to verify.
+ *
+ * This is a set rather than one id because it was one id: `pf_sealed` arrived
+ * with the feedback section and fell through to the "must verify" path, where
+ * the honest report that its starter does not prove its goal looked like a
+ * broken lesson.
+ */
+const UNFINISHED_IDS = new Set(["pf_yours", "pf_sealed"]);
 const INTENDED_SOLUTION = [
   "¬ ¬ P    :ax",
   "    ¬ P  :ax",
@@ -72,7 +82,7 @@ function lower(
       publicData.assumptionRule,
       publicData.sequentSymbol ?? "⊢",
       publicData.contextSymbol ?? ",",
-      proofFormulaReader(source, "sentence"),
+      proofFormulaReader(source, "sentence", publicData.goalName),
     );
 
     if (translated.diagnostics.length > 0) {
@@ -95,7 +105,7 @@ function lower(
   const flattened = flattenProofTree(
     publicData.starterTree as never,
     publicData.goalName,
-    proofFormulaReader(source, "sequent"),
+    proofFormulaReader(source, "sequent", publicData.goalName),
   );
 
   if (flattened.formulaProblems.length > 0) {
@@ -162,7 +172,7 @@ for (const node of compiled.artifact.document.nodes) {
   const { mm0, source } = proofTheoryText(publicData);
   const label = `${node.exerciseId} (${node.render.assetId})`;
 
-  if (node.exerciseId === UNFINISHED_ID) {
+  if (UNFINISHED_IDS.has(node.exerciseId)) {
     const starter = lower(node.render.assetId, publicData, source);
     const starterVerifies =
       starter !== null && (await verify(mm0, starter, true));
@@ -181,7 +191,7 @@ for (const node of compiled.artifact.document.nodes) {
       publicData.assumptionRule,
       publicData.sequentSymbol ?? "⊢",
       publicData.contextSymbol ?? ",",
-      proofFormulaReader(source, "sentence"),
+      proofFormulaReader(source, "sentence", publicData.goalName),
     );
 
     if (

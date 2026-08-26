@@ -43,12 +43,13 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *   - `goalName`       the theorem name the proof establishes
  *   - `source`         the resolved theory plus the appended goal declaration
  *                      `theorem <goalName> …: $ Γ ⊢ φ $;`, `@syntax` intact —
- *                      the language a student's line is read in, and (once
- *                      stripped) the sole verification input. Absent where the
- *                      proof stays engine text; see {@link proofTheoryText}
- *   - `mm0`            the same text already stripped. What artifacts compiled
- *                      before `source` existed carry, and what one whose goal
- *                      is schematic still carries. Never read directly — go
+ *                      the language a student's line is read in — and, since
+ *                      the declaration comes with it, the binder scope that
+ *                      line is read in too — and (once stripped) the sole
+ *                      verification input. Absent where the proof stays engine
+ *                      text; see {@link proofTheoryText}
+ *   - `mm0`            the same text already stripped, for artifacts compiled
+ *                      before `source` existed. Never read directly — go
  *                      through {@link proofTheoryText}, which resolves the two
  *   - `options`        the shared editor-assistance toggles (reused from the
  *                      linear proof type)

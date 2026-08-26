@@ -34,7 +34,7 @@
   "dependencies": {
     "@aufbau/compiler": "0.0.7",
     "@aufbau/lsp": "0.0.7",
-    "@aufbau/syntax": "0.0.3",
+    "@aufbau/syntax": "0.0.4",
     "@aufbau/verifier": "0.0.7",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.12.4",

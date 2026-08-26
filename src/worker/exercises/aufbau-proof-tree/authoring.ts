@@ -125,7 +125,7 @@ export async function compileAufbauProofTree(
       const { formulaProblems } = flattenProofTree(
         parsed.tree,
         header.goalName,
-        starterFormulaReader(theory, header.theoremDecl, "sequent"),
+        starterFormulaReader(theory, header, "sequent"),
       );
 
       for (const problem of formulaProblems) {

@@ -709,7 +709,11 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
 
     const theory = proofTheoryText(data);
     this.mm0 = theory.mm0;
-    this.readFormula = proofFormulaReader(theory.source, "sequent");
+    this.readFormula = proofFormulaReader(
+      theory.source,
+      "sequent",
+      data.goalName,
+    );
     this.goalName = data.goalName;
 
     const container = root.querySelector<HTMLElement>(".proof-tree");

@@ -53,8 +53,8 @@ export interface ProofTreeNode {
  *                   the sole verification input. Absent where the proof stays
  *                   engine text; see {@link proofTheoryText}
  *   - `mm0`         the same text already stripped, for artifacts compiled
- *                   before `source` existed and for a schematic goal. Read the
- *                   pair through {@link proofTheoryText}, never directly
+ *                   before `source` existed. Read the pair through
+ *                   {@link proofTheoryText}, never directly
  *   - `options`     the shared editor-assistance toggles (reused from the linear
  *                   proof type)
  *   - `promptHtml`  the rendered prose above the goal

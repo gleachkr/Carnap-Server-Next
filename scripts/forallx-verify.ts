@@ -29,7 +29,7 @@ const compiler = await loadCompiler({ wasmBytes });
 
 let passed = 0;
 for (const testCase of FORALLX_CASES) {
-  const { mm0, readSentence } = forallxExercise(testCase.theoremDecl);
+  const { mm0, readSentence } = forallxExercise(testCase.goalName, testCase.theoremDecl);
   const translation = fitchToAuf(
     testCase.fitch,
     testCase.goalName,

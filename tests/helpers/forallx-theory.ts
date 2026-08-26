@@ -47,11 +47,14 @@ export const FORALLX_THEORY_BLOCK = `:::aufbau-mm0{name="forallx"}\n${FORALLX_TH
  * exactly what the authoring compiler would have produced for that goal.
  *
  * Going through `frozenTheoryText` rather than assembling the two texts here
- * is the point: it is what decides that a *schematic* goal keeps its lines in
- * engine text and a concrete one has them read as surface text, so a test or a
- * verify script cannot accidentally exercise a path an author cannot reach.
+ * is the point: it is what decides whether a goal's lines are read as surface
+ * text at all, so a test or a verify script cannot accidentally exercise a
+ * path an author cannot reach.
  */
-export function forallxExercise(theoremDecl: string): {
+export function forallxExercise(
+  goalName: string,
+  theoremDecl: string,
+): {
   readonly mm0: string;
   readonly readSentence: ProofFormulaReader;
 } {
@@ -63,6 +66,6 @@ export function forallxExercise(theoremDecl: string): {
 
   return {
     mm0: resolved.mm0,
-    readSentence: proofFormulaReader(resolved.source, "sentence"),
+    readSentence: proofFormulaReader(resolved.source, "sentence", goalName),
   };
 }

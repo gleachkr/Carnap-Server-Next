@@ -348,7 +348,11 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
 
     const theory = proofTheoryText(data);
     this.mm0 = theory.mm0;
-    this.readFormula = proofFormulaReader(theory.source, "sentence");
+    this.readFormula = proofFormulaReader(
+      theory.source,
+      "sentence",
+      data.goalName,
+    );
     this.goalName = data.goalName;
     this.assumptionRule = data.assumptionRule;
     if (typeof data.sequentSymbol === "string" && data.sequentSymbol !== "") {

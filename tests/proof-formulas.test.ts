@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
+import type { ProofFormulaShape } from "../src/worker/exercises/aufbau-proof/formulas";
 import {
   ENGINE_TEXT,
   frozenTheoryText,
-  goalIsSchematic,
+  goalBinderScope,
   hasTheoryText,
   proofFormulaReader,
   proofTheoryText,
@@ -14,20 +15,22 @@ import type { PrawitzProofNode } from "../src/worker/exercises/aufbau-proof-praw
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import type { ProofTreeNode } from "../src/worker/exercises/aufbau-proof-tree/types";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
+import { FORALLX_CASES } from "./helpers/forallx-cases";
 import {
   FORALLX_THEORY_MM0,
   FORALLX_THEORY_SOURCE,
 } from "./helpers/forallx-theory";
 
 /**
- * Reading a proof's formulas in the theory's own language (#250).
+ * Reading a proof's formulas in the theory's own language (#250), in the
+ * scope of the goal's own binders (#253).
  *
  * The end-to-end claim — that what comes out is text the real Aufbau compiler
  * accepts and the verifier verifies — is `scripts/{forallx,prawitz}-verify.ts`,
  * which compile from source each run. What is pinned here is everything that
- * decides *whether* a formula is read at all, because that is where being wrong
- * is silent: a proof read when it should not be is a proof that used to compile
- * and no longer does, or worse, one that means something else.
+ * decides *how* a formula is read, because that is where being wrong is
+ * silent: the failure the scope exists to stop is not a refusal but a line
+ * that parses against the wrong vocabulary and means something else.
  */
 
 const GENTZEN = theorySourceByFileName("gentzen-lk.mm0");
@@ -35,8 +38,28 @@ const GENTZEN = theorySourceByFileName("gentzen-lk.mm0");
 const CONCRETE =
   "theorem t {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ⊢ G(a) $;";
 
+/** The schematic shape 12 of the 19 forallx rule cases are stated in. */
+const SCHEMATIC = "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;";
+
+const THEORY = { mm0: FORALLX_THEORY_MM0, source: FORALLX_THEORY_SOURCE };
+
+/**
+ * A reader for one goal over the forallx theory, assembled the way the
+ * authoring compiler assembles it — so a test cannot read a formula in a
+ * scope no exercise would actually have.
+ */
+function readerFor(
+  goalName: string,
+  theoremDecl: string,
+  shape: ProofFormulaShape = "sentence",
+) {
+  const { source } = proofTheoryText(frozenTheoryText(THEORY, theoremDecl));
+
+  return proofFormulaReader(source, shape, goalName);
+}
+
 describe("proofFormulaReader", () => {
-  const read = proofFormulaReader(FORALLX_THEORY_SOURCE, "sentence");
+  const read = readerFor("t", CONCRETE);
 
   test("textbook spellings come out as engine text", () => {
     expect(read("Ax(F(x)->G(x))")).toEqual({
@@ -92,7 +115,7 @@ describe("proofFormulaReader", () => {
   test("a sequent shape reads at the sort the turnstile yields", () => {
     // The tree type's nodes state whole judgements, so reading them at the
     // sentence sort would refuse every one of them.
-    const sequent = proofFormulaReader(FORALLX_THEORY_SOURCE, "sequent");
+    const sequent = readerFor("t", CONCRETE, "sequent");
 
     expect(sequent("Ax(F(x)->G(x)) ; F(a) ⊢ G(a)")).toEqual({
       ok: true,
@@ -104,7 +127,7 @@ describe("proofFormulaReader", () => {
   test("a theory that is not a language passes everything through", () => {
     // `gentzen-lk` declares no `@syntax` at all, so it names no sentence sort
     // and nothing here is willing to guess one.
-    const gentzen = proofFormulaReader(GENTZEN, "sequent");
+    const gentzen = proofFormulaReader(GENTZEN, "sequent", "t");
 
     expect(gentzen("Γ ==> Δ")).toEqual({ ok: true, text: "Γ ==> Δ" });
     expect(gentzen("this is not a formula")).toEqual({
@@ -116,53 +139,117 @@ describe("proofFormulaReader", () => {
   test("no source at all is the same pass-through", () => {
     // What a pre-#250 artifact hands over: it froze the stripped engine text
     // and nothing else, so there is no language to read it in.
-    expect(proofFormulaReader(null, "sentence")).toBe(ENGINE_TEXT);
-    expect(proofFormulaReader(undefined, "sentence")).toBe(ENGINE_TEXT);
+    expect(proofFormulaReader(null, "sentence", "t")).toBe(ENGINE_TEXT);
+    expect(proofFormulaReader(undefined, "sentence", "t")).toBe(ENGINE_TEXT);
   });
 });
 
-describe("goalIsSchematic", () => {
-  test("a goal binding a provable sort is schematic", () => {
-    expect(
-      goalIsSchematic(
-        "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
-        FORALLX_THEORY_SOURCE,
-      ),
-    ).toBe(true);
+describe("goalBinderScope", () => {
+  const scopeOf = (theoremDecl: string, goalName: string) =>
+    goalBinderScope(`${FORALLX_THEORY_SOURCE}\n${theoremDecl}`, goalName);
+
+  test("a binder group is one entry per name", () => {
+    // `(a b: wff)` is two binders, not one — the shape a regular expression
+    // over the declaration text got wrong, and the spec reader gets right.
+    expect(scopeOf(SCHEMATIC, "mp")).toEqual(
+      new Map([
+        ["a", "wff"],
+        ["b", "wff"],
+      ]),
+    );
   });
 
-  test("binders drawn from lexicon sorts are not", () => {
-    expect(goalIsSchematic(CONCRETE, FORALLX_THEORY_SOURCE)).toBe(false);
-    expect(
-      goalIsSchematic(
-        "theorem eqreplace {a b: name}: $ a = b ; F(a) ⊢ F(b) $;",
-        FORALLX_THEORY_SOURCE,
-      ),
-    ).toBe(false);
+  test("bound binders count too, at their own sort", () => {
+    expect(scopeOf(CONCRETE, "t")).toEqual(
+      new Map([
+        ["x", "var"],
+        ["a", "name"],
+      ]),
+    );
   });
 
   test("a hypothesis binder introduces no vocabulary", () => {
-    // `(h: $ … $)` names a hypothesis, not a metavariable, and the math string
-    // is cleared before the binder list is read so its `$` cannot be mistaken
-    // for a sort name.
+    // `(h: $ … $)` names a hypothesis, and carries a formula where the others
+    // carry a type. It is in the binder list and not in the scope.
     expect(
-      goalIsSchematic(
-        "theorem h {a: name} (h: $ F(a) $): $ _ ⊢ F(a) $;",
-        FORALLX_THEORY_SOURCE,
-      ),
-    ).toBe(false);
+      scopeOf("theorem h {a: name} (h: $ F(a) $): $ _ ⊢ F(a) $;", "h"),
+    ).toEqual(new Map([["a", "name"]]));
   });
 
-  test("a theory that is not a language is never schematic", () => {
-    // There is nothing to turn off: those proofs are engine text either way.
-    expect(goalIsSchematic("theorem t (a b: wff): $ a ⊢ b $;", GENTZEN)).toBe(
-      false,
+  test("a dependent sort contributes its head", () => {
+    expect(
+      scopeOf("theorem d {x: var} (p: wff x): $ _ ⊢ ∀ x p $;", "d"),
+    ).toEqual(
+      new Map([
+        ["x", "var"],
+        ["p", "wff"],
+      ]),
     );
+  });
+
+  test("a goal with no binders has an empty scope", () => {
+    expect(scopeOf("theorem c: $ _ ⊢ F(a) → F(a) $;", "c")).toEqual(
+      new Map(),
+    );
+  });
+
+  test("a theory that is not a language has no scope to give", () => {
+    // Nothing reads those lines, so there is nothing to shadow.
+    expect(
+      goalBinderScope(`${GENTZEN}\ntheorem t (a b: wff): $ a ⊢ b $;`, "t"),
+    ).toEqual(new Map());
+  });
+
+  test("every worked forallx case names a goal the scope can find", () => {
+    // The failure mode this guards is silent: a goal name that does not match
+    // yields an empty scope, which is exactly the pre-#253 behaviour. Every
+    // case in the corpus binds something, so an empty scope means a miss.
+    for (const testCase of FORALLX_CASES) {
+      expect(
+        scopeOf(testCase.theoremDecl, testCase.goalName).size,
+        testCase.name,
+      ).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("a schematic goal reads in its own binders", () => {
+  const read = readerFor("mp", SCHEMATIC);
+
+  test("a metavariable is not the lexicon letter it collides with", () => {
+    // `a` is a name in this theory's lexicon and a wff metavariable in this
+    // goal. Before #253 this exercise was frozen without a language so the
+    // line passed through untouched; now it is read, and read correctly.
+    expect(read("a → b")).toEqual({ ok: true, text: "(a → b)" });
+  });
+
+  test("textbook notation works in a schematic goal too", () => {
+    // The point of the whole feature, previously unavailable to 12 of the 19
+    // rule cases: the student may write the book's spelling.
+    expect(read("~(a /\\ b)")).toEqual({ ok: true, text: "(¬ (a ∧ b))" });
+  });
+
+  test("a metavariable takes no arguments", () => {
+    // The shadowing is total: `a` is not the predicate letter any more, so
+    // applying it is a refusal rather than a silently different reading.
+    expect(read("a(b)").ok).toBe(false);
+  });
+
+  test("a name the goal does not bind still reads from the lexicon", () => {
+    // `c` is not among this goal's binders, so it is the lexicon's name — and
+    // the scope shadows only what it holds, never the whole vocabulary.
+    expect(read("F(c) → a")).toEqual({ ok: true, text: "((F (c)) → a)" });
+  });
+
+  test("shadowing is total, so a metavariable cannot take an argument", () => {
+    // The mirror of the case above: `a` is bound, so `F(a)` wants a term and
+    // is handed a sentence. A refusal, not a different reading.
+    expect(read("F(a)").ok).toBe(false);
   });
 });
 
 describe("frozenTheoryText", () => {
-  const theory = { mm0: FORALLX_THEORY_MM0, source: FORALLX_THEORY_SOURCE };
+  const theory = THEORY;
 
   test("a concrete goal freezes the artifact as written", () => {
     const frozen = frozenTheoryText(theory, CONCRETE);
@@ -181,14 +268,16 @@ describe("frozenTheoryText", () => {
     expect(resolved.source).not.toBeNull();
   });
 
-  test("a schematic goal freezes the stripped text and no language", () => {
-    const decl = "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;";
-    const frozen = frozenTheoryText(theory, decl);
+  test("a schematic goal freezes the artifact as written too", () => {
+    // Before #253 this froze the stripped text and no language, turning the
+    // feature off for every goal stated as a rule schema. The binder scope is
+    // what made that unnecessary.
+    const frozen = frozenTheoryText(theory, SCHEMATIC);
 
-    expect(frozen.source).toBeUndefined();
+    expect(frozen.mm0).toBeUndefined();
     expect(proofTheoryText(frozen)).toEqual({
-      mm0: `${FORALLX_THEORY_MM0}\n${decl}`,
-      source: null,
+      mm0: `${FORALLX_THEORY_MM0}\n${SCHEMATIC}`,
+      source: `${FORALLX_THEORY_SOURCE}\n${SCHEMATIC}`,
     });
   });
 
@@ -210,7 +299,7 @@ describe("frozenTheoryText", () => {
 });
 
 describe("readNodeFormulas", () => {
-  const read = proofFormulaReader(FORALLX_THEORY_SOURCE, "sentence");
+  const read = readerFor("t", CONCRETE);
 
   test("every node is read, and ids survive", () => {
     const root: PrawitzProofNode = {
@@ -278,7 +367,7 @@ describe("the translators, reading", () => {
     const flattened = flattenProofTree(
       root,
       "t",
-      proofFormulaReader(FORALLX_THEORY_SOURCE, "sequent"),
+      readerFor("t", CONCRETE, "sequent"),
     );
 
     expect(flattened.formulaProblems).toEqual([]);
@@ -325,7 +414,7 @@ describe("the translators, reading", () => {
       "ax",
       "⊢",
       ";",
-      proofFormulaReader(FORALLX_THEORY_SOURCE, "sentence"),
+      readerFor("t", CONCRETE),
     );
     expect(read.formulaProblems).toEqual([]);
     expect(read.diagnostics).toEqual([]);
