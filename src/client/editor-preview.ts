@@ -42,7 +42,7 @@ import {
 } from "../worker/i18n/translator";
 import { hostedTheoryRevisionId } from "../worker/logic/theories";
 import {
-  artifactStyleProps,
+  artifactDocumentProps,
   contentDocumentHtml,
 } from "../worker/web/content-document";
 import {
@@ -461,19 +461,18 @@ function drawPreview(
     // it and dims it.
     split.classList.remove("preview-empty");
 
+    const artifact = compiled.artifact;
+
     // No `escapeFrame` here, unlike the frames that hold a saved document: a
     // link followed out of the preview would replace this editor, and the
     // source in it is unsaved by definition.
     frame.srcdoc = contentDocumentHtml({
-      body: raw(renderCompiledContent(compiled.artifact, i18n)),
-      componentAssets: componentAssetsForArtifact(compiled.artifact),
-      exerciseHydration: exerciseHydrationForArtifact(
-        compiled.artifact,
-        i18n,
-      ),
+      body: raw(renderCompiledContent(artifact, i18n)),
+      componentAssets: componentAssetsForArtifact(artifact),
+      exerciseHydration: exerciseHydrationForArtifact(artifact, i18n),
       i18n,
       locale: i18n.locale,
-      ...artifactStyleProps(compiled.artifact),
+      ...artifactDocumentProps(artifact),
       // The frame's own title, which the server already resolved for this
       // page's language.
       title: frame.title || "Preview",
@@ -483,8 +482,8 @@ function drawPreview(
     // linear starters verify, tree goals declare cleanly.
     const checkStrings = proofCheckStrings();
     const checks = [
-      ...(await proofChecksFor(compiled.artifact, checkStrings)),
-      ...(await treeChecksFor(compiled.artifact, checkStrings)),
+      ...(await proofChecksFor(artifact, checkStrings)),
+      ...(await treeChecksFor(artifact, checkStrings)),
     ];
 
     if (!stale()) {

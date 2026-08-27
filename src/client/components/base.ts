@@ -1,3 +1,4 @@
+import type { CompiledSystems } from "../../worker/domain/content";
 import type { ExerciseFeedback } from "../../worker/domain/exercises";
 import {
   ANSWER_RECORDED_EVENT,
@@ -13,7 +14,58 @@ import type {
   ExerciseHydration,
   ExerciseHydrationMode,
 } from "../../worker/exercises/hydration";
+import { withSystemText } from "../../worker/exercises/systems";
 import { formatMessage } from "../../worker/i18n/translator";
+
+/**
+ * The systems tables already read, by the document each was read from.
+ *
+ * Cached because every element on the page asks for the same one and the answer
+ * cannot change once it is there — so a lesson of thirty proofs would otherwise
+ * re-parse the same 30 KB of JSON thirty times on connect. Keyed by document
+ * rather than held in a module variable because a page can hold more than one:
+ * the revision editor's preview builds a whole content document into a `srcdoc`
+ * frame, and its table is not this one's.
+ */
+const systemsByDocument = new WeakMap<Document, CompiledSystems>();
+
+/**
+ * The systems table of the document an element is in.
+ *
+ * Missing or malformed is `undefined` rather than an error: a document whose
+ * exercises are set in nothing emits no table at all, and a payload with no key
+ * has nothing to look up in one either way.
+ *
+ * Only a table that was *found* is remembered. Caching the absence would be
+ * caching an answer that can still change — the script sits at the foot of the
+ * body, after the elements — and the saving it would buy is one `querySelector`
+ * against a document that has no table to parse anyway.
+ */
+function documentSystems(owner: Document): CompiledSystems | undefined {
+  const cached = systemsByDocument.get(owner);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const script = owner.querySelector<HTMLScriptElement>(
+    "script[data-carnap-systems]",
+  );
+
+  if (script === null) {
+    return undefined;
+  }
+
+  try {
+    const systems = JSON.parse(script.textContent ?? "{}") as CompiledSystems;
+
+    systemsByDocument.set(owner, systems);
+
+    return systems;
+  } catch (_error) {
+    return undefined;
+  }
+}
 
 /**
  * Shared base for interactive exercise custom elements.
@@ -198,6 +250,12 @@ export abstract class CarnapExerciseElement<
    * interactive path, whose payload carries the student's prior answer), then
    * the document's hydration table keyed by exercise id (a preview, which has no
    * forms — see the worker's `exerciseHydrationForArtifact`).
+   *
+   * Whichever channel answers, the payload names the system this exercise is
+   * set in rather than carrying its text, and {@link joinSystems} puts the text
+   * back from the document's own table. The join is here, at the one point
+   * every payload passes through, so that no widget has to know the table
+   * exists: what `publicData` hands `enhance` is what it always was.
    */
   private readHydration(): ExerciseHydration | null {
     const script =
@@ -210,14 +268,41 @@ export abstract class CarnapExerciseElement<
       null;
 
     if (script === null) {
-      return this.readHydrationFromDocument();
+      return this.joinSystems(this.readHydrationFromDocument());
     }
 
     try {
-      return JSON.parse(script.textContent ?? "") as ExerciseHydration;
+      return this.joinSystems(
+        JSON.parse(script.textContent ?? "") as ExerciseHydration,
+      );
     } catch (_error) {
       return null;
     }
+  }
+
+  /**
+   * The payload with its system's MM0 spliced into `publicData`, read from the
+   * document-scoped table the content document emits beside the component asset
+   * list.
+   *
+   * A missing table is not a failure to report: a payload that froze its own
+   * text (every artifact compiled before the table existed) has nothing to look
+   * up, and `withSystemText` passes it through.
+   */
+  private joinSystems(
+    hydration: ExerciseHydration | null,
+  ): ExerciseHydration | null {
+    if (hydration === null) {
+      return null;
+    }
+
+    return {
+      ...hydration,
+      publicData: withSystemText(
+        hydration.publicData,
+        documentSystems(this.ownerDocument),
+      ),
+    };
   }
 
   /** This element's entry in the document-scoped hydration table, if any. */

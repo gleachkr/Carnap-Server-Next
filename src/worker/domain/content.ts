@@ -116,6 +116,25 @@ export interface CompiledContentDocument {
   readonly profile: ContentSourceProfile;
 }
 
+/**
+ * One system's frozen text, in whichever of the two shapes it is usable in.
+ *
+ * The same discriminated pair a proof exercise's `publicData` used to carry
+ * directly, and for the same reason (see `exercises/aufbau-proof/formulas.ts`):
+ * `source` is the artifact as written, `@syntax` annotations intact, and its
+ * presence *is* the statement that this artifact is a language whose formulas
+ * can be read as surface text. `mm0` is the engine input for an artifact that
+ * is not one. Exactly one of the two is written, so a reader cannot be told one
+ * and shown the other.
+ */
+export interface CompiledSystem {
+  readonly mm0?: string;
+  readonly source?: string;
+}
+
+/** Every system a document's exercises name, by the name they name it with. */
+export type CompiledSystems = Readonly<Record<string, CompiledSystem>>;
+
 export interface CompiledContentArtifact {
   readonly componentRegistryVersion: string;
   /** Author stylesheet from `:::style` blocks, applied only in the isolated content document. */
@@ -128,6 +147,13 @@ export interface CompiledContentArtifact {
   readonly manifest: readonly ExerciseManifestItem[];
   readonly manifestVersion: 1;
   readonly sourceProfile: ContentSourceProfile;
+  /**
+   * The MM0 every exercise in this document is set in, frozen once and keyed by
+   * the name the exercise wrote. Absent in an artifact compiled before the
+   * table existed, and in a document whose exercises are set in nothing; see
+   * `exercises/systems.ts` for the join that hands an exercise its copy.
+   */
+  readonly systems?: CompiledSystems;
 }
 
 export interface MultipleChoiceOptionPublicData {

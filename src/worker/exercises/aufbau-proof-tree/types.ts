@@ -60,8 +60,17 @@ export interface ProofTreeNode {
  *   - `promptHtml`  the rendered prose above the goal
  *   - `starterTree` an optional pre-populated tree the editor seeds from instead
  *                   of a bare goal root (parsed from the author's `.auf` starter)
+ *   - `goalDecl`    this exercise's own `theorem <goalName> …: $ … $;`, which the
+ *                   join appends to the system's text. Stored beside the key
+ *                   rather than inside the frozen text, because the key is per
+ *                   document and the declaration is per exercise
+ *   - `system`      which of the document's systems this exercise is set in;
+ *                   `source`/`mm0` above are what the join fills in from it.
+ *                   Absent in an artifact compiled before the table existed,
+ *                   which froze its text inline instead
  */
 export interface AufbauProofTreePublicData {
+  readonly goalDecl?: string;
   readonly goalFormula: string;
   readonly goalName: string;
   readonly mm0?: string;
@@ -69,6 +78,7 @@ export interface AufbauProofTreePublicData {
   readonly promptHtml: string;
   readonly source?: string;
   readonly starterTree?: ProofTreeNode;
+  readonly system?: string;
 }
 
 /**

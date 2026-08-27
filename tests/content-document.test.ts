@@ -3,7 +3,7 @@ import { raw } from "hono/html";
 
 import { passthroughTranslator } from "../src/worker/i18n/translator";
 import {
-  artifactStyleProps,
+  artifactDocumentProps,
   contentDocumentHtml,
   escapeStyleText,
 } from "../src/worker/web/content-document";
@@ -170,22 +170,53 @@ describe("content document", () => {
       sourceProfile: "carnap-markdown-v1" as const,
     };
 
-    expect(artifactStyleProps(base)).toEqual({});
+    expect(artifactDocumentProps(base)).toEqual({});
     expect(
-      artifactStyleProps({ ...base, css: "h1 { color: maroon; }" }),
+      artifactDocumentProps({ ...base, css: "h1 { color: maroon; }" }),
     ).toEqual({ css: "h1 { color: maroon; }" });
-    expect(artifactStyleProps({ ...base, css: "", cssReset: true })).toEqual({
+    expect(
+      artifactDocumentProps({ ...base, css: "", cssReset: true }),
+    ).toEqual({
       cssReset: true,
     });
     expect(
-      artifactStyleProps({ ...base, cssHrefs: ["", "/ok.css"] }),
+      artifactDocumentProps({ ...base, cssHrefs: ["", "/ok.css"] }),
     ).toEqual({ cssHrefs: ["/ok.css"] });
     expect(
-      artifactStyleProps({
+      artifactDocumentProps({
         ...base,
         cssHrefs: "/not-an-array.css" as unknown as readonly string[],
       }),
     ).toEqual({});
+    expect(
+      artifactDocumentProps({
+        ...base,
+        systems: { forallx: { source: "sort wff;" } },
+      }),
+    ).toEqual({ systems: { forallx: { source: "sort wff;" } } });
+  });
+
+  test("a document carries its systems table where its widgets can read it", () => {
+    // The other half of the payload each widget hydrates from: the payloads
+    // carry a name, and this is the one copy of what the name stands for. A
+    // document that dropped it would leave every proof widget with a key and
+    // nothing to look it up in — inert, with nothing in the console.
+    const html = contentDocumentHtml({
+      ...DOCUMENT_LOCALE,
+      body: raw("<p>Prose.</p>"),
+      systems: { forallx: { source: "sort wff;" } },
+      title: "Lesson",
+    });
+
+    expect(html).toContain("data-carnap-systems");
+    expect(html).toContain('{"forallx":{"source":"sort wff;"}}');
+    expect(
+      contentDocumentHtml({
+        ...DOCUMENT_LOCALE,
+        body: raw("<p>Prose.</p>"),
+        title: "Lesson",
+      }),
+    ).not.toContain("data-carnap-systems");
   });
 
   test("the shared layer carries the content rules and none of the chrome", () => {

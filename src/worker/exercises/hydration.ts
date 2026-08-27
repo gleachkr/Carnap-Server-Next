@@ -3,6 +3,7 @@ import type { JsonValue } from "../domain/json";
 import type { Translator } from "../i18n/translator";
 import { jsonScriptContent } from "../web/json-script";
 import { exerciseStrings } from "./strings";
+import { keyedPublicData } from "./systems";
 
 /**
  * The per-exercise hydration payload — the single channel from the server
@@ -74,11 +75,22 @@ export interface ExerciseHydration {
  * again here because the escaping is a correctness matter (a `</script>` inside
  * a translated string would otherwise end the tag), and two copies of it is one
  * copy too many.
+ *
+ * {@link keyedPublicData} is applied here and not at each emitter for the same
+ * reason: a payload whose exercise names one of the document's systems travels
+ * as the *name*, and the document carries one copy of the text for all of them.
+ * Before that, a lesson of thirty Fitch proofs put thirty copies of a 30 KB
+ * theory in the page, one inside every widget.
  */
 export function exerciseHydrationScript(
   hydration: ExerciseHydration,
 ): string {
-  return `<script type="application/json" data-exercise-hydration>${jsonScriptContent(hydration)}</script>`;
+  const payload: ExerciseHydration = {
+    ...hydration,
+    publicData: keyedPublicData(hydration.publicData),
+  };
+
+  return `<script type="application/json" data-exercise-hydration>${jsonScriptContent(payload)}</script>`;
 }
 
 /**

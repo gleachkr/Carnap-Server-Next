@@ -26,7 +26,6 @@ import {
   starterFormulaReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
-import { frozenTheoryText } from "../aufbau-proof/formulas";
 import { flattenProofTree } from "./flatten";
 import { parseProofTree } from "./parse";
 import type { AufbauProofTreePublicData, ProofTreeNode } from "./types";
@@ -173,15 +172,16 @@ export async function compileAufbauProofTree(
   }
 
   const publicData: AufbauProofTreePublicData = {
+    goalDecl: header.theoremDecl,
     goalFormula: header.goalFormula,
     goalName: header.goalName,
-    ...frozenTheoryText(theory, header.theoremDecl),
     options,
     promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,
     }),
     ...(starterTree === undefined ? {} : { starterTree }),
+    system: theory.name,
   };
 
   return buildCompiledExercise({

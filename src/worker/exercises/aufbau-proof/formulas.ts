@@ -48,6 +48,7 @@ import {
   stripSyntaxAnnotations,
   surfaceVocabulary,
 } from "@aufbau/syntax";
+import type { CompiledSystem } from "../../domain/content";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
 import { roleIndex, sentenceSort } from "../../logic/specs/roles";
@@ -73,13 +74,14 @@ export type ProofFormulaReader = (text: string) => ProofFormulaReading;
  * Reading a ~30 KB artifact into notation tables is not something to do twice
  * for the same text, so it is done once and kept.
  *
- * The key is the frozen text, which carries the *goal declaration* appended to
+ * The key is the joined text, which carries the *goal declaration* appended to
  * the theory — so two exercises over one theory do not in fact share an entry,
  * and a page setting several from the same artifact parses it once each. That
  * is the price of the goal being part of the text rather than beside it, which
- * is also what {@link goalBinderScope} reads it back out of. Worth revisiting
- * if a lesson ever gets big enough for it to show; nothing measured says it
- * does.
+ * is also what {@link goalBinderScope} reads it back out of. The document's
+ * systems table shares the theory itself (see `exercises/systems.ts`); what is
+ * not shared is the parse. Worth revisiting if a lesson ever gets big enough
+ * for it to show; nothing measured says it does.
  */
 const languages = new Map<string, ProofLanguage | null>();
 
@@ -278,8 +280,8 @@ export function readNodeFormulas<
 }
 
 /**
- * Which theory text a proof exercise freezes, and therefore whether its
- * formulas are read as surface text at all.
+ * Which theory text a document's systems table freezes, and therefore whether
+ * the formulas of the exercises set in it are read as surface text at all.
  *
  * One decision for all three input modalities, made once at authoring time and
  * carried by *which field arrives* rather than by a flag beside it: `source`
@@ -287,18 +289,34 @@ export function readNodeFormulas<
  * student writes engine text", and there is no way to be told one and shown
  * the other. One condition, the module's own: the theory has to be a language.
  *
- * The goal declaration is appended either way, and its binders are what
- * {@link goalBinderScope} later reads back out of `source`.
+ * The goal declaration is not here. It is per exercise and the entry is per
+ * document, so it is appended by the join (`exercises/systems.ts`) at the
+ * moment the two meet — which is also where {@link goalBinderScope} finds it
+ * again, still inside `source`.
  */
-export function frozenTheoryText(
-  theory: { readonly mm0: string; readonly source: string },
-  theoremDecl: string,
-): { readonly mm0?: string; readonly source?: string } {
+export function compiledSystem(theory: {
+  readonly mm0: string;
+  readonly source: string;
+}): CompiledSystem {
   if (proofLanguage(theory.source) === null) {
-    return { mm0: `${theory.mm0}\n${theoremDecl}` };
+    return { mm0: theory.mm0 };
   }
 
-  return { source: `${theory.source}\n${theoremDecl}` };
+  return { source: theory.source };
+}
+
+/**
+ * The theory as a *language* with one exercise's goal declaration appended, or
+ * `null` where it is not a language — what the compiler itself needs, having
+ * the theory and the declaration in hand and no table yet to join against.
+ */
+export function theoryLanguageSource(
+  theory: { readonly source: string },
+  theoremDecl: string,
+): string | null {
+  return proofLanguage(theory.source) === null
+    ? null
+    : `${theory.source}\n${theoremDecl}`;
 }
 
 /**

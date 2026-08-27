@@ -9,7 +9,6 @@ import type {
   ContentSourceFormat,
 } from "../domain/content";
 import type { User } from "../domain/users";
-import type { ExerciseHydration } from "../exercises/hydration";
 import type { AppBindings } from "../http";
 import {
   splitAtValue,
@@ -31,6 +30,7 @@ import {
   TableScroll,
   Time,
 } from "./components";
+import type { ContentDocumentModel } from "./content-document";
 import { renderContentDocument } from "./content-document";
 import { DownloadIcon } from "./icons";
 import { renderShell, useI18n } from "./layout";
@@ -912,25 +912,23 @@ export function renderRevision(
 /**
  * A revision's compiled output as a standalone content document — the target
  * of the revision page's iframe and fullscreen link.
+ *
+ * Everything but the body is passed straight through rather than relisted:
+ * naming the props here meant that `cssHrefs` — and, later, `systems` — arrived
+ * from `artifactDocumentProps` at the call site and were dropped on this floor,
+ * with nothing to say so.
  */
 export function renderRevisionDocument(
   context: Context<AppBindings>,
-  model: {
+  model: Omit<ContentDocumentModel, "body" | "i18n" | "locale"> & {
     readonly compiledHtml: string;
-    readonly componentAssets: readonly string[];
-    readonly css?: string;
-    readonly cssReset?: boolean;
-    readonly exerciseHydration: Record<string, ExerciseHydration>;
-    readonly title: string;
   },
 ): Response {
+  const { compiledHtml, ...rest } = model;
+
   return renderContentDocument(context, {
-    body: raw(model.compiledHtml),
-    componentAssets: model.componentAssets,
-    exerciseHydration: model.exerciseHydration,
-    ...(model.css === undefined ? {} : { css: model.css }),
-    ...(model.cssReset === undefined ? {} : { cssReset: model.cssReset }),
-    title: model.title,
+    ...rest,
+    body: raw(compiledHtml),
   });
 }
 

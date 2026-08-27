@@ -12,10 +12,11 @@
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import type { ProofFormulaReader } from "../../src/worker/exercises/aufbau-proof/formulas";
 import {
-  frozenTheoryText,
+  compiledSystem,
   proofFormulaReader,
   proofTheoryText,
 } from "../../src/worker/exercises/aufbau-proof/formulas";
+import { withSystemText } from "../../src/worker/exercises/systems";
 import { THEORY_SOURCES } from "../../src/worker/logic/theories";
 
 const source = THEORY_SOURCES["forallx-calgary-2019.mm0"];
@@ -46,10 +47,10 @@ export const FORALLX_THEORY_BLOCK = `:::aufbau-mm0{name="forallx"}\n${FORALLX_TH
  * What one exercise over this theory freezes, and how its lines are read —
  * exactly what the authoring compiler would have produced for that goal.
  *
- * Going through `frozenTheoryText` rather than assembling the two texts here
- * is the point: it is what decides whether a goal's lines are read as surface
- * text at all, so a test or a verify script cannot accidentally exercise a
- * path an author cannot reach.
+ * Going through `compiledSystem` and the join rather than assembling the two
+ * texts here is the point: between them they decide whether a goal's lines are
+ * read as surface text at all, so a test or a verify script cannot accidentally
+ * exercise a path an author cannot reach.
  */
 export function forallxExercise(
   goalName: string,
@@ -58,11 +59,16 @@ export function forallxExercise(
   readonly mm0: string;
   readonly readSentence: ProofFormulaReader;
 } {
-  const frozen = frozenTheoryText(
-    { mm0: FORALLX_THEORY_MM0, source: FORALLX_THEORY_SOURCE },
-    theoremDecl,
+  const frozen = withSystemText(
+    { goalDecl: theoremDecl, system: "forallx" },
+    {
+      forallx: compiledSystem({
+        mm0: FORALLX_THEORY_MM0,
+        source: FORALLX_THEORY_SOURCE,
+      }),
+    },
   );
-  const resolved = proofTheoryText(frozen);
+  const resolved = proofTheoryText(frozen as { readonly source?: string });
 
   return {
     mm0: resolved.mm0,

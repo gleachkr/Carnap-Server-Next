@@ -1,7 +1,10 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
-import type { CompiledContentArtifact } from "../domain/content";
+import type {
+  CompiledContentArtifact,
+  CompiledSystems,
+} from "../domain/content";
 import type { ExerciseHydration } from "../exercises/hydration";
 import type { Translator } from "../i18n/translator";
 import contentDocumentStyles from "./content-document.css" with {
@@ -82,6 +85,14 @@ export interface ContentDocumentModel {
   readonly i18n: Translator;
   /** BCP 47 tag for the document root, matching `i18n`. */
   readonly locale: string;
+  /**
+   * The MM0 this document's exercises are set in, one copy each, keyed by the
+   * name they name it with. The document-scoped half of a widget's payload:
+   * each hydration payload carries the *name*, and the client element base
+   * joins the two on connect. Thirty proofs over one theory therefore put one
+   * copy of it in the page rather than thirty.
+   */
+  readonly systems?: CompiledSystems;
   readonly title: string;
 }
 
@@ -96,13 +107,20 @@ export function escapeStyleText(css: string): string {
 }
 
 /**
- * The style-related document props carried by a compiled artifact, guarded at
- * runtime because stored artifacts are lenient casts of persisted JSON.
+ * The document props a compiled artifact carries — its author stylesheets and
+ * its systems table — guarded at runtime because stored artifacts are lenient
+ * casts of persisted JSON.
+ *
+ * One function rather than one per prop so that a caller building this document
+ * from an artifact cannot pass on half of it. `systems` arrived that way: every
+ * one of these four call sites needs it, and a site that forgot would render a
+ * page whose widgets hydrate with a key and nothing to look it up in.
  */
-export function artifactStyleProps(artifact: CompiledContentArtifact): {
+export function artifactDocumentProps(artifact: CompiledContentArtifact): {
   css?: string;
   cssHrefs?: readonly string[];
   cssReset?: boolean;
+  systems?: CompiledSystems;
 } {
   const cssHrefs = Array.isArray(artifact.cssHrefs)
     ? artifact.cssHrefs.filter(
@@ -116,6 +134,7 @@ export function artifactStyleProps(artifact: CompiledContentArtifact): {
       : {}),
     ...(cssHrefs.length === 0 ? {} : { cssHrefs }),
     ...(artifact.cssReset === true ? { cssReset: true } : {}),
+    ...(artifact.systems === undefined ? {} : { systems: artifact.systems }),
   };
 }
 
@@ -176,6 +195,12 @@ export function contentDocumentHtml(model: ContentDocumentModel): string {
             </noscript>
             {model.body}
           </div>
+          {model.systems === undefined ||
+          Object.keys(model.systems).length === 0 ? null : (
+            <script type="application/json" data-carnap-systems>
+              {raw(jsonScriptContent(model.systems))}
+            </script>
+          )}
           {(model.componentAssets ?? []).length === 0 ? null : (
             <>
               <script type="application/json" data-carnap-component-assets>

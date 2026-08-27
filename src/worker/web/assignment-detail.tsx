@@ -130,7 +130,7 @@ import {
   TimestampInput,
 } from "./components";
 import {
-  artifactStyleProps,
+  artifactDocumentProps,
   renderContentDocument,
 } from "./content-document";
 import { jsonScriptContent } from "./json-script";
@@ -1458,7 +1458,7 @@ export function renderAssignmentContentDocument(
           ),
         }
       : {}),
-    ...artifactStyleProps(model.detail.artifact),
+    ...artifactDocumentProps(model.detail.artifact),
     title: model.detail.assignment.title,
   });
 }

@@ -14,7 +14,11 @@ CodeMirror text editor.
 
 - The instructor authors an **`aufbau-mm0`** theory (sorts, terms, axioms) and,
   in each **`aufbau-proof`**, a goal `theorem`. The compiler **freezes** the
-  theory plus the goal declaration into `publicData.mm0`.
+  theory into the document's systems table and names it from the exercise, which
+  keeps its own goal declaration; reading either side of that seam — the store
+  or the browser — hands the widget and the grader `publicData.mm0`, the theory
+  plus the declaration, exactly as before it was a table. See
+  [`systems.ts`](../systems.ts).
 - The **client** ([`carnap-aufbau-proof-v1.ts`](../../../client/components/carnap-aufbau-proof-v1.ts))
   compiles `mm0 + (goal header + student body)` on each edit and writes
   `{ proofText, mmb }` (the base64 certificate) into `answerData`. It gets the

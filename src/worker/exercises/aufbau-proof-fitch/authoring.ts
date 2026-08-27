@@ -24,7 +24,6 @@ import {
   starterFormulaReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
-import { frozenTheoryText } from "../aufbau-proof/formulas";
 import { fitchToAuf } from "./translate";
 import type { AufbauProofFitchPublicData } from "./types";
 import {
@@ -205,8 +204,8 @@ export async function compileAufbauProofFitch(
   const publicData: AufbauProofFitchPublicData = {
     assumptionRule,
     contextSymbol,
+    goalDecl: header.theoremDecl,
     goalName: header.goalName,
-    ...frozenTheoryText(theory, header.theoremDecl),
     options,
     promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
       ...renderOptions,
@@ -214,6 +213,7 @@ export async function compileAufbauProofFitch(
     }),
     sequentSymbol,
     starterBody,
+    system: theory.name,
   };
 
   return buildCompiledExercise({

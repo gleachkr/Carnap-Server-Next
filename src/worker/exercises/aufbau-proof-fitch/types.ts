@@ -65,10 +65,19 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *                      predicate's arguments and spells this `;`. Optional on
  *                      the same terms as `sequentSymbol`
  *   - `starterBody`    the seed Fitch proof text the editor opens with
+ *   - `goalDecl`       this exercise's own `theorem <goalName> …: $ … $;`, which
+ *                      the join appends to the system's text. Stored beside the
+ *                      key rather than inside the frozen text, because the key
+ *                      is per document and the declaration is per exercise
+ *   - `system`         which of the document's systems this exercise is set in;
+ *                      `source`/`mm0` above are what the join fills in from it.
+ *                      Absent in an artifact compiled before the table existed,
+ *                      which froze its text inline instead
  */
 export interface AufbauProofFitchPublicData {
   readonly assumptionRule: string;
   readonly contextSymbol?: string;
+  readonly goalDecl?: string;
   readonly goalName: string;
   readonly mm0?: string;
   readonly options: AufbauProofOptions;
@@ -76,6 +85,7 @@ export interface AufbauProofFitchPublicData {
   readonly sequentSymbol?: string;
   readonly source?: string;
   readonly starterBody: string;
+  readonly system?: string;
 }
 
 /**

@@ -3,6 +3,7 @@ import type {
   ContentRevision,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import { withSystemSources } from "../../exercises/systems";
 import { deferred } from "../../i18n/deferred";
 import type { Translator } from "../../i18n/translator";
 import { AppHttpError } from "../errors";
@@ -176,7 +177,36 @@ export function parseContentArtifact(
     unreadable(revisionId, "`cssReset` is present but is not a boolean");
   }
 
-  return compiled as unknown as CompiledContentArtifact;
+  // Checked because the join below reads it, and an entry that is not the
+  // shape it expects would leave a widget silently textless — the same class
+  // of failure as the manifest check above, which is what this parse is for.
+  if (compiled.systems !== undefined) {
+    if (!isObject(compiled.systems)) {
+      unreadable(
+        revisionId,
+        `\`systems\` is present but is ${describe(compiled.systems)}`,
+      );
+    }
+
+    for (const [name, system] of Object.entries(compiled.systems)) {
+      if (
+        !isObject(system) ||
+        (system.mm0 !== undefined && typeof system.mm0 !== "string") ||
+        (system.source !== undefined && typeof system.source !== "string")
+      ) {
+        unreadable(
+          revisionId,
+          `system "${name}" is not MM0 text in either of its two shapes`,
+        );
+      }
+    }
+  }
+
+  // The one place a stored artifact becomes a usable one: the table holds a
+  // single copy of each system's text, and every consumer downstream — grading,
+  // review, the server renderers — reads a `publicData` that already has its
+  // own copy spliced in. See `exercises/systems.ts`.
+  return withSystemSources(compiled as unknown as CompiledContentArtifact);
 }
 
 /** {@link parseContentArtifact} over a revision, which knows its own id. */

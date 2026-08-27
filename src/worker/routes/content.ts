@@ -42,7 +42,7 @@ import {
   sampleSource,
 } from "../web/content";
 import {
-  artifactStyleProps,
+  artifactDocumentProps,
   contentDocumentHtml,
 } from "../web/content-document";
 import { markdownDownloadHeaders } from "../web/download";
@@ -349,6 +349,7 @@ async function renderEditor(
       requireAuthenticated(context),
     ),
   });
+  const artifact = compiled.ok ? compiled.artifact : null;
 
   return renderRevisionEditor(context, {
     ...shared,
@@ -357,20 +358,18 @@ async function renderEditor(
     diagnostics: compiled.diagnostics,
     // The unsaved source has no document URL, so the preview builds the
     // whole content document and embeds it via iframe srcdoc.
-    previewDocumentHtml: compiled.ok
-      ? contentDocumentHtml({
-          body: raw(renderCompiledContent(compiled.artifact, i18n)),
-          componentAssets: componentAssetsForArtifact(compiled.artifact),
-          exerciseHydration: exerciseHydrationForArtifact(
-            compiled.artifact,
+    previewDocumentHtml:
+      artifact === null
+        ? null
+        : contentDocumentHtml({
+            body: raw(renderCompiledContent(artifact, i18n)),
+            componentAssets: componentAssetsForArtifact(artifact),
+            exerciseHydration: exerciseHydrationForArtifact(artifact, i18n),
             i18n,
-          ),
-          i18n,
-          locale: context.get("language"),
-          ...artifactStyleProps(compiled.artifact),
-          title: i18n.t("Preview"),
-        })
-      : null,
+            locale: context.get("language"),
+            ...artifactDocumentProps(artifact),
+            title: i18n.t("Preview"),
+          }),
   });
 }
 
@@ -646,7 +645,7 @@ async function revisionDocumentPage(
     compiledHtml: renderCompiledContent(artifact, i18n),
     componentAssets: componentAssetsForArtifact(artifact),
     exerciseHydration: exerciseHydrationForArtifact(artifact, i18n),
-    ...artifactStyleProps(artifact),
+    ...artifactDocumentProps(artifact),
     // The day rather than the ordinal, matching every other place a revision is
     // named to a reader. A `<time>` element cannot live in a document title, so
     // this date is formatted here rather than by the layout's client script.

@@ -2,6 +2,7 @@ import type { Root } from "mdast";
 import type { ContainerDirective } from "mdast-util-directive";
 import type {
   CompiledContentArtifact,
+  CompiledSystem,
   ContentNode,
   ContentSourceProfile,
   ExerciseManifestItem,
@@ -11,6 +12,7 @@ import {
   compileAufbauMm0,
   compileAufbauProof,
 } from "../../exercises/aufbau-proof/authoring";
+import { compiledSystem } from "../../exercises/aufbau-proof/formulas";
 import { AUFBAU_PROOF_KIND } from "../../exercises/aufbau-proof/types";
 import { compileAufbauProofFitch } from "../../exercises/aufbau-proof-fitch/authoring";
 import { AUFBAU_PROOF_FITCH_KIND } from "../../exercises/aufbau-proof-fitch/types";
@@ -29,6 +31,7 @@ import { compileMultipleChoice } from "../../exercises/multiple-choice/authoring
 import { MULTIPLE_CHOICE_KIND } from "../../exercises/multiple-choice/types";
 import { compileShortAnswer } from "../../exercises/short-answer/authoring";
 import { SHORT_ANSWER_KIND } from "../../exercises/short-answer/types";
+import { withSystemSources } from "../../exercises/systems";
 import { compileTranslation } from "../../exercises/translation/authoring";
 import { TRANSLATION_KIND } from "../../exercises/translation/types";
 import { compileTruthTable } from "../../exercises/truth-table/authoring";
@@ -370,6 +373,44 @@ function mathDiagnostic(failure: MathFailure): CompilerDiagnostic {
 }
 
 /**
+ * The document's systems table: one frozen copy of each theory its exercises
+ * actually name.
+ *
+ * Read off the manifest rather than tracked as the blocks compile, because the
+ * manifest is where the keys are — an exercise wrote one, so an exercise is
+ * what asks for the text. A theory declared and never used is left out; the
+ * copy that a `show` panel needs is already in its own node.
+ */
+function referencedSystems(
+  theories: ReadonlyMap<string, AufbauTheory>,
+  manifest: readonly ExerciseManifestItem[],
+): Record<string, CompiledSystem> {
+  const systems: Record<string, CompiledSystem> = {};
+
+  for (const item of manifest) {
+    const data = item.publicData;
+
+    if (typeof data !== "object" || data === null || Array.isArray(data)) {
+      continue;
+    }
+
+    const name = (data as { readonly system?: unknown }).system;
+
+    if (typeof name !== "string") {
+      continue;
+    }
+
+    const theory = theories.get(name);
+
+    if (theory !== undefined) {
+      systems[name] = compiledSystem(theory);
+    }
+  }
+
+  return systems;
+}
+
+/**
  * What a caller can lend the compiler beyond the source text.
  *
  * Both are optional, and the defaults are what makes this compiler runnable
@@ -698,9 +739,15 @@ export async function compileCarnapMarkdown(
   }
 
   const css = cssParts.join("\n\n");
+  const systems = referencedSystems(theories, manifest);
 
   return {
-    artifact: {
+    // Joined, not keyed. A compiled artifact is nearly always about to be
+    // rendered or inspected, and every one of those callers wants each
+    // exercise's theory text in hand; the one caller that does not — the save,
+    // on its way into the `compiled` column — calls `keyedArtifact`. Storage
+    // and the wire carry the key; memory carries the text.
+    artifact: withSystemSources({
       componentRegistryVersion: COMPONENT_REGISTRY_VERSION,
       ...(css.length === 0 ? {} : { css }),
       ...(cssHrefs.length === 0 ? {} : { cssHrefs }),
@@ -709,7 +756,8 @@ export async function compileCarnapMarkdown(
       manifest,
       manifestVersion: MANIFEST_VERSION,
       sourceProfile: PROFILE,
-    },
+      ...(Object.keys(systems).length === 0 ? {} : { systems }),
+    }),
     diagnostics,
     ok: true,
   };

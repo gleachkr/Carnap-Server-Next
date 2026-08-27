@@ -26,6 +26,7 @@ import { MULTIPLE_CHOICE_COMPONENT_METADATA } from "../../exercises/multiple-cho
 import { renderShortAnswer } from "../../exercises/short-answer/read-only-view";
 import { SHORT_ANSWER_COMPONENT_METADATA } from "../../exercises/short-answer/types";
 import { exerciseStrings } from "../../exercises/strings";
+import { keyedPublicData } from "../../exercises/systems";
 import { renderTranslation } from "../../exercises/translation/read-only-view";
 import { TRANSLATION_COMPONENT_METADATA } from "../../exercises/translation/types";
 import { renderTruthTable } from "../../exercises/truth-table/read-only-view";
@@ -290,7 +291,10 @@ export function exerciseHydrationForArtifact(
       mode: "answer",
       options: feedback === undefined ? {} : { feedback },
       priorAnswer: null,
-      publicData: node.publicData,
+      // The name of the system, not its text: the document carries one copy
+      // beside this table and the element joins the two. Same reason as
+      // `exerciseHydrationScript`, which does it for the interactive path.
+      publicData: keyedPublicData(node.publicData),
       strings: exerciseStrings(node.render.assetId, i18n),
       version: EXERCISE_HYDRATION_VERSION,
     };

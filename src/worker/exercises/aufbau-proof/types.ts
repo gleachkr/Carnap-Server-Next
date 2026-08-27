@@ -36,21 +36,41 @@ export interface AufbauProofOptions {
 
 /**
  * Everything the widget and grader need, frozen at authoring time.
+ *   - `goalDecl`    this exercise's own `theorem <goalName>: $ … $;`, which the
+ *                   join appends to the system's text
  *   - `goalName`    the theorem name; the student's proof body attaches to a
  *                   `<goalName>` public-theorem-block header (see `docs/proof.md`)
  *   - `mm0`         the resolved theory text plus the appended goal declaration
- *                   `theorem <goalName>: $ … $;` — the sole verification input
+ *                   — the sole verification input. **Filled by the join**, not
+ *                   stored: see `exercises/systems.ts`. It is required here
+ *                   because this interface describes the payload as a consumer
+ *                   receives it, which is always after the join; what the
+ *                   compiler writes is {@link CompiledAufbauProofPublicData}.
  *   - `promptHtml`  the rendered prose above the theorem header
  *   - `starterBody` the seed proof body shown in the editable region (may hold
  *                   `auto?` holes)
+ *   - `system`      which of the document's systems this exercise is set in
  */
 export interface AufbauProofPublicData {
+  readonly goalDecl?: string;
   readonly goalName: string;
   readonly mm0: string;
   readonly options: AufbauProofOptions;
   readonly promptHtml: string;
   readonly starterBody: string;
+  readonly system?: string;
 }
+
+/**
+ * The payload as it is stored and as it goes on the wire: the key instead of
+ * the text. One copy of a 30 KB theory per document rather than one per
+ * exercise is the whole point of the table; `mm0` is what the reader's own join
+ * puts back.
+ */
+export type CompiledAufbauProofPublicData = Omit<
+  AufbauProofPublicData,
+  "mm0"
+>;
 
 /**
  * The submitted answer. `mmb` is the base64 MMB certificate the client compiled

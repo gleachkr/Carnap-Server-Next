@@ -26,7 +26,6 @@ import {
   starterFormulaReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
-import { frozenTheoryText } from "../aufbau-proof/formulas";
 import { parsePrawitzStarter } from "./parse";
 import type { PrawitzDiagnosticCode } from "./translate";
 import { prawitzToAuf } from "./translate";
@@ -265,9 +264,9 @@ export async function compileAufbauProofPrawitz(
   const publicData: AufbauProofPrawitzPublicData = {
     assumptionRule,
     contextSymbol,
+    goalDecl: header.theoremDecl,
     goalFormula: header.goalFormula,
     goalName: header.goalName,
-    ...frozenTheoryText(theory, header.theoremDecl),
     options,
     promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
       ...renderOptions,
@@ -275,6 +274,7 @@ export async function compileAufbauProofPrawitz(
     }),
     sequentSymbol,
     ...(starterTree === undefined ? {} : { starterTree }),
+    system: theory.name,
   };
 
   return buildCompiledExercise({

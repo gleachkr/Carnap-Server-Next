@@ -28,12 +28,14 @@ import type { TheoryResolver } from "../../logic/theories";
 import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
 import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
 import {
-  frozenTheoryText,
   goalBinderShadows,
   proofFormulaReader,
-  proofTheoryText,
+  theoryLanguageSource,
 } from "./formulas";
-import type { AufbauProofOptions, AufbauProofPublicData } from "./types";
+import type {
+  AufbauProofOptions,
+  CompiledAufbauProofPublicData,
+} from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
   AUFBAU_PROOF_COMPONENT_METADATA,
@@ -104,8 +106,8 @@ function declaredNotations(source: string): {
  * How this exercise's starter is read, given the theory it is set in and the
  * goal it proves.
  *
- * The same two texts and the same decision the widget will make later, taken
- * from {@link frozenTheoryText} so the two cannot part company: an author who
+ * The same text and the same decision the widget will make later, taken from
+ * {@link theoryLanguageSource} so the two cannot part company: an author who
  * writes a starter the language refuses learns it here, while compiling, and
  * not from a student who cannot get the widget to accept what it opened with.
  */
@@ -115,7 +117,7 @@ export function starterFormulaReader(
   shape: ProofFormulaShape,
 ): ProofFormulaReader {
   return proofFormulaReader(
-    proofTheoryText(frozenTheoryText(theory, header.theoremDecl)).source,
+    theoryLanguageSource(theory, header.theoremDecl),
     shape,
     header.goalName,
   );
@@ -141,9 +143,7 @@ export function goalBinderWarnings(
   header: TheoremHeader,
   line: number,
 ): CompilerDiagnostic[] {
-  const { source } = proofTheoryText(
-    frozenTheoryText(theory, header.theoremDecl),
-  );
+  const source = theoryLanguageSource(theory, header.theoremDecl);
 
   return goalBinderShadows(source, header.goalName).map((shadow) => {
     if (shadow.kind === "notation") {
@@ -571,9 +571,11 @@ const AUFBAU_PROOF_ATTRIBUTES = [
 ] as const;
 
 /**
- * Compile an `:::aufbau-proof` exercise. Freezes the referenced theory plus the
- * goal declaration into `publicData.mm0` so the worker can verify a submitted
- * MMB against it independently of anything the student sends.
+ * Compile an `:::aufbau-proof` exercise. Names the referenced theory and keeps
+ * the goal declaration beside it, so the join (`exercises/systems.ts`) can hand
+ * the widget and the grader `publicData.mm0` — the theory plus the declaration —
+ * and the worker can verify a submitted MMB against it independently of
+ * anything the student sends.
  */
 export async function compileAufbauProof(
   block: DirectiveBlock,
@@ -617,15 +619,16 @@ export async function compileAufbauProof(
     return null;
   }
 
-  const publicData: AufbauProofPublicData = {
+  const publicData: CompiledAufbauProofPublicData = {
+    goalDecl: body.theoremDecl,
     goalName: body.goalName,
-    mm0: `${theory.mm0}\n${body.theoremDecl}`,
     options,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,
     }),
     starterBody: body.starterBody,
+    system: theory.name,
   };
 
   return buildCompiledExercise({

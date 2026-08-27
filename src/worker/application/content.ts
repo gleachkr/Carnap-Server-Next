@@ -1,4 +1,5 @@
 import type {
+  CompiledContentArtifact,
   ContentItem,
   ContentRevision,
   ContentSourceFormat,
@@ -7,6 +8,7 @@ import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import type { JsonValue } from "../domain/json";
 import { timestampNow } from "../domain/time";
+import { keyedArtifact } from "../exercises/systems";
 import { deferred } from "../i18n/deferred";
 import type { TheoryResolver } from "../logic/theories";
 import { hostedTheoryRevisionId } from "../logic/theories";
@@ -282,7 +284,12 @@ export class ContentService {
     }
 
     return this.options.stores.content.createRevision({
-      compiled: compiled.artifact as unknown as JsonValue,
+      // The key rather than the text: one copy of each system per document
+      // instead of one per exercise. `parseContentArtifact` joins them back on
+      // every read, so nothing downstream sees the difference.
+      compiled: keyedArtifact(
+        compiled.artifact as CompiledContentArtifact,
+      ) as unknown as JsonValue,
       contentHash,
       createdAt: now,
       createdById: actor.user.id,

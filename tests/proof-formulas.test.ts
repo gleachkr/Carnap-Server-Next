@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 
 import type { ProofFormulaShape } from "../src/worker/exercises/aufbau-proof/formulas";
 import {
+  compiledSystem,
   ENGINE_TEXT,
-  frozenTheoryText,
   goalBinderScope,
   goalBinderShadows,
   hasTheoryText,
@@ -15,6 +15,7 @@ import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/trans
 import type { PrawitzProofNode } from "../src/worker/exercises/aufbau-proof-prawitz/types";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import type { ProofTreeNode } from "../src/worker/exercises/aufbau-proof-tree/types";
+import { withSystemText } from "../src/worker/exercises/systems";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
 import { FORALLX_CASES } from "./helpers/forallx-cases";
 import {
@@ -45,6 +46,21 @@ const SCHEMATIC = "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;";
 const THEORY = { mm0: FORALLX_THEORY_MM0, source: FORALLX_THEORY_SOURCE };
 
 /**
+ * The two texts one exercise over a theory ends up with, assembled the way the
+ * compiler and the join assemble them: the theory becomes a table entry, and
+ * the exercise's own declaration is appended when the two meet.
+ */
+function frozenFor(
+  theory: { readonly mm0: string; readonly source: string },
+  theoremDecl: string,
+): { readonly mm0?: string; readonly source?: string } {
+  return withSystemText(
+    { goalDecl: theoremDecl, system: "t" },
+    { t: compiledSystem(theory) },
+  ) as { readonly mm0?: string; readonly source?: string };
+}
+
+/**
  * A reader for one goal over the forallx theory, assembled the way the
  * authoring compiler assembles it — so a test cannot read a formula in a
  * scope no exercise would actually have.
@@ -54,7 +70,7 @@ function readerFor(
   theoremDecl: string,
   shape: ProofFormulaShape = "sentence",
 ) {
-  const { source } = proofTheoryText(frozenTheoryText(THEORY, theoremDecl));
+  const { source } = proofTheoryText(frozenFor(THEORY, theoremDecl));
 
   return proofFormulaReader(source, shape, goalName);
 }
@@ -319,46 +335,49 @@ describe("a schematic goal reads in its own binders", () => {
   });
 });
 
-describe("frozenTheoryText", () => {
+describe("compiledSystem", () => {
   const theory = THEORY;
 
-  test("a concrete goal freezes the artifact as written", () => {
-    const frozen = frozenTheoryText(theory, CONCRETE);
+  test("a language is tabled as written", () => {
+    const entry = compiledSystem(theory);
 
-    expect(frozen.mm0).toBeUndefined();
+    expect(entry.mm0).toBeUndefined();
+    expect(entry.source).toBe(FORALLX_THEORY_SOURCE);
+  });
+
+  test("a concrete goal joins onto the artifact as written", () => {
+    const frozen = frozenFor(theory, CONCRETE);
+
     expect(frozen.source).toBe(`${FORALLX_THEORY_SOURCE}\n${CONCRETE}`);
   });
 
-  test("stripping the frozen source gives back the engine input exactly", () => {
+  test("stripping the joined source gives back the engine input exactly", () => {
     // The two texts differ by whole `@syntax` lines and nothing else, which is
-    // what lets only one of them be frozen: a certificate is still verified
+    // what lets only one of them be tabled: a certificate is still verified
     // against `${theory}\n${goal}`, byte for byte.
-    const resolved = proofTheoryText(frozenTheoryText(theory, CONCRETE));
+    const resolved = proofTheoryText(frozenFor(theory, CONCRETE));
 
     expect(resolved.mm0).toBe(`${FORALLX_THEORY_MM0}\n${CONCRETE}`);
     expect(resolved.source).not.toBeNull();
   });
 
-  test("a schematic goal freezes the artifact as written too", () => {
+  test("a schematic goal joins onto the artifact as written too", () => {
     // Before #253 this froze the stripped text and no language, turning the
     // feature off for every goal stated as a rule schema. The binder scope is
     // what made that unnecessary.
-    const frozen = frozenTheoryText(theory, SCHEMATIC);
-
-    expect(frozen.mm0).toBeUndefined();
-    expect(proofTheoryText(frozen)).toEqual({
+    expect(proofTheoryText(frozenFor(theory, SCHEMATIC))).toEqual({
       mm0: `${FORALLX_THEORY_MM0}\n${SCHEMATIC}`,
       source: `${FORALLX_THEORY_SOURCE}\n${SCHEMATIC}`,
     });
   });
 
-  test("a theory that is not a language freezes the stripped text", () => {
-    const frozen = frozenTheoryText(
-      { mm0: GENTZEN ?? "", source: GENTZEN ?? "" },
-      "theorem t: $ Γ ==> Δ $;",
-    );
+  test("a theory that is not a language is tabled as the stripped text", () => {
+    const gentzen = { mm0: GENTZEN ?? "", source: GENTZEN ?? "" };
 
-    expect(frozen.source).toBeUndefined();
+    expect(compiledSystem(gentzen).source).toBeUndefined();
+    expect(
+      frozenFor(gentzen, "theorem t: $ Γ ==> Δ $;").source,
+    ).toBeUndefined();
   });
 
   test("a pre-#250 artifact resolves to its own text and no language", () => {
