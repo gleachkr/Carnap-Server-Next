@@ -41,7 +41,7 @@ import { printTerm } from "@aufbau/syntax";
 import { languageById, languageFromSource } from "../../../logic/specs";
 import type { FormulaParseError } from "../../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
-import { hasQuantifiers, roleIndex } from "../../../logic/specs/roles";
+import { roleIndex } from "../../../logic/specs/roles";
 
 export type BinaryConnective = "and" | "or" | "if" | "iff";
 
@@ -288,20 +288,21 @@ export function formulaToString(
  * The language a truth-table exercise is set in, or `null` where its stored
  * data no longer names one.
  *
- * The mirror of `first-order`'s reader, and refusing the opposite thing: a
- * language with binders is not one a truth table can be set in, because a
- * quantifier is a construct its columns have no cell for. `source` is the
- * language's own text, joined in from the document's systems table; `dialect`
- * and the absence of both fall back to what this type has always spoken.
+ * The mirror of `first-order`'s reader. `source` is the language's own text,
+ * joined in from the document's systems table; `dialect` and the absence of
+ * both fall back to what this type has always spoken.
+ *
+ * `null` means there is no language here, not that this one is unsuitable. A
+ * predicate language is a perfectly good one to set a table in — `F(a)` and
+ * `R(a,b)` are columns like any other — and a construct the table has no column
+ * for is refused where it is written, by {@link parseFormula}, which can say
+ * which construct it was.
  */
 export function truthTableLanguage(data: {
   readonly dialect?: string;
   readonly source?: string;
 }): SurfaceLanguage | null {
-  const language =
-    data.source === undefined
-      ? languageById(data.dialect ?? PROP_LANGUAGE_ID)
-      : languageFromSource(data.source);
-
-  return language === null || hasQuantifiers(language) ? null : language;
+  return data.source === undefined
+    ? languageById(data.dialect ?? PROP_LANGUAGE_ID)
+    : languageFromSource(data.source);
 }

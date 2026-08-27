@@ -9,11 +9,30 @@
  * resolution order, and a course that extends forallx with its own vocabulary
  * can set every kind of exercise in the result.
  *
- * The requirement is per type and is the reason this takes a callback rather
- * than a flag: a model or translation exercise needs quantifiers and a truth
- * table needs their absence, and each says so in its own words. Passing the
- * refusal in as a function is also what keeps `tsc` checking the sentence
- * against `diagnostic-strings.ts` at the site that writes it.
+ * **What a type asks of a language is now only its name.** This used to carry a
+ * capability predicate too — model and translation demanded quantifiers, a
+ * truth table demanded their absence — and both halves were wrong.
+ *
+ * The positive half refused a real exercise: propositional translation
+ * (`R /\ C`) is week two of an intro course, and `system="carnap-prop"` on a
+ * translation block was answered with "declares no quantifiers, which this
+ * exercise type needs".
+ *
+ * The negative half was defeated by exactly the failure it existed for. It
+ * refused a language whose binder carried `@syntax role forall`; a language
+ * whose binder was *not* annotated passed, and was then read as an atom. It
+ * stopped only the authors who had annotated correctly.
+ *
+ * Neither was load-bearing. Both formula readers end their role dispatch in a
+ * refusal, which fires at compile time on the author's own formula and names
+ * the construct rather than the file — see `truth-table/logic/formula.ts` and
+ * `first-order/formula.ts`. A property of a *language* was never the right
+ * thing to check, because the same node wants opposite readings in two types:
+ * `F(a)` is structured for a model, which looks `a` up in an extension of `F`,
+ * and opaque for a truth table, which gives it a column.
+ *
+ * What survives here is `system_unreadable`, which is a fact about the file
+ * rather than about what an exercise wants from it.
  *
  * Kept out of the exercise barrels deliberately: those are imported by the
  * client elements, and the authoring toolkit has no business in their bundles.
@@ -48,12 +67,8 @@ export interface SystemLanguage {
 
 /** What a type asks of the language it is set in. */
 export interface SystemRequirement {
-  /** Whether this type can be set in the language at all. */
-  readonly accepts: (language: SurfaceLanguage) => boolean;
   /** What `system=` means when the author does not write it. */
   readonly defaultId: string;
-  /** How this type says no, in its own words. */
-  readonly refuse: (name: string, line: number) => CompilerDiagnostic;
 }
 
 /**
@@ -78,20 +93,15 @@ export function parseSystemAttribute(
   const language =
     resolved === null ? null : languageFromSource(resolved.source);
 
-  if (
-    resolved !== null &&
-    language !== null &&
-    requirement.accepts(language)
-  ) {
+  if (resolved !== null && language !== null) {
     return { language, source: resolved.source, system };
   }
 
-  if (resolved !== null && language === null) {
-    // Not a refusal: the requirement has not been *asked* yet, because there is
-    // no language to ask it of. Saying "no quantifiers" here would state a fact
-    // about a spec nobody read — which is what this said before, and it sent an
-    // author looking for a binder in a file whose real problem was a typo three
-    // lines up.
+  if (resolved !== null) {
+    // The one thing left to say about a language as such. Whether this type can
+    // do anything with the formulas written in it is asked of each formula, not
+    // here; this is the case where there is no language to ask about at all,
+    // and the author's real problem is usually a typo a few lines up.
     diagnostics.push(
       diagnostic(
         block.line,
@@ -100,12 +110,6 @@ export function parseSystemAttribute(
         { params: { name: system } },
       ),
     );
-  } else if (resolved !== null) {
-    // It resolved, it read, and it is not one of these. Saying which half is
-    // missing is the whole gain over the allowlist this replaced: an author who
-    // declared their own language can act on "no quantifiers", while "must be
-    // one of: forallx-calgary-2019" told them to abandon it.
-    diagnostics.push(requirement.refuse(system, block.line));
   }
 
   return fallbackLanguage(resolveSystem, block, diagnostics, requirement);

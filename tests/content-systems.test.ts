@@ -250,7 +250,10 @@ Something is a cube.
     expect(publicDataOf(artifact, "t1").source).toContain("term Cube");
   });
 
-  test("a language with no quantifiers is refused, and says which half is missing", async () => {
+  test("a propositional language is a language a translation can be set in", async () => {
+    // The regression the capability gate shipped with. `accepts: quantifies`
+    // refused this outright — "declares no quantifiers, which this exercise
+    // type needs" — for an exercise every intro course sets in week two.
     const compiled = await compileCarnapMarkdown(
       `::::translation{#t1 system="carnap-prop"}
 People danced.
@@ -259,35 +262,43 @@ People danced.
 ::::`,
     );
 
-    expect(compiled.ok).toBe(false);
-    expect(compiled.diagnostics.map((one) => one.code)).toContain(
-      "system_not_first_order",
-    );
+    expect(compiled.diagnostics).toEqual([]);
+    expect(compiled.ok).toBe(true);
   });
 
-  test("a truth table can name a propositional system, and refuses a quantified one", async () => {
-    // The one type an author could not point at their own notation, for no
-    // reason beyond nobody having written the attribute.
-    const ok = await compileCarnapMarkdown(
-      `::::truth-table{#tt1 system="carnap-prop"}
-Fill it in.
-
-- P -> Q
-::::`,
-    );
-
-    expect(ok.ok).toBe(true);
-
-    const refused = await compileCarnapMarkdown(
+  test("a truth table can be set over a language with predicates in it", async () => {
+    // Refused as "has quantifiers" until the check moved to the formula. The
+    // binder is what a table has no column for, and forallx's propositional
+    // fragment has none in it.
+    const artifact = await compile(
       `::::truth-table{#tt1 system="forallx-calgary-2019"}
 Fill it in.
 
-- P -> Q
+- F(a) -> F(b)
 ::::`,
     );
 
-    expect(refused.diagnostics.map((one) => one.code)).toContain(
-      "system_not_propositional",
+    const data = publicDataOf(artifact, "tt1") as {
+      readonly formulas: readonly string[];
+    };
+
+    // Two columns, not one. A letter carries its arguments into the atom it
+    // keys, so the antecedent and consequent are independent.
+    expect(data.formulas).toEqual(["(F(a) → F(b))"]);
+  });
+
+  test("a binder is refused by the formula that uses it, not by the language", async () => {
+    const compiled = await compileCarnapMarkdown(
+      `::::truth-table{#tt1 system="forallx-calgary-2019"}
+Fill it in.
+
+- Ax F(x)
+::::`,
+    );
+
+    expect(compiled.ok).toBe(false);
+    expect(compiled.diagnostics.map((one) => one.code)).toContain(
+      "invalid_formula",
     );
   });
 
@@ -325,11 +336,10 @@ Fill it in.
   });
 
   test("a system that does not read says so, rather than what it lacks", async () => {
-    // `infixl` on a term that was never declared. The capability refusals state
-    // a fact about the language ("has quantifiers", "declares none"), so they
-    // may only be said of one that read; before this, an unreadable spec got
-    // the truth-table refusal and an author chasing a binder that was not the
-    // problem.
+    // `infixl` on a term that was never declared. The only thing left to say
+    // about a language as such: it did not read. Everything else an exercise
+    // needs is asked of its formulas, which is why this is the one refusal that
+    // survived the capability gate.
     const compiled = await compileCarnapMarkdown(
       `:::aufbau-mm0{name="ours" src="/theories/carnap-prop.mm0"}
 --| @syntax delimiter $ ∧ $

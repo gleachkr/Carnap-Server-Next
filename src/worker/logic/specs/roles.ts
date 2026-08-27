@@ -49,25 +49,6 @@ export interface RoleIndex {
 }
 
 /**
- * Whether a language has binders — the one question two exercise types ask of a
- * spec before they will be set in it, from opposite sides.
- *
- * A model or translation exercise *needs* them: it quantifies, so a language
- * with no `∀` and `∃` is one whose formulas it can parse and never evaluate. A
- * truth table needs their absence: it is propositional, and a binder is a
- * construct its columns have no cell for.
- *
- * Asked of the spec rather than of a list of ids, which is what lets it answer
- * for a language an author declared in their own document — a language with no
- * id to be on a list.
- */
-export function hasQuantifiers(lang: SurfaceLanguage): boolean {
-  const roles = roleIndex(lang);
-
-  return roles.termFor("forall") !== null && roles.termFor("exists") !== null;
-}
-
-/**
  * The sort a student's formula is read at: the one carrying
  * `@syntax role sentence`, or `undefined` where the spec says nothing.
  *

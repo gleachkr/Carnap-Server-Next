@@ -94,17 +94,18 @@ describe("the language registry", () => {
     expect(firstOrderLanguageFor({})).toBeNull();
   });
 
-  test("a spec that ships but does not quantify is refused here", () => {
-    // `carnap-prop` reads fine as a language — it is the truth-table type's —
-    // and is still not something a model exercise may be set in. The refusal is
-    // now a property of the spec rather than of a list, so it holds for a
-    // language an author declared in their own document too.
-    expect(firstOrderLanguageFor({ dialect: "carnap-prop" })).toBeNull();
+  test("a spec that does not quantify is still a language these types read", () => {
+    // The inverse of what this asserted while the capability gate existed.
+    // `carnap-prop` was refused here for declaring no binders, which made
+    // propositional translation — `R /\\ C`, week two — impossible to set. A
+    // language is refused only when it is not a language; whether a formula
+    // uses something these types cannot evaluate is asked of the formula.
+    expect(firstOrderLanguageFor({ dialect: "carnap-prop" })).not.toBeNull();
     expect(
       firstOrderLanguageFor({
         source: LANGUAGE_SPEC_SOURCES["carnap-prop"] ?? "",
       }),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 
   test("a language named by its own text reads as the same one", () => {

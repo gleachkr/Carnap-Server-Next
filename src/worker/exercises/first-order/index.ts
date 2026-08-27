@@ -10,7 +10,6 @@
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import { languageById, languageFromSource } from "../../logic/specs";
-import { hasQuantifiers } from "../../logic/specs/roles";
 
 export type {
   BinaryConnective,
@@ -29,24 +28,16 @@ export {
 export const DEFAULT_LANGUAGE_ID = "forallx-calgary-2019";
 
 /**
- * Whether a language is one these two types can be set in.
- *
- * Quantification, and nothing else. Identity is not required: a spec that
- * declares no `=` simply never yields an identity node, which every reader here
- * already handles, and refusing it would refuse a perfectly ordinary predicate
- * language.
- *
- * This used to be an allowlist of ids, which had two problems and one of them
- * was fatal. It could not answer for a language an author declared in their own
- * document, because such a language has no id to be on a list; and the reason
- * it gave — "must be one of: forallx-calgary-2019" — told an author which
- * *file* to name rather than what their own was missing.
- */
-export const quantifies = hasQuantifiers;
-
-/**
  * The language an exercise is set in, or `null` where its stored data no longer
  * names one.
+ *
+ * `null` means there is no language here at all — no `source`, no `dialect`, or
+ * text that does not read as a spec. It does not mean "a language these types
+ * refuse": there is no such thing now. A capability predicate used to sit here
+ * demanding quantifiers, which made `carnap-prop` unusable for propositional
+ * translation, and a language whose binder carried no `@syntax role` satisfied
+ * it anyway. Whether a *formula* uses something these types cannot evaluate is
+ * asked of that formula, by `./formula.ts`, which can also name the construct.
  *
  * Two shapes arrive here, and the newer one is the reason this takes a payload
  * rather than a name. `source` is the language's own text, joined in from the
@@ -59,12 +50,9 @@ export function firstOrderLanguageFor(data: {
   readonly dialect?: string;
   readonly source?: string;
 }): SurfaceLanguage | null {
-  const language =
-    data.source === undefined
-      ? data.dialect === undefined
-        ? null
-        : languageById(data.dialect)
-      : languageFromSource(data.source);
-
-  return language === null || !quantifies(language) ? null : language;
+  return data.source === undefined
+    ? data.dialect === undefined
+      ? null
+      : languageById(data.dialect)
+    : languageFromSource(data.source);
 }

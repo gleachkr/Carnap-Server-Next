@@ -438,16 +438,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.",
         placeholders("name"),
       ),
-    "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder.":
-      i18n.t(
-        "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder.",
-        placeholders("name"),
-      ),
-    "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.":
-      i18n.t(
-        "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.",
-        placeholders("name"),
-      ),
     "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}.":
       i18n.t(
         "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}.",

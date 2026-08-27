@@ -2,18 +2,20 @@
  * `system=` for the two types that read a formula and evaluate it over a
  * domain — the model and the translation.
  *
- * Everything but the requirement is `../system-attribute.ts`; what is here is
- * the requirement, which is quantification, and the sentence that says so.
+ * Everything is `../system-attribute.ts`; what is here is the default, which is
+ * forallx. There is no requirement beyond that any more: these types used to
+ * demand quantifiers, which refused propositional translation — an exercise
+ * every intro course sets — for a capability its formulas never reach for. What
+ * a formula uses is now asked of the formula, in `./formula.ts`.
  */
 
 import type {
   CompilerDiagnostic,
   DirectiveBlock,
 } from "../../application/content/authoring-toolkit";
-import { diagnostic } from "../../application/content/authoring-toolkit";
 import type { SystemLanguage } from "../system-attribute";
 import { parseSystemAttribute } from "../system-attribute";
-import { DEFAULT_LANGUAGE_ID, quantifies } from "./index";
+import { DEFAULT_LANGUAGE_ID } from "./index";
 
 /** The language this block's `system=` names, with any refusal reported. */
 export function parseSystem(
@@ -22,14 +24,6 @@ export function parseSystem(
   diagnostics: CompilerDiagnostic[],
 ): SystemLanguage {
   return parseSystemAttribute(block, resolveSystem, diagnostics, {
-    accepts: quantifies,
     defaultId: DEFAULT_LANGUAGE_ID,
-    refuse: (name, line) =>
-      diagnostic(
-        line,
-        "system_not_first_order",
-        "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.",
-        { params: { name } },
-      ),
   });
 }
