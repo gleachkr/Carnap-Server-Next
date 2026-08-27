@@ -2537,6 +2537,18 @@ l1: $ top $ by top_i []
       expect(documentHtml).toContain(`/attempts/${attemptId}/submissions`);
       // The theory panel renders alongside the exercise.
       expect(documentHtml).toContain("aufbau-theory");
+      // The document carries one copy of the theory, and the widget's own
+      // payload carries its name — the element joins the two on connect. A
+      // document that emitted the table but kept the text in each payload would
+      // still work and would still be the duplication this replaced.
+      expect(documentHtml).toContain("data-carnap-systems");
+      const payload =
+        /<script type="application\/json" data-exercise-hydration>(.*?)<\/script>/s.exec(
+          documentHtml,
+        )?.[1] ?? "";
+
+      expect(payload).toContain('"system":"prop"');
+      expect(payload).not.toContain("sort wff");
     });
   });
 });
