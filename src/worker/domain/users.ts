@@ -67,6 +67,40 @@ export function normalizeName(
 }
 
 /**
+ * A name as an LMS may assert it: {@link normalizeName}'s shape, plus a
+ * {@link NAME_MAX_LENGTH} bound that drops rather than refuses.
+ *
+ * Over-long is left on the floor because nothing that long is a name. The limit
+ * sits far past any real one, so what exceeds it is a platform's composed
+ * display string or a concatenation bug, and the useful thing to keep of that is
+ * nothing at all: the account comes out nameless, which is a state the profile
+ * prompt already exists to repair. Truncating would file two hundred characters
+ * of the same junk under a person's name in every roster and grade export.
+ *
+ * Separate from {@link normalizeName} rather than folded into it because the two
+ * sources want opposite answers to the same length. A name typed on the profile
+ * form is refused with a message, since someone is there to read it and shorten
+ * it; a launch has nobody to tell. Shape is shared, and the policy for over-long
+ * belongs to the source.
+ *
+ * The bound lives here rather than at the adopter so that every route an
+ * asserted name reaches the column by is bounded by construction — a launch that
+ * adopts onto an existing account, and one that creates the account, which never
+ * passes an adopter at all. Storing it unbounded is the defect this closes:
+ * `assertName` then refuses the stored value, so the account's owner cannot save
+ * their profile page until they shorten a name they never wrote.
+ */
+export function normalizeAssertedName(
+  name: string | null | undefined,
+): string | null {
+  const normalized = normalizeName(name);
+
+  return normalized === null || normalized.length > NAME_MAX_LENGTH
+    ? null
+    : normalized;
+}
+
+/**
  * Whether this user has a name to go by.
  *
  * Blank and absent are the same answer, which is why this is a function and not

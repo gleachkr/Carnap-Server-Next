@@ -389,6 +389,47 @@ describe("LTI 1.3 core launches", () => {
     });
   });
 
+  // The hole the test above left open: the launch that CREATES an account
+  // carries the asserted name straight to the insert, so a bound that lived
+  // only at the adopter never ran on the launch that matters most. Probed
+  // against the real flow before this was fixed — a 300-character assertion
+  // stored 300 characters, and that account's owner could not save their
+  // profile page at all, which is precisely what the bound exists to prevent.
+  test("an over-long asserted name does not name the account it creates", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        email: null,
+        name: "x".repeat(201),
+      });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.name).toBeNull();
+
+      // The boundary itself, so that "drops what is over" cannot quietly
+      // become "drops what is at the limit".
+      await instructorLaunch(app, env, {
+        email: null,
+        name: "y".repeat(200),
+        sub: "lms-instructor-2",
+      });
+
+      const atLimit = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-2",
+      );
+
+      expect((await stores.users.getById(atLimit))?.name).toBe(
+        "y".repeat(200),
+      );
+    });
+  });
+
   // The institution's own identifier for a student, which an instructor needs
   // to join a Carnap grade export to a roster their registrar produced. Only a
   // launch can supply one — nothing on the site can type it.

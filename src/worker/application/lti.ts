@@ -12,7 +12,7 @@ import { createAppId } from "../domain/ids";
 import type { LtiPlatform, LtiResourceLink } from "../domain/lti";
 import { addSeconds, type Timestamp, timestampNow } from "../domain/time";
 import {
-  NAME_MAX_LENGTH,
+  normalizeAssertedName,
   normalizeName,
   normalizeStudentId,
   type User,
@@ -299,6 +299,25 @@ function normalizedEmailClaim(payload: JWTPayload): string | null {
   const email = stringClaim(payload, "email")?.trim().toLowerCase() ?? null;
 
   return email !== null && email.length > 0 ? email : null;
+}
+
+/**
+ * The launching person's name: the `name` claim, or the given and family names
+ * composed when a platform sends only the parts.
+ *
+ * Bounded here rather than at the adopter, for the reason
+ * {@link normalizeAssertedName} gives — the account-creating insert carries this
+ * value to the column without passing an adopter at all.
+ */
+function nameClaim(payload: JWTPayload): string | null {
+  const givenName = stringClaim(payload, "given_name");
+  const familyName = stringClaim(payload, "family_name");
+  const composedName =
+    givenName !== null || familyName !== null
+      ? [givenName, familyName].filter((part) => part !== null).join(" ")
+      : null;
+
+  return normalizeAssertedName(stringClaim(payload, "name") ?? composedName);
 }
 
 /**
@@ -1228,12 +1247,6 @@ export class LtiService {
     const contextId = stringField(contextClaim, "id");
     const resourceLinkClaim = objectClaim(payload, CLAIM_RESOURCE_LINK);
     const resourceLinkId = stringField(resourceLinkClaim, "id");
-    const givenName = stringClaim(payload, "given_name");
-    const familyName = stringClaim(payload, "family_name");
-    const composedName =
-      givenName !== null || familyName !== null
-        ? [givenName, familyName].filter((part) => part !== null).join(" ")
-        : null;
 
     return {
       agsLineItemUrl: stringField(
@@ -1254,7 +1267,7 @@ export class LtiService {
       ),
       email: normalizedEmailClaim(payload),
       locale: localeClaim(payload),
-      name: stringClaim(payload, "name") ?? composedName,
+      name: nameClaim(payload),
       resourceLink:
         resourceLinkId === null
           ? null
@@ -1419,19 +1432,15 @@ export class LtiService {
     asserted: string | null,
     nowDate: Date,
   ): Promise<User> {
-    const name = normalizeName(asserted);
+    const name = normalizeAssertedName(asserted);
 
-    // Over the limit is left on the floor rather than truncated: a stored name
-    // the profile form would reject is one the owner cannot save the page past
-    // until they edit a name they never wrote.
+    // The length bound is `normalizeAssertedName`'s and not this method's: a
+    // launch that creates an account never arrives here, so a test that lived
+    // only here left that path storing whatever the platform sent.
     //
-    // The stored name is read through the same normalizer rather than through
+    // The stored name is read through the shape normalizer rather than through
     // `hasName`, whose narrowing would leave `user` typed `never` below.
-    if (
-      name === null ||
-      normalizeName(user.name) !== null ||
-      name.length > NAME_MAX_LENGTH
-    ) {
+    if (name === null || normalizeName(user.name) !== null) {
       return user;
     }
 
