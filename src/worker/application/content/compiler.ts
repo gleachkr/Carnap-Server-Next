@@ -2,7 +2,6 @@ import type { Root } from "mdast";
 import type { ContainerDirective } from "mdast-util-directive";
 import type {
   CompiledContentArtifact,
-  CompiledSystem,
   ContentNode,
   ContentSourceProfile,
   ExerciseManifestItem,
@@ -16,7 +15,6 @@ import {
   compileAufbauMm0,
   compileAufbauProof,
 } from "../../exercises/aufbau-proof/authoring";
-import { compiledSystem } from "../../exercises/aufbau-proof/formulas";
 import { AUFBAU_PROOF_KIND } from "../../exercises/aufbau-proof/types";
 import { compileAufbauProofFitch } from "../../exercises/aufbau-proof-fitch/authoring";
 import { AUFBAU_PROOF_FITCH_KIND } from "../../exercises/aufbau-proof-fitch/types";
@@ -436,8 +434,8 @@ function systemResolver(theories: Map<string, AufbauTheory>): SystemResolver {
 function referencedSystems(
   theories: ReadonlyMap<string, AufbauTheory>,
   manifest: readonly ExerciseManifestItem[],
-): Record<string, CompiledSystem> {
-  const systems: Record<string, CompiledSystem> = {};
+): Record<string, string> {
+  const systems: Record<string, string> = {};
 
   for (const item of manifest) {
     const data = item.publicData;
@@ -455,7 +453,10 @@ function referencedSystems(
     const theory = theories.get(name);
 
     if (theory !== undefined) {
-      systems[name] = compiledSystem(theory);
+      // As written. The engine text is one strip away and every reader that
+      // wants it does that strip; freezing it here instead would be the only
+      // point in the pipeline where an author's `@syntax` could be lost.
+      systems[name] = theory.source;
     }
   }
 

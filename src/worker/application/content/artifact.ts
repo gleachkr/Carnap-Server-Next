@@ -189,15 +189,8 @@ export function parseContentArtifact(
     }
 
     for (const [name, system] of Object.entries(compiled.systems)) {
-      if (
-        !isObject(system) ||
-        (system.mm0 !== undefined && typeof system.mm0 !== "string") ||
-        (system.source !== undefined && typeof system.source !== "string")
-      ) {
-        unreadable(
-          revisionId,
-          `system "${name}" is not MM0 text in either of its two shapes`,
-        );
+      if (typeof system !== "string") {
+        unreadable(revisionId, `system "${name}" is not MM0 text`);
       }
     }
   }

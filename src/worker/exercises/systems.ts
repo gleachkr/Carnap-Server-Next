@@ -30,7 +30,6 @@
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import type {
   CompiledContentArtifact,
-  CompiledSystem,
   CompiledSystems,
   ContentNode,
 } from "../domain/content";
@@ -39,36 +38,34 @@ import type { JsonValue } from "../domain/json";
 
 /** The fields the join fills in, which are the fields consumers read. */
 interface SystemText {
-  readonly mm0?: string;
-  readonly source?: string;
+  readonly mm0: string;
+  readonly source: string;
 }
 
 /**
  * The two texts a system yields an exercise, given that exercise's own
  * declaration to append.
  *
- * The engine text is derived from `source` by stripping rather than stored
- * beside it — `stripSyntaxAnnotations` drops whole lines, which is what lets
- * the declaration be appended to either one and give the same answer — so a
- * language costs one copy in the table, not two.
+ * The engine text is derived from the stored source by stripping rather than
+ * stored beside it — `stripSyntaxAnnotations` drops whole lines, which is what
+ * lets the declaration be appended before or after and give the same answer —
+ * so a system costs one copy in the table, not two.
  *
- * Both fields arrive when the system is a language, and that is deliberate:
- * the three shaped proof types read `source` through `proofTheoryText` and get
- * surface formulas, while the plain `aufbau-proof` type reads `mm0` and goes
- * on being written in engine text. Which text an exercise is at is a fact
- * about its *type*, not about its theory, and this is where the two stopped
- * being conflated.
+ * Both fields always arrive, and that is deliberate: the three shaped proof
+ * types read `source` through `proofTheoryText` and get surface formulas, while
+ * the plain `aufbau-proof` type reads `mm0` and goes on being written in engine
+ * text. Which text an exercise is at is a fact about its *type*, not about its
+ * theory, and this is where the two stopped being conflated. A theory that is
+ * no language costs the duplicate and nothing else: with no `@syntax` to strip
+ * the two are the same bytes, and every reader that could care re-asks the spec
+ * rather than trusting a field's absence.
  */
-function systemText(system: CompiledSystem, declaration: string): SystemText {
+function systemText(source: string, declaration: string): SystemText {
   const suffix = declaration.length === 0 ? "" : `\n${declaration}`;
 
-  if (system.source === undefined) {
-    return { mm0: `${system.mm0 ?? ""}${suffix}` };
-  }
-
   return {
-    mm0: `${stripSyntaxAnnotations(system.source)}${suffix}`,
-    source: `${system.source}${suffix}`,
+    mm0: `${stripSyntaxAnnotations(source)}${suffix}`,
+    source: `${source}${suffix}`,
   };
 }
 
@@ -102,9 +99,9 @@ export function withSystemText(
   systems: CompiledSystems | undefined,
 ): JsonValue {
   const key = keyOf(publicData);
-  const system = key === null ? undefined : systems?.[key];
+  const source = key === null ? undefined : systems?.[key];
 
-  if (system === undefined) {
+  if (source === undefined) {
     return publicData;
   }
 
@@ -112,7 +109,7 @@ export function withSystemText(
 
   return {
     ...(publicData as Record<string, JsonValue>),
-    ...systemText(system, typeof declaration === "string" ? declaration : ""),
+    ...systemText(source, typeof declaration === "string" ? declaration : ""),
   };
 }
 

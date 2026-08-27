@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 
 import type { ProofFormulaShape } from "../src/worker/exercises/aufbau-proof/formulas";
 import {
-  compiledSystem,
   ENGINE_TEXT,
   goalBinderScope,
   goalBinderShadows,
@@ -56,7 +55,7 @@ function frozenFor(
 ): { readonly mm0?: string; readonly source?: string } {
   return withSystemText(
     { goalDecl: theoremDecl, system: "t" },
-    { t: compiledSystem(theory) },
+    { t: theory.source },
   ) as { readonly mm0?: string; readonly source?: string };
 }
 
@@ -335,15 +334,8 @@ describe("a schematic goal reads in its own binders", () => {
   });
 });
 
-describe("compiledSystem", () => {
+describe("the systems table's text", () => {
   const theory = THEORY;
-
-  test("a language is tabled as written", () => {
-    const entry = compiledSystem(theory);
-
-    expect(entry.mm0).toBeUndefined();
-    expect(entry.source).toBe(FORALLX_THEORY_SOURCE);
-  });
 
   test("a concrete goal joins onto the artifact as written", () => {
     const frozen = frozenFor(theory, CONCRETE);
@@ -371,13 +363,21 @@ describe("compiledSystem", () => {
     });
   });
 
-  test("a theory that is not a language is tabled as the stripped text", () => {
+  test("a theory that is no language costs the duplicate and nothing else", () => {
+    // `gentzen-lk` carries no `@syntax` at all, which used to put it on the
+    // table's second arm — the one that stored the stripped text and told a
+    // reader there was no language here. Both texts now arrive, and for a file
+    // with nothing to strip they are the same bytes; what makes that safe is
+    // that no reader trusts the field's absence. `proofLanguage` asks the spec
+    // for a sentence sort and this one names none, so its lines are engine text
+    // exactly as before.
     const gentzen = { mm0: GENTZEN ?? "", source: GENTZEN ?? "" };
+    const frozen = frozenFor(gentzen, "theorem t: $ Γ ==> Δ $;");
 
-    expect(compiledSystem(gentzen).source).toBeUndefined();
-    expect(
-      frozenFor(gentzen, "theorem t: $ Γ ==> Δ $;").source,
-    ).toBeUndefined();
+    expect(frozen.source).toBe(frozen.mm0);
+    expect(proofFormulaReader(frozen.source ?? null, "sentence", "t")).toBe(
+      ENGINE_TEXT,
+    );
   });
 
   test("a pre-#250 artifact resolves to its own text and no language", () => {

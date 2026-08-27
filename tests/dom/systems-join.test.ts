@@ -48,8 +48,8 @@ const table = domDocument.createElement("script");
 table.setAttribute("data-carnap-systems", "");
 table.type = "application/json";
 table.textContent = JSON.stringify({
-  engine: { mm0: "sort wff;" },
-  ours: { source: LANGUAGE },
+  engine: "sort wff;",
+  ours: LANGUAGE,
 });
 domDocument.body.append(table);
 
@@ -84,11 +84,14 @@ describe("the client's systems join", () => {
     expect(data.mm0).toBe(`${LANGUAGE_MM0}\n${GOAL}`);
   });
 
-  test("a system that is not a language yields engine text only", () => {
+  test("a system with nothing to strip yields the same text twice", () => {
+    // No `@syntax`, so the two texts coincide. The widget is not told "there is
+    // no language here" by an absent field — it asks the spec, which names no
+    // sentence sort, and reads engine text on that account.
     const data = mount({ goalDecl: GOAL, system: "engine" });
 
-    expect(data.source).toBeUndefined();
     expect(data.mm0).toBe(`sort wff;\n${GOAL}`);
+    expect(data.source).toBe(data.mm0);
   });
 
   test("a payload that froze its own text is untouched", () => {

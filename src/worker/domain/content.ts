@@ -117,23 +117,23 @@ export interface CompiledContentDocument {
 }
 
 /**
- * One system's frozen text, in whichever of the two shapes it is usable in.
+ * Every system a document's exercises name, by the name they name it with: the
+ * MM0 artifact as written, `@syntax` annotations intact.
  *
- * The same discriminated pair a proof exercise's `publicData` used to carry
- * directly, and for the same reason (see `exercises/aufbau-proof/formulas.ts`):
- * `source` is the artifact as written, `@syntax` annotations intact, and its
- * presence *is* the statement that this artifact is a language whose formulas
- * can be read as surface text. `mm0` is the engine input for an artifact that
- * is not one. Exactly one of the two is written, so a reader cannot be told one
- * and shown the other.
+ * **One text, not a pair.** This used to hold `{mm0} | {source}` — the
+ * discriminated pair a proof exercise's `publicData` carried before the table
+ * existed — where `source` present meant "this artifact is a language, read the
+ * student's formulas as surface text" and `mm0` meant "engine text only". Both
+ * of that flag's jobs have since moved. The wire saving it bought is now the
+ * table's (a keyed payload carries neither text), and the surface/engine
+ * question is re-asked at the point of use, of the spec itself, by
+ * `proofLanguage`. What was left was a way for the compiler to pick the lossy
+ * arm and throw an author's annotations away at the one point where the table
+ * is the only copy — which is exactly what it did to a document-local
+ * propositional language. The engine text is derived by stripping, which is
+ * cheap and total, so nothing needs the choice.
  */
-export interface CompiledSystem {
-  readonly mm0?: string;
-  readonly source?: string;
-}
-
-/** Every system a document's exercises name, by the name they name it with. */
-export type CompiledSystems = Readonly<Record<string, CompiledSystem>>;
+export type CompiledSystems = Readonly<Record<string, string>>;
 
 export interface CompiledContentArtifact {
   readonly componentRegistryVersion: string;

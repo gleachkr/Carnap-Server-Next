@@ -78,7 +78,7 @@ describe("the document's systems table", () => {
     );
 
     expect(Object.keys(artifact.systems ?? {})).toEqual(["forallx"]);
-    expect(artifact.systems?.forallx?.source).toBe(FORALLX_SOURCE);
+    expect(artifact.systems?.forallx).toBe(FORALLX_SOURCE);
 
     // Not a rounding-error saving: the theory is 30 KB, so what is stored is
     // the difference between one copy and one per exercise.
@@ -172,7 +172,7 @@ Pick one.
       manifest: [],
       manifestVersion: 1,
       sourceProfile: "carnap-markdown-v1",
-      systems: { forallx: { source: 42 } },
+      systems: { forallx: 42 },
     } as unknown as JsonValue;
 
     expect(() => parseContentArtifact(broken, "rev-1")).toThrow(
@@ -292,12 +292,13 @@ Fill it in.
   });
 
   test("a language with no sentence sort still reaches its reader as a language", async () => {
-    // The table's entry is a discriminated pair and `source` is the arm that
-    // carries `@syntax`, so getting the discriminator wrong is silent: the
-    // exercise compiles, stores its formulas in the author's canonical
-    // spelling, and then has no language to read them back in. Which is what
-    // happened — the test was "declares a sentence sort", and a language-only
-    // spec has nothing to disambiguate and declares none.
+    // The table entry used to be a discriminated pair, and the compiler chose
+    // its arm by asking whether the theory declared a sentence sort — a
+    // proof-type question asked of a table that serves all seven. A
+    // language-only spec has one provable sort and so declares none, and the
+    // exercise silently lost its `@syntax`: it compiled, stored its formulas in
+    // the author's canonical spelling, and had no language to read them back
+    // in. The entry is now the source as written, so there is no arm to pick.
     const artifact = await compile(
       `:::aufbau-mm0{name="ours" src="/theories/carnap-prop.mm0"}
 --| @syntax delimiter $ ∧ $
@@ -316,7 +317,7 @@ Fill it in.
       readonly source?: string;
     };
 
-    expect(Object.keys(artifact.systems?.ours ?? {})).toEqual(["source"]);
+    expect(artifact.systems?.ours).toContain("@syntax role conjunction");
     // Stored in the block's canonical spelling, which is the point: nothing but
     // the block's own language reads it.
     expect(data.formulas).toEqual(["(P ∧ Q)"]);

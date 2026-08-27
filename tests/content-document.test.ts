@@ -191,9 +191,9 @@ describe("content document", () => {
     expect(
       artifactDocumentProps({
         ...base,
-        systems: { forallx: { source: "sort wff;" } },
+        systems: { forallx: "sort wff;" },
       }),
-    ).toEqual({ systems: { forallx: { source: "sort wff;" } } });
+    ).toEqual({ systems: { forallx: "sort wff;" } });
   });
 
   test("a document carries its systems table where its widgets can read it", () => {
@@ -204,12 +204,12 @@ describe("content document", () => {
     const html = contentDocumentHtml({
       ...DOCUMENT_LOCALE,
       body: raw("<p>Prose.</p>"),
-      systems: { forallx: { source: "sort wff;" } },
+      systems: { forallx: "sort wff;" },
       title: "Lesson",
     });
 
     expect(html).toContain("data-carnap-systems");
-    expect(html).toContain('{"forallx":{"source":"sort wff;"}}');
+    expect(html).toContain('{"forallx":"sort wff;"}');
     expect(
       contentDocumentHtml({
         ...DOCUMENT_LOCALE,
