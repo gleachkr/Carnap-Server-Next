@@ -28,7 +28,11 @@
  *     does not.
  */
 
-import type { SurfaceLanguage, Term as SurfaceTerm } from "@aufbau/syntax";
+import type {
+  AppTerm,
+  SurfaceLanguage,
+  Term as SurfaceTerm,
+} from "@aufbau/syntax";
 import type { FormulaParseError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
 import { roleIndex, sentenceSort } from "../../logic/specs/roles";
@@ -83,14 +87,64 @@ export type ParseResult =
   | { readonly ok: false; readonly errors: readonly ParseError[] };
 
 /**
- * A spec node this module cannot read as a formula.
+ * A spec node this module cannot read as a formula, carrying the complaint it
+ * will be reported as.
  *
- * Only reachable through a spec that gives a constructor a role we have no
- * case for — an authoring mistake in the spec, not something a student
- * can type — so it is reported rather than thrown, and
- * `tests/language-specs.test.ts` is where a spec that would do it gets caught.
+ * The detail travels with the throw because the two ways to get here want
+ * different sentences, and unlike the truth table's this one is reachable by a
+ * *student*: the translation widget parses what is typed into it with this
+ * module, so a language carrying a construct these types cannot evaluate has to
+ * name it rather than say only that something went wrong.
  */
-class Unreadable extends Error {}
+class Unreadable extends Error {
+  constructor(readonly detail: FormulaParseError) {
+    super(detail.message);
+  }
+}
+
+/** The tree is malformed: nothing to name, nowhere useful to point. */
+function malformed(): Unreadable {
+  return new Unreadable({
+    message: "This formula could not be read.",
+    position: 0,
+  });
+}
+
+/**
+ * The language has this construct and these types have no reading for it.
+ *
+ * Quoted as the writer spelled it where the parser recorded a token, else as
+ * the spec's canonical spelling of the role, else by constructor name — a
+ * lexicon letter is written as its own name and has no notation to report.
+ */
+function uninterpretable(
+  node: AppTerm,
+  lang: SurfaceLanguage,
+  role: string | null,
+): Unreadable {
+  const spelled = role === null ? null : roleIndex(lang).spellingFor(role);
+
+  return new Unreadable({
+    message:
+      "“{construct}” is not something this exercise type can interpret.",
+    params: { construct: node.token ?? spelled ?? node.term },
+    position: node.span.start,
+  });
+}
+
+/**
+ * Whether this node would swallow a sentence.
+ *
+ * The test that lets an unrolled constructor be a predicate without letting an
+ * unannotated connective become one. A letter takes its arguments at the
+ * *sequence* sort, so `F`, `F(a)` and `R(a,b)` are predications. A
+ * `term box (p: wff): wff;` with no `@syntax role` takes an argument at the
+ * sentence sort; reading it as a predicate would push a formula through
+ * {@link readTerm}, which fails further down with nothing useful to say.
+ */
+function swallowsSentence(node: AppTerm): boolean {
+  return node.args.some((argument) => argument.sort === node.sort);
+}
 
 /** Strip the coercion wrappers the parser inserts between sorts. */
 function bare(node: SurfaceTerm, lang: SurfaceLanguage): SurfaceTerm {
@@ -173,7 +227,7 @@ function readTerm(node: SurfaceTerm, lang: SurfaceLanguage): Term {
 
 function binder(node: SurfaceTerm): string {
   if (node.kind !== "variable") {
-    throw new Unreadable("a quantifier without a variable");
+    throw malformed();
   }
 
   return node.name;
@@ -184,7 +238,7 @@ function operand(
   lang: SurfaceLanguage,
 ): Formula {
   if (node === undefined) {
-    throw new Unreadable("a connective missing an argument");
+    throw malformed();
   }
 
   return readFormula(node, lang);
@@ -195,7 +249,7 @@ function operandTerm(
   lang: SurfaceLanguage,
 ): Term {
   if (node === undefined) {
-    throw new Unreadable("a relation missing an argument");
+    throw malformed();
   }
 
   return readTerm(node, lang);
@@ -213,13 +267,17 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
   const inner = bare(node, lang);
 
   if (inner.kind === "variable") {
-    throw new Unreadable("a variable standing alone as a formula");
+    throw malformed();
   }
 
   const role = roleIndex(lang).roleOf(inner.term);
 
   switch (role) {
     case null:
+      if (swallowsSentence(inner)) {
+        throw uninterpretable(inner, lang, role);
+      }
+
       return {
         args: (inner.args[0] === undefined
           ? []
@@ -286,7 +344,7 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
     case "verum":
       return { type: "verum" };
     default:
-      throw new Unreadable(`a constructor with the role ${role}`);
+      throw uninterpretable(inner, lang, role);
   }
 }
 
@@ -338,10 +396,7 @@ export function parseFormula(
     return { formula: readFormula(result.term, lang), ok: true };
   } catch (error) {
     if (error instanceof Unreadable) {
-      return {
-        errors: [{ message: "This formula could not be read.", position: 0 }],
-        ok: false,
-      };
+      return { errors: [error.detail], ok: false };
     }
 
     throw error;

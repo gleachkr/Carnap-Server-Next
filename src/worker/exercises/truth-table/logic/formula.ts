@@ -32,7 +32,12 @@
  * `/\`, `\/`, and `<->` are left-associative; `->` is right-associative.
  */
 
-import type { SurfaceLanguage, Term as SurfaceTerm } from "@aufbau/syntax";
+import type {
+  AppTerm,
+  SurfaceLanguage,
+  Term as SurfaceTerm,
+} from "@aufbau/syntax";
+import { printTerm } from "@aufbau/syntax";
 import { languageById, languageFromSource } from "../../../logic/specs";
 import type { FormulaParseError } from "../../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
@@ -66,13 +71,68 @@ export type ParseResult =
 export const PROP_LANGUAGE_ID = "carnap-prop";
 
 /**
- * A spec node this module cannot read as a propositional formula.
+ * A spec node this module cannot read as a propositional formula, carrying the
+ * complaint it will be reported as.
  *
- * Only reachable through a spec that gives a constructor a role we have no
- * case for — an authoring mistake in the spec, not something a student
- * can type.
+ * The detail travels with the throw because the two ways to get here want
+ * different sentences. A malformed tree — a connective the parser accepted with
+ * an argument missing — is a defect nobody can act on and says so. A construct
+ * the language *has* and this type cannot interpret is an ordinary authoring
+ * mistake, and naming it is the whole point: "a truth table cannot interpret ∀"
+ * is actionable where "this formula could not be read" is not.
  */
-class Unreadable extends Error {}
+class Unreadable extends Error {
+  constructor(readonly detail: ParseError) {
+    super(detail.message);
+  }
+}
+
+/** The tree is malformed: nothing to name, nowhere useful to point. */
+function malformed(): Unreadable {
+  return new Unreadable({
+    message: "This formula could not be read.",
+    position: 0,
+  });
+}
+
+/**
+ * The language has this construct and a truth table has no reading for it.
+ *
+ * Quoted as the writer spelled it where the parser recorded a token, else as
+ * the spec's canonical spelling of the role, else by constructor name — a
+ * lexicon letter is written as its own name and has no notation to report.
+ */
+function uninterpretable(
+  node: AppTerm,
+  lang: SurfaceLanguage,
+  role: string | null,
+): Unreadable {
+  const spelled = role === null ? null : roleIndex(lang).spellingFor(role);
+
+  return new Unreadable({
+    message:
+      "“{construct}” is not something this exercise type can interpret.",
+    params: { construct: node.token ?? spelled ?? node.term },
+    position: node.span.start,
+  });
+}
+
+/**
+ * Whether this node would swallow a sentence.
+ *
+ * The test that lets an unrolled constructor be an atom without letting an
+ * unannotated connective become one. `F`, `F(a)` and `R(a,b)` take arguments at
+ * the *sequence* sort and are atomic — the whole open-ended half of a language.
+ * A `term box (p: wff): wff;` with no `@syntax role` takes an argument at the
+ * sentence sort, and reading it as an atom would silently discard the
+ * subformula and turn the exercise into a different, trivial one.
+ *
+ * Sorts are compared against the node's own rather than looked up in the spec,
+ * because a node in formula position is at the sentence sort by construction.
+ */
+function swallowsSentence(node: AppTerm): boolean {
+  return node.args.some((argument) => argument.sort === node.sort);
+}
 
 /** Built once; a language is tables, not data. */
 function prop(): SurfaceLanguage {
@@ -90,27 +150,42 @@ function operand(
   lang: SurfaceLanguage,
 ): Formula {
   if (node === undefined) {
-    throw new Unreadable("a connective missing an argument");
+    throw malformed();
   }
 
   return readFormula(node, lang);
 }
 
 /**
- * One parsed node as a formula, dispatched on its `@syntax role`. A
- * constructor with no role is a sentence letter — the whole open-ended half
- * of a propositional language.
+ * One parsed node as a formula, dispatched on its `@syntax role`.
+ *
+ * The dispatch is a whitelist and the `default` arm is not a leftover: a
+ * declared role is the spec author's claim that a constructor *means*
+ * something, and a type with no reading for it must say so rather than treat
+ * it as opaque. `identity` is refused by that rule like any other — which is
+ * what keeps `a ≠ b`, a `def` that parses without unfolding, from becoming a
+ * column independent of `~(a = b)` that a student could make true alongside it.
+ *
+ * A constructor with no role at all is an atom: a `carnap-prop` sentence
+ * letter, a forallx letter at the elided empty sequence, or that letter applied
+ * to terms. It is keyed by how it *prints* rather than by its constructor name,
+ * so `F(a)` and `F(b)` are two columns; keying by name gave both the column `F`
+ * and read `F(a) /\ ~F(b)` as a contradiction.
  */
 function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
   if (node.kind === "variable") {
-    throw new Unreadable("a variable in a propositional language");
+    throw malformed();
   }
 
   const role = roleIndex(lang).roleOf(node.term);
 
   switch (role) {
     case null:
-      return { name: node.term, type: "atom" };
+      if (swallowsSentence(node)) {
+        throw uninterpretable(node, lang, role);
+      }
+
+      return { name: printTerm(lang, node, "display"), type: "atom" };
     case "negation":
       return { operand: operand(node.args[0], lang), type: "not" };
     case "conjunction":
@@ -138,7 +213,7 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
         type: "iff",
       };
     default:
-      throw new Unreadable(`a constructor with the role ${role}`);
+      throw uninterpretable(node, lang, role);
   }
 }
 
@@ -164,10 +239,7 @@ export function parseFormula(
     return { formula: readFormula(result.term, lang), ok: true };
   } catch (error) {
     if (error instanceof Unreadable) {
-      return {
-        errors: [{ message: "This formula could not be read.", position: 0 }],
-        ok: false,
-      };
+      return { errors: [error.detail], ok: false };
     }
 
     throw error;

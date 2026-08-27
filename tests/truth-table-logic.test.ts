@@ -11,6 +11,35 @@ import {
   parseFormula,
   subformulaColumns,
 } from "../src/worker/exercises/truth-table/logic";
+import { languageById, languageFromSource } from "../src/worker/logic/specs";
+
+/**
+ * A propositional language with one construct this type has no reading for,
+ * and — the point of the fixture — no `@syntax role` on it.
+ *
+ * `hasQuantifiers` could never have refused this language: there is no binder
+ * to find, and `box` announces nothing about itself. Only the reader, meeting
+ * the node, can tell that a truth table has nowhere to put it.
+ */
+const MODAL_SPEC = `--| @syntax delimiter $ P Q ( ) ~ -> [] $
+delimiter $ ( ) $;
+
+provable sort wff;
+
+term P: wff;
+term Q: wff;
+
+--| @syntax role negation
+term not (p: wff): wff;
+prefix not: $~$ prec 50;
+
+--| @syntax role conditional
+term imp (p q: wff): wff;
+infixr imp: $->$ prec 30;
+
+term box (p: wff): wff;
+prefix box: $[]$ prec 50;
+`;
 
 function parse(source: string): Formula {
   const result = parseFormula(source);
@@ -133,6 +162,99 @@ describe("parseFormula errors", () => {
 
     if (!result.ok) {
       expect(result.errors[0]?.position).toBe(5);
+    }
+  });
+});
+
+describe("atoms over a language whose letters take arguments", () => {
+  // `carnap-prop` spells a letter `term P: wff;`, which is the unusual
+  // encoding. forallx spells one `term F (sq: seq): wff;` at the `@syntax
+  // elided` empty sequence, so one declaration covers `F`, `F(a)` and
+  // `R(a,b)` — and a truth table set over such a language has to tell those
+  // three apart. Keying a column by the constructor name gave all of them the
+  // column `F`.
+  const registered = languageById("forallx-calgary-2019");
+
+  if (registered === null) {
+    throw new Error("no forallx spec registered");
+  }
+
+  // Rebound rather than narrowed in place: `atom` below is a hoisted function
+  // declaration, so `tsc` cannot assume the check above ran before it.
+  const forallx = registered;
+
+  function atom(source: string): string {
+    const result = parseFormula(source, forallx);
+
+    if (!result.ok || result.formula.type !== "atom") {
+      throw new Error(`Expected '${source}' to read as one atom.`);
+    }
+
+    return result.formula.name;
+  }
+
+  test("a letter at the elided empty sequence prints as the bare letter", () => {
+    expect(atom("F")).toBe("F");
+  });
+
+  test("a letter applied to terms keeps them, so arguments make columns", () => {
+    expect(atom("F(a)")).toBe("F(a)");
+    expect(atom("F(b)")).toBe("F(b)");
+    expect(atom("R(a,b)")).toBe("R(a,b)");
+  });
+
+  test("the atoms of a formula are as many as its distinct predications", () => {
+    const result = parseFormula("F(a) /\\ ~F(b)", forallx);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok) {
+      // The regression this guards. Under the old keying both sides were the
+      // column `F`, so this contradicted itself and no valuation satisfied it.
+      expect(collectAtoms([result.formula])).toEqual(["F(a)", "F(b)"]);
+    }
+  });
+
+  test("a binder is refused where it stands, and names itself", () => {
+    const result = parseFormula("Ax F(x)", forallx);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) {
+      expect(result.errors[0]?.params?.construct).toBe("∀");
+    }
+  });
+
+  test("a declared role with no reading is refused, identity included", () => {
+    // The `default` arm is a whitelist, not a blacklist with identity on it.
+    // Letting `=` through as an opaque column would put `a ≠ b` — a `def` that
+    // parses without unfolding — in a column of its own, free to be true
+    // alongside `~(a = b)`.
+    const result = parseFormula("a = b", forallx);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) {
+      expect(result.errors[0]?.params?.construct).toBe("=");
+    }
+  });
+
+  test("a roleless constructor over a sentence is refused, not made an atom", () => {
+    // The case no capability gate could catch: an author's modal operator with
+    // no `@syntax role` has no `forall` to be recognized by, and reading it as
+    // an atom would discard `P -> Q` and leave a trivially satisfiable table.
+    const modal = languageFromSource(MODAL_SPEC);
+
+    if (modal === null) {
+      throw new Error("the modal fixture does not read as a language");
+    }
+
+    const result = parseFormula("[]P", modal);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) {
+      expect(result.errors[0]?.params?.construct).toBe("[]");
     }
   });
 });

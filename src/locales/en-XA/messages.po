@@ -23,6 +23,11 @@ msgid "“{chunk}” is not part of this language."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
+msgid "“{construct}” is not something this exercise type can interpret."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "“{formula}” is not propositional; a prop translation uses sentence letters and connectives only."
 msgstr ""
 

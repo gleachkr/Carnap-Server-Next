@@ -59,6 +59,11 @@ export function buildFormulaParserStrings(i18n: Translator) {
       "Unexpected “{token}”.",
       placeholders("token"),
     ),
+    "“{construct}” is not something this exercise type can interpret.":
+      i18n.t(
+        "“{construct}” is not something this exercise type can interpret.",
+        placeholders("construct"),
+      ),
     "“{chunk}” is not part of this language.": i18n.t(
       "“{chunk}” is not part of this language.",
       placeholders("chunk"),

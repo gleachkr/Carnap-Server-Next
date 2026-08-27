@@ -7,7 +7,10 @@ import {
   formulaToString,
   parseFormula,
 } from "../src/worker/exercises/first-order";
-import { LANGUAGE_SPEC_SOURCES } from "../src/worker/logic/specs";
+import {
+  LANGUAGE_SPEC_SOURCES,
+  languageFromSource,
+} from "../src/worker/logic/specs";
 
 /**
  * What the model and translation types accept as a formula, and what they show
@@ -537,5 +540,41 @@ describe("how a formula is written back out", () => {
   test("predicates keep their parentheses; a sentence letter has none", () => {
     expect(show("R(a,b)")).toBe("R(a,b)");
     expect(show("P")).toBe("P");
+  });
+});
+
+describe("a construct these types have no reading for", () => {
+  /**
+   * forallx with one instructor-added modal operator, and no `@syntax role` on
+   * it.
+   *
+   * The shape no language-level check could have refused. `box` declares
+   * nothing about itself, so a predicate asking "does this language quantify"
+   * answers yes — it is forallx, it quantifies — and lets the exercise
+   * through. Only the reader, meeting the node, can tell that a model has no
+   * clause for it.
+   */
+  const MODAL = languageFromSource(
+    `${LANGUAGE_SPEC_SOURCES[DEFAULT_LANGUAGE_ID] ?? ""}
+--| @syntax delimiter $ [] $
+term box (p: wff): wff;
+prefix box: $[]$ prec 50;
+`,
+  );
+
+  if (MODAL === null) {
+    throw new Error("the modal fixture does not read as a language");
+  }
+
+  test("is refused where it stands, and quoted as it was written", () => {
+    // Reading it as a predicate instead would push `F(a)` through `readTerm`
+    // and fail somewhere downstream with nothing to say about `[]`.
+    const error = failure("[]F(a)", MODAL);
+
+    expect(error.params?.construct).toBe("[]");
+  });
+
+  test("the same language's ordinary formulas still read", () => {
+    expect(show("Ax(F(x) -> G(x))", MODAL)).toBe("∀x(F(x) → G(x))");
   });
 });

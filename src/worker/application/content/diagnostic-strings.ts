@@ -373,6 +373,16 @@ export function buildDiagnosticStrings(i18n: Translator) {
       "This is a {kind}, not a complete sentence.",
       placeholders("kind"),
     ),
+    // Not a parse failure: the formula reads, and the type it was written for
+    // has no interpretation of one of its constructors — a binder in a truth
+    // table, a modal operator in a model. The construct is quoted as the writer
+    // spelled it, which is the whole gain over saying only that it could not be
+    // read.
+    "“{construct}” is not something this exercise type can interpret.":
+      i18n.t(
+        "“{construct}” is not something this exercise type can interpret.",
+        placeholders("construct"),
+      ),
     "“{chunk}” is not part of this language.": i18n.t(
       "“{chunk}” is not part of this language.",
       placeholders("chunk"),
