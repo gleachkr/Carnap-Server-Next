@@ -120,7 +120,7 @@ describe("truth-table grading", () => {
   };
 
   test("resolves atoms, rows, and cells", () => {
-    const table = resolveTable(publicData.formulas);
+    const table = resolveTable(publicData);
     expect(table).not.toBeNull();
     if (table !== null) {
       expect(table.atoms).toEqual(["P"]);
@@ -130,7 +130,7 @@ describe("truth-table grading", () => {
   });
 
   test("counts every fillable cell under fill=all", () => {
-    const table = resolveTable(publicData.formulas);
+    const table = resolveTable(publicData);
     if (table !== null) {
       // 2 rows × (1 reference atom + 3 formula cells) = 8.
       expect(fillableCellCount(table, DEFAULT_OPTIONS)).toBe(8);
@@ -197,7 +197,7 @@ describe("truth-table grading", () => {
       autoAtoms: true,
       fill: "connectives",
     };
-    const table = resolveTable(publicData.formulas);
+    const table = resolveTable(publicData);
     if (table !== null) {
       expect(referenceFillable(options)).toBe(false);
       // Only the one connective cell is fillable, across 2 rows.
@@ -208,7 +208,7 @@ describe("truth-table grading", () => {
   });
 
   test("correct cells match the semantics", () => {
-    const table = resolveTable(publicData.formulas);
+    const table = resolveTable(publicData);
     if (table !== null) {
       // (P -> P) columns are [P, ->, P]; the middle is always true.
       expect(correctCells(table)[0]).toEqual([
@@ -485,7 +485,7 @@ describe("truth-table counterexample", () => {
   ];
 
   test("counterexampleHolds reads the target predicate off a row", () => {
-    const table = resolveTable(["P", "Q"]);
+    const table = resolveTable({ formulas: ["P", "Q"] });
     expect(table).not.toBeNull();
     if (table !== null) {
       // Rows: 0=TT, 1=TF, 2=FT, 3=FF.
@@ -819,7 +819,7 @@ describe("truth-table validity", () => {
     // Affirming the consequent: Q, P -> Q :|-: P. formulas = [Q, (P->Q), P],
     // premiseCount 2. Rows: 0=TT, 1=TF, 2=FT, 3=FF. The counterexample is FT
     // (P=F, Q=T): both premises true, conclusion P false.
-    const table = resolveTable(["Q", "(P -> Q)", "P"]);
+    const table = resolveTable({ formulas: ["Q", "(P -> Q)", "P"] });
     expect(table).not.toBeNull();
     if (table !== null) {
       expect(sequentHolds(table, 2, 0)).toBe(true);
@@ -830,7 +830,7 @@ describe("truth-table validity", () => {
   });
 
   test("a valid argument's turnstile column is all T", () => {
-    const table = resolveTable(modusPonens.formulas);
+    const table = resolveTable(modusPonens);
     if (table !== null) {
       expect(
         table.valuations.map((_row, i) => sequentHolds(table, 2, i)),
@@ -839,7 +839,7 @@ describe("truth-table validity", () => {
   });
 
   test("the turnstile column adds one graded cell per row", () => {
-    const table = resolveTable(modusPonens.formulas);
+    const table = resolveTable(modusPonens);
     if (table !== null) {
       // 4 rows × (2 reference + 5 formula cells) = 28, + 4 turnstile = 32.
       expect(fillableCellCount(table, VALIDITY_OPTIONS)).toBe(28);
@@ -848,7 +848,7 @@ describe("truth-table validity", () => {
   });
 
   test("grades the turnstile column against the sequent", () => {
-    const table = resolveTable(modusPonens.formulas);
+    const table = resolveTable(modusPonens);
     if (table === null) {
       throw new Error("table failed to resolve");
     }
@@ -895,7 +895,7 @@ describe("truth-table validity", () => {
     // Q, R :|-: with premise P — counterexample is a row where P is true and the
     // two conclusions disagree. Atoms P,Q,R; rows 0..7 all-true-top. Row 1 = TTF
     // (P=T,Q=T,R=F): premise true, conclusions differ → counterexample.
-    const table = resolveTable(data.formulas);
+    const table = resolveTable(data);
     if (table !== null) {
       expect(counterexampleHolds(table, 1, "equivalence", 1)).toBe(true);
       // Row 0 = TTT: conclusions agree → not a counterexample.
@@ -926,7 +926,7 @@ describe("truth-table validity", () => {
       promptHtml: "",
       variant: "validity",
     };
-    const table = resolveTable(affirming.formulas);
+    const table = resolveTable(affirming);
     if (table === null) {
       throw new Error("table failed to resolve");
     }
@@ -980,7 +980,7 @@ describe("truth-table validity", () => {
   }
 
   test("review renders the turnstile column with its marks", () => {
-    const table = resolveTable(modusPonens.formulas);
+    const table = resolveTable(modusPonens);
     if (table === null) {
       throw new Error("table failed to resolve");
     }
@@ -1004,7 +1004,7 @@ describe("truth-table validity", () => {
   });
 
   test("review escapes the translated verdict text", () => {
-    const table = resolveTable(modusPonens.formulas);
+    const table = resolveTable(modusPonens);
     if (table === null) {
       throw new Error("table failed to resolve");
     }
@@ -1051,7 +1051,7 @@ describe("truth-table validity", () => {
     ).manifest[0] as ExerciseManifestItem;
 
     // Build a correctly-shaped blank answer from the resolved table.
-    const table = resolveTable(["P", "(P -> Q)", "Q"]);
+    const table = resolveTable({ formulas: ["P", "(P -> Q)", "Q"] });
     if (table === null) {
       throw new Error("table failed to resolve");
     }
@@ -1308,7 +1308,7 @@ describe("truth-table given grid (simple/validity)", () => {
   function fullCorrectAnswer(
     data: TruthTablePublicData,
   ): TruthTableAnswerData {
-    const table = resolveTable(data.formulas);
+    const table = resolveTable(data);
     if (table === null) {
       throw new Error("table failed to resolve");
     }

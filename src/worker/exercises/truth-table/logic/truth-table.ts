@@ -5,6 +5,7 @@
  * authoritative grade) and the client element (local check).
  */
 
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { Formula, ParseError } from "./formula";
 import { parseFormula } from "./formula";
 
@@ -214,12 +215,13 @@ function buildFormulaTable(
  */
 export function buildTruthTable(
   sources: readonly string[],
+  lang?: SurfaceLanguage,
 ): TruthTableResult {
   const parsed: Formula[] = [];
   const errors: TruthTableBuildError[] = [];
 
   for (const [index, source] of sources.entries()) {
-    const result = parseFormula(source);
+    const result = parseFormula(source, lang);
 
     if (result.ok) {
       parsed.push(result.formula);

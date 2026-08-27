@@ -3703,6 +3703,10 @@ msgstr ""
 msgid "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder."
+msgstr ""
+
 #: src/worker/application/admin.ts
 #: src/worker/application/auth.ts
 #: src/worker/application/courses.ts

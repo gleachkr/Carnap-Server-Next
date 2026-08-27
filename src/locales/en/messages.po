@@ -3703,6 +3703,10 @@ msgstr "The submission was not found."
 msgid "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
 msgstr "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder."
+msgstr "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder."
+
 #: src/worker/application/admin.ts
 #: src/worker/application/auth.ts
 #: src/worker/application/courses.ts

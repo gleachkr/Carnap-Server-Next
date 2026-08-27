@@ -581,7 +581,7 @@ export function renderTruthTableElement(
   meta: TruthTableElementMeta,
   actions = "",
 ): string {
-  const table = resolveTable(publicData.formulas);
+  const table = resolveTable(publicData);
 
   if (table === null) {
     return `<carnap-truth-table data-exercise-id="${escapeHtml(meta.exerciseId)}"></carnap-truth-table>`;
@@ -812,7 +812,7 @@ export function renderTruthTableReview(
     TRUTH_TABLE_COMPONENT_METADATA.assetId,
     i18n,
   );
-  const table = resolveTable(publicData.formulas);
+  const table = resolveTable(publicData);
   const grade = gradeTruthTable(publicData, review.answer);
 
   if (table === null || grade === null) {

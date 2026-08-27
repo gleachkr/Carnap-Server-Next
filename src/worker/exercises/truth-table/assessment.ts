@@ -52,7 +52,7 @@ function hasExpectedDimensions(
     return false;
   }
 
-  const table = resolveTable(declaration.publicData.formulas);
+  const table = resolveTable(declaration.publicData);
 
   if (table === null) {
     return false;

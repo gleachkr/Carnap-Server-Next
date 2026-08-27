@@ -420,6 +420,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}.",
         placeholders("available", "declared", "name"),
       ),
+    "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder.":
+      i18n.t(
+        "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder.",
+        placeholders("name"),
+      ),
     "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.":
       i18n.t(
         "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.",

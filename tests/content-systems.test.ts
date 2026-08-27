@@ -264,6 +264,32 @@ People danced.
     );
   });
 
+  test("a truth table can name a propositional system, and refuses a quantified one", async () => {
+    // The one type an author could not point at their own notation, for no
+    // reason beyond nobody having written the attribute.
+    const ok = await compileCarnapMarkdown(
+      `::::truth-table{#tt1 system="carnap-prop"}
+Fill it in.
+
+- P -> Q
+::::`,
+    );
+
+    expect(ok.ok).toBe(true);
+
+    const refused = await compileCarnapMarkdown(
+      `::::truth-table{#tt1 system="forallx-calgary-2019"}
+Fill it in.
+
+- P -> Q
+::::`,
+    );
+
+    expect(refused.diagnostics.map((one) => one.code)).toContain(
+      "system_not_propositional",
+    );
+  });
+
   test("an unresolvable name names both places it was looked for", async () => {
     const compiled = await compileCarnapMarkdown(
       `${THEORY_BLOCK}\n\n${fitch("ex1", "andcomm", "forallks")}`,

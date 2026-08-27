@@ -528,7 +528,10 @@ spelling of `feedback`), `counterexample-to` (`tautology`/`validity` | `equivale
 `inconsistency`/`contradiction` — the property a counterexample row must show;
 on a `validity` table the premises stay all-true and the property applies to the
 conclusions, which also defines the turnstile column), `trueMark` / `falseMark`
-(display glyphs for true/false cells; the recorded answer stays `T`/`F`), and an
+(display glyphs for true/false cells; the recorded answer stays `T`/`F`),
+`system` (an `aufbau-mm0` block name or a language spec id, defaulting to
+`carnap-prop`; it has to be propositional — a language with quantifiers is
+refused, since a binder has no column), and an
 `options` string of Carnap flags (`autoAtoms`, `nodash`, `nocheck`,
 `nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
 `negated-double-turnstile`; `immutable` — Carnap's whole-table display lock — is
@@ -536,8 +539,8 @@ recognized but not yet effective).
 On the `simple` and `validity` variants a student may fill the table and then
 mark one row of it as a counterexample, submitting that row instead of the whole
 table (unless `nocounterexample`).
-Notation is `~ /\ \/ -> <->` with single-letter atoms; the sequent turnstile is
-`:|-:`.
+Notation is whatever the system spells — `~ /\ \/ -> <->` with single-letter
+atoms in the default `carnap-prop`; the sequent turnstile is `:|-:`.
 
 The full reference — every option, the notation and precedence rules, the answer
 shape, and the roadmap — lives next to the code in
@@ -917,7 +920,7 @@ not let you write `(P)`). Two ship, and `system=` names either of them by id:
 | Id | Language |
 | --- | --- |
 | `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — the model and translation types. |
-| `carnap-prop` | Carnap's default `prop` — the truth-table type, ASCII connectives and 52 sentence letters. |
+| `carnap-prop` | Carnap's default `prop` — the truth-table type's default, ASCII connectives and 52 sentence letters. |
 
 They live in `src/worker/logic/theories/` alongside the proof systems, and are
 served at `/theories/<id>.mm0` like them — a language and a proof system are the
@@ -934,10 +937,12 @@ matches an `aufbau-mm0` block declared earlier in the same document first, and
 one of the ids above second — so a course that extends forallx with its own
 `Cube` and `Loves` can call the result `forallx` and set proofs, models and
 translations in it without any of them disagreeing about what `A` means. A name
-that is neither is a compile error naming both lists. A language a model or
-translation is set in has to quantify; one that declares no `∀` and `∃` is
-refused with a diagnostic saying so, which is why `carnap-prop` is a truth-table
-language and not a model one.
+that is neither is a compile error naming both lists. Each type also says what it needs of the
+language, and says it of the *spec* rather than by listing files. A model or
+translation has to quantify, and one that declares no `∀` and `∃` is refused
+with a diagnostic saying so; a truth table needs the opposite, because a binder
+has no column. That is why `carnap-prop` is a truth-table language and not a
+model one, and why forallx is the reverse.
 
 **The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
 predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters

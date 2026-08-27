@@ -33,10 +33,10 @@
  */
 
 import type { SurfaceLanguage, Term as SurfaceTerm } from "@aufbau/syntax";
-import { languageById } from "../../../logic/specs";
+import { languageById, languageFromSource } from "../../../logic/specs";
 import type { FormulaParseError } from "../../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
-import { roleIndex } from "../../../logic/specs/roles";
+import { hasQuantifiers, roleIndex } from "../../../logic/specs/roles";
 
 export type BinaryConnective = "and" | "or" | "if" | "iff";
 
@@ -56,11 +56,14 @@ export type ParseResult =
   | { readonly ok: false; readonly errors: readonly ParseError[] };
 
 /**
- * The spec this type speaks. Unlike the model and translation types there is
- * no `system=` attribute to choose another: a truth table is propositional,
- * and the one language that ships for it is this one.
+ * What `system=` means on a truth table when the author does not write it.
+ *
+ * A default rather than the only possibility: a truth table is propositional,
+ * but so is any number of textbooks' propositional notations, and there is no
+ * reason this type alone should be unable to point at one. What it will not
+ * take is a language with binders — see {@link truthTableLanguage}.
  */
-const PROP_LANGUAGE_ID = "carnap-prop";
+export const PROP_LANGUAGE_ID = "carnap-prop";
 
 /**
  * A spec node this module cannot read as a propositional formula.
@@ -139,9 +142,18 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
   }
 }
 
-/** Parse a single `prop` formula, collecting every syntax error it has. */
-export function parseFormula(source: string): ParseResult {
-  const lang = prop();
+/**
+ * Parse a single propositional formula, collecting every syntax error it has.
+ *
+ * The language is a parameter rather than this module's own, because a truth
+ * table names one in `system=` like every other type that reads a formula. It
+ * defaults to the shipped `carnap-prop` for the callers holding an artifact
+ * compiled before the attribute existed.
+ */
+export function parseFormula(
+  source: string,
+  lang: SurfaceLanguage = prop(),
+): ParseResult {
   const result = lang.parse(source);
 
   if (!result.ok) {
@@ -171,8 +183,11 @@ export function parseFormula(source: string): ParseResult {
  * always did. A spec that added `∧` as a later notation would change both
  * together, which is the point of reading them from one place.
  */
-export function formulaToString(formula: Formula): string {
-  const index = roleIndex(prop());
+export function formulaToString(
+  formula: Formula,
+  lang: SurfaceLanguage = prop(),
+): string {
+  const index = roleIndex(lang);
   const of = (role: string, fallback: string): string =>
     index.spellingFor(role) ?? fallback;
   const spelling = {
@@ -195,4 +210,26 @@ export function formulaToString(formula: Formula): string {
   };
 
   return write(formula);
+}
+
+/**
+ * The language a truth-table exercise is set in, or `null` where its stored
+ * data no longer names one.
+ *
+ * The mirror of `first-order`'s reader, and refusing the opposite thing: a
+ * language with binders is not one a truth table can be set in, because a
+ * quantifier is a construct its columns have no cell for. `source` is the
+ * language's own text, joined in from the document's systems table; `dialect`
+ * and the absence of both fall back to what this type has always spoken.
+ */
+export function truthTableLanguage(data: {
+  readonly dialect?: string;
+  readonly source?: string;
+}): SurfaceLanguage | null {
+  const language =
+    data.source === undefined
+      ? languageById(data.dialect ?? PROP_LANGUAGE_ID)
+      : languageFromSource(data.source);
+
+  return language === null || hasQuantifiers(language) ? null : language;
 }

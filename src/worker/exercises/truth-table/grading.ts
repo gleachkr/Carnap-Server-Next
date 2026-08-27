@@ -16,6 +16,7 @@ import {
   evaluate,
   formulaLayout,
   parseFormula,
+  truthTableLanguage,
 } from "./logic";
 import type {
   TruthTableAnswerData,
@@ -43,17 +44,38 @@ export interface ResolvedTable {
 }
 
 /**
- * Parse the formulas and assemble the shared layout. Returns null if any
- * formula fails to parse (the author's compile step already rejects those, so
- * this is a defensive guard for malformed stored data).
+ * What a table is built from: the formulas and the language they are written
+ * in, together.
+ *
+ * One argument rather than two because they belong together — an exercise's
+ * `publicData` already has this shape, so every caller holding one passes it
+ * whole and cannot pass the formulas of one system with the language of
+ * another.
  */
-export function resolveTable(
-  sources: readonly string[],
-): ResolvedTable | null {
+export interface TruthTableSource {
+  readonly dialect?: string;
+  readonly formulas: readonly string[];
+  readonly source?: string;
+}
+
+/**
+ * Parse the formulas and assemble the shared layout. Returns null if the
+ * language no longer resolves, or if any formula fails to parse (the author's
+ * compile step already rejects those, so this is a defensive guard for
+ * malformed stored data).
+ */
+export function resolveTable(input: TruthTableSource): ResolvedTable | null {
+  const lang = truthTableLanguage(input);
+
+  if (lang === null) {
+    return null;
+  }
+
+  const sources = input.formulas;
   const parsed: Formula[] = [];
 
   for (const source of sources) {
-    const result = parseFormula(source);
+    const result = parseFormula(source, lang);
 
     if (!result.ok) {
       return null;
@@ -448,7 +470,7 @@ export function gradeTruthTable(
   publicData: TruthTablePublicData,
   answer: TruthTableAnswerData,
 ): TruthTableGrade | null {
-  const table = resolveTable(publicData.formulas);
+  const table = resolveTable(publicData);
 
   if (table === null) {
     return null;

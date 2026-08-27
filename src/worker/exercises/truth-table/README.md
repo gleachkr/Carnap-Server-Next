@@ -39,6 +39,7 @@ Fill in both tables. If they agree on every row, the formulas are equivalent.
 | `counterexample-to` | `tautology`/`validity` \| `equivalence` \| `inconsistency`/`contradiction` | `tautology` | The property a counterexample row must show; applies to both variants (see below). The `nocounterexample` flag hides the button. |
 | `points`   | number `0 < n ≤ 1000`                 | `1`              | Nominal points. |
 | `trueMark` / `falseMark` | glyph, 1–8 chars          | `T` / `F`        | Display glyph for a true / false cell (cf. Carnap). Display only — the recorded answer stays `T`/`F`. |
+| `system`   | a block name or a spec id             | `carnap-prop`    | The notation the formulas are written in: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. It has to be propositional — a language with quantifiers is refused, since a binder has no column. |
 | `title`    | string                                | —                | Optional title. |
 | `exam`     | `true` \| `false`                     | the assignment's: `true` while its grades are withheld, `false` once released | `true` records every submission; `false` records only correct autograded work. Leaving it out is a third value, not `false`. |
 | `feedback` | `full` \| `terse` \| `none` | the assignment's: `none` while its grades are withheld, `full` once released | How much the student is told: `terse` drops the detail, `none` drops the verdict too. The score is separate — it waits for the release date whatever this says. See `docs/carnap-markdown-v1.md`. |
@@ -260,7 +261,8 @@ is a compile error.
 
 The table above is `src/worker/logic/theories/carnap-prop.mm0` — an MM0 signature
 with `@syntax` annotations, read by `@aufbau/syntax` — rather than anything in
-TypeScript. Sentence letters are the 52 single Roman letters it declares, of
+TypeScript. It is the *default*, not the only possibility: `system=` names
+another the way it does on every other type that reads a formula. Sentence letters are the 52 single Roman letters it declares, of
 either case: `P`, `Q`, `p`, `q`. The vocabulary is finite because an MM0
 signature is; the hand parser this replaced also read a bare-digit subscript
 (`P0`, `R12`), and that went with it (2026-08-24). Precedence, loosest to
@@ -345,5 +347,5 @@ the **Partial** variant (single free row, consistency grading), the unified
 wildcards, `immutable` locking, key-integrity checks), and display polish
 (`trueMark`/`falseMark`, `double-turnstile` / `negated-double-turnstile`).
 
-Still deferred: pluggable `system=` notations, `turnstilemark`, and seeding a
+Still deferred: `turnstilemark`, and seeding a
 validity turnstile-column cell (the grid seeds `reference | formulas` only).

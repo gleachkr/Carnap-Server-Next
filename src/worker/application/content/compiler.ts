@@ -708,7 +708,12 @@ export async function compileCarnapMarkdown(
           : exerciseKind === SHORT_ANSWER_KIND
             ? await compileShortAnswer(block, diagnostics, renderOptions)
             : exerciseKind === TRUTH_TABLE_KIND
-              ? await compileTruthTable(block, diagnostics, renderOptions)
+              ? await compileTruthTable(
+                  block,
+                  resolveSystem,
+                  diagnostics,
+                  renderOptions,
+                )
               : exerciseKind === MODEL_KIND
                 ? await compileModel(
                     block,

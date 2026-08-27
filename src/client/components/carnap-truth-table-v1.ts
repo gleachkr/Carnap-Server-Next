@@ -433,7 +433,7 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
       return empty;
     }
 
-    const table = resolveTable(data.formulas);
+    const table = resolveTable(data);
 
     if (table === null) {
       return empty;

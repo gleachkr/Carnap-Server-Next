@@ -17,6 +17,7 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
+import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   correctCells,
   fillableCellCount,
@@ -25,7 +26,13 @@ import {
   partialFillableCellCount,
   resolveTable,
 } from "./grading";
-import { formulaToString, MAX_TABLE_ATOMS, parseFormula } from "./logic";
+import {
+  formulaToString,
+  MAX_TABLE_ATOMS,
+  parseFormula,
+  truthTableLanguage,
+} from "./logic";
+import { parseSystem } from "./system";
 import type {
   TruthTableCellValue,
   TruthTableCheckMode,
@@ -346,6 +353,7 @@ function turnstileGlyphFromFlags(flags: {
 
 function parseBody(
   block: DirectiveBlock,
+  system: string,
   diagnostics: CompilerDiagnostic[],
 ): {
   formulas: string[];
@@ -387,13 +395,13 @@ function parseBody(
     // A single bullet may list several comma-separated formulas, so multiple
     // formulas can share one line just as they do on a validity sequent's sides.
     formulas.push(
-      ...parseFormulaList(match[1] ?? "", lineNumber, diagnostics),
+      ...parseFormulaList(match[1] ?? "", system, lineNumber, diagnostics),
     );
   }
 
   return {
     formulas,
-    givens: parseGivenGrid(gridRows, formulas, "simple", diagnostics),
+    givens: parseGivenGrid(gridRows, formulas, system, "simple", diagnostics),
     promptLines,
   };
 }
@@ -405,10 +413,18 @@ function parseBody(
  */
 function parseFormulaList(
   source: string,
+  system: string,
   line: number,
   diagnostics: CompilerDiagnostic[],
 ): string[] {
+  const lang = truthTableLanguage({ source: system });
   const formulas: string[] = [];
+
+  // A language that did not resolve is already reported by `parseSystem`;
+  // piling a parse error onto every formula would only bury it.
+  if (lang === null) {
+    return formulas;
+  }
 
   for (const piece of source.split(",")) {
     const trimmed = piece.trim();
@@ -417,10 +433,10 @@ function parseFormulaList(
       continue;
     }
 
-    const parsed = parseFormula(trimmed);
+    const parsed = parseFormula(trimmed, lang);
 
     if (parsed.ok) {
-      formulas.push(formulaToString(parsed.formula));
+      formulas.push(formulaToString(parsed.formula, lang));
     } else {
       diagnostics.push(
         diagnostic(
@@ -451,6 +467,7 @@ function parseFormulaList(
  */
 function parseValidityBody(
   block: DirectiveBlock,
+  system: string,
   diagnostics: CompilerDiagnostic[],
 ): {
   formulas: string[];
@@ -522,11 +539,13 @@ function parseValidityBody(
 
   const premises = parseFormulaList(
     parts[0] ?? "",
+    system,
     sequent.line,
     diagnostics,
   );
   const conclusions = parseFormulaList(
     parts[1] ?? "",
+    system,
     sequent.line,
     diagnostics,
   );
@@ -555,7 +574,13 @@ function parseValidityBody(
 
   return {
     formulas,
-    givens: parseGivenGrid(gridRows, formulas, "validity", diagnostics),
+    givens: parseGivenGrid(
+      gridRows,
+      formulas,
+      system,
+      "validity",
+      diagnostics,
+    ),
     premiseCount: premises.length,
     promptLines,
   };
@@ -569,6 +594,7 @@ function parseValidityBody(
  */
 function parsePartialBody(
   block: DirectiveBlock,
+  system: string,
   diagnostics: CompilerDiagnostic[],
 ): {
   formulas: string[];
@@ -606,13 +632,19 @@ function parsePartialBody(
     }
 
     formulas.push(
-      ...parseFormulaList(match[1] ?? "", lineNumber, diagnostics),
+      ...parseFormulaList(match[1] ?? "", system, lineNumber, diagnostics),
     );
   }
 
   return {
     formulas,
-    givens: parseGivenGrid(gridRows, formulas, "partial", diagnostics),
+    givens: parseGivenGrid(
+      gridRows,
+      formulas,
+      system,
+      "partial",
+      diagnostics,
+    ),
     promptLines,
   };
 }
@@ -703,6 +735,7 @@ function givenAgreesWithKey(
 function parseGivenGrid(
   rows: readonly { text: string; line: number }[],
   formulas: readonly string[],
+  system: string,
   variant: TruthTableVariant,
   diagnostics: CompilerDiagnostic[],
 ): TruthTableGivenRow[] {
@@ -710,7 +743,7 @@ function parseGivenGrid(
     return [];
   }
 
-  const table = resolveTable(formulas);
+  const table = resolveTable({ formulas, source: system });
 
   // Malformed formulas are already reported; skip the grid rather than pile on.
   if (table === null) {
@@ -843,6 +876,7 @@ function parseGivenGrid(
 function validateTable(
   block: DirectiveBlock,
   formulas: readonly string[],
+  system: string,
   options: TruthTableOptions,
   variant: TruthTableVariant,
   diagnostics: CompilerDiagnostic[],
@@ -858,7 +892,7 @@ function validateTable(
     return;
   }
 
-  const table = resolveTable(formulas);
+  const table = resolveTable({ formulas, source: system });
 
   if (table === null) {
     return;
@@ -901,18 +935,21 @@ const TRUTH_TABLE_ATTRIBUTES = [
   "fill",
   "grading",
   "options",
+  "system",
   "trueMark",
   "variant",
 ] as const;
 
 export async function compileTruthTable(
   block: DirectiveBlock,
+  resolveSystem: SystemResolver,
   diagnostics: CompilerDiagnostic[],
   renderOptions: MarkdownRenderOptions,
 ): Promise<CompiledExercise | null> {
   validateAttributes(block, TRUTH_TABLE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
+  const system = parseSystem(block, resolveSystem, diagnostics);
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
   const fill = parseFillScope(block.attrs.fill, block.line, diagnostics);
@@ -930,10 +967,13 @@ export async function compileTruthTable(
   const isValidity = variant === "validity";
   const isPartial = variant === "partial";
   const body = isValidity
-    ? parseValidityBody(block, diagnostics)
+    ? parseValidityBody(block, system.source, diagnostics)
     : isPartial
-      ? { premiseCount: 0, ...parsePartialBody(block, diagnostics) }
-      : { premiseCount: 0, ...parseBody(block, diagnostics) };
+      ? {
+          premiseCount: 0,
+          ...parsePartialBody(block, system.source, diagnostics),
+        }
+      : { premiseCount: 0, ...parseBody(block, system.source, diagnostics) };
 
   if (id === null) {
     return null;
@@ -989,7 +1029,14 @@ export async function compileTruthTable(
     turnstileGlyph: turnstileGlyphFromFlags(flags),
   };
 
-  validateTable(block, body.formulas, options, variant, diagnostics);
+  validateTable(
+    block,
+    body.formulas,
+    system.source,
+    options,
+    variant,
+    diagnostics,
+  );
 
   const publicData: TruthTablePublicData = {
     formulas: body.formulas,
@@ -1002,6 +1049,7 @@ export async function compileTruthTable(
     ...(isValidity ? { premiseCount: body.premiseCount } : {}),
     // Any variant may carry a seeded given grid (only when the author wrote one).
     ...(body.givens.length > 0 ? { givens: body.givens } : {}),
+    system: system.system,
     variant,
   };
 

@@ -9,7 +9,12 @@ export type {
   ParseError,
   ParseResult,
 } from "./formula";
-export { formulaToString, parseFormula } from "./formula";
+export {
+  formulaToString,
+  PROP_LANGUAGE_ID,
+  parseFormula,
+  truthTableLanguage,
+} from "./formula";
 export type { CellRole, CellSegment, FormulaSegment } from "./layout";
 export { formulaCells, formulaLayout } from "./layout";
 export type {
