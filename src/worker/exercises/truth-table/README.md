@@ -259,6 +259,11 @@ is a compile error.
 | conditional   | `->`   | right-associative              |
 | biconditional | `<->`  |                                |
 
+Those five are what `carnap-prop` declares, not what this type can read: see
+*What counts as an atom* below. Every symbol a table **draws** is the spec's
+own — its last-declared notation for the role — so a course spelling
+conjunction `&` sees `&` in the grid, not `/\`.
+
 The table above is `src/worker/logic/theories/carnap-prop.mm0` — an MM0 signature
 with `@syntax` annotations, read by `@aufbau/syntax` — rather than anything in
 TypeScript. It is the *default*, not the only possibility: `system=` names
@@ -288,8 +293,16 @@ What is and is not a column is decided **per node**, when the formula is read:
   `R(a,b)` are all that one declaration — and all three are distinct columns.
   Predications over different terms are independent, so `F(a) -> F(b)` has two
   reference columns, not one.
-- A constructor with a role this type **has a reading for** — the five
-  connectives above — gets its cells as usual.
+- A constructor with a role this type **has a reading for** gets its cells as
+  usual. That is `negation`, `verum`, `falsum`, and **all sixteen** binary truth
+  functions — not just the five `carnap-prop` happens to declare. A course
+  whose textbook uses the Sheffer stroke, exclusive disjunction or NAND declares
+  the constructor in its own `aufbau-mm0` block, annotates it
+  (`--| @syntax role nand`), and gets a column for it with nothing changed here.
+  The roles are listed in `docs/carnap-markdown-v1.md`; the truth functions are
+  `src/worker/logic/specs/connectives.ts`.
+- `⊤` and `⊥` are columns, not reference columns: nothing varies, but the
+  student still writes the value under the symbol.
 - Anything else is **refused where it is written**, and the complaint names it:
   a binder (`∀`), an identity (`=`), a modal operator an author declared. The
   list of readable roles is closed on purpose. Treating an unrecognized
@@ -304,7 +317,7 @@ What is and is not a column is decided **per node**, when the formula is read:
 
 | File | Role |
 |------|------|
-| `logic/` | DOM-free `prop` core: `formula.ts` (spec parse → AST, and back), `truth-table.ts` (atoms, 2ⁿ valuations, evaluator, sub-formula columns, `buildTruthTable`), `layout.ts` (written-out formula → parens + cells). Imported by **both** the worker and the client. |
+| `logic/` | DOM-free `prop` core: `formula.ts` (spec parse → AST, and back), `truth-table.ts` (atoms, 2ⁿ valuations, evaluator, sub-formula columns, `buildTruthTable`), `layout.ts` (written-out formula → parens + cells, spelled by the spec). Imported by **both** the worker and the client. |
 | `types.ts` | Kind/answer/component constants and the public-data, options, and answer-grid shapes. |
 | `grading.ts` | DOM-free grading shared by the worker (score + review marks) and the client (Check): resolve the table, fill mask, correct grid, per-cell verdicts, score fraction, structural guards. |
 | `authoring.ts` | Compiles the directive → a `CompiledExercise` (parses formulas, validates attributes/options). |

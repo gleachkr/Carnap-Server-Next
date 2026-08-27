@@ -37,8 +37,14 @@
  * consequence relation.
  */
 
+import {
+  BINARY_CONNECTIVES,
+  type BinaryConnective,
+} from "../../../logic/specs/connectives";
+
 /** Everything the generated theory needs to know about the two formulas: the
- * symbols they mention, and the bound-variable names emission chose. */
+ * symbols they mention, the connectives they are built from, and the
+ * bound-variable names emission chose. */
 export interface TranslationSignature {
   /** Mangled predicate name → arity, in emission order. */
   readonly predicates: ReadonlyMap<string, number>;
@@ -50,6 +56,10 @@ export interface TranslationSignature {
   readonly usesIdentity: boolean;
   /** Bound-variable names, one per quantifier occurrence. */
   readonly boundNames: readonly string[];
+  /** Which binary connectives occur. The four in {@link CORE_NOTATION} are
+   * declared unconditionally; every other one that appears here brings its own
+   * term and its own pair of Tait rules. */
+  readonly connectives: ReadonlySet<BinaryConnective>;
 }
 
 /** A signature needs the first-order machinery (objects, substitution,
@@ -69,6 +79,26 @@ const HEADER = `delimiter $ ( ) [ / ] $;
 provable sort form;
 sort ctx;
 `;
+
+/** The four binary connectives every generated theory declares, and the
+ * notation {@link connectiveForm} writes them in. Their rules live in
+ * {@link PROPOSITIONAL_RULES} and are always present — partly because the
+ * remaining twelve are stated over `¬` and the succedent alone and need no
+ * more than that, and partly because a theory that dropped an unused core
+ * connective would change the mm0 of every formula ever graded, and a stored
+ * certificate is only valid against the bytes it was found for. */
+const CORE_NOTATION = {
+  and: "∧",
+  if: "→",
+  iff: "↔",
+  or: "∨",
+} as const;
+
+type CoreConnective = keyof typeof CORE_NOTATION;
+
+function isCore(connective: BinaryConnective): connective is CoreConnective {
+  return connective in CORE_NOTATION;
+}
 
 /** The connectives, plus the two truth constants forallx spells `⊤`/`⊥`. */
 const CONNECTIVES = `term im (a b: form): form;
@@ -298,6 +328,207 @@ axiom rdm_ex (d: ctx) {x: obj} (p: form x):
   $ ⊢ (∀ x (¬ p)) , d $ > $ ⊢ ¬ (∃ x p) , d $;
 `;
 
+type ExtraConnective = Exclude<BinaryConnective, CoreConnective>;
+
+interface ExtraConnectiveRules {
+  /** MM0 term name. Cannot collide with a mangled signature symbol, which is
+   * always `p_`/`c_`/`f_`-prefixed. */
+  readonly term: string;
+  /** The positive and De Morgan rules, in that order. */
+  readonly rules: string;
+}
+
+/**
+ * The other twelve truth functions: a term and a pair of Tait rules apiece,
+ * emitted only for the ones the two formulas actually contain.
+ *
+ * A course whose textbook opens with the Sheffer stroke writes `↑` in a
+ * translation, and the search is given rules for it rather than a rewritten
+ * formula — the same way it is given the quantifier rules only when there is a
+ * quantifier. The rules are the obvious ones. Each connective gets a
+ * *positive* rule for `⊢ (C a b) , Δ` and a *De Morgan* rule for
+ * `⊢ ¬ (C a b) , Δ`, read straight off the truth function: nand is `¬a ∨ ¬b`,
+ * so its positive rule is the non-branching `⊢ ¬a , ¬b , Δ` and its negated
+ * form is the branching conjunction rule. All are invertible, hence
+ * `@auto eager`, priority 2 for the branching half, matching
+ * {@link PROPOSITIONAL_RULES}.
+ *
+ * These take no notation. The connective is applied by bare prefix
+ * application, the way the signature's own symbols are (`(nand a b)`), which
+ * keeps twelve more operator precedences out of a grammar that has to parse
+ * identically on both sides of the trust boundary.
+ *
+ * Every entry is exercised, positively and negatively, by the battery in
+ * `tests/translation-engine.test.ts` — a hand-written rule is exactly the kind
+ * of thing that is wrong in one place and nowhere else.
+ */
+const EXTRA_CONNECTIVES: Record<ExtraConnective, ExtraConnectiveRules> = {
+  "binary-falsum": {
+    rules: `--| @auto eager
+axiom rbfal (d: ctx) (a b: form): $ ⊢ d $ > $ ⊢ (bfal a b) , d $;
+axiom rdm_bfal (d: ctx) (a b: form): $ ⊢ ¬ (bfal a b) , d $;`,
+    term: "bfal",
+  },
+  "binary-verum": {
+    rules: `axiom rbver (d: ctx) (a b: form): $ ⊢ (bver a b) , d $;
+--| @auto eager
+axiom rdm_bver (d: ctx) (a b: form): $ ⊢ d $ > $ ⊢ ¬ (bver a b) , d $;`,
+    term: "bver",
+  },
+  "converse-conditional": {
+    rules: `--| @auto eager
+axiom rcim (d: ctx) (a b: form): $ ⊢ a , (¬ b) , d $ > $ ⊢ (cim a b) , d $;
+--| @auto eager 2
+axiom rdm_cim (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , d $ > $ ⊢ b , d $ > $ ⊢ ¬ (cim a b) , d $;`,
+    term: "cim",
+  },
+  "converse-non-conditional": {
+    rules: `--| @auto eager 2
+axiom rcnim (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , d $ > $ ⊢ b , d $ > $ ⊢ (cnim a b) , d $;
+--| @auto eager
+axiom rdm_cnim (d: ctx) (a b: form):
+  $ ⊢ a , (¬ b) , d $ > $ ⊢ ¬ (cnim a b) , d $;`,
+    term: "cnim",
+  },
+  "left-projection": {
+    rules: `--| @auto eager
+axiom rlproj (d: ctx) (a b: form): $ ⊢ a , d $ > $ ⊢ (lproj a b) , d $;
+--| @auto eager
+axiom rdm_lproj (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , d $ > $ ⊢ ¬ (lproj a b) , d $;`,
+    term: "lproj",
+  },
+  nand: {
+    rules: `--| @auto eager
+axiom rnand (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , (¬ b) , d $ > $ ⊢ (nand a b) , d $;
+--| @auto eager 2
+axiom rdm_nand (d: ctx) (a b: form):
+  $ ⊢ a , d $ > $ ⊢ b , d $ > $ ⊢ ¬ (nand a b) , d $;`,
+    term: "nand",
+  },
+  "negated-left-projection": {
+    rules: `--| @auto eager
+axiom rnlproj (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , d $ > $ ⊢ (nlproj a b) , d $;
+--| @auto eager
+axiom rdm_nlproj (d: ctx) (a b: form): $ ⊢ a , d $ > $ ⊢ ¬ (nlproj a b) , d $;`,
+    term: "nlproj",
+  },
+  "negated-right-projection": {
+    rules: `--| @auto eager
+axiom rnrproj (d: ctx) (a b: form):
+  $ ⊢ (¬ b) , d $ > $ ⊢ (nrproj a b) , d $;
+--| @auto eager
+axiom rdm_nrproj (d: ctx) (a b: form): $ ⊢ b , d $ > $ ⊢ ¬ (nrproj a b) , d $;`,
+    term: "nrproj",
+  },
+  "non-conditional": {
+    rules: `--| @auto eager 2
+axiom rnim (d: ctx) (a b: form):
+  $ ⊢ a , d $ > $ ⊢ (¬ b) , d $ > $ ⊢ (nim a b) , d $;
+--| @auto eager
+axiom rdm_nim (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , b , d $ > $ ⊢ ¬ (nim a b) , d $;`,
+    term: "nim",
+  },
+  nor: {
+    rules: `--| @auto eager 2
+axiom rnor (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , d $ > $ ⊢ (¬ b) , d $ > $ ⊢ (nor a b) , d $;
+--| @auto eager
+axiom rdm_nor (d: ctx) (a b: form): $ ⊢ a , b , d $ > $ ⊢ ¬ (nor a b) , d $;`,
+    term: "nor",
+  },
+  "right-projection": {
+    rules: `--| @auto eager
+axiom rrproj (d: ctx) (a b: form): $ ⊢ b , d $ > $ ⊢ (rproj a b) , d $;
+--| @auto eager
+axiom rdm_rproj (d: ctx) (a b: form):
+  $ ⊢ (¬ b) , d $ > $ ⊢ ¬ (rproj a b) , d $;`,
+    term: "rproj",
+  },
+  xor: {
+    rules: `--| @auto eager 2
+axiom rxor (d: ctx) (a b: form):
+  $ ⊢ a , b , d $ > $ ⊢ (¬ a) , (¬ b) , d $ > $ ⊢ (xor a b) , d $;
+--| @auto eager 2
+axiom rdm_xor (d: ctx) (a b: form):
+  $ ⊢ (¬ a) , b , d $ > $ ⊢ a , (¬ b) , d $ > $ ⊢ ¬ (xor a b) , d $;`,
+    term: "xor",
+  },
+};
+
+/**
+ * How a binary connective is written in an emitted formula, over its already
+ * emitted operands.
+ *
+ * Lives here rather than in `mm0.ts` because it has to agree with the rules
+ * above symbol for symbol: a term name written one way in the goal and another
+ * in its rule is a search that silently never closes.
+ */
+export function connectiveForm(
+  connective: BinaryConnective,
+  left: string,
+  right: string,
+): string {
+  return isCore(connective)
+    ? `(${left} ${CORE_NOTATION[connective]} ${right})`
+    : `(${EXTRA_CONNECTIVES[connective].term} ${left} ${right})`;
+}
+
+/** The connectives present that are not among the four declared
+ * unconditionally, in a fixed order so the client's mm0 and the worker's are
+ * byte-identical. */
+function extraConnectives(
+  signature: TranslationSignature,
+): readonly ExtraConnectiveRules[] {
+  return BINARY_CONNECTIVES.filter(
+    (connective): connective is ExtraConnective =>
+      signature.connectives.has(connective) && !isCore(connective),
+  ).map((connective) => EXTRA_CONNECTIVES[connective]);
+}
+
+function extraConnectiveTerms(
+  extras: readonly ExtraConnectiveRules[],
+): string {
+  const lines = extras.map(({ term }) => `term ${term} (a b: form): form;`);
+  return lines.length === 0 ? "" : `${lines.join("\n")}\n`;
+}
+
+/** Congruence, and — first-order only — the substitution case the `@rewrite`
+ * automation needs to push an `[x/t]` past the connective. */
+function extraConnectiveAxioms(
+  extras: readonly ExtraConnectiveRules[],
+  firstOrder: boolean,
+): string {
+  const lines: string[] = [];
+  for (const { term } of extras) {
+    lines.push(
+      "--| @congr",
+      `axiom ${term}_congr (a b c d: form):`,
+      `  $ a ↔ b $ > $ c ↔ d $ > $ (${term} a c) ↔ (${term} b d) $;`,
+    );
+    if (firstOrder) {
+      lines.push(
+        "--| @rewrite",
+        `axiom sb_f_${term} {x: obj} (t: obj x) (p q: form x):`,
+        `  $ [x/t] (${term} p q) ↔ (${term} ([x/t] p) ([x/t] q)) $;`,
+      );
+    }
+  }
+  return lines.length === 0 ? "" : `${lines.join("\n")}\n`;
+}
+
+function extraConnectiveRules(
+  extras: readonly ExtraConnectiveRules[],
+): string {
+  const blocks = extras.map(({ rules }) => rules);
+  return blocks.length === 0 ? "" : `${blocks.join("\n")}\n`;
+}
+
 /** Congruence and substitution cases for the symbols the two formulas
  * actually use. A nullary predicate needs neither: `sb_f_irrel` already
  * covers a formula that cannot mention the substituted variable. */
@@ -385,21 +616,28 @@ function signatureTerms(signature: TranslationSignature): string {
  * declarations and rules for the symbols the two formulas use. Purely
  * propositional signatures get the propositional fragment only — no objects,
  * no substitution, no quantifier rules — which keeps a refused prop check an
- * order of magnitude cheaper than a first-order one.
+ * order of magnitude cheaper than a first-order one. A pair built from the
+ * four connectives {@link CONNECTIVES} declares emits exactly what it emitted
+ * before {@link EXTRA_CONNECTIVES} existed, which is what keeps certificates
+ * stored against the older theory verifiable.
  */
 export function buildTheory(signature: TranslationSignature): string {
   const firstOrder = isFirstOrder(signature);
+  const extras = extraConnectives(signature);
   const sections = [
     HEADER,
     CONNECTIVES,
+    extraConnectiveTerms(extras),
     firstOrder ? objectTerms() : "",
     CONTEXTS,
     signatureTerms(signature),
     RELATIONS,
     firstOrder ? OBJECT_RELATIONS : "",
     firstOrder ? SUBSTITUTION : "",
+    extraConnectiveAxioms(extras, firstOrder),
     signatureRules(signature),
     PROPOSITIONAL_RULES,
+    extraConnectiveRules(extras),
     firstOrder ? QUANTIFIER_RULES : "",
   ];
   return sections.filter((section) => section !== "").join("\n");

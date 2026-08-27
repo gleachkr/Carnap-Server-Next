@@ -955,6 +955,65 @@ given a free truth value. A constructor with *no* role is the open half — a
 sentence letter, or a predicate letter applied to terms — and a truth table
 gives each distinct one (`F`, `F(a)`, `R(a,b)`) its own column.
 
+**Every truth function has a role, not just the five a textbook opens with.**
+Which connectives a course takes as primitive is the textbook's business:
+Quine's stroke, exclusive disjunction, NAND and NOR before anything else in a
+digital-logic course. So all sixteen binary truth functions are named, and a
+course that wants one declares the constructor in its own `aufbau-mm0` block and
+annotates it — no change to the server, and the truth table, the model and the
+translation all read it. A truth table gives it a column, a model evaluates it,
+and a translation's proof search is handed inference rules for it — so `P ↑ Q`
+is *proved* equivalent to `~(P /\ Q)` rather than quietly rewritten into it.
+
+| Role | Truth function |
+| --- | --- |
+| `negation` | ¬p (unary) |
+| `verum` / `falsum` | ⊤ / ⊥ (nullary) |
+| `conjunction` | p ∧ q |
+| `disjunction` | p ∨ q |
+| `conditional` | p → q |
+| `biconditional` | p ↔ q |
+| `nand` | ¬(p ∧ q) |
+| `nor` | ¬(p ∨ q) |
+| `exclusive-disjunction` | p ⊻ q |
+| `converse-conditional` | q → p |
+| `non-conditional` | p ∧ ¬q |
+| `converse-non-conditional` | ¬p ∧ q |
+| `left-projection` / `right-projection` | p / q |
+| `negated-left-projection` / `negated-right-projection` | ¬p / ¬q |
+| `binary-verum` / `binary-falsum` | ⊤ / ⊥ as two-place functions |
+
+The last six are degenerate and nobody teaches them, but they are named for the
+same reason the other ten are: the list is a closed whitelist, and a hole in it
+is a construct refused for a reason no author can act on. Roles that are not
+truth functions — `forall`, `exists`, `identity`, `inequality`, `sentence`,
+`turnstile`, `context-join` — are read by the types that have a use for them,
+and refused by the ones that do not: a truth table has no column for `∀`.
+
+Here is a course whose textbook uses the stroke, over `carnap-prop`:
+
+````markdown
+:::aufbau-mm0{name="ours" src="/theories/carnap-prop.mm0"}
+--| @syntax delimiter $ | $
+--| @syntax role nand
+term nand (p q: wff): wff;
+infixl nand: $|$ prec 40;
+:::
+
+::::truth-table{system="ours"}
+Fill in the table.
+
+- P | Q
+- ~(P /\ Q)
+::::
+````
+
+Both formulas get their columns, and the widget's Check grades the stroke's
+column like any other. The `@syntax delimiter` line is not optional: input is
+segmented by declared delimiters before anything is looked up, so a spelling
+that is not a delimiter will not be found. See the notes on delimiters in
+`@aufbau/syntax`'s spec-authoring guide.
+
 **The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
 predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters
 `f`–`r`, and eight variables `s`–`z`; `carnap-prop` gives you 52 sentence

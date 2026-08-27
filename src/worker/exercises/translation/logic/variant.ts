@@ -19,13 +19,13 @@ export function isPropositional(formula: Formula): boolean {
       return true;
     case "not":
       return isPropositional(formula.operand);
-    case "and":
-    case "or":
-    case "if":
-    case "iff":
-      return isPropositional(formula.left) && isPropositional(formula.right);
     case "forall":
     case "exists":
       return false;
+    // Every binary connective is propositional whatever its operands are made
+    // of — what makes a formula first-order is terms, and a connective has
+    // none.
+    default:
+      return isPropositional(formula.left) && isPropositional(formula.right);
   }
 }

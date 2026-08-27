@@ -13,6 +13,7 @@ import {
   DOMAIN_FIELD_LABEL,
   firstOrderLanguageFor,
   formatFunctionTable,
+  formulaToString,
   functionTableLayout,
   MAX_DOMAIN_SIZE,
   modelSignature,
@@ -26,6 +27,7 @@ import {
   tupleKey,
   tuplesOver,
 } from "../src/worker/exercises/model/logic";
+import { theorySourceByFileName } from "../src/worker/logic/theories";
 
 /** The forallx spec, resolved once — a language is tables, not data. */
 function calgary(): SurfaceLanguage {
@@ -616,5 +618,85 @@ describe("judging a task", () => {
     expect(verdict.problem?.kind).toBe("domain-empty");
     expect(verdict.targetMissed).toBe(false);
     expect(verdict.targetOffenders).toEqual([]);
+  });
+});
+
+describe("a connective the course declares itself", () => {
+  // What an instructor actually writes is an `:::aufbau-mm0` block with
+  // `src="/theories/forallx-calgary-2019.mm0"` and their own constructor after
+  // it; this is the same two texts joined. The point of the fixture is that
+  // nothing in the server declares `↑` — the role is read, the notation is the
+  // course's.
+  const EXTENSION = `
+--| @syntax delimiter $ ↑ $
+--| @syntax role nand
+term nand (ph ps: wff): wff;
+infixl nand: $↑$ prec 30;
+`;
+
+  const base = theorySourceByFileName(`${DEFAULT_LANGUAGE_ID}.mm0`);
+
+  if (base === null) {
+    throw new Error(`no source for ${DEFAULT_LANGUAGE_ID}`);
+  }
+
+  const registered = firstOrderLanguageFor({
+    source: `${base}${EXTENSION}`,
+  });
+
+  if (registered === null) {
+    throw new Error("the extended fixture does not read as a language");
+  }
+
+  // Rebound rather than narrowed in place: the helpers below are hoisted
+  // function declarations, so `tsc` cannot assume the check above ran first.
+  const extended = registered;
+
+  function parseExtended(source: string): Formula {
+    const result = parseFormula(source, extended);
+
+    if (!result.ok) {
+      throw new Error(
+        `Expected '${source}' to parse: ${result.errors[0]?.message}`,
+      );
+    }
+
+    return result.formula;
+  }
+
+  function holdsIn(source: string, input: ModelInput): boolean {
+    const formula = parseExtended(source);
+    const read = readModel(modelSignature([formula]), input);
+
+    if (!read.ok) {
+      throw new Error(`Expected the model to read: ${read.problem.kind}`);
+    }
+
+    return satisfies(formula, read.model);
+  }
+
+  test("a stroke is evaluated, not refused", () => {
+    expect(
+      holdsIn("P ↑ Q", { domain: "0", fields: { P: "false", Q: "true" } }),
+    ).toBe(true);
+    expect(
+      holdsIn("P ↑ Q", { domain: "0", fields: { P: "true", Q: "true" } }),
+    ).toBe(false);
+  });
+
+  test("it composes with the quantifiers like any other connective", () => {
+    // ∀x(F(x) ↑ F(x)) is ∀x¬F(x): true exactly when the extension is empty.
+    expect(
+      holdsIn("Ax(F(x) ↑ F(x))", { domain: "0,1", fields: { "F(_)": "" } }),
+    ).toBe(true);
+    expect(
+      holdsIn("Ax(F(x) ↑ F(x))", { domain: "0,1", fields: { "F(_)": "0" } }),
+    ).toBe(false);
+  });
+
+  test("it prints back in the course's own spelling", () => {
+    expect(formulaToString(parseExtended("F(a) ↑ G(b)"), extended)).toBe(
+      "F(a) ↑ G(b)",
+    );
   });
 });

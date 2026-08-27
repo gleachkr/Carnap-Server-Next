@@ -25,6 +25,7 @@ import {
 import {
   formulaCells,
   parseFormula,
+  truthTableLanguage,
 } from "../src/worker/exercises/truth-table/logic";
 import { renderTruthTableReview } from "../src/worker/exercises/truth-table/read-only-view";
 import type {
@@ -88,11 +89,17 @@ function publicDataOf(item: ExerciseManifestItem): TruthTablePublicData {
 }
 
 describe("truth-table layout", () => {
+  const prop = truthTableLanguage({});
+
+  if (prop === null) {
+    throw new Error("carnap-prop is no longer registered");
+  }
+
   test("negation's operand is parenthesized only when binary", () => {
     const parsed = parseFormula("~(P /\\ Q)");
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
-      const cells = formulaCells(parsed.formula);
+      const cells = formulaCells(parsed.formula, prop);
       expect(cells.map((c) => c.text)).toEqual(["~", "P", "/\\", "Q"]);
     }
   });
@@ -101,7 +108,7 @@ describe("truth-table layout", () => {
     const parsed = parseFormula("P -> Q");
     expect(parsed.ok).toBe(true);
     if (parsed.ok) {
-      const cells = formulaCells(parsed.formula);
+      const cells = formulaCells(parsed.formula, prop);
       expect(cells.map((c) => ({ main: c.isMain, role: c.role }))).toEqual([
         { main: false, role: "atom" },
         { main: true, role: "connective" },

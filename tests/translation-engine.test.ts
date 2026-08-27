@@ -36,6 +36,7 @@ import {
   TRANSLATION_ANSWER_KIND,
   TRANSLATION_SCHEMA_VERSION,
 } from "../src/worker/exercises/translation/types";
+import type { BinaryConnective } from "../src/worker/logic/specs/connectives";
 
 function wasmBytes(packagePath: string): Uint8Array {
   return readFileSync(
@@ -153,11 +154,9 @@ function parse(source: string): Formula {
 /** The client's half: search for a proof, expand the edit, compile, and hand
  * back the certificate — or null when the search comes up empty. */
 function findCertificate(
-  studentSource: string,
-  solutionSource: string,
+  student: Formula,
+  solution: Formula,
 ): Uint8Array | null {
-  const student = parse(studentSource);
-  const solution = parse(solutionSource);
   const sources = buildEquivalenceCheck(student, solution);
 
   syncDocument(MM0_URI, "mm0", sources.mm0);
@@ -188,25 +187,29 @@ function findCertificate(
 
 /** The full client-then-worker path: search, expand, compile, and verify the
  * certificate against an independently rebuilt mm0. */
-function checkEquivalent(
-  studentSource: string,
-  solutionSource: string,
+function checkEquivalentFormulas(
+  student: Formula,
+  solution: Formula,
 ): boolean {
-  const mmb = findCertificate(studentSource, solutionSource);
+  const mmb = findCertificate(student, solution);
 
   if (mmb === null) {
     return false;
   }
 
-  // The worker's half: rebuild the mm0 from a fresh parse (emission must be
+  // The worker's half: rebuild the mm0 from a fresh emission (which must be
   // deterministic for the trust boundary to hold) and verify the certificate.
-  const rebuilt = buildEquivalenceCheck(
-    parse(studentSource),
-    parse(solutionSource),
-  );
+  const rebuilt = buildEquivalenceCheck(student, solution);
   const verdict = verifier.verifyPair(rebuilt.mm0, mmb);
   expect(verdict.ok).toBe(true);
   return true;
+}
+
+function checkEquivalent(
+  studentSource: string,
+  solutionSource: string,
+): boolean {
+  return checkEquivalentFormulas(parse(studentSource), parse(solutionSource));
 }
 
 describe("propositional equivalences the calculus must certify", () => {
@@ -229,6 +232,116 @@ describe("propositional equivalences the calculus must certify", () => {
       expect(checkEquivalent(left, right)).toBe(true);
     });
   }
+});
+
+describe("connectives the calculus grows rules for", () => {
+  // A course declares the Sheffer stroke in its own `aufbau-mm0` block, and
+  // the generated theory answers with a `nand` term and its two Tait rules —
+  // present exactly when the formulas contain one, the way the quantifier
+  // rules are. The stroke reaches the search as a stroke, and the equivalences
+  // that make it a stroke are proved rather than assumed.
+  const binary =
+    (type: BinaryConnective) =>
+    (left: Formula, right: Formula): Formula => ({ left, right, type });
+
+  const nand = binary("nand");
+  const nor = binary("nor");
+  const leftProjection = binary("left-projection");
+
+  // Each of the twelve against its paraphrase in the connectives the theory
+  // always declares. The rules are hand-written, one pair per connective, so
+  // this is the table that catches the one that is wrong. The positive half
+  // alone would not: a rule that proves *too much* certifies the paraphrase
+  // and its negation alike, which is what the refusal rules out.
+  const PARAPHRASES: readonly [BinaryConnective, string][] = [
+    ["nand", "~(P/\\Q)"],
+    ["nor", "~(P\\/Q)"],
+    ["xor", "~(P<->Q)"],
+    ["converse-conditional", "Q->P"],
+    ["non-conditional", "~(P->Q)"],
+    ["converse-non-conditional", "~(Q->P)"],
+    ["left-projection", "P"],
+    ["right-projection", "Q"],
+    ["negated-left-projection", "~P"],
+    ["negated-right-projection", "~Q"],
+    ["binary-verum", "⊤"],
+    ["binary-falsum", "⊥"],
+  ];
+  for (const [type, paraphrase] of PARAPHRASES) {
+    test(`${type} is ${paraphrase}, and is not its negation`, () => {
+      const formula = binary(type)(parse("P"), parse("Q"));
+      expect(checkEquivalentFormulas(formula, parse(paraphrase))).toBe(true);
+      expect(
+        checkEquivalentFormulas(formula, {
+          operand: parse(paraphrase),
+          type: "not",
+        }),
+      ).toBe(false);
+    });
+  }
+
+  test("De Morgan reaches the stroke's operands", () => {
+    expect(
+      checkEquivalentFormulas(nand(parse("P"), parse("Q")), parse("~P\\/~Q")),
+    ).toBe(true);
+  });
+
+  test("two exotic connectives are related to each other", () => {
+    // `P ↑ Q` is `¬(¬P ↓ ¬Q)`. Neither side reduces to the other by a rule
+    // about one of them, so the search has to take both apart — which is only
+    // possible because both are in the theory at once.
+    expect(
+      checkEquivalentFormulas(nand(parse("P"), parse("Q")), {
+        operand: nor(
+          { operand: parse("P"), type: "not" },
+          { operand: parse("Q"), type: "not" },
+        ),
+        type: "not",
+      }),
+    ).toBe(true);
+  });
+
+  test("its operands are still reached by the quantifier rules", () => {
+    // `AxF(x) ↑ AxF(x)` is `~AxF(x)`, which is `Ex~F(x)` — so the stroke's
+    // rules have to hand the quantifier half of the calculus something it can
+    // work on, and the substitution case has to push `[x/t]` past a `nand`.
+    expect(
+      checkEquivalentFormulas(
+        nand(parse("AxF(x)"), parse("AxF(x)")),
+        parse("Ex~F(x)"),
+      ),
+    ).toBe(true);
+  });
+
+  test("a projection over a quantifier keeps its discarded operand", () => {
+    // The discarded operand is still an argument of the term, so its symbols
+    // are declared and its binder is quantified in the theorem statement —
+    // which is what the old desugaring could not do.
+    const sources = buildEquivalenceCheck(
+      leftProjection(parse("AxF(x)"), parse("EyG(y)")),
+      parse("AzF(z)"),
+    );
+    expect(sources.mm0).toContain(
+      "(lproj (∀ v0 (p_F_1 v0)) (∃ v1 (p_G_1 v1)))",
+    );
+    expect(sources.mm0).toContain("theorem check {v0 v1 v2: obj}:");
+  });
+
+  test("only the connectives present get rules", () => {
+    const stroke = buildEquivalenceCheck(
+      nand(parse("P"), parse("Q")),
+      parse("~(P/\\Q)"),
+    );
+    expect(stroke.mm0).toContain("term nand (a b: form): form;");
+    expect(stroke.mm0).toContain("axiom rdm_nand ");
+    expect(stroke.mm0).not.toContain("term nor ");
+
+    // And a pair that names none of them is emitted exactly as it was before
+    // the twelve existed — the property that keeps stored certificates valid.
+    const plain = buildEquivalenceCheck(parse("P/\\Q"), parse("Q/\\P"));
+    expect(plain.mm0).not.toContain("nand");
+    expect(plain.mm0).not.toContain("lproj");
+  });
 });
 
 describe("propositional non-equivalences the search must refuse", () => {
@@ -412,7 +525,7 @@ Everything is fine.
 ::::`);
 
     // The stored solution is canonical source; the certificate must target it.
-    const mmb = findCertificate("~Ex~F(x)", "AxF(x)");
+    const mmb = findCertificate(parse("~Ex~F(x)"), parse("AxF(x)"));
     expect(mmb).not.toBeNull();
     expect(await grade(item, "~Ex~F(x)", mmb)).toBe("correct");
   });
@@ -427,7 +540,7 @@ Everything is fine.
 
     // Proves ~Ex~F(x) ↔ AxF(x); submitted with text AyG(y), whose rebuilt
     // mm0 states a different theorem entirely.
-    const mmb = findCertificate("~Ex~F(x)", "AxF(x)");
+    const mmb = findCertificate(parse("~Ex~F(x)"), parse("AxF(x)"));
     expect(mmb).not.toBeNull();
     expect(await grade(item, "AyG(y)", mmb)).toBe("incorrect");
   });

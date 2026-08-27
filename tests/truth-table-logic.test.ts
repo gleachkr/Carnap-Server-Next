@@ -5,6 +5,7 @@ import {
   collectAtoms,
   enumerateValuations,
   evaluate,
+  formulaCells,
   formulaToString,
   isTautology,
   MAX_TABLE_ATOMS,
@@ -39,6 +40,57 @@ infixr imp: $->$ prec 30;
 
 term box (p: wff): wff;
 prefix box: $[]$ prec 50;
+`;
+
+/**
+ * A course's own propositional language: conjunction spelled `&` rather than
+ * `/\`, and five connectives `carnap-prop` does not ship.
+ *
+ * This is the whole point of naming all sixteen truth functions as roles —
+ * none of these is declared anywhere in the server, and an instructor writing
+ * an `aufbau-mm0` block gets columns for every one of them. `%` is a
+ * projection, included because the degenerate six are readable too.
+ */
+const EXTENDED_SPEC = `--| @syntax delimiter $ P Q R ( ) ~ & | ! + % ⊤ ⊥ $
+delimiter $ ( ) $;
+
+provable sort wff;
+
+term P: wff;
+term Q: wff;
+term R: wff;
+
+--| @syntax role negation
+term not (p: wff): wff;
+prefix not: $~$ prec 50;
+
+--| @syntax role conjunction
+term and (p q: wff): wff;
+infixl and: $&$ prec 40;
+
+--| @syntax role nand
+term nand (p q: wff): wff;
+infixl nand: $|$ prec 40;
+
+--| @syntax role nor
+term nor (p q: wff): wff;
+infixl nor: $!$ prec 40;
+
+--| @syntax role exclusive-disjunction
+term xor (p q: wff): wff;
+infixl xor: $+$ prec 40;
+
+--| @syntax role left-projection
+term proj (p q: wff): wff;
+infixl proj: $%$ prec 40;
+
+--| @syntax role verum
+term top: wff;
+notation top: wff = ($⊤$:max);
+
+--| @syntax role falsum
+term bot: wff;
+notation bot: wff = ($⊥$:max);
 `;
 
 function parse(source: string): Formula {
@@ -419,5 +471,113 @@ describe("isTautology", () => {
 
   test("false for a contradiction", () => {
     expect(isTautology(firstFormulaTable("P /\\ ~P"))).toBe(false);
+  });
+});
+
+describe("connectives past the five carnap-prop declares", () => {
+  const registered = languageFromSource(EXTENDED_SPEC);
+
+  if (registered === null) {
+    throw new Error("the extended fixture does not read as a language");
+  }
+
+  // Rebound rather than narrowed in place: the helpers below are hoisted
+  // function declarations, so `tsc` cannot assume the check above ran first.
+  const extended = registered;
+
+  function evalIn(source: string, values: Record<string, boolean>): boolean {
+    const result = parseFormula(source, extended);
+
+    if (!result.ok) {
+      throw new Error(
+        `Expected '${source}' to parse: ${result.errors[0]?.message}`,
+      );
+    }
+
+    return evaluate(result.formula, new Map(Object.entries(values)));
+  }
+
+  const T = { P: true, Q: true };
+  const TF = { P: true, Q: false };
+  const FT = { P: false, Q: true };
+  const F = { P: false, Q: false };
+
+  test("nand is false only when both are true", () => {
+    expect([T, TF, FT, F].map((v) => evalIn("P | Q", v))).toEqual([
+      false,
+      true,
+      true,
+      true,
+    ]);
+  });
+
+  test("nor is true only when both are false", () => {
+    expect([T, TF, FT, F].map((v) => evalIn("P ! Q", v))).toEqual([
+      false,
+      false,
+      false,
+      true,
+    ]);
+  });
+
+  test("exclusive disjunction is the negated biconditional", () => {
+    expect([T, TF, FT, F].map((v) => evalIn("P + Q", v))).toEqual([
+      false,
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  test("a projection ignores the operand it projects away", () => {
+    expect([T, TF, FT, F].map((v) => evalIn("P % Q", v))).toEqual([
+      true,
+      true,
+      false,
+      false,
+    ]);
+  });
+
+  test("the truth constants are constant", () => {
+    expect(evalIn("⊤", F)).toBe(true);
+    expect(evalIn("⊥", T)).toBe(false);
+  });
+
+  test("a truth constant is a column, never a reference column", () => {
+    // Nothing varies, so there is no atom to enumerate — but the student
+    // still writes its value under the symbol, which means a column of its
+    // own rather than the silence an atom occurrence gets.
+    const result = buildTruthTable(["P & ⊥"], extended);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok) {
+      expect(result.table.atoms).toEqual(["P"]);
+      expect(
+        result.table.formulas[0]?.columns.map(
+          (column) => column.formula.type,
+        ),
+      ).toEqual(["and", "falsum"]);
+      expect(result.table.formulas[0]?.values).toEqual([
+        [false, false],
+        [false, false],
+      ]);
+    }
+  });
+
+  test("cells are drawn in the spec's spelling, not carnap-prop's", () => {
+    // The bug this closes: symbols were a hardcoded ASCII table in
+    // `layout.ts`, so a course spelling conjunction `&` had its formula
+    // *stored* as `(P & Q)` and *drawn* as `(P /\ Q)`. A connective the
+    // author declared themselves had no spelling here at all.
+    const result = parseFormula("~(P & Q) | R", extended);
+
+    expect(result.ok).toBe(true);
+
+    if (result.ok) {
+      expect(
+        formulaCells(result.formula, extended).map((c) => c.text),
+      ).toEqual(["~", "P", "&", "Q", "|", "R"]);
+    }
   });
 });

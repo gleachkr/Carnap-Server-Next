@@ -7,9 +7,16 @@
  *
  * Parenthesization mirrors {@link formulaToString} but drops the redundant
  * outermost parens: a binary sub-formula is wrapped only when it is nested.
+ *
+ * Symbols come from the spec, through the same {@link connectiveSpellings} the
+ * printer uses. They were a hardcoded ASCII table here until 2026-08-27, which
+ * meant a table set in forallx stored `(P ∧ Q)` and drew `(P /\ Q)`, and meant
+ * a connective an author declared themselves had no spelling at all to draw.
  */
 
-import type { BinaryConnective, Formula } from "./formula";
+import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { Formula, Spellings } from "./formula";
+import { connectiveSpellings } from "./formula";
 
 export type CellRole = "atom" | "connective";
 
@@ -29,20 +36,23 @@ export type FormulaSegment =
   | { readonly kind: "paren"; readonly text: "(" | ")" }
   | CellSegment;
 
-const CONNECTIVE_SYMBOL: Record<BinaryConnective | "not", string> = {
-  and: "/\\",
-  if: "->",
-  iff: "<->",
-  not: "~",
-  or: "\\/",
-};
-
 function emit(
   node: Formula,
   root: Formula,
   isRoot: boolean,
+  spelling: Spellings,
   out: FormulaSegment[],
 ): void {
+  const cell = (text: string): void => {
+    out.push({
+      formula: node,
+      isMain: node === root,
+      kind: "cell",
+      role: "connective",
+      text,
+    });
+  };
+
   switch (node.type) {
     case "atom":
       out.push({
@@ -53,31 +63,28 @@ function emit(
         text: node.name,
       });
       return;
+    // `⊤` and `⊥` take no operands and are still connectives: a column of
+    // constant Ts under the symbol, which is what a student is being asked to
+    // notice about them.
+    case "verum":
+      cell(spelling.verum);
+      return;
+    case "falsum":
+      cell(spelling.falsum);
+      return;
     case "not":
-      out.push({
-        formula: node,
-        isMain: node === root,
-        kind: "cell",
-        role: "connective",
-        text: CONNECTIVE_SYMBOL.not,
-      });
+      cell(spelling.not);
       // A negation's operand is parenthesized only when it is binary.
-      emit(node.operand, root, false, out);
+      emit(node.operand, root, false, spelling, out);
       return;
     default: {
       if (!isRoot) {
         out.push({ kind: "paren", text: "(" });
       }
 
-      emit(node.left, root, false, out);
-      out.push({
-        formula: node,
-        isMain: node === root,
-        kind: "cell",
-        role: "connective",
-        text: CONNECTIVE_SYMBOL[node.type],
-      });
-      emit(node.right, root, false, out);
+      emit(node.left, root, false, spelling, out);
+      cell(spelling.binary[node.type]);
+      emit(node.right, root, false, spelling, out);
 
       if (!isRoot) {
         out.push({ kind: "paren", text: ")" });
@@ -87,15 +94,21 @@ function emit(
 }
 
 /** The full parenthesis-and-cell run for a written-out formula. */
-export function formulaLayout(formula: Formula): FormulaSegment[] {
+export function formulaLayout(
+  formula: Formula,
+  lang: SurfaceLanguage,
+): FormulaSegment[] {
   const segments: FormulaSegment[] = [];
-  emit(formula, formula, true, segments);
+  emit(formula, formula, true, connectiveSpellings(lang), segments);
   return segments;
 }
 
 /** Just the fillable cells of a formula, in left-to-right display order. */
-export function formulaCells(formula: Formula): CellSegment[] {
-  return formulaLayout(formula).filter(
+export function formulaCells(
+  formula: Formula,
+  lang: SurfaceLanguage,
+): CellSegment[] {
+  return formulaLayout(formula, lang).filter(
     (segment): segment is CellSegment => segment.kind === "cell",
   );
 }

@@ -12,6 +12,7 @@
  * here is language-specific: a formula is a formula once parsed.
  */
 
+import { applyBinaryConnective } from "../../../logic/specs/connectives";
 import type { Formula, Term } from "../../first-order";
 import { tupleKey } from "./fields";
 import { symbolKey } from "./signature";
@@ -108,27 +109,8 @@ export function satisfies(
       return true;
     case "not":
       return !satisfies(formula.operand, model, assignment);
-    case "and":
-      return (
-        satisfies(formula.left, model, assignment) &&
-        satisfies(formula.right, model, assignment)
-      );
-    case "or":
-      return (
-        satisfies(formula.left, model, assignment) ||
-        satisfies(formula.right, model, assignment)
-      );
-    case "if":
-      return (
-        !satisfies(formula.left, model, assignment) ||
-        satisfies(formula.right, model, assignment)
-      );
-    case "iff":
-      return (
-        satisfies(formula.left, model, assignment) ===
-        satisfies(formula.right, model, assignment)
-      );
-    default: {
+    case "forall":
+    case "exists": {
       const extended = new Map(assignment);
       const holds = (element: number): boolean => {
         extended.set(formula.variable, element);
@@ -139,5 +121,16 @@ export function satisfies(
         ? model.domain.every(holds)
         : model.domain.some(holds);
     }
+    // Every binary connective is its truth function applied to the two
+    // operands' values, which is the whole of what a model has to say about
+    // one — including the twelve past the four a textbook usually takes as
+    // primitive. Both operands are evaluated either way: the short-circuit the
+    // four used to get was never observable, since evaluation is total.
+    default:
+      return applyBinaryConnective(
+        formula.type,
+        satisfies(formula.left, model, assignment),
+        satisfies(formula.right, model, assignment),
+      );
   }
 }

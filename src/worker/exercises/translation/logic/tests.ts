@@ -103,18 +103,15 @@ function subformulas(formula: Formula): Formula[] {
       return [formula];
     case "not":
       return [formula, ...subformulas(formula.operand)];
-    case "and":
-    case "or":
-    case "if":
-    case "iff":
+    case "forall":
+    case "exists":
+      return [formula, ...subformulas(formula.body)];
+    default:
       return [
         formula,
         ...subformulas(formula.left),
         ...subformulas(formula.right),
       ];
-    case "forall":
-    case "exists":
-      return [formula, ...subformulas(formula.body)];
   }
 }
 

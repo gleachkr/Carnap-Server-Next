@@ -33,11 +33,18 @@ import type {
   SurfaceLanguage,
   Term as SurfaceTerm,
 } from "@aufbau/syntax";
+import type { BinaryConnective } from "../../logic/specs/connectives";
+import {
+  BINARY_CONNECTIVES,
+  binaryConnectiveForRole,
+  DEFAULT_BINARY_SPELLING,
+  roleForBinaryConnective,
+} from "../../logic/specs/connectives";
 import type { FormulaParseError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
 import { roleIndex, sentenceSort } from "../../logic/specs/roles";
 
-export type BinaryConnective = "and" | "or" | "if" | "iff";
+export type { BinaryConnective };
 
 /**
  * A term: a variable, an individual constant, or a function symbol applied to
@@ -288,30 +295,6 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
       };
     case "negation":
       return { operand: operand(inner.args[0], lang), type: "not" };
-    case "conjunction":
-      return {
-        left: operand(inner.args[0], lang),
-        right: operand(inner.args[1], lang),
-        type: "and",
-      };
-    case "disjunction":
-      return {
-        left: operand(inner.args[0], lang),
-        right: operand(inner.args[1], lang),
-        type: "or",
-      };
-    case "conditional":
-      return {
-        left: operand(inner.args[0], lang),
-        right: operand(inner.args[1], lang),
-        type: "if",
-      };
-    case "biconditional":
-      return {
-        left: operand(inner.args[0], lang),
-        right: operand(inner.args[1], lang),
-        type: "iff",
-      };
     case "forall":
     case "exists":
       return {
@@ -343,8 +326,23 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
       return { type: "falsum" };
     case "verum":
       return { type: "verum" };
-    default:
-      throw uninterpretable(inner, lang, role);
+    // Every binary role through one lookup: a connective's whole content here
+    // is the truth function it computes, and all sixteen of those live in
+    // `logic/specs/connectives.ts`. Only the roles that are *not* truth
+    // functions of two sentences are worth a case.
+    default: {
+      const connective = binaryConnectiveForRole(role);
+
+      if (connective === null) {
+        throw uninterpretable(inner, lang, role);
+      }
+
+      return {
+        left: operand(inner.args[0], lang),
+        right: operand(inner.args[1], lang),
+        type: connective,
+      };
+    }
   }
 }
 
@@ -417,25 +415,30 @@ export function termToString(term: Term): string {
  * which is the one convention `@aufbau/syntax` fixes and every spec here
  * follows by listing its ASCII spellings first and its glyph last.
  *
- * The fallbacks are unreachable for the specs that ship — every role below is
- * declared in `forallx-calgary-2019.mm0` — and are here so that a spec missing
- * one prints something rather than `undefined`.
+ * The fallbacks are unreachable for anything a student can write — a
+ * constructor with no notation cannot be typed — and are here so that a spec
+ * missing one prints something rather than `undefined`.
  */
 function symbols(lang: SurfaceLanguage) {
   const index = roleIndex(lang);
   const of = (role: string, fallback: string): string =>
     index.spellingFor(role) ?? fallback;
+  const binary = {} as Record<BinaryConnective, string>;
+
+  for (const connective of BINARY_CONNECTIVES) {
+    binary[connective] = of(
+      roleForBinaryConnective(connective),
+      DEFAULT_BINARY_SPELLING[connective],
+    );
+  }
 
   return {
-    and: of("conjunction", "∧"),
+    binary,
     exists: of("exists", "∃"),
     falsum: of("falsum", "⊥"),
     forall: of("forall", "∀"),
     identity: of("identity", "="),
-    if: of("conditional", "→"),
-    iff: of("biconditional", "↔"),
     not: of("negation", "¬"),
-    or: of("disjunction", "∨"),
     verum: of("verum", "⊤"),
   };
 }
@@ -470,7 +473,7 @@ function schematize(
         formula.type === "forall" ? spelling.forall : spelling.exists
       }${formula.variable}${inner(formula.body)}`;
     default:
-      return `(${inner(formula.left)} ${spelling[formula.type]} ${inner(formula.right)})`;
+      return `(${inner(formula.left)} ${spelling.binary[formula.type]} ${inner(formula.right)})`;
   }
 }
 

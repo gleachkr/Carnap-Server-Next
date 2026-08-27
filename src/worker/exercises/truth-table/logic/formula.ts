@@ -22,6 +22,14 @@
  *   - `\/`   disjunction
  *   - `->`   conditional   (right-associative)
  *   - `<->`  biconditional
+ *
+ * Those are the five `carnap-prop` declares, not the five this module can
+ * read: it reads **all sixteen** binary truth functions plus `⊤` and `⊥`, one
+ * `@syntax role` each (`logic/specs/connectives.ts`). A course whose textbook
+ * uses the Sheffer stroke or exclusive disjunction declares the constructor in
+ * an `aufbau-mm0` block extending `carnap-prop`, annotates it, and the table
+ * gives it a column with nothing changed here.
+ *
  * Sentence letters are a single Roman letter of either case. The hand parser
  * this replaced also read a bare-digit subscript (`P0`, `R12`); an MM0
  * signature is a finite vocabulary and cannot spell an unbounded one, and
@@ -39,14 +47,23 @@ import type {
 } from "@aufbau/syntax";
 import { printTerm } from "@aufbau/syntax";
 import { languageById, languageFromSource } from "../../../logic/specs";
+import type { BinaryConnective } from "../../../logic/specs/connectives";
+import {
+  BINARY_CONNECTIVES,
+  binaryConnectiveForRole,
+  DEFAULT_BINARY_SPELLING,
+  roleForBinaryConnective,
+} from "../../../logic/specs/connectives";
 import type { FormulaParseError } from "../../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
 import { roleIndex } from "../../../logic/specs/roles";
 
-export type BinaryConnective = "and" | "or" | "if" | "iff";
+export type { BinaryConnective };
 
 export type Formula =
   | { readonly type: "atom"; readonly name: string }
+  | { readonly type: "verum" }
+  | { readonly type: "falsum" }
   | { readonly type: "not"; readonly operand: Formula }
   | {
       readonly type: BinaryConnective;
@@ -65,8 +82,9 @@ export type ParseResult =
  *
  * A default rather than the only possibility: a truth table is propositional,
  * but so is any number of textbooks' propositional notations, and there is no
- * reason this type alone should be unable to point at one. What it will not
- * take is a language with binders — see {@link truthTableLanguage}.
+ * reason this type alone should be unable to point at one. Extending it in an
+ * `aufbau-mm0` block is also how a course gets a connective `carnap-prop` does
+ * not declare — the roles are read, the notations are not shipped.
  */
 export const PROP_LANGUAGE_ID = "carnap-prop";
 
@@ -171,6 +189,11 @@ function operand(
  * to terms. It is keyed by how it *prints* rather than by its constructor name,
  * so `F(a)` and `F(b)` are two columns; keying by name gave both the column `F`
  * and read `F(a) /\ ~F(b)` as a contradiction.
+ *
+ * Every binary role goes through one lookup rather than a case apiece, because
+ * a truth table's reading of a connective is exactly its truth function and
+ * nothing else — `logic/specs/connectives.ts` holds all sixteen. What is left
+ * to case on is the handful that are not binary.
  */
 function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
   if (node.kind === "variable") {
@@ -188,32 +211,23 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
       return { name: printTerm(lang, node, "display"), type: "atom" };
     case "negation":
       return { operand: operand(node.args[0], lang), type: "not" };
-    case "conjunction":
+    case "verum":
+      return { type: "verum" };
+    case "falsum":
+      return { type: "falsum" };
+    default: {
+      const connective = binaryConnectiveForRole(role);
+
+      if (connective === null) {
+        throw uninterpretable(node, lang, role);
+      }
+
       return {
         left: operand(node.args[0], lang),
         right: operand(node.args[1], lang),
-        type: "and",
+        type: connective,
       };
-    case "disjunction":
-      return {
-        left: operand(node.args[0], lang),
-        right: operand(node.args[1], lang),
-        type: "or",
-      };
-    case "conditional":
-      return {
-        left: operand(node.args[0], lang),
-        right: operand(node.args[1], lang),
-        type: "if",
-      };
-    case "biconditional":
-      return {
-        left: operand(node.args[0], lang),
-        right: operand(node.args[1], lang),
-        type: "iff",
-      };
-    default:
-      throw uninterpretable(node, lang, role);
+    }
   }
 }
 
@@ -246,6 +260,46 @@ export function parseFormula(
   }
 }
 
+/** Every symbol a written-out formula needs, as this spec spells it. */
+export interface Spellings {
+  readonly binary: Record<BinaryConnective, string>;
+  readonly not: string;
+  readonly verum: string;
+  readonly falsum: string;
+}
+
+/**
+ * The spec's canonical spelling of every symbol this type reads — its
+ * last-declared notation for each role.
+ *
+ * The one place a truth table decides what a connective *looks like*, shared
+ * by the printer below and by `layout.ts`, which used to carry a second table
+ * of hardcoded ASCII. That divergence was visible: an author whose spec spells
+ * conjunction `&` had their formula stored as `(P & Q)` and drawn as
+ * `(P /\ Q)`, because storage asked the spec and the grid did not.
+ *
+ * The fallbacks are unreachable for anything writable — a constructor with no
+ * notation cannot be typed — and are here so a printer emits a symbol rather
+ * than `undefined`.
+ */
+export function connectiveSpellings(lang: SurfaceLanguage): Spellings {
+  const index = roleIndex(lang);
+  const binary = {} as Record<BinaryConnective, string>;
+
+  for (const connective of BINARY_CONNECTIVES) {
+    binary[connective] =
+      index.spellingFor(roleForBinaryConnective(connective)) ??
+      DEFAULT_BINARY_SPELLING[connective];
+  }
+
+  return {
+    binary,
+    falsum: index.spellingFor("falsum") ?? "⊥",
+    not: index.spellingFor("negation") ?? "~",
+    verum: index.spellingFor("verum") ?? "⊤",
+  };
+}
+
 /**
  * Render a formula back to canonical `prop` source (fully parenthesized).
  *
@@ -259,25 +313,20 @@ export function formulaToString(
   formula: Formula,
   lang: SurfaceLanguage = prop(),
 ): string {
-  const index = roleIndex(lang);
-  const of = (role: string, fallback: string): string =>
-    index.spellingFor(role) ?? fallback;
-  const spelling = {
-    and: of("conjunction", "/\\"),
-    if: of("conditional", "->"),
-    iff: of("biconditional", "<->"),
-    not: of("negation", "~"),
-    or: of("disjunction", "\\/"),
-  };
+  const spelling = connectiveSpellings(lang);
 
   const write = (part: Formula): string => {
     switch (part.type) {
       case "atom":
         return part.name;
+      case "verum":
+        return spelling.verum;
+      case "falsum":
+        return spelling.falsum;
       case "not":
         return `${spelling.not}${write(part.operand)}`;
       default:
-        return `(${write(part.left)} ${spelling[part.type]} ${write(part.right)})`;
+        return `(${write(part.left)} ${spelling.binary[part.type]} ${write(part.right)})`;
     }
   };
 

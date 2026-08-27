@@ -6,6 +6,7 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
+import { applyBinaryConnective } from "../../../logic/specs/connectives";
 import type { Formula, ParseError } from "./formula";
 import { parseFormula } from "./formula";
 
@@ -59,6 +60,11 @@ function collectAtomsInto(formula: Formula, into: Set<string>): void {
   switch (formula.type) {
     case "atom":
       into.add(formula.name);
+      return;
+    // A truth constant is a column, never a reference column: there is nothing
+    // to vary.
+    case "verum":
+    case "falsum":
       return;
     case "not":
       collectAtomsInto(formula.operand, into);
@@ -122,27 +128,17 @@ export function evaluate(
 
       return value;
     }
+    case "verum":
+      return true;
+    case "falsum":
+      return false;
     case "not":
       return !evaluate(formula.operand, valuation);
-    case "and":
-      return (
-        evaluate(formula.left, valuation) &&
-        evaluate(formula.right, valuation)
-      );
-    case "or":
-      return (
-        evaluate(formula.left, valuation) ||
-        evaluate(formula.right, valuation)
-      );
-    case "if":
-      return (
-        !evaluate(formula.left, valuation) ||
-        evaluate(formula.right, valuation)
-      );
-    case "iff":
-      return (
-        evaluate(formula.left, valuation) ===
-        evaluate(formula.right, valuation)
+    default:
+      return applyBinaryConnective(
+        formula.type,
+        evaluate(formula.left, valuation),
+        evaluate(formula.right, valuation),
       );
   }
 }
@@ -155,6 +151,12 @@ function collectColumnsInto(
   switch (formula.type) {
     case "atom":
       // Atom occurrences are reference columns, not sub-formula columns.
+      return;
+    // A truth constant has no reference column to stand in for it, so its own
+    // column is where its value is written.
+    case "verum":
+    case "falsum":
+      into.push({ formula, isMain: formula === root });
       return;
     case "not":
       // Prefix connective: its column precedes the operand's columns.

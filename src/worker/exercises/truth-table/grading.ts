@@ -87,7 +87,7 @@ export function resolveTable(input: TruthTableSource): ResolvedTable | null {
   const atoms = collectAtoms(parsed);
   const valuations = enumerateValuations(atoms);
   const formulas = parsed.map((formula, index) => {
-    const segments = formulaLayout(formula);
+    const segments = formulaLayout(formula, lang);
     return {
       cells: segments.filter(
         (segment): segment is CellSegment => segment.kind === "cell",

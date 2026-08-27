@@ -190,6 +190,14 @@ is a file in that directory.
 - **Identity** `=`; **inequality** `!=` or `≠`, which is sugar for `~(t = t')`.
 - **Boolean constants** `⊥` / `_|_` / `!?` and `⊤`.
 
+Those are forallx's connectives, not the reader's limit: **all sixteen** binary
+truth functions have an `@syntax role`, so a course that extends forallx with
+its own stroke or exclusive disjunction gets it evaluated like any other
+connective. The roles are listed in `docs/carnap-markdown-v1.md`, and the truth
+functions are `src/worker/logic/specs/connectives.ts`. Nothing about it is
+first-order: a connective takes sentences, and terms are what make a formula
+first-order.
+
 ### Input, and display
 
 Those are the spellings a formula is **typed** in. A formula is **written back

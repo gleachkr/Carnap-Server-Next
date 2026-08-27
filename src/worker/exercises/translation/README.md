@@ -42,6 +42,19 @@ gleachkr/Aufbau. Two formulas are equivalent exactly when `auto?` can prove
 only — no objects, no substitution, no quantifier rules — which keeps a refused
 prop check an order of magnitude cheaper.
 
+**Connectives are selected the same way the quantifier rules are.** Four —
+`∧ ∨ → ↔`, plus `¬` and the two truth constants — are declared in every
+generated theory. Each of the other twelve binary truth functions is a term of
+its own (`(nand p q)`, applied like a signature symbol, so no new operator
+precedence), and a formula that contains one brings its congruence case, its
+substitution case, and its two Tait rules along with it: a positive rule for
+`⊢ (C a b) , Δ` and a De Morgan rule for `⊢ ¬ (C a b) , Δ`, read off the truth
+function. So a course teaching the stroke gets a stroke the search reasons
+about, not a rewritten formula, and `P ↑ Q` ↔ `¬(¬P ↓ ¬Q)` is proved rather
+than made true by spelling. A pair built from the four always-present
+connectives emits byte-for-byte what it emitted before the twelve existed,
+which is what keeps the certificates below verifiable.
+
 **Why a calculus and not a rewrite theory.** The first design saturated an
 egraph of `@conversion` laws with `conversion?`. It foundered on quantifier
 *shape*: the egraph is nominal, so `∀x P(x)` and `∀y P(y)` never share a class

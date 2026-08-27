@@ -27,12 +27,21 @@
  *     subscripted letter of its own would need.
  *
  * The signature's own symbols are applied by bare prefix application
- * (`(p_F_1 c_a)`); the calculus's connectives use the notation the theory
- * declares, so the emitted goal reads like ordinary logic.
+ * (`(p_F_1 c_a)`); the four connectives the theory always declares use its
+ * notation, so the emitted goal reads like ordinary logic. A connective past
+ * those four is a term of its own, applied the same way — `(nand p q)` — and
+ * `buildTheory` gives it rules because the emission said it was there. Which
+ * spelling goes with which is {@link connectiveForm}'s business, next to the
+ * rules that have to agree with it.
  */
 
+import type { BinaryConnective } from "../../../logic/specs/connectives";
 import type { Formula, Term } from "../../first-order";
-import { buildTheory, type TranslationSignature } from "./theories";
+import {
+  buildTheory,
+  connectiveForm,
+  type TranslationSignature,
+} from "./theories";
 
 /** What the equivalence check hands the engine: the theory (calculus + symbol
  * declarations + the `check` theorem) and the one-line proof to search. */
@@ -43,13 +52,6 @@ export interface EquivalenceCheckSources {
    * LSP `textDocument/codeAction` request must point. */
   readonly placeholder: { readonly line: number; readonly character: number };
 }
-
-const CONNECTIVE_TERMS: Record<"and" | "or" | "if" | "iff", string> = {
-  and: "∧",
-  if: "→",
-  iff: "↔",
-  or: "∨",
-};
 
 /** `F_2` → `Fs2`. Dialect names are one letter plus an optional `_digits`
  * subscript, so this cannot collide. */
@@ -64,6 +66,7 @@ interface Collector {
   readonly constants: Set<string>;
   usesIdentity: boolean;
   readonly boundNames: string[];
+  readonly connectives: Set<BinaryConnective>;
 }
 
 function declarePredicate(
@@ -146,14 +149,6 @@ function emitFormula(
       return "⊤";
     case "not":
       return `(¬ ${emitFormula(formula.operand, collector, scope)})`;
-    case "and":
-    case "or":
-    case "if":
-    case "iff": {
-      const left = emitFormula(formula.left, collector, scope);
-      const right = emitFormula(formula.right, collector, scope);
-      return `(${left} ${CONNECTIVE_TERMS[formula.type]} ${right})`;
-    }
     case "forall":
     case "exists": {
       const bound = `v${String(collector.boundNames.length)}`;
@@ -163,6 +158,13 @@ function emitFormula(
       const body = emitFormula(formula.body, collector, inner);
       const quantifier = formula.type === "forall" ? "∀" : "∃";
       return `(${quantifier} ${bound} ${body})`;
+    }
+    default: {
+      // Left first, so binder numbering follows the written order.
+      const left = emitFormula(formula.left, collector, scope);
+      const right = emitFormula(formula.right, collector, scope);
+      collector.connectives.add(formula.type);
+      return connectiveForm(formula.type, left, right);
     }
   }
 }
@@ -181,6 +183,7 @@ export function buildEquivalenceCheck(
 ): EquivalenceCheckSources {
   const collector: Collector = {
     boundNames: [],
+    connectives: new Set(),
     constants: new Set(),
     functions: new Map(),
     predicates: new Map(),
@@ -193,6 +196,7 @@ export function buildEquivalenceCheck(
 
   const signature: TranslationSignature = {
     boundNames: collector.boundNames,
+    connectives: collector.connectives,
     constants: [...collector.constants].sort(),
     functions: new Map([...collector.functions].sort(byName)),
     predicates: new Map([...collector.predicates].sort(byName)),
