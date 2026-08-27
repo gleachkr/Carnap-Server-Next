@@ -530,8 +530,8 @@ on a `validity` table the premises stay all-true and the property applies to the
 conclusions, which also defines the turnstile column), `trueMark` / `falseMark`
 (display glyphs for true/false cells; the recorded answer stays `T`/`F`),
 `system` (an `aufbau-mm0` block name or a language spec id, defaulting to
-`carnap-prop`; it has to be propositional — a language with quantifiers is
-refused, since a binder has no column), and an
+`carnap-prop`; any language will do, and a formula using something a table has
+no column for is refused where it is written), and an
 `options` string of Carnap flags (`autoAtoms`, `nodash`, `nocheck`,
 `nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
 `negated-double-turnstile`; `immutable` — Carnap's whole-table display lock — is
@@ -937,12 +937,23 @@ matches an `aufbau-mm0` block declared earlier in the same document first, and
 one of the ids above second — so a course that extends forallx with its own
 `Cube` and `Loves` can call the result `forallx` and set proofs, models and
 translations in it without any of them disagreeing about what `A` means. A name
-that is neither is a compile error naming both lists. Each type also says what it needs of the
-language, and says it of the *spec* rather than by listing files. A model or
-translation has to quantify, and one that declares no `∀` and `∃` is refused
-with a diagnostic saying so; a truth table needs the opposite, because a binder
-has no column. That is why `carnap-prop` is a truth-table language and not a
-model one, and why forallx is the reverse.
+that is neither is a compile error naming both lists.
+
+**A type asks nothing of the language beyond its being one.** Any spec that
+reads may be named by any of the seven types: propositional translation in
+`carnap-prop` and a truth table over forallx's predicate letters are both
+ordinary, and both were refused while this was a property of the language. What
+a type cannot interpret is refused *per formula*, at the construct that caused
+it — write `Ax F(x)` in a truth table and the complaint names `∀` and points at
+it, because there is no column for a binder. A spec that does not read at all is
+still refused as a whole, since there is nothing to write formulas in.
+
+Which constructs a type reads is fixed by the `@syntax role` annotations it has
+a case for, and the list is closed: a role a type has no reading for is refused
+rather than treated as opaque, so an unfamiliar connective can never be quietly
+given a free truth value. A constructor with *no* role is the open half — a
+sentence letter, or a predicate letter applied to terms — and a truth table
+gives each distinct one (`F`, `F(a)`, `R(a,b)`) its own column.
 
 **The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
 predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters

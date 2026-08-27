@@ -39,7 +39,7 @@ Fill in both tables. If they agree on every row, the formulas are equivalent.
 | `counterexample-to` | `tautology`/`validity` \| `equivalence` \| `inconsistency`/`contradiction` | `tautology` | The property a counterexample row must show; applies to both variants (see below). The `nocounterexample` flag hides the button. |
 | `points`   | number `0 < n ≤ 1000`                 | `1`              | Nominal points. |
 | `trueMark` / `falseMark` | glyph, 1–8 chars          | `T` / `F`        | Display glyph for a true / false cell (cf. Carnap). Display only — the recorded answer stays `T`/`F`. |
-| `system`   | a block name or a spec id             | `carnap-prop`    | The notation the formulas are written in: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. It has to be propositional — a language with quantifiers is refused, since a binder has no column. |
+| `system`   | a block name or a spec id             | `carnap-prop`    | The notation the formulas are written in: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. Any language that reads will do, including a predicate one — see below. |
 | `title`    | string                                | —                | Optional title. |
 | `exam`     | `true` \| `false`                     | the assignment's: `true` while its grades are withheld, `false` once released | `true` records every submission; `false` records only correct autograded work. Leaving it out is a third value, not `false`. |
 | `feedback` | `full` \| `terse` \| `none` | the assignment's: `none` while its grades are withheld, `full` once released | How much the student is told: `terse` drops the detail, `none` drops the verdict too. The score is separate — it waits for the release date whatever this says. See `docs/carnap-markdown-v1.md`. |
@@ -270,6 +270,35 @@ tightest:
 `<->` < `->` < `\/` < `/\` < `~`. `/\`, `\/`, and `<->` are left-associative;
 `->` is right-associative. Use parentheses to override. A table may use at most
 `MAX_TABLE_ATOMS` (12) distinct atoms.
+
+### What counts as an atom, and what a table refuses
+
+A table may be set over **any** language that reads, including a first-order
+one. There is no requirement that it declare no binders — there used to be, and
+it was wrong in both directions: it refused forallx outright, whose
+propositional fragment makes perfectly good tables, while a language whose
+binder carried no `@syntax role` sailed straight past it and had its quantifier
+read as an atom.
+
+What is and is not a column is decided **per node**, when the formula is read:
+
+- A constructor with **no `@syntax role`** is an atom, keyed by how it *prints*.
+  `carnap-prop` spells a letter `term P: wff;`; forallx spells one
+  `term F (sq: seq): wff;` at the elided empty sequence, so `F`, `F(a)` and
+  `R(a,b)` are all that one declaration — and all three are distinct columns.
+  Predications over different terms are independent, so `F(a) -> F(b)` has two
+  reference columns, not one.
+- A constructor with a role this type **has a reading for** — the five
+  connectives above — gets its cells as usual.
+- Anything else is **refused where it is written**, and the complaint names it:
+  a binder (`∀`), an identity (`=`), a modal operator an author declared. The
+  list of readable roles is closed on purpose. Treating an unrecognized
+  connective as an opaque atom would let a student assign `□(P -> Q)` a free
+  truth value and score full marks on an exercise that had quietly become a
+  different one.
+- A roleless constructor that takes a **sentence** argument is refused too, and
+  that is the case no language-level check could ever have caught: an author's
+  `term box (p: wff): wff;` with no annotation declares nothing about itself.
 
 ## How it fits together
 
