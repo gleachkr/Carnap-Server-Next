@@ -32,7 +32,7 @@ const FORALLX_FROZEN = stripSyntaxAnnotations(FORALLX_SOURCE);
 function lesson(theoryBlock: string, goal = "andcomm"): string {
   return `${theoryBlock}
 
-:::aufbau-proof-fitch{theory="forallx" id="ex1"}
+:::aufbau-proof-fitch{system="forallx" id="ex1"}
 Take it apart and put it back.
 
 theorem ${goal} (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
@@ -157,7 +157,7 @@ term and (a b: wff): wff;
       `:::aufbau-mm0{name="forallx" src="${FORALLX}"}
 :::
 
-:::aufbau-proof-fitch{theory="forallx" id="ex1" context="," sequent="|-"}
+:::aufbau-proof-fitch{system="forallx" id="ex1" context="," sequent="|-"}
 Take it apart and put it back.
 
 theorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
@@ -241,7 +241,7 @@ term Cube (x: tm): wff;
       : compiled.diagnostics.map((one) => one.code);
 
     expect(codes).toContain("unknown_theory_src");
-    expect(codes).toContain("unknown_theory");
+    expect(codes).toContain("unknown_system");
   });
 
   test("a block with neither a src nor a body is empty", async () => {

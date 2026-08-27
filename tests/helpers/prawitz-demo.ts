@@ -44,7 +44,7 @@ No discharge yet — this one is about joining trees. Make two assumptions,
 \`a → b\` and \`a\`, tick their dots **in that order** (the conditional
 first), and apply \`imp_elim\` below them.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_mp" title="Modus ponens" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_mp" title="Modus ponens" points="1"}
 Derive \`b\` from \`a → b\` and \`a\`.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
@@ -56,7 +56,7 @@ The first discharge. Assume \`a\` under label \`1\`, apply \`imp_intro\`
 below it to conclude \`a → a\`, and put \`1\` in the discharge box beside the
 rule — the assumption's brackets appear when both ends match.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_self" title="Conditional introduction" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_self" title="Conditional introduction" points="1"}
 Prove \`a → a\` from nothing.
 
 theorem self (a: wff): $ _ ⊢ a → a $
@@ -68,7 +68,7 @@ One assumption stays a **standing premise** (no label — it ends up in the
 context) while the other, \`¬ a\`, is labeled and discharged by
 \`neg_intro\`. \`neg_elim\` wants the formula first and its negation second.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_dni" title="Double-negation introduction" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_dni" title="Double-negation introduction" points="1"}
 Show that \`a\` entails \`¬ ¬ a\`.
 
 theorem dni (a: wff): $ a ⊢ ¬ ¬ a $
@@ -82,7 +82,7 @@ The full Prawitz shape. Two labeled case-assumptions, \`a\` under \`1\` and
 order), discharging **both** labels at once — write \`1 2\` in its discharge
 box.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_orcomm" title="Disjunction commutes" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_orcomm" title="Disjunction commutes" points="1"}
 Show that \`a ∨ b\` entails \`b ∨ a\`.
 
 theorem orcomm (a b: wff): $ a ∨ b ⊢ b ∨ a $
@@ -96,7 +96,7 @@ cannot discharge \`b\` vacuously the way a Fitch proof assumes and reiterates
 past. The classical detour: conjoin the unused assumption in with
 \`and_intro\`, take it back out with \`and_elim_r\`, then discharge as usual.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_kcomb" title="The K combinator" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_kcomb" title="The K combinator" points="1"}
 Prove \`b → a\` from \`a\` — via \`b ∧ a\`.
 
 theorem kcomb (a b: wff): $ a ⊢ b → a $
@@ -111,7 +111,7 @@ witness \`F y\` under label \`1\`; get \`F y → G y\` by \`all_elim\`, then
 order), discharging the witness — the eigenvariable condition is checked by
 the engine.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_exelim" title="Existential elimination" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_exelim" title="Existential elimination" points="1"}
 Derive \`∃ x (G x)\` from \`∃ x (F x)\` and \`∀ x (F x → G x)\`.
 
 theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $
@@ -126,7 +126,7 @@ matching \`2\`. Your job is the outer discharge — apply \`imp_intro\` at the
 bottom, label the \`a\` assumption \`1\`, and write \`1\` in the new rule's
 discharge box.
 
-:::aufbau-proof-prawitz{theory="forallx" id="pz_starter" title="Finish a started tree" points="1"}
+:::aufbau-proof-prawitz{system="forallx" id="pz_starter" title="Finish a started tree" points="1"}
 Finish the proof of \`a → (b → a ∧ b)\`.
 
 theorem curry (a b: wff): $ _ ⊢ a → (b → a ∧ b) $

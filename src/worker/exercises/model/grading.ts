@@ -14,7 +14,7 @@ import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { Formula, ModelField, ModelTarget, ModelTask } from "./logic";
 import {
   DOMAIN_FIELD_LABEL,
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   formatFunctionTable,
   modelSignature,
   parseFormula,
@@ -54,7 +54,7 @@ export function isModelPublicData(value: unknown): value is ModelPublicData {
   const data = value as Partial<ModelPublicData>;
 
   return (
-    typeof data.dialect === "string" &&
+    typeof (data.system ?? data.dialect) === "string" &&
     typeof data.promptHtml === "string" &&
     isStringArray(data.required) &&
     isStringArray(data.targeted) &&
@@ -96,7 +96,7 @@ export function isModelAnswerData(value: unknown): value is ModelAnswerData {
 export function resolveModel(
   publicData: ModelPublicData,
 ): ResolvedModel | null {
-  const language = firstOrderLanguage(publicData.dialect);
+  const language = firstOrderLanguageFor(publicData);
 
   if (language === null) {
     return null;

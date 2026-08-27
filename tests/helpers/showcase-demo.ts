@@ -360,7 +360,7 @@ justified by a rule and the labels of the lines it uses. This proof is filled in
 already, so it should show its ✓ at once.
 
 \`\`\`md
-:::aufbau-proof{theory="forallx" id="pf_lines" title="Distributing ∀" points="2"}
+:::aufbau-proof{system="forallx" id="pf_lines" title="Distributing ∀" points="2"}
 Read the proof, then submit it. Try breaking a line to see the engine complain.
 
 theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
@@ -372,7 +372,7 @@ l4: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $ by all_intro [l3]
 :::
 \`\`\`
 
-:::aufbau-proof{theory="forallx" id="pf_lines" title="Distributing ∀" points="2"}
+:::aufbau-proof{system="forallx" id="pf_lines" title="Distributing ∀" points="2"}
 Read the proof, then submit it. Try breaking a line to see the engine complain.
 
 theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
@@ -391,7 +391,7 @@ Optionally seed it with a starter written in the same line form as above — the
 compiler reads that back into a tree.
 
 \`\`\`md
-:::aufbau-proof-tree{theory="forallx" id="pf_tree" title="Universal instantiation" points="2"}
+:::aufbau-proof-tree{system="forallx" id="pf_tree" title="Universal instantiation" points="2"}
 The tree below is complete. Click a line to select it; the toolbar adds a
 premise, adds a hypothesis, or deletes a subtree.
 
@@ -404,7 +404,7 @@ l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by imp_elim [l3, l2]
 :::
 \`\`\`
 
-:::aufbau-proof-tree{theory="forallx" id="pf_tree" title="Universal instantiation" points="2"}
+:::aufbau-proof-tree{system="forallx" id="pf_tree" title="Universal instantiation" points="2"}
 The tree below is complete. Click a line to select it; the toolbar adds a
 premise, adds a hypothesis, or deletes a subtree.
 
@@ -429,7 +429,7 @@ name may not escape into the conclusion; that side condition is checked by the
 engine, not by the editor.
 
 \`\`\`md
-:::aufbau-proof-fitch{theory="forallx" id="pf_fitch" title="Existential elimination" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="pf_fitch" title="Existential elimination" points="3"}
 A worked ∃E. Re-indent line 3 and watch the scope line — and the ✓ — react.
 
 theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
@@ -444,7 +444,7 @@ theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ 
 :::
 \`\`\`
 
-:::aufbau-proof-fitch{theory="forallx" id="pf_fitch" title="Existential elimination" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="pf_fitch" title="Existential elimination" points="3"}
 A worked ∃E. Re-indent line 3 and watch the scope line — and the ✓ — react.
 
 theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
@@ -464,7 +464,7 @@ The last one is not done for you. Assume \`¬ P\` for contradiction, derive \`�
 with \`neg_elim\`, and close the subproof with \`ip\`, citing its range.
 
 \`\`\`md
-:::aufbau-proof-fitch{theory="forallx" id="pf_yours" title="Double negation" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="pf_yours" title="Double negation" points="3"}
 Show that \`¬ ¬ P\` entails \`P\`.
 
 theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
@@ -473,7 +473,7 @@ theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
 :::
 \`\`\`
 
-:::aufbau-proof-fitch{theory="forallx" id="pf_yours" title="Double negation" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="pf_yours" title="Double negation" points="3"}
 Show that \`¬ ¬ P\` entails \`P\`.
 
 theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
@@ -497,7 +497,7 @@ released them gives every exercise \`full\`. The attribute is for disagreeing wi
 that in one place.
 
 \`\`\`md
-:::aufbau-proof-fitch{theory="forallx" id="pf_sealed" title="Double negation, sealed" points="3" feedback="none"}
+:::aufbau-proof-fitch{system="forallx" id="pf_sealed" title="Double negation, sealed" points="3" feedback="none"}
 Show that \`¬ ¬ P\` entails \`P\`. You will not be told whether you have.
 
 theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $
@@ -506,7 +506,7 @@ theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $
 :::
 \`\`\`
 
-:::aufbau-proof-fitch{theory="forallx" id="pf_sealed" title="Double negation, sealed" points="3" feedback="none"}
+:::aufbau-proof-fitch{system="forallx" id="pf_sealed" title="Double negation, sealed" points="3" feedback="none"}
 Show that \`¬ ¬ P\` entails \`P\`. You will not be told whether you have.
 
 theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $

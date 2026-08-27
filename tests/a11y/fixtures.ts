@@ -86,7 +86,7 @@ term top: wff;
 axiom top_i: $ top $;
 :::
 
-:::aufbau-proof{theory="prop" id="pf" points="1"}
+:::aufbau-proof{system="prop" id="pf" points="1"}
 Prove top.
 
 theorem thm_top: $ top $
@@ -94,13 +94,13 @@ theorem thm_top: $ top $
 l1: $ top $ by top_i []
 :::
 
-:::aufbau-proof-tree{theory="prop" id="tr" points="1"}
+:::aufbau-proof-tree{system="prop" id="tr" points="1"}
 Build a proof of top.
 
 theorem thm_tree: $ top $
 :::
 
-:::aufbau-proof-prawitz{theory="prop" id="pz" points="1"}
+:::aufbau-proof-prawitz{system="prop" id="pz" points="1"}
 Build a Prawitz tree for top.
 
 theorem thm_prawitz: $ top $

@@ -11,7 +11,7 @@ import {
   checkModel,
   DEFAULT_LANGUAGE_ID,
   DOMAIN_FIELD_LABEL,
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   formatFunctionTable,
   functionTableLayout,
   MAX_DOMAIN_SIZE,
@@ -29,7 +29,7 @@ import {
 
 /** The forallx spec, resolved once — a language is tables, not data. */
 function calgary(): SurfaceLanguage {
-  const found = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+  const found = firstOrderLanguageFor({ dialect: DEFAULT_LANGUAGE_ID });
 
   if (found === null) {
     throw new Error(`no first-order language under ${DEFAULT_LANGUAGE_ID}`);

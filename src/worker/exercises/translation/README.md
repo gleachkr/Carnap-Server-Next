@@ -98,7 +98,7 @@ Everything is fine.
 |---|---|---|---|
 | `#id` / `id` | identifier | — (**required**) | Stable exercise id. |
 | `variant` | `prop` \| `first-order` \| `exact` | `prop` | Carnap's `.Prop`/`.FOL`/`.Exact`. `prop` rejects quantifiers, identity, and predicates of things — in solutions at compile time and in answers at grading time. `exact` compares parsed formulas and never consults the engine. |
-| `system` | a dialect id | `forallx-calgary-2019` | The notation system; validated against the shared dialect table. |
+| `system` | a block name or a spec id | `forallx-calgary-2019` | The notation system: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. It has to quantify. |
 | `tests` | space-separated | — | Extra conditions on the submission: `CNF` `DNF` `PNF` (first-order only) and `maxCon:N` `maxNeg:N`/`maxNot:N` `maxAnd:N` `maxOr:N` `maxIf:N` `maxIff:N` `maxFalse:N` `maxAtom:N`. Carnap's names and counting ([`logic/tests.ts`](./logic/tests.ts)); note upstream documented `maxNot` but implemented `maxNeg` — both work here. |
 | `starter` | string | — | Prefilled input text (Carnap's partial solution; may be prose). |
 | `options` | space-separated flags | — | `nocheck` (this type's spelling of `feedback="none"`) and `checksyntax` (refuse to submit text that does not parse). |

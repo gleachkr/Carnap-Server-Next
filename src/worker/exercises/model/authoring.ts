@@ -18,11 +18,10 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
+import type { SystemResolver } from "../aufbau-proof/authoring";
+import { parseSystem } from "../first-order/authoring";
 import type { ModelField, ModelTarget } from "./logic";
 import {
-  DEFAULT_LANGUAGE_ID,
-  FIRST_ORDER_LANGUAGE_IDS,
-  firstOrderLanguage,
   formulaToString,
   modelSignature,
   parseDomain,
@@ -103,55 +102,6 @@ function parseVariant(
   );
 
   return "simple";
-}
-
-/**
- * The language the exercise is written in, and the id it is stored under.
- *
- * Both travel together because they are stored apart: `publicData.dialect`
- * holds the id, and every reader resolves the spec from it again — a parsed
- * language is tables, not data.
- */
-interface ResolvedLanguage {
-  readonly id: string;
-  readonly language: SurfaceLanguage;
-}
-
-function parseLanguage(
-  value: string | undefined,
-  line: number,
-  diagnostics: CompilerDiagnostic[],
-): ResolvedLanguage {
-  const id = value ?? DEFAULT_LANGUAGE_ID;
-  const language = firstOrderLanguage(id);
-
-  if (language !== null) {
-    return { id, language };
-  }
-
-  diagnostics.push(
-    diagnostic(
-      line,
-      "unsupported_model_system",
-      "The system attribute must name a notation system this server knows: {systems}.",
-      { params: { systems: FIRST_ORDER_LANGUAGE_IDS.join(", ") } },
-    ),
-  );
-
-  return fallbackLanguage();
-}
-
-/** The default spec, which ships and therefore reads. */
-function fallbackLanguage(): ResolvedLanguage {
-  const language = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
-
-  if (language === null) {
-    throw new Error(
-      `the ${DEFAULT_LANGUAGE_ID} spec is no longer registered`,
-    );
-  }
-
-  return { id: DEFAULT_LANGUAGE_ID, language };
 }
 
 interface OptionFlags {
@@ -719,6 +669,7 @@ const MODEL_ATTRIBUTES = [
 
 export async function compileModel(
   block: DirectiveBlock,
+  resolveSystem: SystemResolver,
   diagnostics: CompilerDiagnostic[],
   renderOptions: MarkdownRenderOptions,
 ): Promise<CompiledExercise | null> {
@@ -727,11 +678,7 @@ export async function compileModel(
   const id = requireAttribute(block, "id", diagnostics);
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
-  const { id: languageId, language } = parseLanguage(
-    block.attrs.system,
-    block.line,
-    diagnostics,
-  );
+  const { language, system } = parseSystem(block, resolveSystem, diagnostics);
   const flags = parseOptionFlags(
     block.attrs.options,
     block.line,
@@ -798,7 +745,6 @@ export async function compileModel(
   );
 
   const publicData: ModelPublicData = {
-    dialect: languageId,
     ...(Object.keys(givens).length > 0 ? { givens } : {}),
     options,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
@@ -806,6 +752,7 @@ export async function compileModel(
       lineOffset: block.bodyStartLine - 1,
     }),
     required: body.required,
+    system,
     target,
     targeted: body.targeted,
     variant,

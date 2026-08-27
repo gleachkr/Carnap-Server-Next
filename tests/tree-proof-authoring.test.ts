@@ -37,7 +37,7 @@ function treePublicData(
 describe("aufbau-proof-tree authoring", () => {
   test("a theory + tree proof compiles, freezing the goal and its formula", async () => {
     const compiled = await compileCarnapMarkdown(
-      treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 Build a proof that top holds.
 
 theorem thm_top: $ top $
@@ -75,7 +75,7 @@ theorem thm_top: $ top $
 
   test("the tree proof renders its element with the goal seeded", async () => {
     const compiled = await compileCarnapMarkdown(
-      treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 theorem thm_top: $ top $
 :::`),
     );
@@ -95,7 +95,7 @@ theorem thm_top: $ top $
 
   test("options=auto complete toggles editor assistance", async () => {
     const compiled = await compileCarnapMarkdown(
-      treeSource(`:::aufbau-proof-tree{theory="prop" id="t1" options="auto complete"}
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1" options="auto complete"}
 theorem thm_top: $ top $
 :::`),
     );
@@ -111,16 +111,16 @@ theorem thm_top: $ top $
 
   test("a tree proof referencing an undeclared theory is rejected", async () => {
     expect(
-      await diagnosticsFor(`:::aufbau-proof-tree{theory="missing" id="t1"}
+      await diagnosticsFor(`:::aufbau-proof-tree{system="missing" id="t1"}
 theorem thm_top: $ top $
 :::`),
-    ).toContain("unknown_theory");
+    ).toContain("unknown_system");
   });
 
   test("a missing theorem header is rejected", async () => {
     expect(
       await diagnosticsFor(
-        treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+        treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 Just some prose, no goal.
 :::`),
       ),
@@ -130,7 +130,7 @@ Just some prose, no goal.
   test("a header with no goal formula is rejected", async () => {
     expect(
       await diagnosticsFor(
-        treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+        treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 theorem thm_top:
 :::`),
       ),
@@ -140,7 +140,7 @@ theorem thm_top:
   test("an unknown option flag is rejected", async () => {
     expect(
       await diagnosticsFor(
-        treeSource(`:::aufbau-proof-tree{theory="prop" id="t1" options="cheat"}
+        treeSource(`:::aufbau-proof-tree{system="prop" id="t1" options="cheat"}
 theorem thm_top: $ top $
 :::`),
       ),
@@ -149,7 +149,7 @@ theorem thm_top: $ top $
 
   test("no starter body leaves starterTree undefined (build from scratch)", async () => {
     const compiled = await compileCarnapMarkdown(
-      treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 theorem thm_top: $ top $
 :::`),
     );
@@ -164,7 +164,7 @@ theorem thm_top: $ top $
 
   test("a `----` starter body pre-populates the tree", async () => {
     const compiled = await compileCarnapMarkdown(
-      treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 theorem thm_top: $ top $
 ----
 l1: $ a $ by ax []
@@ -184,7 +184,7 @@ l2: $ top $ by mp [l1]
 
   test("the starter tree is drawn into the inert SSR seed", async () => {
     const compiled = await compileCarnapMarkdown(
-      treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 theorem thm_top: $ top $
 ----
 l1: $ a $ by ax []
@@ -205,7 +205,7 @@ l2: $ top $ by mp [l1]
   test("a starter proof that is a graph, not a tree, is rejected", async () => {
     expect(
       await diagnosticsFor(
-        treeSource(`:::aufbau-proof-tree{theory="prop" id="t1"}
+        treeSource(`:::aufbau-proof-tree{system="prop" id="t1"}
 theorem thm_top: $ top $
 ----
 l1: $ a $ by ax []

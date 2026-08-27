@@ -75,8 +75,51 @@ function sourceFor(id: string): string {
 export const LANGUAGE_SPEC_SOURCES: Readonly<Record<string, string>> =
   Object.fromEntries(LANGUAGE_IDS.map((id) => [id, sourceFor(id)]));
 
-/** Reading a spec builds tables; every caller shares one per language. */
-const languages = new Map<string, SurfaceLanguage>();
+/**
+ * Reading a spec builds tables; every caller shares one per language.
+ *
+ * Keyed by *source*, not by id, because an id is no longer the only way to
+ * name a language: a document that declares its own `:::aufbau-mm0` block and
+ * sets a model exercise in it arrives here with text and no id at all. The
+ * shipped specs are entered under their own text too, so the two namespaces
+ * share one table and forallx named by id and forallx named by a block are
+ * literally the same object.
+ */
+const languages = new Map<string, SurfaceLanguage | null>();
+
+/**
+ * The language a spec's *text* describes, or `null` where it does not read as
+ * one.
+ *
+ * `null` rather than a throw, unlike {@link languageById}: this text may be an
+ * author's, and an author's mistake is a diagnostic on their revision, not a
+ * 500 on somebody's lesson. The compiler is what turns the `null` into the
+ * diagnostic; by the time a stored exercise reaches this, a `null` means an
+ * artifact authored against a version of the language that no longer reads.
+ */
+export function languageFromSource(source: string): SurfaceLanguage | null {
+  const cached = languages.get(source);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  let language: SurfaceLanguage | null = null;
+
+  try {
+    const { spec, diagnostics } = parseSpec(source);
+
+    if (!diagnostics.some((one) => one.severity === "error")) {
+      language = new SurfaceLanguage(spec);
+    }
+  } catch {
+    language = null;
+  }
+
+  languages.set(source, language);
+
+  return language;
+}
 
 /**
  * The language an author named, or `null` if no such spec ships.
@@ -87,31 +130,24 @@ const languages = new Map<string, SurfaceLanguage>();
  * them clean.
  */
 export function languageById(id: string): SurfaceLanguage | null {
-  const cached = languages.get(id);
-
-  if (cached !== undefined) {
-    return cached;
-  }
-
   const source = LANGUAGE_SPEC_SOURCES[id];
 
   if (source === undefined) {
     return null;
   }
 
-  const { spec, diagnostics } = parseSpec(source);
-  const errors = diagnostics.filter((one) => one.severity === "error");
+  const language = languageFromSource(source);
 
-  if (errors.length > 0) {
+  if (language === null) {
+    const { diagnostics } = parseSpec(source);
+
     throw new Error(
-      `language spec ${id} does not read: ${errors
+      `language spec ${id} does not read: ${diagnostics
+        .filter((one) => one.severity === "error")
         .map((one) => `${one.id} (${one.message})`)
         .join("; ")}`,
     );
   }
-
-  const language = new SurfaceLanguage(spec);
-  languages.set(id, language);
 
   return language;
 }

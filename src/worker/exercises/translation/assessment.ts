@@ -17,7 +17,7 @@ import type { JsonValue } from "../../domain/json";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import type { Formula } from "../first-order";
 import {
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   formulaToString,
   parseFormula,
 } from "../first-order";
@@ -70,7 +70,7 @@ function readSubmission(
   publicData: TranslationPublicData,
   text: string,
 ): Formula | null {
-  const language = firstOrderLanguage(publicData.dialect);
+  const language = firstOrderLanguageFor(publicData);
 
   if (language === null) {
     return null;
@@ -227,7 +227,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       return incorrect("unreadable");
     }
 
-    const language = firstOrderLanguage(publicData.dialect);
+    const language = firstOrderLanguageFor(publicData);
 
     if (language === null) {
       return { ...base, awardedScore: 0, status: "error" };
@@ -304,7 +304,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
     // evaluation's story: equivalence cannot be recomputed here (the check
     // runs a search this page has no engine for), so unlike the model this
     // review asserts nothing the seal would need to hide.
-    const language = firstOrderLanguage(declaration.publicData.dialect);
+    const language = firstOrderLanguageFor(declaration.publicData);
     const parsed =
       language === null ? null : parseFormula(data.text, language);
     const display =

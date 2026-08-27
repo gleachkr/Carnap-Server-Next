@@ -7,8 +7,12 @@ import type {
   ContentSourceProfile,
   ExerciseManifestItem,
 } from "../../domain/content";
-import type { AufbauTheory } from "../../exercises/aufbau-proof/authoring";
+import type {
+  AufbauTheory,
+  SystemResolver,
+} from "../../exercises/aufbau-proof/authoring";
 import {
+  builtInSystem,
   compileAufbauMm0,
   compileAufbauProof,
 } from "../../exercises/aufbau-proof/authoring";
@@ -37,6 +41,7 @@ import { TRANSLATION_KIND } from "../../exercises/translation/types";
 import { compileTruthTable } from "../../exercises/truth-table/authoring";
 import { TRUTH_TABLE_KIND } from "../../exercises/truth-table/types";
 import type { TheoryResolver } from "../../logic/theories";
+import { BUILT_IN_SYSTEM_IDS } from "../../logic/theories";
 import type { AuthoringExerciseRegistry } from "./authoring-registry";
 import { createDefaultAuthoringExerciseRegistry } from "./authoring-registry";
 import type {
@@ -373,6 +378,53 @@ function mathDiagnostic(failure: MathFailure): CompilerDiagnostic {
 }
 
 /**
+ * The resolver every exercise's `system=` goes through: a block this document
+ * declares, then an id the server ships.
+ *
+ * A block wins, which is what lets a course extend forallx and go on calling
+ * the result `forallx`. A shipped id that *is* named is entered into the same
+ * map, so it lands in the systems table below on exactly the terms a block
+ * does — one frozen copy per document either way — and so the second exercise
+ * naming it reads the same object as the first.
+ *
+ * The miss names both namespaces. It has to: a mistyped block name falls
+ * through to the id lookup, and a message that listed only the shipped ids
+ * would answer a question the author did not ask.
+ */
+function systemResolver(theories: Map<string, AufbauTheory>): SystemResolver {
+  return (name, line, diagnostics) => {
+    const known = theories.get(name) ?? builtInSystem(name);
+
+    if (known !== null && known !== undefined) {
+      theories.set(name, known);
+
+      return known;
+    }
+
+    const declared = [...theories.keys()].sort();
+
+    diagnostics.push(
+      diagnostic(
+        line,
+        "unknown_system",
+        declared.length === 0
+          ? "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}."
+          : "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}.",
+        {
+          params: {
+            available: BUILT_IN_SYSTEM_IDS.join(", "),
+            declared: declared.join(", "),
+            name,
+          },
+        },
+      ),
+    );
+
+    return null;
+  };
+}
+
+/**
  * The document's systems table: one frozen copy of each theory its exercises
  * actually name.
  *
@@ -453,9 +505,11 @@ export async function compileCarnapMarkdown(
   const nodes: ContentNode[] = [];
   const manifest: ExerciseManifestItem[] = [];
   const exerciseIds = new Set<string>();
-  // Theories declared by `:::aufbau-mm0` blocks, keyed by name. A proof block
-  // resolves its `theory=` against theories declared earlier in the document.
+  // Every system this document's exercises can name: the `:::aufbau-mm0` blocks
+  // it declares, plus the shipped ids any exercise asks for, entered as they
+  // are asked for. `referencedSystems` freezes the ones that were used.
   const theories = new Map<string, AufbauTheory>();
+  const resolveSystem = systemResolver(theories);
   const cssParts: string[] = [];
   const cssHrefs: string[] = [];
   let cssReset = false;
@@ -656,38 +710,44 @@ export async function compileCarnapMarkdown(
             : exerciseKind === TRUTH_TABLE_KIND
               ? await compileTruthTable(block, diagnostics, renderOptions)
               : exerciseKind === MODEL_KIND
-                ? await compileModel(block, diagnostics, renderOptions)
+                ? await compileModel(
+                    block,
+                    resolveSystem,
+                    diagnostics,
+                    renderOptions,
+                  )
                 : exerciseKind === AUFBAU_PROOF_KIND
                   ? await compileAufbauProof(
                       block,
-                      theories,
+                      resolveSystem,
                       diagnostics,
                       renderOptions,
                     )
                   : exerciseKind === AUFBAU_PROOF_TREE_KIND
                     ? await compileAufbauProofTree(
                         block,
-                        theories,
+                        resolveSystem,
                         diagnostics,
                         renderOptions,
                       )
                     : exerciseKind === AUFBAU_PROOF_FITCH_KIND
                       ? await compileAufbauProofFitch(
                           block,
-                          theories,
+                          resolveSystem,
                           diagnostics,
                           renderOptions,
                         )
                       : exerciseKind === AUFBAU_PROOF_PRAWITZ_KIND
                         ? await compileAufbauProofPrawitz(
                             block,
-                            theories,
+                            resolveSystem,
                             diagnostics,
                             renderOptions,
                           )
                         : exerciseKind === TRANSLATION_KIND
                           ? await compileTranslation(
                               block,
+                              resolveSystem,
                               diagnostics,
                               renderOptions,
                             )

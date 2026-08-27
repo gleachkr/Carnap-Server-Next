@@ -56,7 +56,7 @@ conditions (∀I, ∃E) ride entirely on the engine, exactly as in the Fitch typ
 ## Authoring syntax
 
 ```md
-:::aufbau-proof-prawitz{theory="forallx" id="p1"}
+:::aufbau-proof-prawitz{system="forallx" id="p1"}
 Finish the discharge.
 
 theorem self (a: wff): $ _ ⊢ a → a $
@@ -79,7 +79,7 @@ grammar accepts trailing comments, so annotated lines compile as written).
 The starter is parsed structurally and its discharge structure is checked by
 the translator at compile time; it need not prove anything.
 
-Attributes match the siblings: `theory` (required, a declared `aufbau-mm0` name
+Attributes match the siblings: `system` (required, a declared `aufbau-mm0` name
 earlier in the document), `id`, `title`, `points`, `exam`, `feedback`,
 `options`,
 `assumption=` naming the theory's assumption axiom (`ax` by default),

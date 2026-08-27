@@ -289,11 +289,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "The check attribute must be on or off.": i18n.t(
       "The check attribute must be on or off.",
     ),
-    "The system attribute must name a notation system this server knows: {systems}.":
-      i18n.t(
-        "The system attribute must name a notation system this server knows: {systems}.",
-        placeholders("systems"),
-      ),
     "The variant attribute must be simple, validity, or constraint.": i18n.t(
       "The variant attribute must be simple, validity, or constraint.",
     ),
@@ -417,10 +412,23 @@ export function buildDiagnosticStrings(i18n: Translator) {
       i18n.t(
         "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves.",
       ),
-    "No aufbau-mm0 theory named “{name}” is declared before this proof.":
+    // Both namespaces, always. A mistyped block name falls through to the
+    // shipped ids, so a message that listed only those would answer a question
+    // the author did not ask.
+    "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}.":
       i18n.t(
-        "No aufbau-mm0 theory named “{name}” is declared before this proof.",
+        "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}.",
+        placeholders("available", "declared", "name"),
+      ),
+    "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.":
+      i18n.t(
+        "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs.",
         placeholders("name"),
+      ),
+    "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}.":
+      i18n.t(
+        "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}.",
+        placeholders("available", "name"),
       ),
     "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page.":
       i18n.t(

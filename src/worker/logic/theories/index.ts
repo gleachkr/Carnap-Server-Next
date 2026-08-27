@@ -77,6 +77,23 @@ export const BUILT_IN_THEORY_PATHS: readonly string[] = Object.keys(
   .sort();
 
 /**
+ * The same artifacts by the *id* an exercise's `system=` names them with, which
+ * is each file's stem.
+ *
+ * Two ways of naming one thing, and deliberately so. `src=` on a theory block
+ * takes an address, because an address is a thing this site serves and a person
+ * can open; `system=` on an exercise takes a name in scope, and the names in
+ * scope are the blocks a document declares plus these. Keeping the id equal to
+ * the stem is what stops those being two vocabularies for the same file — the
+ * point `../specs` has made since it was written.
+ */
+export const BUILT_IN_SYSTEM_IDS: readonly string[] = Object.keys(
+  THEORY_SOURCES,
+)
+  .map((fileName) => fileName.replace(/\.mm0$/, ""))
+  .sort();
+
+/**
  * How a caller answers for the paths this module cannot: an instructor-hosted
  * theory, whose bytes live in the database rather than in the module graph.
  *

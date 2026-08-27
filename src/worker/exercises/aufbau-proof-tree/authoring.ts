@@ -17,12 +17,13 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
-import type { AufbauTheory } from "../aufbau-proof/authoring";
+import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
   goalBinderWarnings,
   parseProofOptions,
   parseTheoremHeader,
+  requireSystem,
   starterFormulaReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
@@ -40,7 +41,7 @@ import {
 const AUFBAU_PROOF_TREE_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "options",
-  "theory",
+  "system",
 ] as const;
 
 /**
@@ -56,14 +57,15 @@ const AUFBAU_PROOF_TREE_ATTRIBUTES = [
  */
 export async function compileAufbauProofTree(
   block: DirectiveBlock,
-  theories: ReadonlyMap<string, AufbauTheory>,
+  resolveSystem: SystemResolver,
   diagnostics: CompilerDiagnostic[],
   renderOptions: MarkdownRenderOptions,
 ): Promise<CompiledExercise | null> {
   validateAttributes(block, AUFBAU_PROOF_TREE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
-  const theoryName = requireAttribute(block, "theory", diagnostics);
+  const theory =
+    requireSystem(block, resolveSystem, diagnostics) ?? undefined;
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const exam = parseExamAttribute(block.attrs.exam, block.line, diagnostics);
   const feedback = parseFeedbackAttribute(block, diagnostics);
@@ -77,19 +79,6 @@ export async function compileAufbauProofTree(
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
-  }
-
-  const theory = theoryName === null ? undefined : theories.get(theoryName);
-
-  if (theoryName !== null && theory === undefined) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "unknown_theory",
-        "No aufbau-mm0 theory named “{name}” is declared before this proof.",
-        { params: { name: theoryName } },
-      ),
-    );
   }
 
   if (header !== null && header.goalFormula.length === 0) {

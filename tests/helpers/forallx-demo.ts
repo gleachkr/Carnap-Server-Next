@@ -39,7 +39,7 @@ as you type; a ✓ means it verifies.
 A first proof, already filled in. From \`P → Q\` and \`P\`, conclude \`Q\` with
 \`imp_elim\`. Watch the ✓ appear.
 
-:::aufbau-proof-fitch{theory="forallx" id="mp" points="1"}
+:::aufbau-proof-fitch{system="forallx" id="mp" points="1"}
 Derive \`Q\` from \`P → Q\` and \`P\`.
 
 theorem mp (P Q: wff): $ (P → Q) ; P ⊢ Q $
@@ -54,7 +54,7 @@ Q       :imp_elim 1 2
 Take \`P ∧ Q\` apart with \`and_elim_l\` / \`and_elim_r\` and put it back the other
 way with \`and_intro\`.
 
-:::aufbau-proof-fitch{theory="forallx" id="andcomm" points="2"}
+:::aufbau-proof-fitch{system="forallx" id="andcomm" points="2"}
 Show that \`P ∧ Q\` entails \`Q ∧ P\`.
 
 theorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
@@ -68,7 +68,7 @@ This one needs \`or_elim\`: assume each disjunct in its own subproof, derive the
 goal in both, then discharge. Indent a subproof, and start the second subproof
 with a fresh \`ax\` assumption at the same indentation.
 
-:::aufbau-proof-fitch{theory="forallx" id="orcomm" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="orcomm" points="3"}
 Show that \`P ∨ Q\` entails \`Q ∨ P\`.
 
 theorem orcomm (P Q: wff): $ P ∨ Q ⊢ Q ∨ P $
@@ -81,7 +81,7 @@ P ∨ Q   :ax
 Assume \`¬ P\` for contradiction, reach \`⊥\` with \`neg_elim\`, and close with
 \`ip\`.
 
-:::aufbau-proof-fitch{theory="forallx" id="dne" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="dne" points="3"}
 Show that \`¬ ¬ P\` entails \`P\`.
 
 theorem dne (P: wff): $ ¬ ¬ P ⊢ P $
@@ -95,7 +95,7 @@ Now for quantifiers. Instantiate \`∀ x (F(x) → G(x))\` at the name \`a\` wit
 \`all_elim\`, then finish with \`imp_elim\`. \`all_elim\` reads the name to use off
 the formula you write, so just state \`F(a) → G(a)\`.
 
-:::aufbau-proof-fitch{theory="forallx" id="unimp" points="2"}
+:::aufbau-proof-fitch{system="forallx" id="unimp" points="2"}
 From \`∀ x (F(x) → G(x))\` and \`F(a)\`, derive \`G(a)\`.
 
 theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
@@ -112,7 +112,7 @@ citing the existential line and the subproof range. The name \`b\` may not appea
 in the conclusion or in any premise still standing — that is the eigenvariable
 side condition, and the engine enforces it.
 
-:::aufbau-proof-fitch{theory="forallx" id="exelim" points="3"}
+:::aufbau-proof-fitch{system="forallx" id="exelim" points="3"}
 From \`∃ x F(x)\` and \`∀ x (F(x) → G(x))\`, derive \`∃ x G(x)\`.
 
 theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
@@ -130,7 +130,7 @@ read exactly the way a translation exercise reads your answer: \`Ax\`, \`Ex\`,
 \`~\`, \`/\\\`, \`\\/\` and \`->\` all work, and nothing needs a space it does
 not want. \`AxF(x)\` and \`∀ x F(x)\` are the same line.
 
-:::aufbau-proof-fitch{theory="forallx" id="typing" points="2"}
+:::aufbau-proof-fitch{system="forallx" id="typing" points="2"}
 From \`∀ x (F(x) ∧ G(x))\`, derive \`∀ x F(x)\`. The first line is typed in
 ASCII; finish it with \`all_elim\`, \`and_elim_l\` and \`all_intro\`.
 

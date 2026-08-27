@@ -42,7 +42,7 @@ term top: wff;
 axiom top_i: $ top $;
 :::
 
-:::aufbau-proof-tree{theory="prop" id="t1"}
+:::aufbau-proof-tree{system="prop" id="t1"}
 Build a proof of top.
 
 theorem thm_top: $ top $
@@ -56,7 +56,7 @@ with the goal. Optionally, a `----` underline after the goal may be followed by 
 compiler parses it back into a tree ([`parse.ts`](./parse.ts), the inverse of
 `flatten.ts`) and the editor seeds from it. A starter that reuses a line (a DAG,
 not a tree) is rejected with a `proof_is_not_a_tree` diagnostic — each line may be
-cited by at most one other. Attributes match `aufbau-proof`: `theory` (required, a
+cited by at most one other. Attributes match `aufbau-proof`: `system` (required, a
 declared `aufbau-mm0` name earlier in the document), `id`, `title`, `points`,
 `exam`, `feedback`, `options`.
 

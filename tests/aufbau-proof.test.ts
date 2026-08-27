@@ -37,7 +37,7 @@ function proofPublicData(
 describe("aufbau-proof authoring", () => {
   test("a theory + proof compiles and freezes the goal into the mm0", async () => {
     const compiled = await compileCarnapMarkdown(
-      proofSource(`:::aufbau-proof{theory="prop" id="p1"}
+      proofSource(`:::aufbau-proof{system="prop" id="p1"}
 Show that top holds.
 
 theorem thm_top: $ top $
@@ -77,7 +77,7 @@ l1: $ top $ by top_i []
 
   test("the theory renders a read-only panel and the proof its inert source", async () => {
     const compiled = await compileCarnapMarkdown(
-      proofSource(`:::aufbau-proof{theory="prop" id="p1"}
+      proofSource(`:::aufbau-proof{system="prop" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
@@ -105,7 +105,7 @@ term top: wff;
 axiom top_i: $ top $;
 :::
 
-:::aufbau-proof{theory="prop" id="p1"}
+:::aufbau-proof{system="prop" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
@@ -132,7 +132,7 @@ l1: $ top $ by top_i []
 
   test("the panel's own chrome is written in the reader's language", async () => {
     const compiled = await compileCarnapMarkdown(
-      proofSource(`:::aufbau-proof{theory="prop" id="p1"}
+      proofSource(`:::aufbau-proof{system="prop" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
@@ -163,7 +163,7 @@ provable sort wff;
 
   test("options=auto complete toggles editor assistance", async () => {
     const compiled = await compileCarnapMarkdown(
-      proofSource(`:::aufbau-proof{theory="prop" id="p1" options="auto complete"}
+      proofSource(`:::aufbau-proof{system="prop" id="p1" options="auto complete"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
@@ -182,7 +182,7 @@ l1: $ top $ by top_i []
   test("an unknown option flag is rejected", async () => {
     expect(
       await diagnosticsFor(
-        proofSource(`:::aufbau-proof{theory="prop" id="p1" options="cheat"}
+        proofSource(`:::aufbau-proof{system="prop" id="p1" options="cheat"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
@@ -193,30 +193,30 @@ l1: $ top $ by top_i []
 
   test("a proof referencing an undeclared theory is rejected", async () => {
     expect(
-      await diagnosticsFor(`:::aufbau-proof{theory="missing" id="p1"}
+      await diagnosticsFor(`:::aufbau-proof{system="missing" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
 :::`),
-    ).toContain("unknown_theory");
+    ).toContain("unknown_system");
   });
 
   test("a proof declared before its theory cannot see it (declare before use)", async () => {
     expect(
-      await diagnosticsFor(`:::aufbau-proof{theory="prop" id="p1"}
+      await diagnosticsFor(`:::aufbau-proof{system="prop" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
 :::
 
 ${THEORY}`),
-    ).toContain("unknown_theory");
+    ).toContain("unknown_system");
   });
 
   test("a missing theorem header is rejected", async () => {
     expect(
       await diagnosticsFor(
-        proofSource(`:::aufbau-proof{theory="prop" id="p1"}
+        proofSource(`:::aufbau-proof{system="prop" id="p1"}
 Just some prose, no goal.
 :::`),
       ),
@@ -226,7 +226,7 @@ Just some prose, no goal.
   test("a header with no underline is rejected", async () => {
     expect(
       await diagnosticsFor(
-        proofSource(`:::aufbau-proof{theory="prop" id="p1"}
+        proofSource(`:::aufbau-proof{system="prop" id="p1"}
 theorem thm_top: $ top $
 l1: $ top $ by top_i []
 :::`),
@@ -271,7 +271,7 @@ provable sort wff;
 term iff (a b: wff): wff; infixl iff: $<->$ prec 20;
 :::
 
-:::aufbau-proof{theory="bicond" id="p1"}
+:::aufbau-proof{system="bicond" id="p1"}
 theorem thm: $ top $
 ----
 l1: $ top $ by top_i []

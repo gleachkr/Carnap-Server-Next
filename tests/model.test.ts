@@ -106,7 +106,7 @@ describe("compiling a model directive", () => {
     expect(item.kind).toBe(MODEL_KIND);
     expect(item.nominalPoints).toBe(3);
     expect(data.variant).toBe("simple");
-    expect(data.dialect).toBe("forallx-calgary-2019");
+    expect(data.system).toBe("forallx-calgary-2019");
     expect(data.required).toEqual([]);
     // Stored in the spec's canonical spelling, which is the one a reader
     // sees: what an author types is ASCII, what is kept is the glyph.
@@ -355,7 +355,7 @@ describe("compiling a model directive", () => {
   test("an unknown system and an unknown option are rejected", async () => {
     expect(
       await compileCodes(directive('#bad6 system="firstOrder"', "- AxF(x)")),
-    ).toContain("unsupported_model_system");
+    ).toContain("unknown_system");
     expect(
       await compileCodes(directive('#bad7 options="autoAtoms"', "- AxF(x)")),
     ).toContain("unknown_model_option");
@@ -391,12 +391,18 @@ describe("resolving stored public data", () => {
     ]);
   });
 
-  test("an unknown dialect resolves to nothing rather than half a model", async () => {
+  test("a system that no longer resolves gives nothing, not half a model", async () => {
     const data = publicDataOf(
       await declaration(directive("#r2", "- AxF(x)")),
     );
 
-    expect(resolveModel({ ...data, dialect: "gone" })).toBeNull();
+    // The join is what puts `source` there; an artifact whose key the table no
+    // longer answers arrives with the key alone.
+    const { source: _source, ...keyed } = data;
+
+    expect(resolveModel({ ...keyed, system: "gone" })).toBeNull();
+    // The older shape, for every artifact stored before the table existed.
+    expect(resolveModel({ ...keyed, dialect: "gone" })).toBeNull();
   });
 });
 

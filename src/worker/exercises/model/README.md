@@ -35,7 +35,7 @@ Build a model in which both of these come out true.
 |---|---|---|---|
 | `#id` / `id` | identifier (`[A-Za-z][\w-]{0,63}`) | — (**required**) | Stable exercise id; unique within the document. |
 | `variant` | `simple` \| `validity` \| `constraint` | `simple` | See below. |
-| `system` | a dialect id | `forallx-calgary-2019` | The notation the sentences are written in. |
+| `system` | a block name or a spec id | `forallx-calgary-2019` | The notation the sentences are written in: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. |
 | `counterexample-to` | `validity`/`tautology` \| `equivalence` \| `inconsistency`/`contradiction` | per variant | The property the model must give the sentences (see below). |
 | `check` | `on` \| `off` | `on` | Whether the local Check button is offered. This type's older spelling of `feedback` (`on` is `full`, `off` is `none`); writing both earns a `redundant_check_attribute` diagnostic and `feedback` wins. |
 | `points` | number `0 < n ≤ 1000` | `1` | Nominal points. |
@@ -159,9 +159,10 @@ written as `src/worker/logic/theories/forallx-calgary-2019.mm0` — an MM0
 signature with `@syntax` annotations, read by `@aufbau/syntax`. Everything
 below is in that file rather than in any TypeScript, and `system=` names it.
 
-That file is also the *proof system* a Fitch or Prawitz exercise names as its
-`theory`, which is why a model exercise and a proof from the same course cannot
-disagree about the notation. `logic/specs/index.ts` registers its text under
+That file is also the *proof system* a Fitch or Prawitz exercise names in its
+own `system=` — one attribute for both, resolving to the same file — which is
+why a model exercise and a proof from the same course cannot disagree about the
+notation. `logic/specs/index.ts` registers its text under
 the language id; only a language with no proof system behind it (`carnap-prop`)
 is a file in that directory.
 

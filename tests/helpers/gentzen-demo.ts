@@ -32,7 +32,7 @@ The simplest quantifier shuffle: from \`∀ x P x\` derive \`∃ y P y\`. Instan
 the left with \`all_left\`, then witness on the right with \`ex_right\`, both above a
 single \`ax\` leaf.
 
-:::aufbau-proof-tree{theory="gentzen" id="forall_to_exists" points="1"}
+:::aufbau-proof-tree{system="gentzen" id="forall_to_exists" points="1"}
 Derive \`∃ y P y\` from \`∀ x P x\`.
 
 theorem forall_to_exists {x y: obj}: $ ∀ x P x ==> ∃ y P y $
@@ -44,7 +44,7 @@ Under a universally quantified implication, the existential is monotone. This on
 chains \`imp_left\` (which splits into two branches) beneath \`all_left\`, \`ex_right\`,
 and \`ex_left\`.
 
-:::aufbau-proof-tree{theory="gentzen" id="exists_mono" points="3"}
+:::aufbau-proof-tree{system="gentzen" id="exists_mono" points="3"}
 From \`∀ y (P y → Q y)\` and \`∃ x P x\`, derive \`∃ z Q z\`.
 
 theorem exists_mono {x y z: obj}: $ ∀ y (P y → Q y) , ∃ x P x ==> ∃ z Q z $
@@ -56,7 +56,7 @@ A right-only proof from the empty left context, showing classical LK proves
 \`∀ x (P x ∨ ¬ P x)\`. Build up with \`not_right\`, \`or_right\`, and \`all_right\` — the
 multi-conclusion right side is what makes this go through without a case split.
 
-:::aufbau-proof-tree{theory="gentzen" id="forall_excluded_middle" points="3"}
+:::aufbau-proof-tree{system="gentzen" id="forall_excluded_middle" points="3"}
 Prove \`∀ x (P x ∨ ¬ P x)\` from no premises.
 
 theorem forall_excluded_middle {x: obj}: $ emp ==> ∀ x (P x ∨ ¬ P x) $
@@ -68,7 +68,7 @@ The proof branches: \`or_left\` grows *two* subtrees, one assuming \`P x\` and o
 assuming \`Q x\`, each finished with \`ex_right\`, \`weak_right\`, and \`or_right\`. This
 is where the tree shape earns its keep.
 
-:::aufbau-proof-tree{theory="gentzen" id="exists_or_distrib" points="4"}
+:::aufbau-proof-tree{system="gentzen" id="exists_or_distrib" points="4"}
 Derive \`∃ y P y ∨ ∃ z Q z\` from \`∃ x (P x ∨ Q x)\`.
 
 theorem exists_or_distrib {x y z: obj}: $ ∃ x (P x ∨ Q x) ==> (∃ y P y ∨ ∃ z Q z) $

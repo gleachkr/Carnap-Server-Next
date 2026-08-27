@@ -47,7 +47,7 @@ const GOAL_TREE: ProofTreeNode = {
 function treeDirective(id: string, goalName: string, points = 1): string {
   return `${THEORY}
 
-:::aufbau-proof-tree{theory="prop" id="${id}" points="${points}"}
+:::aufbau-proof-tree{system="prop" id="${id}" points="${points}"}
 theorem ${goalName}: $ top $
 :::`;
 }

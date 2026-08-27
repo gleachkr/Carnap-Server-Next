@@ -61,7 +61,7 @@ axiom top_i: $ top $;
 axiom ax_1 (a b: wff): $ a -> b -> a $;
 :::
 
-:::aufbau-proof{theory="prop" id="identity"}
+:::aufbau-proof{system="prop" id="identity"}
 Prove the law of identity.
 
 theorem thm_k (a b: wff): $ a -> b -> a $
@@ -82,12 +82,13 @@ then the starter proof body. The student edits only the body.
 | `name` | `aufbau-mm0` | theory name other proof blocks reference (required) |
 | `src` | `aufbau-mm0` | a theory path this site serves; the body, if any, extends it |
 | `id` | `aufbau-proof` | exercise id (required) |
-| `theory` | `aufbau-proof` | a theory declared earlier in the document (required) |
+| `system` | `aufbau-proof` | an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships (required) |
 | `title`, `points`, `exam`, `feedback` | `aufbau-proof` | as for every exercise |
 | `options` | `aufbau-proof` | space-separated: `auto` (proof search), `complete` (rule completion) |
 
 Theories must be declared **before** the proofs that use them (matching the
-engine's own no-forward-reference model); an unknown name is `unknown_theory`.
+engine's own no-forward-reference model); a name that is neither a block nor
+a shipped id is `unknown_system`.
 
 ## Proof-script format
 

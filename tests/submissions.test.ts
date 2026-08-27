@@ -575,7 +575,7 @@ Fill it in.
         instructor,
         `${FITCH_THEORY_BLOCK}
 
-:::aufbau-proof-fitch{theory="prop" id="mp"}
+:::aufbau-proof-fitch{system="prop" id="mp"}
 Derive b from the premises.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
@@ -625,7 +625,7 @@ b       :imp_elim 1 2
         instructor,
         `${FITCH_THEORY_BLOCK}
 
-:::aufbau-proof-prawitz{theory="prop" id="mp"}
+:::aufbau-proof-prawitz{system="prop" id="mp"}
 Derive b from the premises.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
@@ -2495,7 +2495,7 @@ term top: wff;
 axiom top_i: $ top $;
 :::
 
-:::aufbau-proof{theory="prop" id="p1"}
+:::aufbau-proof{system="prop" id="p1"}
 Prove top.
 
 theorem thm_top: $ top $
@@ -2558,7 +2558,7 @@ term top: wff;
 axiom top_i: $ top $;
 :::
 
-:::aufbau-proof-tree{theory="prop" id="t1"}
+:::aufbau-proof-tree{system="prop" id="t1"}
 Build a proof of top.
 
 theorem thm_top: $ top $

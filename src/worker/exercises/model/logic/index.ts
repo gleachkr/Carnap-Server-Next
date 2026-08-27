@@ -17,8 +17,7 @@ export type {
 } from "../../first-order";
 export {
   DEFAULT_LANGUAGE_ID,
-  FIRST_ORDER_LANGUAGE_IDS,
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   formulaToString,
   parseFormula,
   splitFormulaList,

@@ -27,7 +27,7 @@ import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import type { Formula } from "../src/worker/exercises/first-order";
 import {
   DEFAULT_LANGUAGE_ID,
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   parseFormula,
 } from "../src/worker/exercises/first-order";
 import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
@@ -131,7 +131,7 @@ function applyEdits(text: string, edits: readonly LspTextEdit[]): string {
 
 /** The forallx spec, resolved once — a language is tables, not data. */
 function calgary(): SurfaceLanguage {
-  const found = firstOrderLanguage(DEFAULT_LANGUAGE_ID);
+  const found = firstOrderLanguageFor({ dialect: DEFAULT_LANGUAGE_ID });
 
   if (found === null) {
     throw new Error(`no first-order language under ${DEFAULT_LANGUAGE_ID}`);

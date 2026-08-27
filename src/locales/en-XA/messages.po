@@ -2325,10 +2325,6 @@ msgstr ""
 msgid "No attempts have been opened."
 msgstr ""
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "No aufbau-mm0 theory named “{name}” is declared before this proof."
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 msgid "No corrections have been published for this assignment."
 msgstr ""
@@ -2392,6 +2388,14 @@ msgstr ""
 
 #: src/worker/web/gradebook.tsx
 msgid "No submissions were recorded in this attempt."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -3696,7 +3700,7 @@ msgid "The submission was not found."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The system attribute must name a notation system this server knows: {systems}."
+msgid "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
 msgstr ""
 
 #: src/worker/application/admin.ts

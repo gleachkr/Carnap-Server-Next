@@ -35,8 +35,12 @@ export interface TranslationPublicData {
    * that arrives anyway is simply wrong.
    */
   readonly checksyntax: boolean;
-  /** The id of the notation system the formulas are written in. */
-  readonly dialect: string;
+  /**
+   * The id of the notation system the formulas are written in — the older
+   * shape, kept readable for every artifact compiled before the systems table.
+   * New compiles write {@link system} instead.
+   */
+  readonly dialect?: string;
   readonly promptHtml: string;
   /**
    * The admissible solutions, in canonical source. Public of necessity: the
@@ -47,6 +51,16 @@ export interface TranslationPublicData {
   readonly solutions: readonly string[];
   /** Prefilled input text (Carnap's partial solution). May be prose. */
   readonly starter?: string;
+  /**
+   * Which of the document's systems the formulas are written in, and
+   * {@link source} the copy of its text the join fills in. See
+   * `exercises/systems.ts`; between them they are what lets an exercise be set
+   * in a language its own document declares, rather than only in one the server
+   * ships.
+   */
+  readonly source?: string;
+  readonly system?: string;
+
   /** Extra conditions on the submission, from the `tests=` attribute. */
   readonly tests: readonly TranslationTest[];
   readonly variant: TranslationVariant;
@@ -76,7 +90,7 @@ export function isTranslationPublicData(
 
   return (
     typeof data.checksyntax === "boolean" &&
-    typeof data.dialect === "string" &&
+    typeof (data.system ?? data.dialect) === "string" &&
     typeof data.promptHtml === "string" &&
     Array.isArray(data.solutions) &&
     data.solutions.every((entry) => typeof entry === "string") &&

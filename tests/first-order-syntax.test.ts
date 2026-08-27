@@ -3,10 +3,11 @@ import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { Formula } from "../src/worker/exercises/first-order";
 import {
   DEFAULT_LANGUAGE_ID,
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   formulaToString,
   parseFormula,
 } from "../src/worker/exercises/first-order";
+import { LANGUAGE_SPEC_SOURCES } from "../src/worker/logic/specs";
 
 /**
  * What the model and translation types accept as a formula, and what they show
@@ -29,7 +30,7 @@ import {
 const CALGARY = language(DEFAULT_LANGUAGE_ID);
 
 function language(id: string): SurfaceLanguage {
-  const found = firstOrderLanguage(id);
+  const found = firstOrderLanguageFor({ dialect: id });
 
   if (found === null) {
     throw new Error(`no first-order language under the id ${id}`);
@@ -83,14 +84,34 @@ function show(source: string, lang: SurfaceLanguage = CALGARY): string {
 
 describe("the language registry", () => {
   test("the default language is one of ours; a stray id is not", () => {
-    expect(firstOrderLanguage(DEFAULT_LANGUAGE_ID)).not.toBeNull();
-    expect(firstOrderLanguage("firstOrder")).toBeNull();
+    expect(
+      firstOrderLanguageFor({ dialect: DEFAULT_LANGUAGE_ID }),
+    ).not.toBeNull();
+    expect(firstOrderLanguageFor({ dialect: "firstOrder" })).toBeNull();
+    expect(firstOrderLanguageFor({})).toBeNull();
   });
 
   test("a spec that ships but does not quantify is refused here", () => {
     // `carnap-prop` reads fine as a language — it is the truth-table type's —
-    // and is still not something a model exercise may be set in.
-    expect(firstOrderLanguage("carnap-prop")).toBeNull();
+    // and is still not something a model exercise may be set in. The refusal is
+    // now a property of the spec rather than of a list, so it holds for a
+    // language an author declared in their own document too.
+    expect(firstOrderLanguageFor({ dialect: "carnap-prop" })).toBeNull();
+    expect(
+      firstOrderLanguageFor({
+        source: LANGUAGE_SPEC_SOURCES["carnap-prop"] ?? "",
+      }),
+    ).toBeNull();
+  });
+
+  test("a language named by its own text reads as the same one", () => {
+    // What lets `system=` name an aufbau-mm0 block: the text is the language,
+    // and naming it by id or by block is naming the same thing.
+    expect(
+      firstOrderLanguageFor({
+        source: LANGUAGE_SPEC_SOURCES[DEFAULT_LANGUAGE_ID] ?? "",
+      }),
+    ).toBe(CALGARY);
   });
 
   test("every overlapping spelling resolves to the longer operator", () => {

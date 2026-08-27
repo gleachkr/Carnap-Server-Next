@@ -35,7 +35,7 @@ const GOOD_MMB_BASE64 =
 
 const SOURCE = `${FITCH_THEORY_BLOCK}
 
-:::aufbau-proof-fitch{theory="prop" id="mp1" points="2"}
+:::aufbau-proof-fitch{system="prop" id="mp1" points="2"}
 Prove modus ponens.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $

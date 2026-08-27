@@ -27,7 +27,7 @@
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { Formula } from "../../worker/exercises/first-order";
 import {
-  firstOrderLanguage,
+  firstOrderLanguageFor,
   formulaToString,
   parseFormula,
 } from "../../worker/exercises/first-order";
@@ -80,7 +80,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     }
 
     this.data = data;
-    this.language = firstOrderLanguage(data.dialect);
+    this.language = firstOrderLanguageFor(data);
     this.input = root.querySelector<HTMLInputElement>(
       'input[data-role="text"]',
     );

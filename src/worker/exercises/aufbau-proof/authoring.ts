@@ -25,7 +25,11 @@ import {
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { roleIndex } from "../../logic/specs/roles";
 import type { TheoryResolver } from "../../logic/theories";
-import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
+import {
+  BUILT_IN_THEORY_PATHS,
+  theoryByPath,
+  theorySourceByFileName,
+} from "../../logic/theories";
 import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
 import {
   goalBinderShadows,
@@ -563,11 +567,71 @@ export async function compileAufbauMm0(
   };
 }
 
+/**
+ * A shipped theory as a system, by the id an author writes in `system=` — which
+ * is the file's stem, and so the tail of the address `src=` takes.
+ *
+ * The `show` is false because nobody asked: a global is named, not declared, so
+ * there is no block for an author to have written `show` on. Reading a theory
+ * this way is the same reading `:::aufbau-mm0` gives it, notations and all, so
+ * an exercise cannot behave differently for having skipped the block.
+ */
+export function builtInSystem(id: string): AufbauTheory | null {
+  const source = theorySourceByFileName(`${id}.mm0`);
+
+  if (source === null) {
+    return null;
+  }
+
+  return {
+    ...declaredNotations(source),
+    mm0: stripSyntaxAnnotations(source),
+    name: id,
+    show: false,
+    source,
+  };
+}
+
+/**
+ * How an exercise gets the system it names.
+ *
+ * Two namespaces, in one order: an `:::aufbau-mm0` block this document
+ * declares, then an id the server ships. A document-local block wins, which is
+ * what lets a course extend forallx and go on calling the result what it likes.
+ *
+ * The resolver reports its own miss, because only the caller that built it
+ * knows *both* namespaces — a diagnostic written here could name the shipped
+ * ids and would never mention that a block was looked for, which is exactly the
+ * case a typo'd block name lands in. See `application/content/compiler.ts`.
+ */
+export type SystemResolver = (
+  name: string,
+  line: number,
+  diagnostics: CompilerDiagnostic[],
+) => AufbauTheory | null;
+
+/**
+ * The system an exercise's `system=` names, with both the missing attribute and
+ * the unresolvable name already reported.
+ *
+ * Shared by all four proof types (and, through the same resolver, by the two
+ * semantic ones), so that "which logic am I in" is asked one way everywhere.
+ */
+export function requireSystem(
+  block: DirectiveBlock,
+  resolve: SystemResolver,
+  diagnostics: CompilerDiagnostic[],
+): AufbauTheory | null {
+  const name = requireAttribute(block, "system", diagnostics);
+
+  return name === null ? null : resolve(name, block.line, diagnostics);
+}
+
 /** What `::::aufbau-proof{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "options",
-  "theory",
+  "system",
 ] as const;
 
 /**
@@ -579,14 +643,15 @@ const AUFBAU_PROOF_ATTRIBUTES = [
  */
 export async function compileAufbauProof(
   block: DirectiveBlock,
-  theories: ReadonlyMap<string, AufbauTheory>,
+  resolveSystem: SystemResolver,
   diagnostics: CompilerDiagnostic[],
   renderOptions: MarkdownRenderOptions,
 ): Promise<CompiledExercise | null> {
   validateAttributes(block, AUFBAU_PROOF_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
-  const theoryName = requireAttribute(block, "theory", diagnostics);
+  const theory =
+    requireSystem(block, resolveSystem, diagnostics) ?? undefined;
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const exam = parseExamAttribute(block.attrs.exam, block.line, diagnostics);
   const feedback = parseFeedbackAttribute(block, diagnostics);
@@ -600,19 +665,6 @@ export async function compileAufbauProof(
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
-  }
-
-  const theory = theoryName === null ? undefined : theories.get(theoryName);
-
-  if (theoryName !== null && theory === undefined) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "unknown_theory",
-        "No aufbau-mm0 theory named “{name}” is declared before this proof.",
-        { params: { name: theoryName } },
-      ),
-    );
   }
 
   if (id === null || theory === undefined || body === null) {

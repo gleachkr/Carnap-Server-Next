@@ -32,7 +32,7 @@ function fitchPublicData(
 describe("a goal binder that shadows the theory's language", () => {
   /** One forallx exercise with the given goal, and the source it compiled. */
   function goalSource(decl: string, body: string): string {
-    return `${FORALLX_THEORY_BLOCK}\n\n:::aufbau-proof-fitch{theory="forallx" id="g1" points="1"}\nProve it.\n\n${decl}\n----\n${body}\n:::\n`;
+    return `${FORALLX_THEORY_BLOCK}\n\n:::aufbau-proof-fitch{system="forallx" id="g1" points="1"}\nProve it.\n\n${decl}\n----\n${body}\n:::\n`;
   }
 
   async function compileGoal(decl: string, body: string) {
@@ -100,7 +100,7 @@ describe("a goal binder that shadows the theory's language", () => {
 describe("aufbau-proof-fitch authoring", () => {
   test("a theory + Fitch proof compiles, freezing goal, starter, and assumption", async () => {
     const compiled = await compileCarnapMarkdown(
-      fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1"}
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1"}
 Prove modus ponens.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
@@ -148,7 +148,7 @@ b       :imp_elim 1 2
 
   test("the assumption= attribute overrides the default assumption axiom", async () => {
     const compiled = await compileCarnapMarkdown(
-      fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1" assumption="hyp"}
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1" assumption="hyp"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
@@ -164,7 +164,7 @@ theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 
   test("the sequent= attribute overrides the default turnstile", async () => {
     const compiled = await compileCarnapMarkdown(
-      fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1" sequent="|-"}
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1" sequent="|-"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
@@ -178,7 +178,7 @@ theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 
   test("an empty starter body is allowed", async () => {
     const compiled = await compileCarnapMarkdown(
-      fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1"}
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
@@ -192,7 +192,7 @@ theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 
   test("options=auto complete toggles editor assistance", async () => {
     const compiled = await compileCarnapMarkdown(
-      fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1" options="auto complete"}
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1" options="auto complete"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
@@ -209,17 +209,17 @@ theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 
   test("a Fitch proof referencing an undeclared theory is rejected", async () => {
     expect(
-      await diagnosticsFor(`:::aufbau-proof-fitch{theory="missing" id="f1"}
+      await diagnosticsFor(`:::aufbau-proof-fitch{system="missing" id="f1"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
-    ).toContain("unknown_theory");
+    ).toContain("unknown_system");
   });
 
   test("a missing theorem header is rejected", async () => {
     expect(
       await diagnosticsFor(
-        fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1"}
+        fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1"}
 Just some prose, no goal.
 :::`),
       ),
@@ -229,7 +229,7 @@ Just some prose, no goal.
   test("a header with no underline is rejected", async () => {
     expect(
       await diagnosticsFor(
-        fitchSource(`:::aufbau-proof-fitch{theory="prop" id="f1"}
+        fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 a → b   :ax
 :::`),

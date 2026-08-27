@@ -46,7 +46,7 @@ function prawitzPublicData(
 describe("aufbau-proof-prawitz authoring", () => {
   test("a theory + prawitz proof compiles, freezing the goal and its formula", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 Build a natural-deduction tree for top.
 
 theorem thm_top: $ top $
@@ -87,7 +87,7 @@ theorem thm_top: $ top $
 
   test("assumption= overrides the assumption axiom the translator keys on", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1" assumption="hyp_intro"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" assumption="hyp_intro"}
 theorem thm_top: $ top $
 :::`),
     );
@@ -103,11 +103,11 @@ theorem thm_top: $ top $
 
   test("sequent= overrides the turnstile; ⊢ is the default", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1" sequent="|-"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" sequent="|-"}
 theorem thm_top: $ top $
 :::
 
-:::aufbau-proof-prawitz{theory="prop" id="p2"}
+:::aufbau-proof-prawitz{system="prop" id="p2"}
 theorem thm_top2: $ top $
 :::`),
     );
@@ -126,7 +126,7 @@ theorem thm_top2: $ top $
 
   test("an optional ---- + starter body freezes a labeled tree into publicData", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 Finish the discharge.
 
 theorem thm_top: $ top → top $
@@ -151,7 +151,7 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
 
   test("a pasted context left of the exercise's sequent symbol is discarded", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1" sequent="|-"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" sequent="|-"}
 theorem thm_top: $ top $
 ----
 l1: $ G |- top $ by top_i []
@@ -169,7 +169,7 @@ l1: $ G |- top $ by top_i []
 
   test("without an underline there is no starter and the canvas stays blank", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 Prose only, as before.
 
 theorem thm_top: $ top $
@@ -188,7 +188,7 @@ theorem thm_top: $ top $
   test("a malformed starter line is a compile diagnostic", async () => {
     expect(
       await diagnosticsFor(
-        prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 theorem thm_top: $ top $
 ----
 this is not a proof line
@@ -200,7 +200,7 @@ this is not a proof line
   test("a starter discharge mark that binds to nothing fails the compile", async () => {
     expect(
       await diagnosticsFor(
-        prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 theorem thm_top: $ top → top $
 ----
 a1: $ top ⊢ top $ by ax []
@@ -213,7 +213,7 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
   test("a bare-formula starter line is refused — one canonical sequent format", async () => {
     expect(
       await diagnosticsFor(
-        prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ top $ by top_i []
@@ -224,7 +224,7 @@ l1: $ top $ by top_i []
 
   test("options=auto complete toggles editor assistance", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1" options="auto complete"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" options="auto complete"}
 theorem thm_top: $ top $
 :::`),
     );
@@ -242,17 +242,17 @@ theorem thm_top: $ top $
   test("an unknown theory is a compile diagnostic", async () => {
     expect(
       await diagnosticsFor(
-        prawitzSource(`:::aufbau-proof-prawitz{theory="nope" id="p1"}
+        prawitzSource(`:::aufbau-proof-prawitz{system="nope" id="p1"}
 theorem thm_top: $ top $
 :::`),
       ),
-    ).toContain("unknown_theory");
+    ).toContain("unknown_system");
   });
 
   test("a goal header without a formula is a compile diagnostic", async () => {
     expect(
       await diagnosticsFor(
-        prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 theorem thm_top:
 :::`),
       ),
@@ -262,7 +262,7 @@ theorem thm_top:
   test("a missing id is a compile diagnostic", async () => {
     expect(
       await diagnosticsFor(
-        prawitzSource(`:::aufbau-proof-prawitz{theory="prop"}
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop"}
 theorem thm_top: $ top $
 :::`),
       ),
@@ -271,7 +271,7 @@ theorem thm_top: $ top $
 
   test("the prawitz proof renders its element with the goal seeded", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{theory="prop" id="p1"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 theorem thm_top: $ top $
 :::`),
     );

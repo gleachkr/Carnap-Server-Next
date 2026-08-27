@@ -636,7 +636,7 @@ fixes `f(0) = 1` and leaves every other argument to the student — so under
 ```
 
 Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
-attributes it accepts `variant` (`simple` | `validity` | `constraint`), `system` (a language spec id;
+attributes it accepts `variant` (`simple` | `validity` | `constraint`), `system` (an `aufbau-mm0` block name or a language spec id;
 only `forallx-calgary-2019` today — see "Languages and theories" below), `counterexample-to` (`validity`/`tautology` |
 `equivalence` | `inconsistency`/`contradiction` — the property the targeted
 sentences must have, defaulting to all-true for `simple` and `constraint` and
@@ -725,8 +725,9 @@ Nothing is not bananas.
 and `options` takes `nocheck` (this type's spelling of `feedback="none"`) and
 `checksyntax` (refuse to submit text that does not parse). The common `id`,
 `title`, `points`, `exam`, and `feedback` attributes apply as everywhere, and
-`system` names the language spec (only `forallx-calgary-2019` today — see
-"Languages and theories" below).
+`system` names the language: an `aufbau-mm0` block declared earlier in the
+document, or one of the ids the server ships (see "Languages and theories"
+below).
 
 The full reference — the check's architecture, the rewrite theory and its
 known gaps, the answer shape — lives next to the code in
@@ -807,9 +808,10 @@ with a colleague means sending them the source to host themselves.
 
 **A theory can be a language too.** If the file gives its sentence sort
 `@syntax role sentence`, the revision page says so, and formulas written
-against it read the way the section on languages below describes. Naming a
-hosted language in `system=` on a model or translation exercise is not
-supported yet — `system=` still takes the id of a language that ships.
+against it read the way the section on languages below describes. To set a
+model or translation exercise in it, name it from an `aufbau-mm0` block —
+`src="/content/revisions/<id>/theory.mm0"` — and write that block's name in the
+exercise's `system=`. `system=` takes a name in scope, not an address.
 
 ### Extending a theory, and writing one
 
@@ -860,13 +862,13 @@ source, extension and all:
 :::
 ```
 
-An `aufbau-proof` block references a theory by `name` and states the goal. The
+An `aufbau-proof` block names the system it is set in and states the goal. The
 body reads: prose (the prompt), then a single `theorem <name>: $ … $` line (the
 goal, in MM0 declaration syntax), then a `----` underline, then the starter proof
 body the student edits:
 
 ```md
-:::aufbau-proof{theory="prop" id="identity"}
+:::aufbau-proof{system="prop" id="identity"}
 Prove the law of identity.
 
 theorem thm_k (a b: wff): $ a -> b -> a $
@@ -882,8 +884,9 @@ statement will not verify). The student edits only the body below the underline;
 the goal header stays fixed.
 
 Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
-attributes it takes the required `theory` (a declared `aufbau-mm0` name, which must appear earlier in the
-document) and an `options` string of editor toggles: `auto` exposes the
+attributes it takes the required `system` (an `aufbau-mm0` block declared
+earlier in the document, or one of the ids the server ships — see "Languages and
+theories" below) and an `options` string of editor toggles: `auto` exposes the
 compiler's `auto?` proof search, `complete` exposes rule-name completion (both
 off by default — appropriate for introductory work, worth enabling for a course
 where search is expected). The proof-script format (proof lines, `by`, rule
@@ -895,9 +898,11 @@ to the code in `src/worker/exercises/aufbau-proof/README.md`.
 
 ## Languages and theories
 
-`theory=` on a proof exercise and `system=` on a truth table, a model, or a
-translation now name the same *kind* of thing: an MM0 file. That is the whole
-of this section, and it is worth stating plainly because it used to be false.
+**Every exercise that reads a formula takes `system=`, and they all mean the
+same thing by it: an MM0 file.** That is the whole of this section, and it is
+worth stating plainly because it used to be false — proofs took `theory=` and
+could only name a block, while a model or translation took `system=` and could
+only name a language the server shipped.
 
 A **theory** is what a proof is built from — sorts, terms, axioms, the rules a
 student cites by name. It is what `/theories/forallx-calgary-2019.mm0` serves,
@@ -907,7 +912,7 @@ A **language spec** is what a formula is written in — the same sorts and terms
 plus `@syntax` annotations saying how a student *spells* them: which brackets
 group, which spellings of `∧` are accepted, which of them is canonical, and
 which conventions the book refuses (forallx will not read `P → Q → R`, and will
-not let you write `(P)`). Two ship, and `system=` names one of them by id:
+not let you write `(P)`). Two ship, and `system=` names either of them by id:
 
 | Id | Language |
 | --- | --- |
@@ -921,10 +926,18 @@ Being MM0 is not a formality: an exercise type reads one by asking what role
 each constructor plays (`@syntax role conjunction`), so nothing in the server
 knows that this book calls conjunction `/\` or that book calls it `∧`. Adding a
 textbook's notation is a file, not a code change — which is what has to be true
-before an instructor can bring their own. Half of that is now real: an
-instructor can host their own MM0 and set *proofs* in it (see "Hosting a theory
-of your own" above). `system=`, which is what a model, translation or truth
-table names its language by, still takes one of the ids in the table above.
+before an instructor can bring their own, and it is now true for every type that
+reads a formula.
+
+**`system=` resolves in one order: your document, then the server.** A name
+matches an `aufbau-mm0` block declared earlier in the same document first, and
+one of the ids above second — so a course that extends forallx with its own
+`Cube` and `Loves` can call the result `forallx` and set proofs, models and
+translations in it without any of them disagreeing about what `A` means. A name
+that is neither is a compile error naming both lists. A language a model or
+translation is set in has to quantify; one that declares no `∀` and `∃` is
+refused with a diagnostic saying so, which is why `carnap-prop` is a truth-table
+language and not a model one.
 
 **The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
 predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters
@@ -1033,7 +1046,7 @@ By default there is no starter body — the student builds the tree from a root
 seeded with the goal:
 
 ```md
-:::aufbau-proof-tree{theory="prop" id="identity"}
+:::aufbau-proof-tree{system="prop" id="identity"}
 Build a proof of the law of identity.
 
 theorem thm_k (a b: wff): $ a -> b -> a $
@@ -1048,7 +1061,7 @@ label or a hypothesis `#n`. The compiler parses it back into a tree and the
 editor seeds from it:
 
 ```md
-:::aufbau-proof-tree{theory="prop" id="mp-start"}
+:::aufbau-proof-tree{system="prop" id="mp-start"}
 Finish the proof.
 
 theorem mp (a b: wff): $ (a -> b) , a ⊢ b $
@@ -1073,7 +1086,7 @@ once the tree compiles, and any engine diagnostic is shown inline on the node
 whose line caused it. The submitted answer carries `{ mmb, proofText, tree }`;
 review pages redraw the submitted tree.
 
-It takes the same attributes as `aufbau-proof` (`theory`, `id`, `title`,
+It takes the same attributes as `aufbau-proof` (`system`, `id`, `title`,
 `points`, `exam`, `feedback`, `options`). v1 is plain tree editing (free-text rule names, no
 rule-picker or drag-to-reparent); the tree is drawn by the vendored ProofML
 elements. The full reference lives in
@@ -1100,7 +1113,7 @@ The body reads prose (the prompt), the `theorem <name>: $ Γ ⊢ φ $` goal line
 `----` underline, then a starter Fitch proof (which may be empty):
 
 ```md
-:::aufbau-proof-fitch{theory="prop" id="mp"}
+:::aufbau-proof-fitch{system="prop" id="mp"}
 Derive Q from P → Q and P.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
@@ -1120,7 +1133,7 @@ a → a       :imp_intro 1-1
 ```
 
 Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
-`options` attributes it takes the required `theory` and an optional `assumption` naming the theory's
+`options` attributes it takes the required `system` and an optional `assumption` naming the theory's
 assumption axiom (default `ax`) — the rule the translator treats as introducing a
 context formula — plus two attributes naming how this theory spells a sequent:
 `sequent` its turnstile (default `⊢`) and `context` the separator between a
@@ -1170,7 +1183,7 @@ line, optionally followed by a `----` underline and a **starter** the editor
 opens with instead of a blank canvas:
 
 ```md
-:::aufbau-proof-prawitz{theory="forallx" id="self"}
+:::aufbau-proof-prawitz{system="forallx" id="self"}
 Prove the conditional by discharging its antecedent.
 
 theorem self (a: wff): $ _ ⊢ a → a $
@@ -1200,7 +1213,7 @@ compile, since the student could never fix it.
 
 Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
 `options` attributes
-it takes the required `theory` and three optional notational attributes:
+it takes the required `system` and three optional notational attributes:
 `assumption` names the theory's assumption axiom (default `ax`), exactly as
 `aufbau-proof-fitch` does; `sequent` names the theory's turnstile notation
 (default `⊢`) — used in every sequent the translator emits and stripped from

@@ -104,7 +104,7 @@ subproofs of ∨E / ↔I read apart rather than as one continuous bar.
 ## Authoring syntax
 
 ```md
-:::aufbau-proof-fitch{theory="prop" id="mp"}
+:::aufbau-proof-fitch{system="prop" id="mp"}
 Derive Q from P → Q and P.
 
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
@@ -117,7 +117,7 @@ b       :imp_elim 1 2
 
 Prose is the prompt; a `theorem <name>: $ Γ ⊢ φ $` line states the goal, a `----`
 underline separates it, then the starter Fitch proof (which may be empty).
-Attributes match `aufbau-proof` (`theory`, `id`, `title`, `points`, `exam`,
+Attributes match `aufbau-proof` (`system`, `id`, `title`, `points`, `exam`,
 `feedback`,
 `options`) plus an optional **`assumption`** naming the theory's assumption axiom
 (default `ax`), an optional **`sequent`** naming its turnstile notation

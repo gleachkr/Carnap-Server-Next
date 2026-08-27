@@ -2325,10 +2325,6 @@ msgstr "No assignments have been created yet."
 msgid "No attempts have been opened."
 msgstr "No attempts have been opened."
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "No aufbau-mm0 theory named “{name}” is declared before this proof."
-msgstr "No aufbau-mm0 theory named “{name}” is declared before this proof."
-
 #: src/worker/web/assignment-detail.tsx
 msgid "No corrections have been published for this assignment."
 msgstr "No corrections have been published for this assignment."
@@ -2393,6 +2389,14 @@ msgstr "No submissions have been recorded."
 #: src/worker/web/gradebook.tsx
 msgid "No submissions were recorded in this attempt."
 msgstr "No submissions were recorded in this attempt."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}."
+msgstr "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}."
+msgstr "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page."
@@ -3696,8 +3700,8 @@ msgid "The submission was not found."
 msgstr "The submission was not found."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The system attribute must name a notation system this server knows: {systems}."
-msgstr "The system attribute must name a notation system this server knows: {systems}."
+msgid "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
+msgstr "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
 
 #: src/worker/application/admin.ts
 #: src/worker/application/auth.ts

@@ -62,8 +62,12 @@ export interface ModelOptions {
 }
 
 export interface ModelPublicData {
-  /** The id of the notation system the formulas are written in. */
-  readonly dialect: string;
+  /**
+   * The id of the notation system the formulas are written in — the older
+   * shape, kept readable for every artifact compiled before the systems table.
+   * New compiles write {@link system} instead.
+   */
+  readonly dialect?: string;
   /**
    * Author-seeded field values, keyed by field label exactly as the givens
    * lines write them (`Domain`, `F(_,_)`, `a`). Absent when the author seeded
@@ -78,6 +82,15 @@ export interface ModelPublicData {
    * source. Empty for a simple exercise.
    */
   readonly required: readonly string[];
+  /**
+   * Which of the document's systems the formulas are written in, and
+   * {@link source} the copy of its text the join fills in. See
+   * `exercises/systems.ts`; between them they are what lets an exercise be set
+   * in a language its own document declares, rather than only in one the server
+   * ships.
+   */
+  readonly source?: string;
+  readonly system?: string;
   readonly target: ModelTarget;
   /** The formulas {@link target} applies to, in canonical source. Never empty. */
   readonly targeted: readonly string[];

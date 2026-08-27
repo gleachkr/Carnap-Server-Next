@@ -37,7 +37,7 @@ axiom top_i: $ top $;
 function proofDirective(id: string, goalName: string, points = 1): string {
   return `${THEORY}
 
-:::aufbau-proof{theory="prop" id="${id}" points="${points}"}
+:::aufbau-proof{system="prop" id="${id}" points="${points}"}
 theorem ${goalName}: $ top $
 ----
 l1: $ top $ by top_i []
@@ -136,7 +136,7 @@ term imp (a b: wff): wff; infixr imp: $->$ prec 25;
 axiom top_i: $ top $;
 :::
 
-:::aufbau-proof{theory="imp" id="p2"}
+:::aufbau-proof{system="imp" id="p2"}
 theorem g: $ top -> top $
 ----
 l1: $ top $ by top_i []

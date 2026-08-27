@@ -28,8 +28,8 @@ const FORALLX_SOURCE = THEORY_SOURCES["forallx-calgary-2019.mm0"] ?? "";
 
 const THEORY_BLOCK = `:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}\n:::`;
 
-function fitch(id: string, goal: string): string {
-  return `:::aufbau-proof-fitch{theory="forallx" id="${id}"}
+function fitch(id: string, goal: string, system = "forallx"): string {
+  return `:::aufbau-proof-fitch{system="${system}" id="${id}"}
 Take it apart and put it back.
 
 theorem ${goal} (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
@@ -195,5 +195,87 @@ Pick one.
     expect(script).toContain('"system":"forallx"');
     expect(script).not.toContain("@syntax");
     expect(script.length).toBeLessThan(FORALLX_SOURCE.length);
+  });
+});
+
+describe("system=", () => {
+  test("a proof can name a shipped id with no block at all", async () => {
+    // The common case, and what the attribute is for: a lesson that teaches
+    // from the textbook's own rules should not have to declare a block whose
+    // only job is to have a name.
+    const artifact = await compile(
+      fitch("ex1", "andcomm", "forallx-calgary-2019"),
+    );
+
+    expect(Object.keys(artifact.systems ?? {})).toEqual([
+      "forallx-calgary-2019",
+    ]);
+    expect(publicDataOf(artifact, "ex1").source).toContain("@syntax");
+  });
+
+  test("a block of the same name wins over the shipped id", async () => {
+    // The point of the order. A course that extends forallx calls the result
+    // whatever it likes — including `forallx-calgary-2019` — and every exercise
+    // naming it gets the extension.
+    const artifact = await compile(
+      `:::aufbau-mm0{name="forallx-calgary-2019" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube $
+term Cube (sq: seq): wff;
+:::
+
+${fitch("ex1", "andcomm", "forallx-calgary-2019")}`,
+    );
+
+    expect(publicDataOf(artifact, "ex1").source).toContain("term Cube");
+  });
+
+  test("a translation can be set in a language the document declares", async () => {
+    // Not possible before: `system=` took an id, and a block had no id. This is
+    // the half of #257 that a course with its own vocabulary was waiting for.
+    const artifact = await compile(
+      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube $
+term Cube (sq: seq): wff;
+:::
+
+::::translation{#t1 system="ours" variant="first-order"}
+Something is a cube.
+
+- ExCube(x)
+::::`,
+    );
+
+    expect(publicDataOf(artifact, "t1").system).toBe("ours");
+    expect(publicDataOf(artifact, "t1").source).toContain("term Cube");
+  });
+
+  test("a language with no quantifiers is refused, and says which half is missing", async () => {
+    const compiled = await compileCarnapMarkdown(
+      `::::translation{#t1 system="carnap-prop"}
+People danced.
+
+- P
+::::`,
+    );
+
+    expect(compiled.ok).toBe(false);
+    expect(compiled.diagnostics.map((one) => one.code)).toContain(
+      "system_not_first_order",
+    );
+  });
+
+  test("an unresolvable name names both places it was looked for", async () => {
+    const compiled = await compileCarnapMarkdown(
+      `${THEORY_BLOCK}\n\n${fitch("ex1", "andcomm", "forallks")}`,
+    );
+    const miss = compiled.diagnostics.find(
+      (one) => one.code === "unknown_system",
+    );
+
+    // A typo'd block name falls through to the shipped ids, so a message that
+    // listed only those would answer a question the author did not ask.
+    expect(miss?.message).toContain("This document declares");
+    expect(miss?.params?.declared).toBe("forallx");
+    expect(miss?.params?.available).toContain("gentzen-lk");
   });
 });

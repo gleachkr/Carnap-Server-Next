@@ -132,7 +132,7 @@ function lessonNaming(src: string): string {
   return `:::aufbau-mm0{name="hosted" src="${src}"}
 :::
 
-::::aufbau-proof{theory="hosted" id="k"}
+::::aufbau-proof{system="hosted" id="k"}
 Prove it.
 
 theorem thm_k (a b: wff): $ a -> b -> a $

@@ -91,7 +91,7 @@ This one arrives finished: \`∀ x P x ==> ∃ y P y\` by \`all_left\` then \`ex
 over an \`ax\` leaf. Open it and it already shows a ✓ — read the completed tree
 from the root sequent downward, then press **Check** to confirm it verifies.
 
-:::aufbau-proof-tree{theory="gentzen" id="starter_forall_to_exists" points="1"}
+:::aufbau-proof-tree{system="gentzen" id="starter_forall_to_exists" points="1"}
 A completed proof — study how \`all_left\` reads its witness off the sequent.
 
 ${headerOf("forall_to_exists")}
@@ -105,7 +105,7 @@ Here the outer chain is given, but the \`imp_left\` step at the top has **no
 premises yet**. Select that node and *Add premise* twice to supply the two
 identity leaves \`P x ==> P x\` and \`Q x ==> Q x\`; the ✓ appears once both are in.
 
-:::aufbau-proof-tree{theory="gentzen" id="starter_exists_mono" points="3"}
+:::aufbau-proof-tree{system="gentzen" id="starter_exists_mono" points="3"}
 The \`imp_left\` node is waiting for its two \`ax\` leaves — add them to close the proof.
 
 ${headerOf("exists_mono")}
@@ -119,7 +119,7 @@ ${starterBodyOf(existsMonoScaffold, existsMono.goalName)}
 assuming \`P x\`, one assuming \`Q x\` — so this is a good look at how the editor lays
 out a tree that forks. It arrives complete.
 
-:::aufbau-proof-tree{theory="gentzen" id="starter_exists_or_distrib" points="4"}
+:::aufbau-proof-tree{system="gentzen" id="starter_exists_or_distrib" points="4"}
 A completed branching proof — note the two subtrees under \`or_left\`.
 
 ${headerOf("exists_or_distrib")}
@@ -134,7 +134,7 @@ The showcase: permuting a \`∀∃\` prefix past a monotone matrix, \`∀ u ∃ 
 \`and_right\`, \`weak_left\`, and every quantifier rule through a deep tree — the
 stress test for how ProofML renders something big. It arrives complete.
 
-:::aufbau-proof-tree{theory="gentzen" id="starter_permute_mono" points="6"}
+:::aufbau-proof-tree{system="gentzen" id="starter_permute_mono" points="6"}
 A completed deep proof (two cuts) — scroll the tree and see how the layout holds up.
 
 ${headerOf("forall_exists_permute_mono")}
