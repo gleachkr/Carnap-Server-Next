@@ -3704,6 +3704,10 @@ msgid "The system “{name}” declares no quantifiers (@syntax role forall and 
 msgstr "The system “{name}” declares no quantifiers (@syntax role forall and exists), which this exercise type needs."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference."
+msgstr "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder."
 msgstr "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder."
 

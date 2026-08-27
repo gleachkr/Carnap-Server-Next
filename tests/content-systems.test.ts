@@ -11,6 +11,7 @@ import {
   exerciseHydrationScript,
 } from "../src/worker/exercises/hydration";
 import { keyedArtifact } from "../src/worker/exercises/systems";
+import { truthTableLanguage } from "../src/worker/exercises/truth-table/logic";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
 
 /**
@@ -288,6 +289,62 @@ Fill it in.
     expect(refused.diagnostics.map((one) => one.code)).toContain(
       "system_not_propositional",
     );
+  });
+
+  test("a language with no sentence sort still reaches its reader as a language", async () => {
+    // The table's entry is a discriminated pair and `source` is the arm that
+    // carries `@syntax`, so getting the discriminator wrong is silent: the
+    // exercise compiles, stores its formulas in the author's canonical
+    // spelling, and then has no language to read them back in. Which is what
+    // happened — the test was "declares a sentence sort", and a language-only
+    // spec has nothing to disambiguate and declares none.
+    const artifact = await compile(
+      `:::aufbau-mm0{name="ours" src="/theories/carnap-prop.mm0"}
+--| @syntax delimiter $ ∧ $
+infixl and: $∧$ prec 40;
+:::
+
+::::truth-table{#tt1 system="ours"}
+Fill it in.
+
+- P /\\ Q
+::::`,
+    );
+
+    const data = publicDataOf(artifact, "tt1") as {
+      readonly formulas: readonly string[];
+      readonly source?: string;
+    };
+
+    expect(Object.keys(artifact.systems?.ours ?? {})).toEqual(["source"]);
+    // Stored in the block's canonical spelling, which is the point: nothing but
+    // the block's own language reads it.
+    expect(data.formulas).toEqual(["(P ∧ Q)"]);
+    expect(truthTableLanguage(data)?.parse("(P ∧ Q)").ok).toBe(true);
+  });
+
+  test("a system that does not read says so, rather than what it lacks", async () => {
+    // `infixl` on a term that was never declared. The capability refusals state
+    // a fact about the language ("has quantifiers", "declares none"), so they
+    // may only be said of one that read; before this, an unreadable spec got
+    // the truth-table refusal and an author chasing a binder that was not the
+    // problem.
+    const compiled = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="ours" src="/theories/carnap-prop.mm0"}
+--| @syntax delimiter $ ∧ $
+infixl nosuchterm: $∧$ prec 40;
+:::
+
+::::truth-table{#tt1 system="ours"}
+Fill it in.
+
+- P /\\ Q
+::::`,
+    );
+
+    expect(compiled.diagnostics.map((one) => one.code)).toEqual([
+      "system_unreadable",
+    ]);
   });
 
   test("an unresolvable name names both places it was looked for", async () => {

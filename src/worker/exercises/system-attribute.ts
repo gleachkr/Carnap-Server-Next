@@ -24,6 +24,7 @@ import type {
   CompilerDiagnostic,
   DirectiveBlock,
 } from "../application/content/authoring-toolkit";
+import { diagnostic } from "../application/content/authoring-toolkit";
 import { languageFromSource } from "../logic/specs";
 import type { SystemResolver } from "./aufbau-proof/authoring";
 
@@ -85,11 +86,25 @@ export function parseSystemAttribute(
     return { language, source: resolved.source, system };
   }
 
-  if (resolved !== null) {
-    // It resolved and it is not one of these. Saying which half is missing is
-    // the whole gain over the allowlist this replaced: an author who declared
-    // their own language can act on "no quantifiers", while "must be one of:
-    // forallx-calgary-2019" told them to abandon it.
+  if (resolved !== null && language === null) {
+    // Not a refusal: the requirement has not been *asked* yet, because there is
+    // no language to ask it of. Saying "no quantifiers" here would state a fact
+    // about a spec nobody read — which is what this said before, and it sent an
+    // author looking for a binder in a file whose real problem was a typo three
+    // lines up.
+    diagnostics.push(
+      diagnostic(
+        block.line,
+        "system_unreadable",
+        "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.",
+        { params: { name: system } },
+      ),
+    );
+  } else if (resolved !== null) {
+    // It resolved, it read, and it is not one of these. Saying which half is
+    // missing is the whole gain over the allowlist this replaced: an author who
+    // declared their own language can act on "no quantifiers", while "must be
+    // one of: forallx-calgary-2019" told them to abandon it.
     diagnostics.push(requirement.refuse(system, block.line));
   }
 

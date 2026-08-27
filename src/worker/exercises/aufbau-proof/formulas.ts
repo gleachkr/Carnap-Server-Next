@@ -293,12 +293,28 @@ export function readNodeFormulas<
  * document, so it is appended by the join (`exercises/systems.ts`) at the
  * moment the two meet — which is also where {@link goalBinderScope} finds it
  * again, still inside `source`.
+ *
+ * **The condition is "stripping would lose something", and it has to be.** The
+ * question the entry answers is which bytes a reader needs, and the only thing
+ * `source` has that `mm0` does not is the `@syntax` annotations — so a theory
+ * whose stripped text is its own text has nothing to offer a surface parser and
+ * is tabled once. Asking instead whether the theory declares a *sentence sort*
+ * (this module's own question, {@link proofLanguage}) was a bug, because that
+ * is a proof-type question and the table serves all seven: `carnap-prop`
+ * annotates every connective it has and names no sentence sort — it has one
+ * provable sort, so there is nothing to disambiguate — and a truth table set in
+ * a document's own propositional block therefore got an entry with no `source`,
+ * leaving its reader to fall back to an id and read the author's notation as
+ * somebody else's. Nothing is lost the other way: roles are the only channel a
+ * language has for saying what its constructors mean, so a spec with no
+ * annotation at all cannot host any of the three interpreting types, and the
+ * proof types re-ask {@link proofLanguage} of the joined `source` anyway.
  */
 export function compiledSystem(theory: {
   readonly mm0: string;
   readonly source: string;
 }): CompiledSystem {
-  if (proofLanguage(theory.source) === null) {
+  if (stripSyntaxAnnotations(theory.source) === theory.source) {
     return { mm0: theory.mm0 };
   }
 

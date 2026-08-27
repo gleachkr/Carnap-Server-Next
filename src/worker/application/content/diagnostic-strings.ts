@@ -420,6 +420,14 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}.",
         placeholders("available", "declared", "name"),
       ),
+    // Said instead of either capability refusal below, and the reason those two
+    // are allowed to state a fact about the language: they are only reached for
+    // a language that read.
+    "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.":
+      i18n.t(
+        "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.",
+        placeholders("name"),
+      ),
     "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder.":
       i18n.t(
         "The system “{name}” has quantifiers, and a truth table is propositional — there is no column for a binder.",
