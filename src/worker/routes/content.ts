@@ -7,18 +7,29 @@ import {
   requireContentAuthor,
 } from "../application/authorization";
 import { ContentService } from "../application/content";
-import { contentArtifactFromRevision } from "../application/content/artifact";
+import {
+  contentArtifactFromRevision,
+  theoryArtifactFromRevision,
+} from "../application/content/artifact";
 import { compileCarnapMarkdown } from "../application/content/compiler";
+import { compileTheorySource } from "../application/content/mm0";
 import {
   componentAssetsForArtifact,
   exerciseHydrationForArtifact,
   renderCompiledContent,
 } from "../application/content/renderer";
 import { AppHttpError, badRequest } from "../application/errors";
-import type { ContentItem, ContentRevision } from "../domain/content";
+import type {
+  ContentItem,
+  ContentRevision,
+  ContentSourceFormat,
+} from "../domain/content";
 import type { AppBindings } from "../http";
+import { deferred } from "../i18n/deferred";
 import type { Translator } from "../i18n/translator";
+import { HOSTED_THEORY_SUFFIX, hostedTheoryPath } from "../logic/theories";
 import { storesForContext } from "../stores";
+import { hashAssetText } from "../web/asset-hash";
 import {
   renderContentCreateError,
   renderContentError,
@@ -44,7 +55,15 @@ import {
 import { revisionDateText } from "../web/revisions";
 import { resolveUsers } from "../web/users";
 
+/**
+ * A day, then revalidate. Longer than the built-in theories' hour because a
+ * revision's bytes cannot change at all — only a deploy can change theirs —
+ * and the ETag makes the asking cheap either way.
+ */
+const THEORY_SOURCE_CACHE_CONTROL = "private, max-age=86400, must-revalidate";
+
 interface CreateContentBody {
+  readonly sourceFormat?: unknown;
   readonly title?: unknown;
 }
 
@@ -195,7 +214,10 @@ async function createContentFromForm(
   const title = fieldValue(form.get("title"));
 
   try {
-    const item = await contentService(context).createItem(actor, { title });
+    const item = await contentService(context).createItem(actor, {
+      sourceFormat: fieldValue(form.get("sourceFormat")),
+      title,
+    });
 
     return redirect(`/content/${item.id}?created=1`);
   } catch (error) {
@@ -281,6 +303,11 @@ async function createRevisionFromForm(
  * The editor page for a given source: initial diagnostics and a
  * server-compiled preview document, after which the preview bundle keeps
  * both current on the client as the author types.
+ *
+ * An MM0 item gets the diagnostics and no preview. There is no document to
+ * build from a theory, and the summary of what one declares belongs on the
+ * revision page beside the address a lesson names it by — which is where it is
+ * useful and where there is something saved to describe.
  */
 async function renderEditor(
   context: Context<AppBindings>,
@@ -292,16 +319,42 @@ async function renderEditor(
     readonly status: AppHttpError["status"];
   },
 ): Promise<Response> {
-  const compiled = await compileCarnapMarkdown(sourceText);
   const i18n = context.get("i18n");
+  const shared = {
+    details,
+    itemId: item.id,
+    itemTitle: item.title,
+    sourceFormat: item.sourceFormat,
+    sourceText,
+    ...(failure === undefined
+      ? {}
+      : { error: failure.error, status: failure.status }),
+  };
+
+  if (item.sourceFormat === "mm0") {
+    const compiled = compileTheorySource(sourceText);
+
+    return renderRevisionEditor(context, {
+      ...shared,
+      diagnostics: compiled.diagnostics,
+      previewDocumentHtml: null,
+    });
+  }
+
+  const compiled = await compileCarnapMarkdown(sourceText, {
+    // The same theories the save will resolve, resolved the same way, so the
+    // preview cannot say a lesson compiles when the save will refuse it — or
+    // the reverse.
+    resolveTheory: contentService(context).theoryResolver(
+      requireAuthenticated(context),
+    ),
+  });
 
   return renderRevisionEditor(context, {
-    details,
+    ...shared,
     // A `CompilerDiagnostic` already satisfies the view's narrower model, and
     // remapping it field by field is how `params` got dropped on the way out.
     diagnostics: compiled.diagnostics,
-    itemId: item.id,
-    itemTitle: item.title,
     // The unsaved source has no document URL, so the preview builds the
     // whole content document and embeds it via iframe srcdoc.
     previewDocumentHtml: compiled.ok
@@ -318,10 +371,6 @@ async function renderEditor(
           title: i18n.t("Preview"),
         })
       : null,
-    sourceText,
-    ...(failure === undefined
-      ? {}
-      : { error: failure.error, status: failure.status }),
   });
 }
 
@@ -447,6 +496,11 @@ async function revisionPage(
     itemTitle: item.title,
     revisionId: revision.id,
     sourceText: revision.sourceText,
+    // A lesson's compiled form is a document the page frames; a theory's is a
+    // summary, and it is read here rather than rendered anywhere else.
+    ...(revision.sourceFormat === "mm0"
+      ? { theory: theoryArtifactFromRevision(revision) }
+      : {}),
   });
 }
 
@@ -490,6 +544,83 @@ async function revisionSourceDownload(
   });
 }
 
+/**
+ * A hosted theory at the address a lesson names it by.
+ *
+ * The second backing of the theory URL namespace: `/theories/…` is answered
+ * from the module graph, this is answered from the database, and an
+ * `aufbau-mm0` block's `src=` does not care which. Served rather than only
+ * resolved for the reason the built-ins are — an author who writes a path
+ * should be able to open it and read the rules their students will cite.
+ *
+ * Inline text, deliberately not the download `/source` is: a download saves a
+ * file with a generated name instead of showing anything, which is the
+ * opposite of what an address is for here.
+ *
+ * **It serves exactly what a lesson can resolve, by asking the same question.**
+ * The resolver is the one place the rule lives — yours, and a theory — so the
+ * route cannot come to disagree with the compiler about what is at an address.
+ * That also gives every miss one answer: no such revision, not yours, and not
+ * a theory are all 404, where reading the revision through the service would
+ * have said 403 to the second and told a stranger it exists.
+ *
+ * A revision never changes, so its bytes can be cached hard. `private` because
+ * a hosted theory is its owner's alone — there is no sharing layer yet, and a
+ * shared cache holding one keyed by URL would be the beginnings of one nobody
+ * designed.
+ */
+async function revisionTheorySource(
+  context: Context<AppBindings>,
+): Promise<Response> {
+  const loginRedirect = webActorOrLogin(context);
+
+  if (loginRedirect !== null) {
+    return loginRedirect;
+  }
+
+  const source = await contentService(context).theoryResolver(
+    requireAuthenticated(context),
+  )(hostedTheoryPath(requiredParam(context, "revisionId")));
+
+  if (source === null) {
+    return context.notFound();
+  }
+
+  return new Response(source, {
+    headers: {
+      "Cache-Control": THEORY_SOURCE_CACHE_CONTROL,
+      // Plain text, not a download, and not a media type invented for MM0:
+      // the point is to be readable in a tab, and a type no browser knows
+      // only invites it to guess.
+      "Content-Type": "text/plain; charset=utf-8",
+      ETag: `"${hashAssetText(source)}"`,
+    },
+  });
+}
+
+/**
+ * Refuse a revision of the wrong kind, as a miss rather than a failure.
+ *
+ * A route is written for one format — a document page renders a lesson, the
+ * MM0 route serves a theory — and handing it the other is not a broken
+ * artifact but an address that does not name anything: there is no document at
+ * a theory's id, and no theory at a lesson's. Saying 404 rather than letting
+ * the artifact read boundary throw keeps a 500 for what it is for, a row that
+ * really is unreadable.
+ */
+function requireFormat(
+  revision: ContentRevision,
+  format: ContentSourceFormat,
+): void {
+  if (revision.sourceFormat !== format) {
+    throw new AppHttpError(
+      404,
+      "content_revision_not_found",
+      deferred.i18n.t("The content revision was not found."),
+    );
+  }
+}
+
 async function revisionDocumentPage(
   context: Context<AppBindings>,
 ): Promise<Response> {
@@ -505,6 +636,8 @@ async function revisionDocumentPage(
     actor,
     requiredParam(context, "revisionId"),
   );
+  requireFormat(revision, "markdown");
+
   const item = await service.getItem(actor, revision.itemId);
   const artifact = contentArtifactFromRevision(revision);
   const i18n = context.get("i18n");
@@ -552,7 +685,22 @@ contentRoutes.post("/", async (context) => {
     );
   }
 
+  // Present-but-not-a-string is a caller mistake worth naming; absent is the
+  // ordinary case, and the service reads it as a lesson.
+  if (
+    body.sourceFormat !== undefined &&
+    typeof body.sourceFormat !== "string"
+  ) {
+    throw badRequest(
+      "invalid_content_source_format",
+      "Content source format must be a string.",
+    );
+  }
+
   const item = await contentService(context).createItem(actor, {
+    ...(body.sourceFormat === undefined
+      ? {}
+      : { sourceFormat: body.sourceFormat }),
     title: body.title,
   });
 
@@ -572,6 +720,11 @@ contentRoutes.get("/revisions/:revisionId/document", (context) =>
 
 contentRoutes.get("/revisions/:revisionId/source", (context) =>
   revisionSourceDownload(context),
+);
+
+contentRoutes.get(
+  `/revisions/:revisionId${HOSTED_THEORY_SUFFIX}`,
+  (context) => revisionTheorySource(context),
 );
 
 contentRoutes.get("/revisions/:revisionId", async (context) => {

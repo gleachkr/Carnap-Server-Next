@@ -766,12 +766,50 @@ Three are available:
 | `/theories/gentzen-lk.mm0` | Classical LK, a multi-conclusion sequent calculus with both sides comma-separated. An LK derivation is a tree, so this is the tree surface's system. |
 | `/theories/carnap-prop.mm0` | Carnap's default `prop` — a propositional *signature* with no rules of its own, which is what the truth-table type reads. Name it here and add your own rules in the block body to build a system over its notation. |
 
-A `src` must be a path this site serves. A theory kept on another server is not
-supported: the text is frozen into the exercise when you save, and putting a
-third party's uptime inside that save — and inside the live preview, which
-compiles in your browser under a policy that permits only same-origin
-requests — would make saving a lesson fail for reasons that have nothing to do
-with the lesson. Copy the MM0 into the block instead.
+A `src` must be a path this site serves — one of the three above, or one of
+yours (below). A theory kept on another server is not supported: the text is
+frozen into the exercise when you save, and putting a third party's uptime
+inside that save — and inside the live preview, which compiles in your browser
+under a policy that permits only same-origin requests — would make saving a
+lesson fail for reasons that have nothing to do with the lesson. Copy the MM0
+into the block instead.
+
+### Hosting a theory of your own
+
+A system nobody has published, or one of the three with your course's own
+vocabulary added, does not have to be pasted into every lesson that uses it.
+Create a content item and choose **Theory or language** for its kind: its
+revisions hold MM0 instead of Markdown, and saving one checks that the file
+reads. The revision page then shows its address, which is what a lesson's
+`src=` names:
+
+```md
+:::aufbau-mm0{name="ours" src="/content/revisions/01JD…/theory.mm0"}
+:::
+```
+
+Four things follow from that being a *revision's* address.
+
+**It is fixed.** There is no spelling that means "the latest". Revising your
+theory leaves every lesson that named an earlier revision exactly as it was —
+which is the point, because a proof that verified last week should not stop
+verifying because somebody widened a signature. To move a lesson onto a new
+revision, save a new revision of the lesson with the new address in it.
+
+**Your students never fetch it.** The MM0 is frozen into the exercise when the
+lesson is saved, so the address is resolved once, by you, at authoring time.
+A student's browser never asks for it, and nothing in an assignment depends on
+it still being there.
+
+**It is yours alone.** A hosted theory is readable by its owner: you can name
+your own from your own lessons, and nobody else can name yours. Sharing one
+with a colleague means sending them the source to host themselves.
+
+**A theory can be a language too.** If the file gives its sentence sort
+`@syntax role sentence`, the revision page says so, and formulas written
+against it read the way the section on languages below describes. Naming a
+hosted language in `system=` on a model or translation exercise is not
+supported yet — `system=` still takes the id of a language that ships.
 
 ### Extending a theory, and writing one
 
@@ -883,7 +921,10 @@ Being MM0 is not a formality: an exercise type reads one by asking what role
 each constructor plays (`@syntax role conjunction`), so nothing in the server
 knows that this book calls conjunction `/\` or that book calls it `∧`. Adding a
 textbook's notation is a file, not a code change — which is what has to be true
-before an instructor can bring their own.
+before an instructor can bring their own. Half of that is now real: an
+instructor can host their own MM0 and set *proofs* in it (see "Hosting a theory
+of your own" above). `system=`, which is what a model, translation or truth
+table names its language by, still takes one of the ids in the table above.
 
 **The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
 predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters

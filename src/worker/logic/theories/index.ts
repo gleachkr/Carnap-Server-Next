@@ -27,10 +27,14 @@
  * (`src/client/editor-preview.ts` runs this compiler too), and in tests that
  * call `compileCarnapMarkdown` with no server anywhere.
  *
- * That is the seam the rest of the namespace grows into: an instructor-hosted
- * theory will be a URL under `/content/`, answered by a store read rather than
- * a fetch, and a foreign origin is the branch after that. What a path *means*
- * does not change when a backing is added.
+ * That is the seam the rest of the namespace grew into. **There are two
+ * backings now.** A built-in answers from the module graph above; an
+ * instructor-hosted theory is a URL under `/content/` (see
+ * {@link hostedTheoryPath}) answered by a store read in the Worker and by a
+ * same-origin fetch in the author's browser — which is how one address means
+ * one thing in both places. A foreign origin is the branch after that, and is
+ * still refused. What a path *means* did not change when the second backing
+ * was added, and that is the property the namespace exists for.
  *
  * **Why `.mm0` files rather than string constants** is the argument in
  * `../specs/index.ts`, and the shape is the same: the import attribute costs no
@@ -71,6 +75,71 @@ export const BUILT_IN_THEORY_PATHS: readonly string[] = Object.keys(
 )
   .map((fileName) => `${THEORY_ROUTE_PREFIX}${fileName}`)
   .sort();
+
+/**
+ * How a caller answers for the paths this module cannot: an instructor-hosted
+ * theory, whose bytes live in the database rather than in the module graph.
+ *
+ * `null` is the only failure, and that is a decision rather than a shortcut.
+ * "No such revision", "that revision belongs to somebody else" and "that item
+ * is a lesson, not a theory" are one miss, because telling them apart would
+ * make `src=` an oracle for the existence of other people's revision ids.
+ *
+ * Async because one implementation reads a database and the other fetches;
+ * built-ins never go through it, so the common lesson still compiles with no
+ * server anywhere.
+ */
+export type TheoryResolver = (path: string) => Promise<string | null>;
+
+/**
+ * The other backing: where a theory an instructor *hosts* lives.
+ *
+ * A revision, never an item, and that is the whole safety property. A lesson
+ * freezes the theory text when it compiles, so what a `src=` names has to stay
+ * the thing that was frozen — an author revising their theory must not silently
+ * repoint somebody's saved lesson at rules it was never checked against. A
+ * revision is immutable, so naming one is immutable by construction rather than
+ * by anybody remembering. There is deliberately no "latest" spelling.
+ *
+ * These two functions are the only place the shape of that path is written
+ * down. Three readers have to agree on it — the route that serves the bytes,
+ * the Worker resolver that reads them out of the database at compile time, and
+ * the author's browser, which fetches the same URL to compile the live preview.
+ */
+export const HOSTED_THEORY_PREFIX = "/content/revisions/";
+
+/**
+ * Ends in `.mm0` so the address says what it is, and so it reads like the
+ * built-in paths beside it in an authored line.
+ */
+export const HOSTED_THEORY_SUFFIX = "/theory.mm0";
+
+/** Where the MM0 of a given content revision is served. */
+export function hostedTheoryPath(revisionId: string): string {
+  return `${HOSTED_THEORY_PREFIX}${revisionId}${HOSTED_THEORY_SUFFIX}`;
+}
+
+/**
+ * The revision a hosted-theory path names, or `null` when the path is not one.
+ *
+ * Rejects an empty id and one carrying a `/` of its own, so that a resolver
+ * cannot be talked into reading some other route's parameter as a revision id.
+ */
+export function hostedTheoryRevisionId(path: string): string | null {
+  if (
+    !path.startsWith(HOSTED_THEORY_PREFIX) ||
+    !path.endsWith(HOSTED_THEORY_SUFFIX)
+  ) {
+    return null;
+  }
+
+  const id = path.slice(
+    HOSTED_THEORY_PREFIX.length,
+    path.length - HOSTED_THEORY_SUFFIX.length,
+  );
+
+  return id.length === 0 || id.includes("/") ? null : id;
+}
 
 /** The theory a file name under the route prefix stands for, or `null`. */
 export function theorySourceByFileName(fileName: string): string | null {

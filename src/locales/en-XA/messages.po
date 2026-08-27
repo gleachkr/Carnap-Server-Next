@@ -471,6 +471,10 @@ msgstr ""
 msgid "All of your courses are archived."
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Also a language: formulas are read at the sort {sort}, so exercises can be set in it too."
+msgstr ""
+
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 msgid "An assumption can't have premises."
 msgstr ""
@@ -497,6 +501,10 @@ msgstr ""
 
 #: src/worker/web/lti.tsx
 msgid "An LMS launch from {platform} wants to connect to the Carnap account for {email}. If this was you, confirm the link below; if not, close this page and nothing will be linked."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "An MM0 file must declare something."
 msgstr ""
 
 #: src/worker/exercises/free-response/read-only-view.ts
@@ -1983,6 +1991,10 @@ msgstr ""
 msgid "Keyboard"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Kind"
+msgstr ""
+
 #: src/worker/web/profile.tsx
 msgid "Language"
 msgstr ""
@@ -2022,6 +2034,10 @@ msgstr ""
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Leave the field and go back to the line"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Lesson"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -2186,6 +2202,10 @@ msgstr ""
 
 #: src/worker/routes/courses.ts
 msgid "Membership updated."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "MM0 source"
 msgstr ""
 
 #: src/worker/exercises/group.ts
@@ -2375,7 +2395,7 @@ msgid "No submissions were recorded in this attempt."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "No theory is served at “{path}”. This site ships: {available}."
+msgid "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page."
 msgstr ""
 
 #: src/worker/web/admin.tsx
@@ -2822,6 +2842,10 @@ msgstr ""
 msgid "Published settings"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Quote this address in an aufbau-mm0 block's src to build proofs on this theory. It names this revision, so later revisions leave existing lessons alone."
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Raw HTML is not allowed in carnap-markdown-v1."
 msgstr ""
@@ -3023,6 +3047,14 @@ msgstr ""
 msgid "Rule (proof line)"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Rules"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Rules a proof can cite: {names}."
+msgstr ""
+
 #: src/worker/web/admin.tsx
 msgid "Save"
 msgstr ""
@@ -3171,6 +3203,10 @@ msgid "Something went wrong on our end. Please try again."
 msgstr ""
 
 #: src/worker/web/content.tsx
+msgid "Sorts"
+msgstr ""
+
+#: src/worker/web/content.tsx
 msgid "Source"
 msgstr ""
 
@@ -3304,6 +3340,18 @@ msgstr ""
 msgid "Teaching assistant"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Terms"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "That content item is a theory, not a lesson. An assignment can only be set on a lesson."
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "That is not a kind of content this site stores."
+msgstr ""
+
 #: src/worker/application/auth.ts
 msgid "That language is not available."
 msgstr ""
@@ -3398,6 +3446,7 @@ msgstr ""
 #: src/worker/application/content.ts
 #: src/worker/application/gradebook.ts
 #: src/worker/application/submissions.ts
+#: src/worker/routes/content.ts
 msgid "The content revision was not found."
 msgstr ""
 
@@ -3669,7 +3718,12 @@ msgid "The variant attribute must be simple, validity, or partial."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof/theory-panel.ts
+#: src/worker/web/content.tsx
 msgid "Theory"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Theory or language"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -3778,6 +3832,10 @@ msgstr ""
 msgid "This exercise wants a propositional sentence: sentence letters and connectives only."
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "This file is a proof system only. To set model or translation exercises in it as well, give its sentence sort a @syntax role."
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "This formula could not be read."
@@ -3859,6 +3917,10 @@ msgstr ""
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This matches the intended answer."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This MM0 does not read: {reason}"
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts
@@ -4201,6 +4263,10 @@ msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Write Carnap Markdown — the preview follows along — then save an immutable revision."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by."
 msgstr ""
 
 #: src/worker/web/courses.tsx

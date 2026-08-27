@@ -33,6 +33,8 @@ import { compileTranslation } from "../../exercises/translation/authoring";
 import { TRANSLATION_KIND } from "../../exercises/translation/types";
 import { compileTruthTable } from "../../exercises/truth-table/authoring";
 import { TRUTH_TABLE_KIND } from "../../exercises/truth-table/types";
+import type { TheoryResolver } from "../../logic/theories";
+import type { AuthoringExerciseRegistry } from "./authoring-registry";
 import { createDefaultAuthoringExerciseRegistry } from "./authoring-registry";
 import type {
   CompilerDiagnostic,
@@ -325,6 +327,36 @@ function collectInvalidItemLinkDiagnostics(
  * "Undefined control sequence" in the artifact and leave a student to discover
  * them; an author watching the preview finds out instead, next to the line.
  */
+/**
+ * The same resolver, asked at most once per path. Undefined in, undefined out:
+ * a caller with nothing to resolve with should not acquire a cache.
+ */
+function memoizeTheoryResolver(
+  resolve: TheoryResolver | undefined,
+): TheoryResolver | undefined {
+  if (resolve === undefined) {
+    return undefined;
+  }
+
+  // The promise, not the result: two blocks naming one path in the same
+  // document should share a single read rather than start a second one while
+  // the first is still in flight.
+  const answers = new Map<string, Promise<string | null>>();
+
+  return (path) => {
+    const asked = answers.get(path);
+
+    if (asked !== undefined) {
+      return asked;
+    }
+
+    const answer = resolve(path);
+    answers.set(path, answer);
+
+    return answer;
+  };
+}
+
 function mathDiagnostic(failure: MathFailure): CompilerDiagnostic {
   return diagnostic(
     failure.line,
@@ -337,10 +369,38 @@ function mathDiagnostic(failure: MathFailure): CompilerDiagnostic {
   );
 }
 
+/**
+ * What a caller can lend the compiler beyond the source text.
+ *
+ * Both are optional, and the defaults are what makes this compiler runnable
+ * anywhere: with neither, a document compiles from the module graph alone —
+ * no database, no network — which is what `bun test`, the demo scripts and the
+ * verify scripts rely on, and what the browser preview relied on entirely
+ * until theories could be hosted.
+ */
+export interface CompileMarkdownOptions {
+  readonly authoringRegistry?: AuthoringExerciseRegistry;
+  /**
+   * How a `src=` this site serves from the *database* is answered — the
+   * instructor-hosted half of the theory URL namespace. Built-ins never reach
+   * it. Omitted by every caller that has no way to read one, which is not a
+   * degraded mode: it is a compiler that knows about the shipped theories and
+   * nothing else, and it says so in the diagnostic.
+   */
+  readonly resolveTheory?: TheoryResolver;
+}
+
 export async function compileCarnapMarkdown(
   sourceText: string,
-  authoringRegistry = createDefaultAuthoringExerciseRegistry(),
+  options: CompileMarkdownOptions = {},
 ): Promise<CompileMarkdownResult> {
+  const authoringRegistry =
+    options.authoringRegistry ?? createDefaultAuthoringExerciseRegistry();
+  // One read per path per document. A lesson naming its course's theory in
+  // five blocks is the ordinary shape, and each of those blocks would
+  // otherwise be its own database round trip for bytes that cannot have
+  // changed since the first.
+  const resolveTheory = memoizeTheoryResolver(options.resolveTheory);
   const normalizedSource = sourceText.replaceAll("\r\n", "\n");
   const lines = normalizedSource.split("\n");
   const tree = markdownParser.parse(normalizedSource) as Root;
@@ -470,7 +530,11 @@ export async function compileCarnapMarkdown(
       await flushMarkdown();
 
       const block = directiveBlockFromNode(child, lines);
-      const theory = compileAufbauMm0(block, diagnostics);
+      const theory = await compileAufbauMm0(
+        block,
+        diagnostics,
+        resolveTheory,
+      );
 
       if (theory !== null) {
         if (theories.has(theory.name)) {

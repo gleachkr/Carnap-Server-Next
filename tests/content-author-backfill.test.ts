@@ -103,6 +103,7 @@ describe("the content_author backfill", () => {
         createdAt: NOW,
         id: "item-owned",
         ownerUserId: owner,
+        sourceFormat: "markdown",
         title: "Week one",
       });
 

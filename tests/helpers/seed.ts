@@ -62,6 +62,7 @@ export async function seedCourseWithAssignment(
     createdAt: SEED_NOW,
     id: `item-${key}`,
     ownerUserId: ownerId,
+    sourceFormat: "markdown",
     title: `Item ${key}`,
   });
   await stores.content.createRevision({

@@ -140,6 +140,7 @@ async function createAssignmentInCourse(
   const item = await stores.content.createItem({
     id: `content-item-${courseId}`,
     ownerUserId: ownerId,
+    sourceFormat: "markdown",
     title: "Proofs",
     createdAt: NOW,
   });
@@ -1752,6 +1753,7 @@ async function createPointedAssignment(
   const item = await stores.content.createItem({
     id: `content-item-${key}-${courseId}`,
     ownerUserId: ownerId,
+    sourceFormat: "markdown",
     title: "Proofs",
     createdAt: NOW,
   });

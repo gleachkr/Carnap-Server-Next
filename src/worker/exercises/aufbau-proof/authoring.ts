@@ -24,6 +24,7 @@ import {
 } from "../../application/content/authoring-toolkit";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { roleIndex } from "../../logic/specs/roles";
+import type { TheoryResolver } from "../../logic/theories";
 import { BUILT_IN_THEORY_PATHS, theoryByPath } from "../../logic/theories";
 import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
 import {
@@ -424,18 +425,25 @@ const ELSEWHERE = /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i;
  * miss it was — the two are worth telling apart, because one is a typo and the
  * other is a feature that does not exist yet.
  *
- * A built-in resolves from the module graph rather than by fetching the path it
- * names. The bytes are the same either way (`tests/theories.test.ts` holds the
- * route and this resolver to each other), and answering locally is what lets a
- * theory resolve identically here, in the browser preview, and in tests with no
- * server running. A path this site will one day serve from the database, and a
- * URL on somebody else's server, are the two branches that grow from here.
+ * **Built-ins first, and without asking anyone.** A shipped theory resolves
+ * from the module graph rather than by fetching the path it names. The bytes
+ * are the same either way (`tests/theories.test.ts` holds the route and this
+ * resolver to each other), and answering locally is what lets a theory resolve
+ * identically here, in the browser preview, and in tests with no server
+ * running. It also means the ordinary lesson never touches `resolve`, whose
+ * absence is therefore not a failure — it is what a caller with nothing to
+ * offer beyond the built-ins passes.
+ *
+ * A path this site serves out of the *database* is the second backing:
+ * `resolve` is how a caller that can read one answers. The third branch, a URL
+ * on somebody else's server, is still refused above.
  */
-function resolveTheorySrc(
+async function resolveTheorySrc(
   src: string,
   line: number,
   diagnostics: CompilerDiagnostic[],
-): string | null {
+  resolve: TheoryResolver | undefined,
+): Promise<string | null> {
   if (ELSEWHERE.test(src)) {
     diagnostics.push(
       diagnostic(
@@ -449,14 +457,14 @@ function resolveTheorySrc(
     return null;
   }
 
-  const found = theoryByPath(src);
+  const found = theoryByPath(src) ?? (await resolve?.(src)) ?? null;
 
   if (found === null) {
     diagnostics.push(
       diagnostic(
         line,
         "unknown_theory_src",
-        "No theory is served at “{path}”. This site ships: {available}.",
+        "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page.",
         {
           params: {
             available: BUILT_IN_THEORY_PATHS.join(", "),
@@ -495,10 +503,11 @@ function resolveTheorySrc(
  * free to write them in an extension for the same reason; either way they are
  * read by `@aufbau/syntax` from the artifact and never reach the compiler.
  */
-export function compileAufbauMm0(
+export async function compileAufbauMm0(
   block: DirectiveBlock,
   diagnostics: CompilerDiagnostic[],
-): AufbauTheory | null {
+  resolve?: TheoryResolver,
+): Promise<AufbauTheory | null> {
   validateAttributes(block, AUFBAU_MM0_ATTRIBUTES, diagnostics);
 
   const name = requireAttribute(block, "name", diagnostics);
@@ -512,7 +521,9 @@ export function compileAufbauMm0(
   const src = block.attrs.src;
   const extension = block.bodyLines.join("\n").trim();
   const base =
-    src === undefined ? null : resolveTheorySrc(src, block.line, diagnostics);
+    src === undefined
+      ? null
+      : await resolveTheorySrc(src, block.line, diagnostics, resolve);
 
   if (src === undefined && extension.length === 0) {
     diagnostics.push(

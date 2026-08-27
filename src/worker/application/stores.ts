@@ -340,6 +340,8 @@ export interface CreateContentItemInput {
   readonly id: AppId;
   readonly ownerUserId: AppId;
   readonly title: string;
+  /** Fixed here and for good: every revision of the item inherits it. */
+  readonly sourceFormat: ContentItem["sourceFormat"];
   readonly createdAt: Timestamp;
 }
 

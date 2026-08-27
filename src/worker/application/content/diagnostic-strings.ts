@@ -395,6 +395,19 @@ export function buildDiagnosticStrings(i18n: Translator) {
       placeholders("token"),
     ),
 
+    // Saving an MM0 item rather than a lesson (`mm0.ts`). The reason is the
+    // syntax library's own English sentence, quoted rather than translated:
+    // there are dozens of them, they are read by whoever is writing the spec,
+    // and they name MM0 machinery that has no plainer wording. The frame is
+    // translated so a reader knows what they are being told.
+    "An MM0 file must declare something.": i18n.t(
+      "An MM0 file must declare something.",
+    ),
+    "This MM0 does not read: {reason}": i18n.t(
+      "This MM0 does not read: {reason}",
+      placeholders("reason"),
+    ),
+
     // The three proof types, whose theory and goal headers are shared.
     "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal.":
       i18n.t(
@@ -409,10 +422,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "No aufbau-mm0 theory named “{name}” is declared before this proof.",
         placeholders("name"),
       ),
-    "No theory is served at “{path}”. This site ships: {available}.": i18n.t(
-      "No theory is served at “{path}”. This site ships: {available}.",
-      placeholders("available", "path"),
-    ),
+    "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page.":
+      i18n.t(
+        "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page.",
+        placeholders("available", "path"),
+      ),
     // Warnings, not errors: shadowing is usually deliberate — a rule schema
     // has to name its metavariables something — and only the author knows.
     // Each says what the name meant before, since that is the part the

@@ -220,6 +220,10 @@ export const contentItems = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
+    /** Fixed at creation and inherited by every revision; see `ContentItem`. */
+    sourceFormat: text("source_format", { enum: ["markdown", "mm0"] })
+      .notNull()
+      .default("markdown"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
   },
@@ -234,7 +238,9 @@ export const contentRevisions = sqliteTable(
       .notNull()
       .references(() => contentItems.id, { onDelete: "restrict" }),
     revisionNumber: integer("revision_number").notNull(),
-    sourceFormat: text("source_format", { enum: ["markdown"] }).notNull(),
+    sourceFormat: text("source_format", {
+      enum: ["markdown", "mm0"],
+    }).notNull(),
     sourceText: text("source_text").notNull(),
     /** Why this revision was made, as the author described it; empty when unsaid. */
     details: text("details").notNull().default(""),

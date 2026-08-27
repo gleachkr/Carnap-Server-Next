@@ -28,7 +28,22 @@ export type {
   RubricSpec,
 } from "./exercises";
 
-export type ContentSourceFormat = "markdown";
+/**
+ * What kind of source a content item holds — a lesson, or an MM0 artifact.
+ *
+ * `markdown` is a lesson in Carnap markdown: it compiles to a document, it is
+ * what an assignment points at, and it is what every item was until MM0 items
+ * arrived. `mm0` is a theory or a language — the same kind of file
+ * `/theories/` serves, hosted by an instructor instead of shipped by us. It
+ * compiles to nothing readable: its "document" is a validation, and what a
+ * lesson does with it is name it in an `aufbau-mm0` block's `src=`.
+ *
+ * The two share ownership, revisions with the author's note, and the library
+ * listing, because those are properties of *authored text* and not of what the
+ * text says. What they do not share is anywhere a compiled document is
+ * expected — which is why an assignment cannot be set on an `mm0` revision.
+ */
+export type ContentSourceFormat = "markdown" | "mm0";
 export type ContentSourceProfile = "carnap-markdown-v1";
 export type MultipleChoiceMode = "single" | "multiple";
 
@@ -36,6 +51,19 @@ export interface ContentItem {
   readonly id: AppId;
   readonly ownerUserId: AppId;
   readonly title: string;
+  /**
+   * The format of every revision of this item, fixed when it was created.
+   *
+   * It lives on the item rather than only on the revision because the question
+   * is asked before there is a revision to ask it of — the first editor page
+   * has to know which editor to open — and because an item that changed kind
+   * between revisions would break the thing pinning makes safe: an assignment
+   * points at revision 3, and revision 4 turning into a theory would leave a
+   * course pointing at a lesson that has stopped being one. A revision still
+   * carries its own copy, written from here, so a row that has been read out
+   * of the database alone still knows what it is.
+   */
+  readonly sourceFormat: ContentSourceFormat;
   readonly createdAt: Timestamp;
   readonly updatedAt: Timestamp;
 }

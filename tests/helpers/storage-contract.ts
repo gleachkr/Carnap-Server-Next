@@ -79,6 +79,7 @@ export function describeStorageContract(
     const item = await stores.content.createItem({
       id: "content-item-1",
       ownerUserId: instructor.id,
+      sourceFormat: "markdown",
       title: "Modus Ponens",
       createdAt: NOW,
     });
@@ -103,6 +104,7 @@ export function describeStorageContract(
     const item = await stores.content.createItem({
       id: "content-item-1",
       ownerUserId: instructor.id,
+      sourceFormat: "markdown",
       title: "Conditional Proof",
       createdAt: NOW,
     });
@@ -517,6 +519,7 @@ export function describeStorageContract(
         const unwritten = await stores.content.createItem({
           id: "content-item-2",
           ownerUserId: instructor.id,
+          sourceFormat: "markdown",
           title: "Modus Tollens",
           createdAt: NOW,
         });

@@ -1156,6 +1156,7 @@ class SqliteContentStore implements ContentStore {
           id: input.id,
           ownerUserId: input.ownerUserId,
           title: input.title,
+          sourceFormat: input.sourceFormat,
           createdAt: input.createdAt,
           updatedAt: input.createdAt,
         })

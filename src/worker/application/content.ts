@@ -1,13 +1,20 @@
-import type { ContentItem, ContentRevision } from "../domain/content";
+import type {
+  ContentItem,
+  ContentRevision,
+  ContentSourceFormat,
+} from "../domain/content";
 import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import type { JsonValue } from "../domain/json";
 import { timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
+import type { TheoryResolver } from "../logic/theories";
+import { hostedTheoryRevisionId } from "../logic/theories";
 import type { AuthenticatedActor } from "./auth";
 import { requireContentAuthor } from "./authorization";
 import { compileCarnapMarkdown } from "./content/compiler";
 import { sha256Id } from "./content/hash";
+import { compileTheorySource } from "./content/mm0";
 import { AppHttpError, badRequest, forbidden } from "./errors";
 import type { AppStores } from "./stores";
 
@@ -17,6 +24,16 @@ export interface ContentServiceOptions {
 }
 
 export interface CreateContentItemCommand {
+  /**
+   * What the item will hold, as the request said it — validated here rather
+   * than narrowed at the route, beside the other asserts, so the form path and
+   * the JSON path refuse the same values with the same words.
+   *
+   * Optional, and absent means a lesson: every caller that predates MM0 items
+   * meant one, and a form that does not offer the choice should not have to
+   * send it.
+   */
+  readonly sourceFormat?: string;
   readonly title: string;
 }
 
@@ -70,6 +87,26 @@ function assertDetails(details: string): void {
   }
 }
 
+/**
+ * The format a create request asked for. Absent and empty both mean a lesson;
+ * anything else that is not a format we have is refused rather than quietly
+ * read as one, because the only way to send one is to have bypassed the form.
+ */
+function resolveSourceFormat(asked: string | undefined): ContentSourceFormat {
+  if (asked === undefined || asked.length === 0 || asked === "markdown") {
+    return "markdown";
+  }
+
+  if (asked === "mm0") {
+    return asked;
+  }
+
+  throw badRequest(
+    "invalid_content_source_format",
+    deferred.i18n.t("That is not a kind of content this site stores."),
+  );
+}
+
 function contentNotFound(): AppHttpError {
   return new AppHttpError(
     404,
@@ -96,6 +133,7 @@ export class ContentService {
     requireContentAuthor(actor);
 
     const title = normalizeTitle(command.title);
+    const sourceFormat = resolveSourceFormat(command.sourceFormat);
 
     assertTitle(title);
 
@@ -106,6 +144,7 @@ export class ContentService {
       createdAt: now,
       id: createAppId(nowDate.getTime()),
       ownerUserId: actor.user.id,
+      sourceFormat,
       title,
     });
   }
@@ -131,6 +170,47 @@ export class ContentService {
     return item;
   }
 
+  /**
+   * How a lesson's `src=` reaches a theory this site serves from the database.
+   *
+   * The compiler resolves the built-in `/theories/…` paths from the module
+   * graph and asks this about everything else that is not somebody else's
+   * origin. Ownership is the whole of the policy: a hosted theory is its
+   * author's, there is no sharing layer yet, and so a path naming one of
+   * *your* revisions resolves and any other path does not.
+   *
+   * All three ways of missing — no such revision, not yours, not a theory —
+   * answer `null` alike. Distinguishing them would let an author probe for the
+   * existence of other people's revision ids one `src=` at a time, which is a
+   * worse thing to have built than a slightly vaguer diagnostic.
+   *
+   * A method rather than a free function because the resolver is per actor,
+   * and both compiling callers — saving a revision, and the editor's
+   * server-rendered preview — have to build the same one.
+   */
+  theoryResolver(actor: AuthenticatedActor): TheoryResolver {
+    return async (path) => {
+      const revisionId = hostedTheoryRevisionId(path);
+
+      if (revisionId === null) {
+        return null;
+      }
+
+      const revision =
+        await this.options.stores.content.getRevision(revisionId);
+
+      if (revision === null || revision.sourceFormat !== "mm0") {
+        return null;
+      }
+
+      const item = await this.options.stores.content.getItem(revision.itemId);
+
+      return item !== null && item.ownerUserId === actor.user.id
+        ? revision.sourceText
+        : null;
+    };
+  }
+
   async createRevision(
     actor: AuthenticatedActor,
     itemId: AppId,
@@ -145,9 +225,18 @@ export class ContentService {
 
     assertSourceText(command.sourceText);
     assertDetails(details);
-    await this.getItem(actor, itemId);
 
-    const compiled = await compileCarnapMarkdown(command.sourceText);
+    const item = await this.getItem(actor, itemId);
+    // What "compile" means depends on what the item holds: a lesson becomes a
+    // document, a theory becomes a verdict and a summary. Both results carry
+    // `ok` and `diagnostics`, so everything past this line — the failed-save
+    // error, the editor's list, the gutter markers — is one path.
+    const compiled =
+      item.sourceFormat === "mm0"
+        ? compileTheorySource(command.sourceText)
+        : await compileCarnapMarkdown(command.sourceText, {
+            resolveTheory: this.theoryResolver(actor),
+          });
 
     if (!compiled.ok) {
       const first = compiled.diagnostics[0];
@@ -170,8 +259,12 @@ export class ContentService {
     const nextRevisionNumber = revisions.length + 1;
     const nowDate = this.options.now?.() ?? new Date();
     const now = timestampNow(nowDate);
+    // Namespaced by format, so that two items holding byte-identical text are
+    // not claimed to hold the same thing. Markdown's prefix is the one it has
+    // always had: it is stored on every revision ever saved, and rewriting it
+    // would make an existing revision's text look new when it was saved again.
     const contentHash = await sha256Id(
-      `carnap-markdown-v1\n${command.sourceText}`,
+      `${item.sourceFormat === "mm0" ? "mm0-v1" : "carnap-markdown-v1"}\n${command.sourceText}`,
     );
 
     // (item_id, content_hash) is unique, so the same source cannot be saved
@@ -197,7 +290,9 @@ export class ContentService {
       id: createAppId(nowDate.getTime()),
       itemId,
       revisionNumber: nextRevisionNumber,
-      sourceFormat: "markdown",
+      // The item's, not the caller's: nothing on the way in gets to say what
+      // kind of thing this revision is, so the two cannot come apart.
+      sourceFormat: item.sourceFormat,
       sourceText: command.sourceText,
     });
   }

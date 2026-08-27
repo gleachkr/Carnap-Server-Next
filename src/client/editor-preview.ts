@@ -12,7 +12,9 @@
 import type { EditorView } from "@codemirror/view";
 import { raw } from "hono/html";
 import type { CompilerDiagnostic } from "../worker/application/content/authoring-toolkit";
+import type { CompileMarkdownResult } from "../worker/application/content/compiler";
 import { compileCarnapMarkdown } from "../worker/application/content/compiler";
+import { compileTheorySource } from "../worker/application/content/mm0";
 import {
   componentAssetsForArtifact,
   exerciseHydrationForArtifact,
@@ -38,6 +40,7 @@ import {
   type Translator,
   VALUE,
 } from "../worker/i18n/translator";
+import { hostedTheoryRevisionId } from "../worker/logic/theories";
 import {
   artifactStyleProps,
   contentDocumentHtml,
@@ -376,11 +379,144 @@ function mountEditor(
   return view;
 }
 
-function setUpPreview(
+/**
+ * A theory this site hosts, fetched from the same address the lesson names it
+ * by.
+ *
+ * The Worker resolves one of these with a database read; the browser has no
+ * database, so it asks the route — which is the point of the theory namespace
+ * being addresses rather than ids. Same-origin, so the page's CSP
+ * (`connect-src 'self'`) already permits it, and the author's own session is
+ * the ownership check: the route serves nobody else's theory.
+ *
+ * Every failure is `null`, the miss the compiler's diagnostic is written for.
+ * Two are worth naming. A signed-out tab gets a *redirect to the login page*,
+ * which `fetch` follows and reports as `ok`, so the content type rather than
+ * the status is what tells a theory from an HTML page. And a network error
+ * throws, which would otherwise take down the whole preview compile for a
+ * lesson whose other blocks are fine.
+ */
+async function fetchHostedTheory(path: string): Promise<string | null> {
+  if (hostedTheoryRevisionId(path) === null) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(path, {
+      credentials: "same-origin",
+      headers: { Accept: "text/plain" },
+    });
+
+    if (
+      !response.ok ||
+      !(response.headers.get("content-type") ?? "").startsWith("text/plain")
+    ) {
+      return null;
+    }
+
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Draw a compiled lesson into the preview column — the `draw` half of
+ * {@link setUpEditor} for a markdown item.
+ *
+ * A theory has no counterpart: its page has no preview column at all. What an
+ * author writing MM0 wants while typing is the complaint, which the shared
+ * half already gives them; what the file declares is on the revision page,
+ * beside the address a lesson names it by, once there is a saved revision to
+ * declare anything.
+ */
+function drawPreview(
   split: HTMLElement,
-  source: HTMLTextAreaElement,
   frame: HTMLIFrameElement,
   diagnosticsHost: HTMLElement,
+) {
+  return async (
+    compiled: CompileMarkdownResult,
+    stale: () => boolean,
+  ): Promise<void> => {
+    // On failure the last good preview stays up, dimmed as stale.
+    split.classList.toggle("preview-stale", !compiled.ok);
+
+    if (!compiled.ok) {
+      renderProofChecks(diagnosticsHost, [], proofCheckStrings());
+
+      return;
+    }
+
+    // The rebuild has no request and no catalog — an i18n module import here
+    // would ship `@lingui/core` and every locale in this bundle. It words
+    // itself from the strings the server resolved for this page instead, so
+    // the preview stays in the author's language across edits.
+    const i18n = previewTranslator();
+
+    // Before the srcdoc, not after: the class is what un-hides the frame,
+    // and a document that loads into a `display: none` iframe measures
+    // itself against no layout, so the height it reports back is useless.
+    // Once a preview exists it is never empty again — a later failure keeps
+    // it and dims it.
+    split.classList.remove("preview-empty");
+
+    // No `escapeFrame` here, unlike the frames that hold a saved document: a
+    // link followed out of the preview would replace this editor, and the
+    // source in it is unsaved by definition.
+    frame.srcdoc = contentDocumentHtml({
+      body: raw(renderCompiledContent(compiled.artifact, i18n)),
+      componentAssets: componentAssetsForArtifact(compiled.artifact),
+      exerciseHydration: exerciseHydrationForArtifact(
+        compiled.artifact,
+        i18n,
+      ),
+      i18n,
+      locale: i18n.locale,
+      ...artifactStyleProps(compiled.artifact),
+      // The frame's own title, which the server already resolved for this
+      // page's language.
+      title: frame.title || "Preview",
+    });
+
+    // Engine-check any proof exercises (async: loads the compiler wasm) —
+    // linear starters verify, tree goals declare cleanly.
+    const checkStrings = proofCheckStrings();
+    const checks = [
+      ...(await proofChecksFor(compiled.artifact, checkStrings)),
+      ...(await treeChecksFor(compiled.artifact, checkStrings)),
+    ];
+
+    if (!stale()) {
+      renderProofChecks(diagnosticsHost, checks, checkStrings);
+    }
+  };
+}
+
+/**
+ * The editor's live loop, over whichever compiler the item's format calls for.
+ *
+ * `compile` and `draw` are separate because the two formats agree about the
+ * first half and not the second: both recompile on a typing pause and both
+ * report diagnostics under the field and on the lines, but only a lesson has a
+ * document to draw. A theory's `draw` does nothing, and its page has no preview
+ * column for it to draw into — what an author needs while writing MM0 is the
+ * complaint, and what the file declares is on the revision page once saved.
+ *
+ * `stale` is handed to `draw` rather than checked for it: drawing a lesson
+ * loads the proof compiler's wasm, so a later edit can overtake it *inside*
+ * the draw, and only the draw knows where its own await points are.
+ */
+function setUpEditor<
+  Result extends {
+    readonly diagnostics: readonly CompilerDiagnostic[];
+    readonly ok: boolean;
+  },
+>(
+  source: HTMLTextAreaElement,
+  diagnosticsHost: HTMLElement,
+  compile: (text: string) => Promise<Result> | Result,
+  draw: (result: Result, stale: () => boolean) => Promise<void> | void,
 ): void {
   let latest = 0;
   // Assigned below, once the debounce is in place for it to drive. Read only
@@ -389,7 +525,7 @@ function setUpPreview(
 
   const render = async (): Promise<void> => {
     const sequence = ++latest;
-    const compiled = await compileCarnapMarkdown(source.value);
+    const compiled = await compile(source.value);
 
     // A newer edit finished compiling first; drop this stale result.
     if (sequence !== latest) {
@@ -413,54 +549,8 @@ function setUpPreview(
         })),
       );
     }
-    // On failure the last good preview stays up, dimmed as stale.
-    split.classList.toggle("preview-stale", !compiled.ok);
 
-    if (compiled.ok) {
-      // The rebuild has no request and no catalog — an i18n module import here
-      // would ship `@lingui/core` and every locale in this bundle. It words
-      // itself from the strings the server resolved for this page instead, so
-      // the preview stays in the author's language across edits.
-      const i18n = previewTranslator();
-
-      // Before the srcdoc, not after: the class is what un-hides the frame,
-      // and a document that loads into a `display: none` iframe measures
-      // itself against no layout, so the height it reports back is useless.
-      // Once a preview exists it is never empty again — a later failure keeps
-      // it and dims it.
-      split.classList.remove("preview-empty");
-
-      // No `escapeFrame` here, unlike the frames that hold a saved document: a
-      // link followed out of the preview would replace this editor, and the
-      // source in it is unsaved by definition.
-      frame.srcdoc = contentDocumentHtml({
-        body: raw(renderCompiledContent(compiled.artifact, i18n)),
-        componentAssets: componentAssetsForArtifact(compiled.artifact),
-        exerciseHydration: exerciseHydrationForArtifact(
-          compiled.artifact,
-          i18n,
-        ),
-        i18n,
-        locale: i18n.locale,
-        ...artifactStyleProps(compiled.artifact),
-        // The frame's own title, which the server already resolved for this
-        // page's language.
-        title: frame.title || "Preview",
-      });
-
-      // Engine-check any proof exercises (async: loads the compiler wasm) —
-      // linear starters verify, tree goals declare cleanly.
-      const checkStrings = proofCheckStrings();
-      const checks = [
-        ...(await proofChecksFor(compiled.artifact, checkStrings)),
-        ...(await treeChecksFor(compiled.artifact, checkStrings)),
-      ];
-      if (sequence === latest) {
-        renderProofChecks(diagnosticsHost, checks, checkStrings);
-      }
-    } else {
-      renderProofChecks(diagnosticsHost, [], proofCheckStrings());
-    }
+    await draw(compiled, () => sequence !== latest);
   };
 
   let pending: number | undefined;
@@ -539,6 +629,18 @@ if (source?.form != null) {
   warnBeforeDiscarding(source.form);
 }
 
+// An MM0 item has no preview column and no document to build, so it is
+// recognized by the absence of the split rather than by asking the page what
+// format it is: the two are the same fact, and one of them cannot be wrong.
+if (source !== null && diagnosticsHost !== null && split === null) {
+  setUpEditor(
+    source,
+    diagnosticsHost,
+    (text) => compileTheorySource(text),
+    () => undefined,
+  );
+}
+
 if (
   split !== null &&
   source !== null &&
@@ -546,7 +648,13 @@ if (
   frame !== undefined &&
   diagnosticsHost !== null
 ) {
-  setUpPreview(split, source, frame, diagnosticsHost);
+  setUpEditor(
+    source,
+    diagnosticsHost,
+    (text) =>
+      compileCarnapMarkdown(text, { resolveTheory: fetchHostedTheory }),
+    drawPreview(split, frame, diagnosticsHost),
+  );
 
   if (modeSwitch !== null) {
     setUpModeSwitch(split, modeSwitch);

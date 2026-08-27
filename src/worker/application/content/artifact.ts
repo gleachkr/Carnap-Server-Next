@@ -6,6 +6,7 @@ import type { JsonValue } from "../../domain/json";
 import { deferred } from "../../i18n/deferred";
 import type { Translator } from "../../i18n/translator";
 import { AppHttpError } from "../errors";
+import type { CompiledTheoryArtifact } from "./mm0";
 
 /**
  * A stored artifact that cannot be read, with the diagnosis attached.
@@ -183,4 +184,59 @@ export function contentArtifactFromRevision(
   revision: ContentRevision,
 ): CompiledContentArtifact {
   return parseContentArtifact(revision.compiled, revision.id);
+}
+
+function isStringArray(value: unknown): boolean {
+  return (
+    Array.isArray(value) && value.every((one) => typeof one === "string")
+  );
+}
+
+/**
+ * The same boundary for the other kind of artifact: what an `mm0` revision
+ * stored about itself when it was saved.
+ *
+ * Separate from {@link parseContentArtifact} rather than a branch inside it,
+ * because the two answer different questions and every caller already knows
+ * which one it is asking — a document route wants a document, and a theory
+ * summary is not a degenerate one. What they share is the failure: an
+ * unreadable row names itself in the log and apologizes in prose, and the
+ * repair is the same, saving the source again.
+ */
+export function parseTheoryArtifact(
+  compiled: JsonValue,
+  revisionId: string,
+): CompiledTheoryArtifact {
+  if (!isObject(compiled)) {
+    unreadable(revisionId, `the artifact is ${describe(compiled)}`);
+  }
+
+  if (compiled.kind !== "mm0") {
+    unreadable(
+      revisionId,
+      `\`kind\` is ${describe(compiled.kind)}, not "mm0"`,
+    );
+  }
+
+  for (const field of ["axioms", "sorts", "terms"] as const) {
+    if (!isStringArray(compiled[field])) {
+      unreadable(revisionId, `\`${field}\` is not an array of strings`);
+    }
+  }
+
+  if (
+    compiled.sentenceSort !== null &&
+    typeof compiled.sentenceSort !== "string"
+  ) {
+    unreadable(revisionId, "`sentenceSort` is neither a string nor null");
+  }
+
+  return compiled as unknown as CompiledTheoryArtifact;
+}
+
+/** {@link parseTheoryArtifact} over a revision, which knows its own id. */
+export function theoryArtifactFromRevision(
+  revision: ContentRevision,
+): CompiledTheoryArtifact {
+  return parseTheoryArtifact(revision.compiled, revision.id);
 }

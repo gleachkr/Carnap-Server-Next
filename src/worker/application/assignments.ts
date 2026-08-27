@@ -562,15 +562,7 @@ export class AssignmentService {
       throw contentRevisionNotFound();
     }
 
-    const item = await this.options.stores.content.getItem(revision.itemId);
-
-    if (item === null) {
-      throw contentItemNotFound();
-    }
-
-    if (item.ownerUserId !== actor.user.id) {
-      throw forbidden("content_owner_required");
-    }
+    const item = await this.requireAssignableLesson(actor, revision);
 
     const assignment = await this.options.stores.assignments.create({
       assessmentMode,
@@ -662,15 +654,7 @@ export class AssignmentService {
       throw contentRevisionNotFound();
     }
 
-    const item = await this.options.stores.content.getItem(revision.itemId);
-
-    if (item === null) {
-      throw contentItemNotFound();
-    }
-
-    if (item.ownerUserId !== actor.user.id) {
-      throw forbidden("content_owner_required");
-    }
+    const item = await this.requireAssignableLesson(actor, revision);
 
     const updated = await this.options.stores.assignments.updateDraft({
       assessmentMode,
@@ -858,15 +842,7 @@ export class AssignmentService {
       );
     }
 
-    const item = await this.options.stores.content.getItem(revision.itemId);
-
-    if (item === null) {
-      throw contentItemNotFound();
-    }
-
-    if (item.ownerUserId !== actor.user.id) {
-      throw forbidden("content_owner_required");
-    }
+    await this.requireAssignableLesson(actor, revision);
 
     const nowDate = this.options.now?.() ?? new Date();
     const updated = await this.options.stores.assignments.repointPublished({
@@ -1301,6 +1277,45 @@ export class AssignmentService {
       ),
       userId: command.userId,
     });
+  }
+
+  /**
+   * The checks every path that points an assignment at a revision makes: the
+   * item exists, the actor owns it, and it is a lesson.
+   *
+   * The last is why this is a method and not three copies of two lines. A
+   * content item can also hold MM0 — a theory an instructor hosts for their
+   * lessons to name — and a theory has no document to render, no manifest, and
+   * no exercises. Pointing an assignment at one would not fail here; it would
+   * fail much later and much worse, as a 500 from the artifact read boundary
+   * on the attempt page, or as a gradebook column whose denominator is zero.
+   * The pickers do not offer one, but the JSON API takes whatever id it is
+   * given, so the refusal belongs where the id is resolved.
+   */
+  private async requireAssignableLesson(
+    actor: AuthenticatedActor,
+    revision: ContentRevision,
+  ): Promise<ContentItem> {
+    const item = await this.options.stores.content.getItem(revision.itemId);
+
+    if (item === null) {
+      throw contentItemNotFound();
+    }
+
+    if (item.ownerUserId !== actor.user.id) {
+      throw forbidden("content_owner_required");
+    }
+
+    if (item.sourceFormat !== "markdown") {
+      throw badRequest(
+        "assignment_content_not_a_lesson",
+        deferred.i18n.t(
+          "That content item is a theory, not a lesson. An assignment can only be set on a lesson.",
+        ),
+      );
+    }
+
+    return item;
   }
 
   private async getAssignmentInCourse(

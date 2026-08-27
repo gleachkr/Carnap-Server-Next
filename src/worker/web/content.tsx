@@ -2,7 +2,12 @@ import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
 import type { DiagnosticMessageId } from "../application/content/diagnostic-strings";
-import type { ContentItem, ContentRevision } from "../domain/content";
+import type { CompiledTheoryArtifact } from "../application/content/mm0";
+import type {
+  ContentItem,
+  ContentRevision,
+  ContentSourceFormat,
+} from "../domain/content";
 import type { User } from "../domain/users";
 import type { ExerciseHydration } from "../exercises/hydration";
 import type { AppBindings } from "../http";
@@ -12,6 +17,7 @@ import {
   translateMessage,
   VALUE,
 } from "../i18n/translator";
+import { hostedTheoryPath } from "../logic/theories";
 import { contentCrumb, contentItemCrumb } from "./breadcrumbs";
 import {
   ContentFrame,
@@ -103,6 +109,9 @@ const ItemsTable: FC<{
       <thead>
         <tr>
           <SortHeader label={i18n.t("Title")} />
+          {/* Sortable, because the reason to look is usually "where are my
+              theories" — an author has many lessons and a few of these. */}
+          <SortHeader label={i18n.t("Kind")} />
           <SortHeader label={i18n.t("Updated")} />
           <th scope="col">{i18n.t("Actions")}</th>
         </tr>
@@ -117,6 +126,11 @@ const ItemsTable: FC<{
             <tr>
               <td>
                 <a href={`/content/${item.id}`}>{item.title}</a>
+              </td>
+              <td>
+                {item.sourceFormat === "mm0"
+                  ? i18n.t("Theory or language")
+                  : i18n.t("Lesson")}
               </td>
               {/* The instant behind the localized date, which does not sort. */}
               <td data-sort-value={item.updatedAt}>
@@ -157,7 +171,53 @@ const ContentItemCreateBar: FC<{
         placeholder={i18n.t("New content item")}
         required
       />
+      <SourceFormatSelect />
     </CreateBar>
+  );
+};
+
+/**
+ * What kind of source the new item will hold — the one thing about an item
+ * that cannot be changed afterwards, which is why it is asked here and nowhere
+ * else. Both creation surfaces use it so the two cannot drift.
+ *
+ * The labels avoid "markdown" and "MM0": an author choosing between them is
+ * choosing between writing a lesson and writing the logic a lesson is set in,
+ * and the file formats follow from that rather than the other way round.
+ */
+const SOURCE_FORMAT_FIELD_ID = "content-source-format";
+
+const SourceFormatSelect: FC<{ readonly labelled?: boolean }> = ({
+  labelled,
+}) => {
+  const i18n = useI18n();
+  const label = i18n.t("Kind");
+  const options = (
+    <>
+      <option value="markdown">{i18n.t("Lesson")}</option>
+      <option value="mm0">{i18n.t("Theory or language")}</option>
+    </>
+  );
+
+  // The create bar is a row of controls with no room for headings, so its
+  // label is the accessible name and nothing more; the standalone form has the
+  // space to show one.
+  if (labelled !== true) {
+    return (
+      <select aria-label={label} name="sourceFormat">
+        {options}
+      </select>
+    );
+  }
+
+  return (
+    <label for={SOURCE_FORMAT_FIELD_ID}>
+      {label}
+      <br />
+      <select id={SOURCE_FORMAT_FIELD_ID} name="sourceFormat">
+        {options}
+      </select>
+    </label>
   );
 };
 
@@ -175,6 +235,7 @@ const ContentItemForm: FC<{
         <br />
         <input name="title" required value={title ?? ""} />
       </label>
+      <SourceFormatSelect labelled />
       <button type="submit">{i18n.t("Create content item")}</button>
     </form>
   );
@@ -246,17 +307,32 @@ const RevisionEditor: FC<{
   readonly details: string;
   readonly diagnostics: readonly Diagnostic[];
   readonly itemId: string;
+  readonly sourceFormat: ContentSourceFormat;
   readonly sourceText: string;
-}> = ({ context, details, diagnostics, itemId, sourceText }) => {
+}> = ({
+  context,
+  details,
+  diagnostics,
+  itemId,
+  sourceFormat,
+  sourceText,
+}) => {
   const i18n = useI18n();
+  const theory = sourceFormat === "mm0";
 
   return (
     <form action={`/content/${itemId}/revisions/new`} method="post">
       <Sheet
         className="source-sheet"
-        description={i18n.t(
-          "Write Carnap Markdown — the preview follows along — then save an immutable revision.",
-        )}
+        description={
+          theory
+            ? i18n.t(
+                "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by.",
+              )
+            : i18n.t(
+                "Write Carnap Markdown — the preview follows along — then save an immutable revision.",
+              )
+        }
         footer={
           <div class="sheet-actions">
             {/* The note travels with the save, in the footer beside it, because
@@ -299,7 +375,7 @@ const RevisionEditor: FC<{
           for={SOURCE_FIELD_ID}
           id={SOURCE_LABEL_ID}
         >
-          {i18n.t("Carnap Markdown")}
+          {theory ? i18n.t("MM0 source") : i18n.t("Carnap Markdown")}
         </label>
         <textarea
           data-editor-source
@@ -310,7 +386,8 @@ const RevisionEditor: FC<{
           // Carnap Markdown is mostly directive names, attribute keys, and
           // logical operators; a spellchecker marks nearly all of it, which
           // buries the words an author would actually want flagged. (CodeMirror
-          // turns it off itself, so this is the no-JS path.)
+          // turns it off itself, so this is the no-JS path.) MM0 is the same
+          // argument with nothing but machinery in it.
           spellcheck={false}
         >
           {sourceText}
@@ -585,11 +662,28 @@ export function renderRevisionEditor(
     /** The server-compiled preview of the initial source, or null when it
      * doesn't compile; the client bundle takes over from the first edit. */
     readonly previewDocumentHtml: string | null;
+    /**
+     * What the item holds. A theory gets the editor and its diagnostics with
+     * no second column: there is no document to preview, and inventing one —
+     * a rendering of the MM0 the author is looking at already — would be a
+     * column that repeats the one beside it.
+     */
+    readonly sourceFormat: ContentSourceFormat;
     readonly sourceText: string;
     readonly status?: Status;
   },
 ): Response {
   const i18n = context.get("i18n");
+  const editor = (
+    <RevisionEditor
+      context={context}
+      details={model.details}
+      diagnostics={model.diagnostics}
+      itemId={model.itemId}
+      sourceFormat={model.sourceFormat}
+      sourceText={model.sourceText}
+    />
+  );
 
   return renderShell(
     context,
@@ -605,58 +699,56 @@ export function renderRevisionEditor(
       {model.error === undefined ? null : (
         <ErrorSummary>{model.error}</ErrorSummary>
       )}
-      <div class="editor-mode-switch" data-editor-mode-switch>
-        <button
-          aria-pressed="true"
-          class="ghost"
-          data-mode-target="write"
-          type="button"
-        >
-          {i18n.t("Write")}
-        </button>
-        <button
-          aria-pressed="false"
-          class="ghost"
-          data-mode-target="preview"
-          type="button"
-        >
-          {i18n.t("Preview")}
-        </button>
-      </div>
-      <ContentSplit
-        // Nothing has compiled yet, so there is no earlier preview to dim as
-        // stale — the column would just be an empty box. The preview bundle
-        // drops the class for good the first time a document lands.
-        {...(model.previewDocumentHtml === null
-          ? { className: "preview-empty" }
-          : {})}
-        content={
-          // srcdoc rather than a URL: the source is unsaved, so there is no
-          // document route to point at (and no fullscreen link).
-          <ContentFrame
-            placeholder={
-              <>
-                <p class="content-frame-empty-title">
-                  {i18n.t("Nothing to preview yet")}
-                </p>
-                <p>{i18n.t("The source doesn't compile.")}</p>
-              </>
+      {model.sourceFormat === "mm0" ? (
+        editor
+      ) : (
+        <>
+          <div class="editor-mode-switch" data-editor-mode-switch>
+            <button
+              aria-pressed="true"
+              class="ghost"
+              data-mode-target="write"
+              type="button"
+            >
+              {i18n.t("Write")}
+            </button>
+            <button
+              aria-pressed="false"
+              class="ghost"
+              data-mode-target="preview"
+              type="button"
+            >
+              {i18n.t("Preview")}
+            </button>
+          </div>
+          <ContentSplit
+            // Nothing has compiled yet, so there is no earlier preview to dim as
+            // stale — the column would just be an empty box. The preview bundle
+            // drops the class for good the first time a document lands.
+            {...(model.previewDocumentHtml === null
+              ? { className: "preview-empty" }
+              : {})}
+            content={
+              // srcdoc rather than a URL: the source is unsaved, so there is no
+              // document route to point at (and no fullscreen link).
+              <ContentFrame
+                placeholder={
+                  <>
+                    <p class="content-frame-empty-title">
+                      {i18n.t("Nothing to preview yet")}
+                    </p>
+                    <p>{i18n.t("The source doesn't compile.")}</p>
+                  </>
+                }
+                srcdoc={model.previewDocumentHtml ?? ""}
+                title={i18n.t("Preview")}
+              />
             }
-            srcdoc={model.previewDocumentHtml ?? ""}
-            title={i18n.t("Preview")}
+            mode="write"
+            rail={editor}
           />
-        }
-        mode="write"
-        rail={
-          <RevisionEditor
-            context={context}
-            details={model.details}
-            diagnostics={model.diagnostics}
-            itemId={model.itemId}
-            sourceText={model.sourceText}
-          />
-        }
-      />
+        </>
+      )}
       {raw(
         uiStringsScript(
           EDITOR_UI_STRINGS_ATTRIBUTE,
@@ -670,6 +762,62 @@ export function renderRevisionEditor(
   );
 }
 
+/**
+ * What a saved theory declares, and the address a lesson names it by.
+ *
+ * The address is the reason this panel exists. A hosted theory is only useful
+ * once it is quoted in an `aufbau-mm0` block, and the thing to quote is a
+ * *revision's* URL — so it is shown where a revision is being looked at, and
+ * shown as text to copy rather than only as a link to follow.
+ */
+const TheorySummary: FC<{
+  readonly artifact: CompiledTheoryArtifact;
+  readonly path: string;
+}> = ({ artifact, path }) => {
+  const i18n = useI18n();
+
+  return (
+    <Sheet
+      description={i18n.t(
+        "Quote this address in an aufbau-mm0 block's src to build proofs on this theory. It names this revision, so later revisions leave existing lessons alone.",
+      )}
+      summary={
+        <SummaryStrip
+          items={[
+            { label: i18n.t("Rules"), value: artifact.axioms.length },
+            { label: i18n.t("Sorts"), value: artifact.sorts.length },
+            { label: i18n.t("Terms"), value: artifact.terms.length },
+          ]}
+        />
+      }
+      title={i18n.t("Theory")}
+    >
+      <p>
+        <a href={path}>
+          <code>{path}</code>
+        </a>
+      </p>
+      <p>
+        {artifact.sentenceSort === null
+          ? i18n.t(
+              "This file is a proof system only. To set model or translation exercises in it as well, give its sentence sort a @syntax role.",
+            )
+          : i18n.t(
+              "Also a language: formulas are read at the sort {sort}, so exercises can be set in it too.",
+              { sort: artifact.sentenceSort },
+            )}
+      </p>
+      {artifact.axioms.length === 0 ? null : (
+        <p class="small">
+          {i18n.t("Rules a proof can cite: {names}.", {
+            names: artifact.axioms.join(", "),
+          })}
+        </p>
+      )}
+    </Sheet>
+  );
+};
+
 export function renderRevision(
   context: Context<AppBindings>,
   model: {
@@ -679,6 +827,8 @@ export function renderRevision(
     readonly itemTitle: string;
     readonly revisionId: string;
     readonly sourceText: string;
+    /** Present exactly when this is a revision of an MM0 item. */
+    readonly theory?: CompiledTheoryArtifact;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -696,11 +846,18 @@ export function renderRevision(
     },
     <ContentSplit
       content={
-        <ContentFrame
-          fullscreenHref={documentUrl}
-          src={documentUrl}
-          title={i18n.t("Compiled content")}
-        />
+        model.theory === undefined ? (
+          <ContentFrame
+            fullscreenHref={documentUrl}
+            src={documentUrl}
+            title={i18n.t("Compiled content")}
+          />
+        ) : (
+          <TheorySummary
+            artifact={model.theory}
+            path={hostedTheoryPath(model.revisionId)}
+          />
+        )
       }
       rail={
         <>

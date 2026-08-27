@@ -471,6 +471,10 @@ msgstr "Alle Noten"
 msgid "All of your courses are archived."
 msgstr "Alle Ihre Kurse sind archiviert."
 
+#: src/worker/web/content.tsx
+msgid "Also a language: formulas are read at the sort {sort}, so exercises can be set in it too."
+msgstr ""
+
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 msgid "An assumption can't have premises."
 msgstr "Eine Annahme kann keine Prämissen haben."
@@ -498,6 +502,10 @@ msgstr "Ein internationales Netzwerk von Universitäten und Hochschulen, das bed
 #: src/worker/web/lti.tsx
 msgid "An LMS launch from {platform} wants to connect to the Carnap account for {email}. If this was you, confirm the link below; if not, close this page and nothing will be linked."
 msgstr "Ein LMS-Start von {platform} möchte sich mit dem Carnap-Konto für {email} verbinden. Wenn das Sie waren, bestätigen Sie die Verknüpfung unten; falls nicht, schließen Sie diese Seite, und es wird nichts verknüpft."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "An MM0 file must declare something."
+msgstr ""
 
 #: src/worker/exercises/free-response/read-only-view.ts
 #: src/worker/exercises/short-answer/read-only-view.ts
@@ -1983,6 +1991,10 @@ msgstr "Kurs beitreten"
 msgid "Keyboard"
 msgstr "Tastatur"
 
+#: src/worker/web/content.tsx
+msgid "Kind"
+msgstr ""
+
 #: src/worker/web/profile.tsx
 msgid "Language"
 msgstr "Sprache"
@@ -2023,6 +2035,10 @@ msgstr "Lassen Sie ein Feld leer, um für diese Person den Standardwert der Aufg
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Leave the field and go back to the line"
 msgstr "Verlässt das Feld und kehrt zur Zeile zurück"
+
+#: src/worker/web/content.tsx
+msgid "Lesson"
+msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Line “{label}” cites “{reference}”, which is not a line above it."
@@ -2187,6 +2203,10 @@ msgstr "Dieser Mitgliedschaftsstatus wird nicht unterstützt."
 #: src/worker/routes/courses.ts
 msgid "Membership updated."
 msgstr "Mitgliedschaft aktualisiert."
+
+#: src/worker/web/content.tsx
+msgid "MM0 source"
+msgstr ""
 
 #: src/worker/exercises/group.ts
 #: src/worker/exercises/model/assessment.ts
@@ -2375,7 +2395,7 @@ msgid "No submissions were recorded in this attempt."
 msgstr "In diesem Versuch wurden keine Abgaben erfasst."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "No theory is served at “{path}”. This site ships: {available}."
+msgid "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page."
 msgstr ""
 
 #: src/worker/web/admin.tsx
@@ -2822,6 +2842,10 @@ msgstr "Veröffentlichte Aufgaben können nur auf eine Revision desselben Inhalt
 msgid "Published settings"
 msgstr "Einstellungen der veröffentlichten Aufgabe"
 
+#: src/worker/web/content.tsx
+msgid "Quote this address in an aufbau-mm0 block's src to build proofs on this theory. It names this revision, so later revisions leave existing lessons alone."
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Raw HTML is not allowed in carnap-markdown-v1."
 msgstr "Rohes HTML ist in carnap-markdown-v1 nicht erlaubt."
@@ -3023,6 +3047,14 @@ msgstr "Bewertungsraster"
 msgid "Rule (proof line)"
 msgstr "Regel"
 
+#: src/worker/web/content.tsx
+msgid "Rules"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Rules a proof can cite: {names}."
+msgstr ""
+
 #: src/worker/web/admin.tsx
 msgid "Save"
 msgstr "Speichern"
@@ -3171,6 +3203,10 @@ msgid "Something went wrong on our end. Please try again."
 msgstr "Bei uns ist etwas schiefgelaufen. Bitte versuchen Sie es erneut."
 
 #: src/worker/web/content.tsx
+msgid "Sorts"
+msgstr ""
+
+#: src/worker/web/content.tsx
 msgid "Source"
 msgstr "Quelltext"
 
@@ -3304,6 +3340,18 @@ msgstr "Ziele"
 msgid "Teaching assistant"
 msgstr "Tutorin oder Tutor"
 
+#: src/worker/web/content.tsx
+msgid "Terms"
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "That content item is a theory, not a lesson. An assignment can only be set on a lesson."
+msgstr ""
+
+#: src/worker/application/content.ts
+msgid "That is not a kind of content this site stores."
+msgstr ""
+
 #: src/worker/application/auth.ts
 msgid "That language is not available."
 msgstr "Diese Sprache ist nicht verfügbar."
@@ -3398,6 +3446,7 @@ msgstr "Das Inhaltsobjekt wurde nicht gefunden."
 #: src/worker/application/content.ts
 #: src/worker/application/gradebook.ts
 #: src/worker/application/submissions.ts
+#: src/worker/routes/content.ts
 msgid "The content revision was not found."
 msgstr "Die Inhaltsrevision wurde nicht gefunden."
 
@@ -3669,8 +3718,13 @@ msgid "The variant attribute must be simple, validity, or partial."
 msgstr "Das Attribut variant muss simple, validity oder partial sein."
 
 #: src/worker/exercises/aufbau-proof/theory-panel.ts
+#: src/worker/web/content.tsx
 msgid "Theory"
 msgstr "Theorie"
+
+#: src/worker/web/content.tsx
+msgid "Theory or language"
+msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "There is already a given for “{field}”."
@@ -3778,6 +3832,10 @@ msgstr "Diese Übung benötigt aktiviertes JavaScript. Bitte aktivieren Sie es f
 msgid "This exercise wants a propositional sentence: sentence letters and connectives only."
 msgstr "Diese Aufgabe verlangt einen aussagenlogischen Satz: nur Satzbuchstaben und Junktoren."
 
+#: src/worker/web/content.tsx
+msgid "This file is a proof system only. To set model or translation exercises in it as well, give its sentence sort a @syntax role."
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "This formula could not be read."
@@ -3860,6 +3918,10 @@ msgstr "Dieses LMS ist nicht bei Carnap registriert."
 #: src/worker/exercises/translation/strings.ts
 msgid "This matches the intended answer."
 msgstr "Das stimmt mit der gesuchten Antwort überein."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This MM0 does not read: {reason}"
+msgstr ""
 
 #: src/worker/exercises/model/strings.ts
 msgid "This model does everything the exercise asks."
@@ -4202,6 +4264,10 @@ msgstr "Schreiben"
 #: src/worker/web/content.tsx
 msgid "Write Carnap Markdown — the preview follows along — then save an immutable revision."
 msgstr "Schreiben Sie Carnap-Markdown — die Vorschau folgt mit — und speichern Sie dann eine unveränderliche Revision."
+
+#: src/worker/web/content.tsx
+msgid "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by."
+msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "You are about to join a course with an enrollment link."

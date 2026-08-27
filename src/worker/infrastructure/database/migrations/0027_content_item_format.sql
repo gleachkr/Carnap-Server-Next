@@ -1,0 +1,15 @@
+-- What kind of source an item holds: a lesson in Carnap markdown, or an MM0
+-- artifact an instructor hosts so their lessons can name it in an `aufbau-mm0`
+-- block's `src=`.
+--
+-- On the item rather than only on the revision, where the column has lived
+-- since the beginning. The question is asked before there is a revision to ask
+-- it of — the first editor page has to know which editor to open — and an item
+-- that changed kind between revisions would break what pinning exists to
+-- guarantee: an assignment points at revision 3, and revision 4 becoming a
+-- theory would leave a course pointing at a lesson that stopped being one.
+--
+-- Defaulted rather than backfilled, because the default is the truth: every
+-- item that exists when this runs is a lesson, and every one created after it
+-- says so for itself.
+ALTER TABLE `content_items` ADD `source_format` text DEFAULT 'markdown' NOT NULL;
