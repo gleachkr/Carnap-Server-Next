@@ -230,9 +230,11 @@ Three things surprise people, and all three are the original's behaviour:
    the same way.
 2. **`/\` and `\/` share one precedence level**, left-associatively, so
    `P \/ Q /\ R` is `(P \/ Q) /\ R` — neither binds tighter. `->` and `<->`
-   share the looser level and **refuse to chain**: `P -> Q -> R` is an error.
-   (This differs from the propositional `prop` notation the truth tables use,
-   where `/\` does bind tighter. The two are separate parsers.)
+   **join nothing unbracketed**: `P -> Q -> R`, `P -> Q <-> R` and
+   `P /\ Q -> R` are all errors, and each wants its parentheses. (This differs
+   from the propositional `prop` notation the truth tables use, where `/\`
+   does bind tighter and the conditional reads all three. The two are
+   separate specs.)
 3. **Parentheses may only wrap a two-place compound.** `(P)`, `(~P)`, `(AxF(x))`
    and `(a = b)` are all errors — forallx's own parenthesization convention,
    which Carnap enforces with its `zachDispatch` guard.

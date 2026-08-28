@@ -26,6 +26,11 @@
  *   - `/\` and `\/` share a precedence rung, so `P /\ Q \/ R` is `(P /\ Q) \/ R`
  *     by left association — not because conjunction binds tighter, which it
  *     does not.
+ *   - **The conditionals join nothing unbracketed.** forallx marks `->` and
+ *     `<->` non-associative on that same one rung, so `P -> Q -> R`,
+ *     `P -> Q <-> R` and `P /\ Q -> R` are all errors rather than readings.
+ *     That is the spec's `@syntax forbid chain mix nest`, not a precedence:
+ *     the rungs are what the engine parses this file's own math strings by.
  */
 
 import type {

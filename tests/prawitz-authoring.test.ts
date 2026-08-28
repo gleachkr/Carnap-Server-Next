@@ -329,7 +329,11 @@ theorem thm_top: $ top $
     // the `b` leaf it discharges carries the matching label. The outer
     // discharge is the student's, so nothing else is labeled.
     const starter = prawitzPublicData(compiled.artifact, "pz_starter");
-    expect(starter.starterTree?.formula).toBe("b → a ∧ b");
+    // The parentheses are the printer's, not the source's: display mode
+    // brackets every nested connective and drops only the outermost pair. It is
+    // also why forallx's `forbid nest` cannot bite anything we print — a
+    // conjunction under a conditional always comes back out grouped.
+    expect(starter.starterTree?.formula).toBe("b → (a ∧ b)");
     expect(starter.starterTree?.rule).toBe("imp_intro");
     expect(starter.starterTree?.discharge).toEqual(["2"]);
     const conjunction = starter.starterTree?.premises[0];

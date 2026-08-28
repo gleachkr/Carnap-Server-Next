@@ -33,6 +33,16 @@ msgstr "„{formula}“ ist nicht aussagenlogisch; eine prop-Übersetzung verwen
 
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
+msgid "“{inner}” and “{outer}” cannot be combined without parentheses."
+msgstr "„{inner}“ und „{outer}“ können ohne Klammern nicht verbunden werden."
+
+#: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
+msgid "“{inner}” needs parentheses inside “{outer}”."
+msgstr "„{inner}“ braucht Klammern innerhalb von „{outer}“."
+
+#: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr "„{name}“ ist eine freie Variable; jede Formel muss ein Satz sein."
 

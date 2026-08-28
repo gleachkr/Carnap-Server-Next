@@ -350,20 +350,57 @@ describe("precedence and association", () => {
   });
 
   test("a conditional binds looser than conjunction", () => {
-    expect(show("P /\\ Q -> R")).toBe("(P ∧ Q) → R");
+    // The rung is still the rung — it is what the engine parses this file's
+    // own math strings by. What has changed is that you have to say it: the
+    // reading below is only reachable through the brackets.
+    expect(show("(P /\\ Q) -> R")).toBe("(P ∧ Q) → R");
+    expect(parse("(P /\\ Q) -> R").type).toBe("if");
   });
 
-  test("conditionals and biconditionals refuse to chain", () => {
-    const error = failure("P -> Q -> R");
+  test("a conditional joins nothing unbracketed", () => {
+    // forallx's own parser puts all four binary connectives on one level and
+    // marks the two conditionals non-associative, so each shape below is an
+    // error there. The spec says it as `@syntax forbid chain mix nest`, and
+    // which of the three relations the operand stood in picks the message.
+    const chained = failure("P -> Q -> R");
 
-    expect(error.message).toBe(
+    expect(chained.message).toBe(
       "“{operator}” cannot be chained; add parentheses to group it.",
     );
-    expect(error.params).toEqual({ operator: "->" });
-    expect(show("P -> (Q -> R)")).toBe("P → (Q → R)");
+    expect(chained.params).toEqual({ operator: "->" });
     expect(failure("P <-> Q <-> R").params).toEqual({ operator: "<->" });
-    // The two share a rung, so mixing them does not chain either.
-    expect(failure("P -> Q <-> R").params).toEqual({ operator: "<->" });
+
+    // A different connective from the same rung: mixed, not chained.
+    const mixed = failure("P -> Q <-> R");
+
+    expect(mixed.message).toBe(
+      "“{inner}” and “{outer}” cannot be combined without parentheses.",
+    );
+    expect(mixed.params).toEqual({ inner: "<->", outer: "->" });
+
+    // And one from a tighter rung, which is the case the rung-wide refusal
+    // this replaced could not state at all: ∧ and → do not share a level here
+    // the way they do in the textbook, so nothing was non-associative about it.
+    const nested = failure("P /\\ Q -> R");
+
+    expect(nested.message).toBe(
+      "“{inner}” needs parentheses inside “{outer}”.",
+    );
+    expect(nested.params).toEqual({ inner: "/\\", outer: "->" });
+    expect(failure("P <-> Q \\/ R").params).toEqual({
+      inner: "\\/",
+      outer: "<->",
+    });
+
+    // Brackets are the repair, and the only one.
+    expect(show("P -> (Q -> R)")).toBe("P → (Q → R)");
+  });
+
+  test("nothing was said about conjunction, so it refuses nothing", () => {
+    // The refusal is per connective, not per rung — which is the whole reason
+    // the annotation moved onto the term. `and` and `or` are untouched.
+    expect(show("P /\\ Q /\\ R")).toBe("(P ∧ Q) ∧ R");
+    expect(show("P /\\ (Q -> R)")).toBe("P ∧ (Q → R)");
   });
 });
 

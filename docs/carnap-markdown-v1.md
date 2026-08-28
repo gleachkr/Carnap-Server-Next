@@ -589,8 +589,9 @@ the outermost, as the original prints them.
 Three of its rules catch people out, and all three are Carnap's own behaviour: a
 quantifier's scope is the sentence **immediately** after it (`AxF(x) -> G(a)` is
 a conditional, not a quantified conditional); `/\` and `\/` share one
-precedence level left-associatively, while `->` and `<->` refuse to chain
-(`P -> Q -> R` is an error); and parentheses may only wrap a two-place compound,
+precedence level left-associatively, while `->` and `<->` join nothing
+unbracketed at all — `P -> Q -> R`, `P -> Q <-> R` and `P /\ Q -> R` are each
+an error, and want their parentheses; and parentheses may only wrap a two-place compound,
 so `(P)`, `(~P)` and `(a = b)` are errors. Every sentence must be closed — an
 unbound variable is rejected. Not accepted, though Carnap takes them: the word
 operators `not`/`and`/`or`, `^n` arity annotations, and `v` for disjunction.
@@ -914,8 +915,9 @@ and what an `aufbau-mm0` block declares.
 A **language spec** is what a formula is written in — the same sorts and terms,
 plus `@syntax` annotations saying how a student *spells* them: which brackets
 group, which spellings of `∧` are accepted, which of them is canonical, and
-which conventions the book refuses (forallx will not read `P → Q → R`, and will
-not let you write `(P)`). Two ship, and `system=` names either of them by id:
+which conventions the book refuses (forallx will not read `P → Q → R` or
+`P ∧ Q → R`, and will not let you write `(P)`). Two ship, and `system=` names
+either of them by id:
 
 | Id | Language |
 | --- | --- |

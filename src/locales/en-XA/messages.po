@@ -33,6 +33,16 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
+msgid "“{inner}” and “{outer}” cannot be combined without parentheses."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
+msgid "“{inner}” needs parentheses inside “{outer}”."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+#: src/worker/logic/specs/strings.ts
 msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr ""
 

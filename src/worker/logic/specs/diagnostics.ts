@@ -100,9 +100,22 @@ const SAID: Readonly<
     ) => Omit<SpecFormulaError, "position">
   >
 > = {
+  // The three refusals a spec's `@syntax forbid` can raise, one per relation an
+  // unbracketed connective operand can stand in to the operator above it. Each
+  // is said in terms of the brackets the writer has to add, since that is the
+  // only repair; which of the three it was is why, not what to do.
   chain_refused: (params) => ({
     message: "“{operator}” cannot be chained; add parentheses to group it.",
     params: { operator: params.operator ?? "" },
+  }),
+  mix_refused: (params) => ({
+    message:
+      "“{inner}” and “{outer}” cannot be combined without parentheses.",
+    params: { inner: params.inner ?? "", outer: params.outer ?? "" },
+  }),
+  nest_refused: (params) => ({
+    message: "“{inner}” needs parentheses inside “{outer}”.",
+    params: { inner: params.inner ?? "", outer: params.outer ?? "" },
   }),
   expected_bracket: (params) => ({
     message: "Expected “{bracket}”.",

@@ -113,7 +113,6 @@
 --| @syntax delimiter $ -> => ⊃ > → <-> <=> <> ≡ ↔ $
 --| @syntax delimiter $ @ 3 ∀ ∃ = != ≠ !? _|_ ⊥ ⊤ $
 --| @syntax brackets ( ) [ ]
---| @syntax assoc-none 20
 --| @syntax lint parenthesize-binary-only
 --| @syntax lint closed-sentences
 --| @syntax display drop-outer-parens
@@ -216,7 +215,18 @@ infixl or: $\/$ prec 30;
 infixl or: $|$ prec 30;
 infixl or: $∨$ prec 30;
 
+-- forallx Calgary's own parser puts all four binary connectives on ONE level
+-- and marks the two conditionals non-associative, so anything an unbracketed
+-- conditional joins is an error there: `P -> Q -> R`, `P -> Q <-> R` and
+-- `P /\ Q -> R` alike. We cannot say that by renumbering — precedence is
+-- shared with the engine, which refuses two associativities on a rung and
+-- would re-read this file's own math strings — so the refusal sits on the
+-- term and is decided on the parse tree. `chain mix nest` is the whole list:
+-- an unbracketed connective operand is the same term repeated, a different
+-- term on the same rung, or a term on a tighter rung. Nothing is said about
+-- `and`/`or`, which therefore still associate left, as the textbook has them.
 --| @syntax role conditional
+--| @syntax forbid chain mix nest
 term imp (ph ps: wff): wff;
 infixr imp: $->$ prec 20;
 infixr imp: $=>$ prec 20;
@@ -225,6 +235,7 @@ infixr imp: $>$ prec 20;
 infixr imp: $→$ prec 20;
 
 --| @syntax role biconditional
+--| @syntax forbid chain mix nest
 term iff (ph ps: wff): wff;
 infixr iff: $<->$ prec 20;
 infixr iff: $<=>$ prec 20;

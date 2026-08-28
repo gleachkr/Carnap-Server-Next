@@ -76,6 +76,14 @@ export function buildFormulaParserStrings(i18n: Translator) {
       "“{operator}” cannot be chained; add parentheses to group it.",
       placeholders("operator"),
     ),
+    "“{inner}” and “{outer}” cannot be combined without parentheses.": i18n.t(
+      "“{inner}” and “{outer}” cannot be combined without parentheses.",
+      placeholders("inner", "outer"),
+    ),
+    "“{inner}” needs parentheses inside “{outer}”.": i18n.t(
+      "“{inner}” needs parentheses inside “{outer}”.",
+      placeholders("inner", "outer"),
+    ),
     "“{token}” binds too loosely here; parenthesize it.": i18n.t(
       "“{token}” binds too loosely here; parenthesize it.",
       placeholders("token"),

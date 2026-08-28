@@ -134,6 +134,6 @@ theorem curry (a b: wff): $ _ ⊢ a → (b → a ∧ b) $
 a1: $ a ⊢ a $ by ax []
 b1: $ b ⊢ b $ by ax [] -- label:2
 c1: $ a , b ⊢ a ∧ b $ by and_intro [a1, b1]
-c2: $ a ⊢ b → a ∧ b $ by imp_intro [c1] -- label:2
+c2: $ a ⊢ b → (a ∧ b) $ by imp_intro [c1] -- label:2
 :::
 `;
