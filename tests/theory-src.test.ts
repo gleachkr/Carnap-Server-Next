@@ -103,6 +103,7 @@ describe("aufbau-mm0 src", () => {
   test("a body alongside src extends the named theory, and comes last", async () => {
     const mm0 = await frozenMm0(
       lesson(`:::aufbau-mm0{name="forallx" src="${FORALLX}"}
+--| @syntax delimiter $ Cube $
 term Cube (x: tm): wff;
 
 --| @congr
@@ -255,6 +256,7 @@ term Cube (x: tm): wff;
   test("show renders the resolved theory, extension and all", async () => {
     const compiled = await compileCarnapMarkdown(
       lesson(`:::aufbau-mm0{name="forallx" src="${FORALLX}" show}
+--| @syntax delimiter $ Cube $
 term Cube (x: tm): wff;
 :::`),
     );
@@ -272,7 +274,7 @@ term Cube (x: tm): wff;
     // there, and a reader shown only the engine half is shown half of it.
     expect(panel).toEqual({
       kind: "theory",
-      mm0: `${FORALLX_SOURCE}\nterm Cube (x: tm): wff;`,
+      mm0: `${FORALLX_SOURCE}\n--| @syntax delimiter $ Cube $\nterm Cube (x: tm): wff;`,
       name: "forallx",
     });
   });

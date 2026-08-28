@@ -3715,7 +3715,7 @@ msgid "The submission was not found."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference."
+msgid "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it."
 msgstr ""
 
 #: src/worker/application/admin.ts
@@ -3940,6 +3940,10 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "This MM0 does not read: {reason}"
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "This MM0 does not read: the delimiters split “{name}” into {chunks}, so nothing anyone types can be read as it. Declare it whole by adding a line reading: --| @syntax delimiter $ {name} $"
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts

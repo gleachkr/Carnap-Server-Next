@@ -50,6 +50,7 @@ with no server running. A `src` pointing at another origin is refused
 
 ```md
 :::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube $
 term Cube (x: tm): wff;
 :::
 

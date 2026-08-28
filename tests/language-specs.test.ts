@@ -5,6 +5,7 @@ import { parseSpec, printTerm, type SurfaceLanguage } from "@aufbau/syntax";
 import {
   LANGUAGE_SPEC_SOURCES,
   languageById,
+  languageFromSource,
 } from "../src/worker/logic/specs";
 import { sentenceSort } from "../src/worker/logic/specs/roles";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
@@ -159,8 +160,35 @@ describe("language specs", () => {
 
     test("atoms are single Roman letters of either case", () => {
       expect(display(id, "p/\\Z")).toBe("(p /\\ Z)");
-      // The incumbent's bare-digit subscript is the documented casualty.
+      // The incumbent's bare-digit subscript is the documented casualty — of
+      // the *shipped signature*, which declares 52 atoms and no `P0`. It is no
+      // longer a casualty of segmentation: see the next test.
       expect(refusal(id, "P0")).toContain("unrecognized_chunk");
+    });
+
+    test("a course can add a word to the atoms, and tight input still reads", () => {
+      // The letters are deliberately not in this spec's delimiter set
+      // (2026-08-28). Nothing propositional needs them — `~` bounds its own
+      // operand and every connective spelling self-delimits — and declaring
+      // them cost the whole multi-character lexicon, a delimiter being a
+      // property of a *string*: with `P` and `R` declared, `Rain` segments as
+      // `R a i n` and the reader refuses the name outright.
+      const extended = languageFromSource(
+        `${LANGUAGE_SPEC_SOURCES[id] ?? ""}\nterm Rain: wff;\nterm P1: wff;\n`,
+      );
+
+      if (extended === null) {
+        throw new Error("carnap-prop plus two atoms does not read");
+      }
+
+      const parsed = extended.parse("~Rain->P1");
+
+      expect(parsed.ok).toBe(true);
+      expect(parsed.ok && printTerm(extended, parsed.term, "display")).toBe(
+        "(~Rain -> P1)",
+      );
+      // The half the letters were supposed to be buying, which they never were.
+      expect(display(id, "~~P")).toBe("~~P");
     });
 
     test("five rungs: ~ over /\\ over \\/ over -> over <->", () => {

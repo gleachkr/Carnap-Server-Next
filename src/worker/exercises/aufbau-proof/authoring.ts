@@ -22,6 +22,8 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import { libraryDiagnostic, lineAt } from "../../application/content/mm0";
+import { readLanguage } from "../../logic/specs";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { roleIndex } from "../../logic/specs/roles";
 import type { TheoryResolver } from "../../logic/theories";
@@ -506,6 +508,13 @@ async function resolveTheorySrc(
  * a course teaches (forallx: Calgary is one file for both), and an author is
  * free to write them in an extension for the same reason; either way they are
  * read by `@aufbau/syntax` from the artifact and never reach the compiler.
+ *
+ * An extension that adds a *name* has one thing to know, and
+ * {@link reportUnreadableTheory} is what tells them: whether `Cube` can be
+ * written at all is decided by the delimiters, not by the declaration. Against
+ * forallx, whose 52 lexicon letters are all delimiters so that `AxF(x)` reads
+ * tight, it cannot be — until the extension declares it whole with its own
+ * `--| @syntax delimiter $ Cube $`.
  */
 export async function compileAufbauMm0(
   block: DirectiveBlock,
@@ -558,6 +567,8 @@ export async function compileAufbauMm0(
     return null;
   }
 
+  reportUnreadableTheory(block, base, source, diagnostics);
+
   return {
     ...declaredNotations(source),
     mm0: stripSyntaxAnnotations(source),
@@ -565,6 +576,73 @@ export async function compileAufbauMm0(
     show,
     source,
   };
+}
+
+/**
+ * Report a block whose MM0 will not read as a language, at a line its author
+ * can act on.
+ *
+ * The complaint used to surface one level away: an exercise set in the block
+ * said only that the system "does not read as a language", while the library
+ * had said which name the delimiters split, and where. Declaring an ordinary
+ * `term Cube (sq: seq): wff;` against forallx is the case that costs — its
+ * lexicon letters are all delimiters, so `Cube` segments as `C u b e` and no
+ * student could ever type it — and the author was told none of that.
+ *
+ * Reading here is not a second read: the first exercise naming this block does
+ * the same one, and `readLanguage` memoizes on the text.
+ *
+ * **Errors only.** forallx: Calgary warns nine times over about its
+ * engine-only tokens (`⊢`, `≐`, …) — correct reports about a file the author
+ * did not write, and every block extending it would inherit the noise.
+ *
+ * The theory is still returned. A block that answered with nothing would send
+ * every exercise naming it to `unknown_system`, which lists the systems in
+ * scope and would not mention that this one is right here and broken.
+ */
+function reportUnreadableTheory(
+  block: DirectiveBlock,
+  base: string | null,
+  source: string,
+  diagnostics: CompilerDiagnostic[],
+): void {
+  const read = readLanguage(source);
+
+  if (read.language !== null) {
+    return;
+  }
+
+  // Where the author's own text starts in the composed source. A `src` is a
+  // file they named rather than wrote, so anything wrong inside it is reported
+  // at the block itself instead of at a line of theirs that does not exist.
+  const bodyStart = base === null ? 0 : base.length + 1;
+  const body = block.bodyLines.join("\n");
+  const trimmed = body.length - body.trimStart().length;
+
+  for (const one of read.errors) {
+    diagnostics.push(
+      libraryDiagnostic(
+        one.span.start < bodyStart
+          ? block.line
+          : block.line + lineAt(body, one.span.start - bodyStart + trimmed),
+        one,
+      ),
+    );
+  }
+
+  // A file that read as statements and still could not be assembled into a
+  // parser: the library threw rather than reporting, so there are no spans and
+  // the block's own line is the only honest place to say it.
+  if (read.errors.length === 0) {
+    diagnostics.push(
+      diagnostic(
+        block.line,
+        "unusable_mm0",
+        "This MM0 does not read: {reason}",
+        { params: { reason: read.thrown ?? "unknown" } },
+      ),
+    );
+  }
 }
 
 /**

@@ -825,6 +825,7 @@ the result as one theory:
 
 ```md
 :::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube Loves $
 term Cube (x: tm): wff;
 term Loves (x y: tm): wff;
 
@@ -839,6 +840,23 @@ The shipped signature is deliberately small — unary `F`, `G` and binary `R` �
 so this is the ordinary way to teach with `Cube` or `Loves`. Congruence axioms
 are what let `=E` replace equals inside your new predicates; without them the
 predicate still parses and proves, it simply cannot be rewritten through.
+
+**A multi-character name needs that first line, and forallx is where.** Where a
+chunk of what a student types ends is decided by the *delimiters*, before
+anything is looked up, and forallx declares all 52 Roman letters as delimiters
+so that `AxF(x)` reads with no spaces in it. `Cube` therefore segments as `C u
+b e`, and the block is refused with the pieces named:
+
+> This MM0 does not read: the delimiters split “Cube” into C u b e, so nothing
+> anyone types can be read as it. Declare it whole by adding a line reading:
+> `--| @syntax delimiter $ Cube $`
+
+Declaring the name as a delimiter is what fixes it: the longest spelling wins,
+so `Cube` outranks the `C` beside it and reads as one name, while `C(a)` goes
+on meaning what it did. One line covers any number of names. `carnap-prop`
+declares no letters, so a propositional course adds `Rain` or `P1` with no such
+line — the requirement belongs to languages whose quantifier prefixes have to
+read tight, not to extension as such.
 
 A block with a body and no `src` is a theory written from scratch, which is what
 a system nobody has published yet needs:

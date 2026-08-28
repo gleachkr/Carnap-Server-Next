@@ -3,6 +3,7 @@ import {
   ContentArtifactError,
   parseContentArtifact,
 } from "../src/worker/application/content/artifact";
+import type { CompilerDiagnostic } from "../src/worker/application/content/authoring-toolkit";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { CompiledContentArtifact } from "../src/worker/domain/content";
 import type { JsonValue } from "../src/worker/domain/json";
@@ -12,6 +13,7 @@ import {
 } from "../src/worker/exercises/hydration";
 import { keyedArtifact } from "../src/worker/exercises/systems";
 import { truthTableLanguage } from "../src/worker/exercises/truth-table/logic";
+import { resolveMessage } from "../src/worker/i18n/translator";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
 
 /**
@@ -353,9 +355,71 @@ Fill it in.
 ::::`,
     );
 
+    // Twice, and deliberately: the exercise says an exercise cannot be set
+    // here, and the block says why, against the line that caused it. Before the
+    // block reported, the second sentence existed only inside the library.
     expect(compiled.diagnostics.map((one) => one.code)).toEqual([
+      "mm0_unknown_term",
       "system_unreadable",
     ]);
+    // The block's own body, not the block: line 2 is where the statement
+    // starts, its `--|` annotation line included, which is the span the
+    // library reports against.
+    expect(compiled.diagnostics[0]?.line).toBe(2);
+    expect(
+      resolveMessage(compiled.diagnostics[0] as CompilerDiagnostic),
+    ).toBe("This MM0 does not read: term nosuchterm is not declared");
+  });
+
+  test("a name the delimiters split is refused with the line that declares it whole", async () => {
+    // The case a course hits on its first day of authoring: forallx spends all
+    // 52 Roman letters as lexicon *and* declares them as delimiters, so that
+    // `AxF(x)` reads tight — and a `Cube` declared beside them can never be
+    // typed. The library says which pieces it split into; only Carnap can say
+    // that declaring the whole word is the repair, because whether that is what
+    // the author meant is a fact about this spec.
+    const compiled = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+term Cube (sq: seq): wff;
+:::
+
+${fitch("ex1", "andcomm", "ours")}`,
+    );
+
+    const split = compiled.diagnostics.find(
+      (one) => one.code === "mm0_delimiter_unreachable_name",
+    );
+
+    expect(split?.line).toBe(2);
+    expect(split?.params?.name).toBe("Cube");
+    expect(split?.params?.chunks).toBe("C u b e");
+    expect(resolveMessage(split as CompilerDiagnostic)).toContain(
+      "--| @syntax delimiter $ Cube $",
+    );
+  });
+
+  test("declaring the name a delimiter is enough to set an exercise over it", async () => {
+    // The other half of the sentence above, so the advice cannot rot: one line,
+    // and the name reads. Longest spelling wins in the delimiter set, which is
+    // why `Cube` outranks the `C` beside it.
+    const artifact = await compile(
+      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube $
+term Cube (sq: seq): wff;
+:::
+
+::::translation{id="tr1" title="Everything is a cube" system="ours" variant="first-order"}
+Everything is a cube.
+
+- AxCube(x)
+::::`,
+    );
+
+    const data = publicDataOf(artifact, "tr1") as {
+      readonly solutions?: readonly string[];
+    };
+
+    expect(data.solutions).toEqual(["∀xCube(x)"]);
   });
 
   test("an unresolvable name names both places it was looked for", async () => {

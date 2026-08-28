@@ -100,13 +100,17 @@ export function parseSystemAttribute(
   if (resolved !== null) {
     // The one thing left to say about a language as such. Whether this type can
     // do anything with the formulas written in it is asked of each formula, not
-    // here; this is the case where there is no language to ask about at all,
-    // and the author's real problem is usually a typo a few lines up.
+    // here; this is the case where there is no language to ask about at all.
+    //
+    // *Why* it does not read is said where it can be acted on — the block that
+    // declares it, which reports the library's own complaint against the line
+    // that caused it (`compileAufbauMm0`). Saying it twice, once per exercise
+    // set in a broken block, would bury the one copy that has a line number.
     diagnostics.push(
       diagnostic(
         block.line,
         "system_unreadable",
-        "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.",
+        "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it.",
         { params: { name: system } },
       ),
     );

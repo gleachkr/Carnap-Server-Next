@@ -79,7 +79,7 @@ export type CompileTheoryResult =
  * because it parses formulas out of the middle of things; the editor's gutter
  * counts lines, and this is the whole of the conversion.
  */
-function lineAt(source: string, offset: number): number {
+export function lineAt(source: string, offset: number): number {
   let line = 1;
 
   for (let at = 0; at < offset && at < source.length; at += 1) {
@@ -92,7 +92,9 @@ function lineAt(source: string, offset: number): number {
 }
 
 /**
- * One library complaint, as an author sees it.
+ * One library complaint, as an author sees it — shared with the `aufbau-mm0`
+ * block inside a lesson, which reads its composed source the same way and
+ * reports at the author's own line.
  *
  * The library's own sentence is quoted rather than translated, which is the
  * one place this path is worse than the markdown compiler's. Carnap adopted
@@ -102,14 +104,47 @@ function lineAt(source: string, offset: number): number {
  * "precedence", "coercion") that has no plainer wording to be translated
  * into. The frame around it is translated, so the reader at least knows what
  * they are being told and where.
+ *
+ * **One id is worded rather than quoted.** `delimiter_unreachable_name` is
+ * what an author gets for declaring an ordinary multi-character predicate —
+ * `term Cube (sq: seq): wff;` against forallx, whose lexicon letters are all
+ * delimiters — and the library cannot name the repair, because whether `Cube`
+ * was meant to be one word is a fact about this spec rather than about MM0.
+ * Carnap can say it, so it does: the whole complaint is otherwise a true
+ * statement about segmentation that leaves the reader nowhere to go.
  */
-function fromLibrary(source: string, one: Diagnostic): CompilerDiagnostic {
+export function libraryDiagnostic(
+  line: number,
+  one: Diagnostic,
+): CompilerDiagnostic {
+  if (one.id === "delimiter_unreachable_name") {
+    return diagnostic(
+      line,
+      `mm0_${one.id}`,
+      "This MM0 does not read: the delimiters split “{name}” into {chunks}, so nothing anyone types can be read as it. Declare it whole by adding a line reading: --| @syntax delimiter $ {name} $",
+      {
+        params: {
+          chunks: one.params.chunks ?? "",
+          name: one.params.name ?? "",
+        },
+        severity: one.severity,
+      },
+    );
+  }
+
   return diagnostic(
-    lineAt(source, one.span.start),
+    line,
     `mm0_${one.id}`,
     "This MM0 does not read: {reason}",
-    { params: { reason: one.message }, severity: one.severity },
+    {
+      params: { reason: one.message },
+      severity: one.severity,
+    },
   );
+}
+
+function fromLibrary(source: string, one: Diagnostic): CompilerDiagnostic {
+  return libraryDiagnostic(lineAt(source, one.span.start), one);
 }
 
 /** Everything the file declares, in the order it declares it. */

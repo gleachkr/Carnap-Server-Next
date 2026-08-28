@@ -416,6 +416,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "An MM0 file must declare something.": i18n.t(
       "An MM0 file must declare something.",
     ),
+    "This MM0 does not read: the delimiters split “{name}” into {chunks}, so nothing anyone types can be read as it. Declare it whole by adding a line reading: --| @syntax delimiter $ {name} $":
+      i18n.t(
+        "This MM0 does not read: the delimiters split “{name}” into {chunks}, so nothing anyone types can be read as it. Declare it whole by adding a line reading: --| @syntax delimiter $ {name} $",
+        placeholders("chunks", "name"),
+      ),
     "This MM0 does not read: {reason}": i18n.t(
       "This MM0 does not read: {reason}",
       placeholders("reason"),
@@ -441,9 +446,9 @@ export function buildDiagnosticStrings(i18n: Translator) {
     // Said instead of either capability refusal below, and the reason those two
     // are allowed to state a fact about the language: they are only reached for
     // a language that read.
-    "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.":
+    "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it.":
       i18n.t(
-        "The system “{name}” does not read as a language, so an exercise cannot be set in it. Check its MM0 against the @syntax reference.",
+        "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it.",
         placeholders("name"),
       ),
     "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}.":

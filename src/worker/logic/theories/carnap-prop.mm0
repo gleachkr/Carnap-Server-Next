@@ -15,15 +15,26 @@
 -- The atoms are ordinary nullary declarations — MM0's finite vocabulary. The
 -- hand parser this replaced also read a bare-digit subscript (`P0`, `R12`),
 -- which no signature can spell; it went when the truth-table type swapped onto
--- this file (2026-08-24), deliberately.
+-- this file (2026-08-24), deliberately. A course that wants `P1` back, or
+-- wants `Rain` outright, declares it in an `aufbau-mm0` block that extends
+-- this file — which is possible here only because of the next paragraph.
 
 -- The surface delimiter set: where one chunk of student input ends and the
--- next begins, fixed before anything is looked up. The lexicon letters are
--- listed so `~~P` reads without spaces, the operator spellings so `P->Q`
--- does. Nothing here may be a string the vocabulary cannot answer to, and
--- no lexicon name may be split by it; the reader checks both.
---| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
---| @syntax delimiter $ a b c d e f g h i j k l m n o p q r s t u v w x y z $
+-- next begins, fixed before anything is looked up. Every operator spelling is
+-- listed, so `P->Q` reads without spaces and so does `~~P`. Nothing here may
+-- be a string the vocabulary cannot answer to, and no lexicon name may be
+-- split by it; the reader checks both.
+--
+-- **The letters are deliberately not listed** (2026-08-28). They were, and it
+-- cost the whole multi-character lexicon: a delimiter is a property of a
+-- string, so declaring `P` splits `Rain` into `R a i n` and the reader refuses
+-- the name. What the letters bought here was nothing — the claim in this
+-- comment used to be that they are what makes `~~P` read tight, but `~` is
+-- itself a delimiter and bounds its own operand. A language with a quantifier
+-- is the case where they earn their keep, because `AxF(x)` has no punctuation
+-- in `Ax` for anything else to break on; see forallx: Calgary, which pays the
+-- one-character price for exactly that and where a multi-character name has to
+-- declare itself a delimiter to be readable.
 --| @syntax delimiter $ ( ) ~ /\ \/ -> <-> $
 delimiter $ ( ) $;
 

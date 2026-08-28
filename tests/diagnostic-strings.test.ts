@@ -57,6 +57,12 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
     "missing goal header",
     "::::aufbau-proof{#p points=1}\nno header here\n::::",
   ],
+  [
+    // The block alone: a spec-read failure is now the block's own diagnostic,
+    // so this needs no exercise to be set in it.
+    "a name the delimiters split",
+    ':::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}\nterm Cube (sq: seq): wff;\n:::',
+  ],
 ];
 
 async function diagnosticsFor(source: string) {
