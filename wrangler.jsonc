@@ -14,6 +14,21 @@
     // anything the kick missed.
     "crons": ["*/5 * * * *"]
   },
+  // Workers Logs. Without this block the structured console lines —
+  // request_failed 500s with their requestId, lti_grade_passback_failed,
+  // lti_tool_key_invalid — exist only for whoever happens to be running
+  // `wrangler tail` at that moment. With it they land in the dashboard
+  // (Workers & Pages → the worker → Logs), queryable after the fact.
+  //
+  // The pilot's log-review habit: after each teaching day, open that view,
+  // filter to error level, and search for the three event names above.
+  // Retention is Cloudflare's — three days on the free plan, seven on paid —
+  // so "after the fact" means days, not weeks; a report of last month's
+  // failure finds nothing.
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
   "d1_databases": [
     {
       "binding": "DB",
@@ -33,7 +48,7 @@
     },
     "demo": {
       // Named environments do NOT inherit top-level bindings, so the demo
-      // deploy repeats assets/d1/triggers here. Deploy with
+      // deploy repeats assets/d1/triggers/observability here. Deploy with
       // `wrangler deploy --env demo`. The env name makes the worker
       // carnap-server-demo.<subdomain>.workers.dev (honest "this is a demo"
       // URL). CARNAP_ENV is any non-"local" value → production behaviour
@@ -47,6 +62,10 @@
       },
       "triggers": {
         "crons": ["*/5 * * * *"]
+      },
+      "observability": {
+        "enabled": true,
+        "head_sampling_rate": 1
       },
       "d1_databases": [
         {
