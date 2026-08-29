@@ -30,6 +30,108 @@ import { formatMessage } from "../../worker/i18n/translator";
 const systemsByDocument = new WeakMap<Document, CompiledSystems>();
 
 /**
+ * The slice of `localStorage` the draft code uses, spelled structurally
+ * because this module also typechecks under workers-types, which has neither
+ * `Storage` nor the global. At runtime it is only ever the real thing.
+ */
+interface DraftStorage {
+  readonly length: number;
+  getItem(key: string): string | null;
+  key(index: number): string | null;
+  removeItem(key: string): void;
+  setItem(key: string, value: string): void;
+}
+
+const DRAFT_KEY_PREFIX = "carnap:draft:";
+const DRAFT_VERSION = 1;
+
+/**
+ * How long an untouched draft survives. There is no signal here for "the
+ * attempt is over" — localStorage outlives every page — so age is the only
+ * bound on growth. A month comfortably covers any assignment window while
+ * keeping a semester of abandoned attempts from accumulating forever.
+ */
+const DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+interface DraftRecord {
+  /** The authored answer at save time — `authoredAnswer()`, JSON text. */
+  readonly authored: string;
+  /** What the server held at save time, for the unsaved-work comparison. */
+  readonly saved: string;
+  readonly savedAt: number;
+  readonly version: number;
+}
+
+/**
+ * The page's localStorage, or null when there is none to use — a disabled
+ * store throws on the property read itself, and drafts are best-effort
+ * everywhere: no storage means no drafts, never a broken widget.
+ */
+function draftStorage(): DraftStorage | null {
+  try {
+    return (
+      (globalThis as { localStorage?: DraftStorage }).localStorage ?? null
+    );
+  } catch (_error) {
+    return null;
+  }
+}
+
+function parseDraftRecord(text: string): DraftRecord | null {
+  try {
+    const record = JSON.parse(text) as DraftRecord;
+
+    if (
+      record.version !== DRAFT_VERSION ||
+      typeof record.authored !== "string" ||
+      typeof record.saved !== "string" ||
+      typeof record.savedAt !== "number"
+    ) {
+      return null;
+    }
+
+    return record;
+  } catch (_error) {
+    return null;
+  }
+}
+
+let sweptStaleDrafts = false;
+
+/**
+ * Drop drafts past their age bound, and any record no current reader can
+ * parse. Opportunistic, like the server's expiring tables: the next answering
+ * page pays for the cleanup, once per load.
+ */
+function sweepStaleDrafts(storage: DraftStorage): void {
+  if (sweptStaleDrafts) {
+    return;
+  }
+
+  sweptStaleDrafts = true;
+
+  try {
+    // Downwards, so removals do not shift the keys still to visit.
+    for (let index = storage.length - 1; index >= 0; index -= 1) {
+      const key = storage.key(index);
+
+      if (key === null || !key.startsWith(DRAFT_KEY_PREFIX)) {
+        continue;
+      }
+
+      const text = storage.getItem(key);
+      const record = text === null ? null : parseDraftRecord(text);
+
+      if (record === null || Date.now() - record.savedAt > DRAFT_MAX_AGE_MS) {
+        storage.removeItem(key);
+      }
+    }
+  } catch (_error) {
+    return;
+  }
+}
+
+/**
  * The systems table of the document an element is in.
  *
  * Missing or malformed is `undefined` rather than an error: a document whose
@@ -81,6 +183,14 @@ function documentSystems(owner: Document): CompiledSystems | undefined {
  * reads (the element never touches fetch, CSRF, or idempotency — the runtime
  * owns recording).
  *
+ * The base also keeps a local draft of unsaved work (see {@link resolveDraftKey}
+ * and the write in {@link markUnsaved}): every edit mirrors the authored answer
+ * into localStorage, a recorded submission clears it, and a draft that survives
+ * — a crash, a dead battery — is restored on the next connect through the
+ * `priorAnswer` channel. Widgets need no code for any of this; a widget whose
+ * answer carries derived state opts it out of the draft the same way it opts it
+ * out of the unsaved-work check, by overriding {@link authoredAnswer}.
+ *
  * A subclass MUST set `this.dataset.enhanced = "true"` once it has enhanced
  * successfully: the content document's failure affordance treats an element
  * that has not done so within a deadline as failed and shows a reload notice.
@@ -114,16 +224,63 @@ export abstract class CarnapExerciseElement<
   /** The answer as of the submit in flight, if there is one. */
   private submittedAnswer: string | null = null;
 
+  /** This exercise's draft key, or null when drafts are off (see resolveDraftKey). */
+  private draftKey: string | null = null;
+
+  /**
+   * Whether draft writes may happen yet. False until connect has settled
+   * `savedAnswer`: the `syncAnswer` inside `connectedCallback` runs before the
+   * baseline exists, and a write then would store the pristine render as a
+   * draft of itself.
+   */
+  private draftReady = false;
+
+  /** The last record written, to skip rewriting an unchanged draft. */
+  private lastDraft: { authored: string; saved: string } | null = null;
+
   connectedCallback(): void {
     this.form = this.closest<HTMLFormElement>("form.exercise");
     this.hydration = this.readHydration();
-    this.enhance();
+    this.draftKey = this.resolveDraftKey();
+
+    // A surviving draft is unsaved work from a page that never came back — a
+    // crash, a dead battery. It restores through the priorAnswer channel
+    // because a draft *is* a prior answer that never got recorded: same
+    // envelope, same rendering path, so no widget knows drafts exist.
+    const draft = this.readDraft();
+
+    if (draft !== null && this.hydration !== null) {
+      this.hydration = { ...this.hydration, priorAnswer: draft.prior };
+    }
+
+    try {
+      this.enhance();
+    } catch (error) {
+      // A draft the widget cannot render must not brick the exercise on every
+      // load. Dropping it makes the failure notice's advice — reload — true.
+      if (draft !== null) {
+        this.removeDraft();
+      }
+
+      throw error;
+    }
+
     this.syncAnswer();
 
     // What the element just rendered is the server's own state arriving, not an
-    // edit — so it is the mark everything after it is measured against.
-    this.savedAnswer = this.authoredAnswer();
-    this.markUnsaved(this.savedAnswer);
+    // edit — so it is the mark everything after it is measured against. Under a
+    // restored draft the render is *ahead* of the server, and the baseline is
+    // the one the draft was measured against, so the unsaved flag (and the
+    // beforeunload guard it drives) comes up already set.
+    if (draft === null) {
+      this.savedAnswer = this.authoredAnswer();
+      this.markUnsaved(this.savedAnswer);
+    } else {
+      this.savedAnswer = draft.saved;
+      this.markUnsaved();
+    }
+
+    this.draftReady = true;
 
     // What gets recorded is the answer as it stood when the submit began. An
     // edit made while the request is in flight is unsaved work, and adopting
@@ -160,10 +317,152 @@ export abstract class CarnapExerciseElement<
 
   /** Flag (or unflag) this element as holding work the server does not have. */
   private markUnsaved(answer = this.authoredAnswer()): void {
-    this.toggleAttribute(
-      UNSAVED_ANSWER_ATTRIBUTE,
-      answer !== this.savedAnswer,
-    );
+    const unsaved = answer !== this.savedAnswer;
+
+    this.toggleAttribute(UNSAVED_ANSWER_ATTRIBUTE, unsaved);
+
+    // The same comparison decides the draft: work the server lacks is exactly
+    // what is worth a local copy, and work it has needs none — which makes a
+    // recorded submission clear the draft with no listener of its own, since
+    // the recorded-answer handler lands here with the two sides equal.
+    if (!this.draftReady) {
+      return;
+    }
+
+    if (unsaved) {
+      this.writeDraft(answer);
+    } else {
+      this.removeDraft();
+    }
+  }
+
+  /**
+   * Where drafts for this exercise live, or null for none. Only the answering
+   * path keeps drafts: review mode shows recorded work, and a formless element
+   * (a preview) has no attempt. The form's `action` already names the attempt
+   * — `/courses/…/attempts/{id}/submissions` — so together with the exercise
+   * id it is the "exercise id and attempt" key with no new markup. It is *not*
+   * keyed by content revision, deliberately: a revision published mid-attempt
+   * changes `priorAnswer`'s fit too, and a draft should survive exactly as
+   * well as a prior answer does.
+   */
+  private resolveDraftKey(): string | null {
+    if (this.mode !== "answer" || this.form === null) {
+      return null;
+    }
+
+    const action = this.form.getAttribute("action");
+    const exerciseId =
+      this.form.dataset.exerciseId ?? this.dataset.exerciseId;
+
+    if (action === null || action === "" || exerciseId === undefined) {
+      return null;
+    }
+
+    return `${DRAFT_KEY_PREFIX}${action}#${exerciseId}`;
+  }
+
+  /**
+   * The stored draft for this exercise, vetted for restoring: a parseable
+   * record whose answer parses and actually differs from what the server held.
+   * Anything less is removed on the spot, so a corrupted draft costs one
+   * reload rather than failing every one.
+   */
+  private readDraft(): {
+    prior: ExerciseHydration["priorAnswer"];
+    saved: string;
+  } | null {
+    if (this.draftKey === null) {
+      return null;
+    }
+
+    const storage = draftStorage();
+
+    if (storage === null) {
+      return null;
+    }
+
+    sweepStaleDrafts(storage);
+
+    let text: string | null = null;
+
+    try {
+      text = storage.getItem(this.draftKey);
+    } catch (_error) {
+      return null;
+    }
+
+    if (text === null) {
+      return null;
+    }
+
+    const record = parseDraftRecord(text);
+
+    if (record === null || record.authored === record.saved) {
+      this.removeDraft();
+      return null;
+    }
+
+    try {
+      return {
+        prior: JSON.parse(
+          record.authored,
+        ) as ExerciseHydration["priorAnswer"],
+        saved: record.saved,
+      };
+    } catch (_error) {
+      this.removeDraft();
+      return null;
+    }
+  }
+
+  private writeDraft(authored: string): void {
+    if (
+      this.draftKey === null ||
+      (this.lastDraft?.authored === authored &&
+        this.lastDraft.saved === this.savedAnswer)
+    ) {
+      return;
+    }
+
+    const storage = draftStorage();
+
+    if (storage === null) {
+      return;
+    }
+
+    // Unthrottled by design: a trailing debounce would lose the last seconds
+    // before a crash, which is the one moment drafts exist for, and an answer
+    // is a few kilobytes at worst. Failure — quota, a locked-down store — just
+    // means no draft; the beforeunload guard still covers deliberate leaving.
+    try {
+      storage.setItem(
+        this.draftKey,
+        JSON.stringify({
+          authored,
+          saved: this.savedAnswer,
+          savedAt: Date.now(),
+          version: DRAFT_VERSION,
+        }),
+      );
+      this.lastDraft = { authored, saved: this.savedAnswer };
+    } catch (_error) {
+      return;
+    }
+  }
+
+  private removeDraft(): void {
+    if (this.draftKey === null) {
+      return;
+    }
+
+    this.lastDraft = null;
+
+    try {
+      draftStorage()?.removeItem(this.draftKey);
+    } catch (_error) {
+      return;
+    }
   }
 
   /**
