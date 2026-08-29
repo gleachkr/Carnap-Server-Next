@@ -833,6 +833,24 @@ a.score-uncounted {
   color: var(--red);
 }
 
+/* Worth knowing, not wrong — the same gold the noscript banner and warning
+   badges use, for notices flagging a true state rather than a mistake. */
+.notice-warn {
+  background: var(--gold-soft);
+  border-color: color-mix(in srgb, var(--gold) 25%, transparent);
+  color: var(--gold);
+}
+
+/* A score graded out of points the assignment no longer uses: the number is
+   right, its denominator has moved on. The tint marks it; the note child
+   names the current figure, so the mark never speaks by colour alone. */
+.points-drift {
+  background: var(--gold-soft);
+  border-radius: 4px;
+  color: var(--gold);
+  padding: 0.12rem 0.45rem;
+}
+
 .notice p {
   margin: 0 0 0.6rem;
 }

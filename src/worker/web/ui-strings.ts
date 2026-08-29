@@ -308,6 +308,12 @@ export interface ReviewUiStrings {
   readonly actionFailed: string;
   readonly allReviewed: string;
   /**
+   * The points-drift note halves, so a card graded in place says the same
+   * thing a reload would. Same ids as `PointsDriftNote`.
+   */
+  readonly driftChanged: string;
+  readonly driftRemoved: string;
+  /**
    * Who produced the score, keyed by `evaluatorKind` — the script used to print
    * the raw enum value, which stayed English (and untranslated) in every locale.
    */
@@ -323,6 +329,8 @@ export function reviewUiStrings(i18n: Translator): ReviewUiStrings {
   return {
     actionFailed: i18n.t("The action was not accepted."),
     allReviewed: i18n.t("Every recorded submission has been reviewed."),
+    driftChanged: i18n.t("now worth {points}", placeholders("points")),
+    driftRemoved: i18n.t("no longer in the assignment"),
     evaluators: {
       automatic: evaluatorKindLabel(i18n, "automatic"),
       manual: evaluatorKindLabel(i18n, "manual"),

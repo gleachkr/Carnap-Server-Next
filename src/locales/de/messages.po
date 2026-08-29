@@ -2392,6 +2392,11 @@ msgstr "Kein Verspätungsabzug"
 msgid "No line is left uncited, so there is no root to prove the goal (the lines cite each other in a cycle)."
 msgstr "Keine Zeile bleibt unzitiert, es gibt also keine Wurzel, die das Ziel beweist (die Zeilen zitieren sich im Kreis)."
 
+#: src/worker/web/components.tsx
+#: src/worker/web/ui-strings.ts
+msgid "no longer in the assignment"
+msgstr ""
+
 #: src/worker/exercises/multiple-choice/assessment.ts
 msgid "No option selected"
 msgstr "Keine Option ausgewählt"
@@ -2514,6 +2519,11 @@ msgstr "Noch nicht bewertet"
 #: src/worker/web/content.tsx
 msgid "Nothing to preview yet"
 msgstr "Noch nichts in der Vorschau"
+
+#: src/worker/web/components.tsx
+#: src/worker/web/ui-strings.ts
+msgid "now worth {points}"
+msgstr ""
 
 #: src/worker/application/grade-passback.ts
 msgid "Only a failed grade sync can be retried."
@@ -3224,6 +3234,11 @@ msgstr "Site-Administrator"
 #: src/worker/application/admin.ts
 msgid "Site administrators cannot suspend their own account."
 msgstr "Site-Administratoren können ihr eigenes Konto nicht sperren."
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Some scores here were graded when their exercises were worth different points. Each shows the points it was graded out of; the assignment total counts every exercise at its current points."
+msgstr ""
 
 #: src/worker/web/errors.tsx
 msgid "Something went wrong"

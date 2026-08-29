@@ -4,6 +4,7 @@ import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
 
 import { CSRF_COOKIE_NAME } from "../application/auth";
+import type { StoredPointsDrift } from "../domain/assessment";
 import type { ExerciseAnswerReview } from "../domain/content";
 import type { AppBindings } from "../http";
 import { APP_FRAME_PARAM } from "./content-document";
@@ -78,11 +79,39 @@ export const AnswerReview: FC<{ readonly review: ExerciseAnswerReview }> = ({
   );
 };
 
-export const Notice: FC<{ readonly children: Child }> = ({ children }) => (
-  <div class="notice" role="status">
+export const Notice: FC<{
+  readonly children: Child;
+  /** "warn" is gold — worth knowing, not wrong. The default blue is neutral. */
+  readonly tone?: "info" | "warn";
+}> = ({ children, tone = "info" }) => (
+  <div
+    class={tone === "warn" ? "notice notice-warn" : "notice"}
+    role="status"
+  >
     {children}
   </div>
 );
+
+/**
+ * The words that ride with a points-drift tint: what the assignment counts
+ * the exercise at now, since the tinted score keeps saying what it was graded
+ * out of. The separator lives inside the span so the review script's
+ * textContent reset removes the whole annotation in one stroke.
+ */
+export const PointsDriftNote: FC<{ readonly drift: StoredPointsDrift }> = ({
+  drift,
+}) => {
+  const i18n = useI18n();
+
+  return (
+    <span class="points-drift-note">
+      {" · "}
+      {drift.kind === "removed"
+        ? i18n.t("no longer in the assignment")
+        : i18n.t("now worth {points}", { points: drift.nominalPoints })}
+    </span>
+  );
+};
 
 /**
  * A read-only value with a copy-to-clipboard button. Use for secrets shown

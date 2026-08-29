@@ -434,6 +434,28 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     });
   }
 
+  // Mirrors storedPointsDrift on the server: the status span carries the
+  // current declared points in data-nominal-points ("" when the exercise has
+  // left the assignment), and the note says how the stored denominator
+  // disagrees — or null when it does not.
+  function driftNoteText(evaluation, status) {
+    if (!evaluation || evaluation.maxScore === null) {
+      return null;
+    }
+
+    const nominal = status.dataset.nominalPoints;
+
+    if (nominal === undefined || nominal === "") {
+      return S.driftRemoved || "no longer in the assignment";
+    }
+
+    if (Number(nominal) === Number(evaluation.maxScore)) {
+      return null;
+    }
+
+    return fill(S.driftChanged || "now worth {points}", { points: nominal });
+  }
+
   // Mirrors submissionNeedsReview + reviewState on the server, and returns the
   // same machine values — never the displayed words, which differ by language.
   function reviewStateOf(evaluation) {
@@ -530,7 +552,23 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     const status = card.querySelector(".submission-review-status");
 
     if (status !== null) {
+      // Wipes any server-rendered drift note along with the old line; the
+      // drift is then re-derived from the fresh evaluation, since a manual
+      // grade is stamped with the current points (drift gone) while an
+      // approval copies the automatic's old figure (drift stays).
       status.textContent = evaluationText(evaluation);
+
+      const note = driftNoteText(evaluation, status);
+
+      status.classList.toggle("points-drift", note !== null);
+
+      if (note !== null) {
+        const span = document.createElement("span");
+
+        span.className = "points-drift-note";
+        span.textContent = " \\u00b7 " + note;
+        status.appendChild(span);
+      }
     }
 
     const label = card.querySelector(".review-state-label");

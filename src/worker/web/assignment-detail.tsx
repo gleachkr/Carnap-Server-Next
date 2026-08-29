@@ -32,6 +32,7 @@ import {
   type Attempt,
   type EvaluationVerdict,
   type Submission,
+  storedPointsDrift,
   submissionNeedsReview,
   type ViewerEvaluation,
 } from "../domain/assessment";
@@ -122,6 +123,7 @@ import {
   ErrorSummary,
   LinkStrip,
   Notice,
+  PointsDriftNote,
   Sheet,
   type SummaryItem,
   SummaryStrip,
@@ -2394,6 +2396,7 @@ const SubmissionReviewCard: FC<{
   const [submittedBefore, submittedAfter] = splitAtValue(
     i18n.t("Submitted {when}", { when: VALUE }),
   );
+  const drift = storedPointsDrift(entry.evaluation, entry.nominalPoints);
 
   return (
     <Sheet className="submission-review-card">
@@ -2404,8 +2407,20 @@ const SubmissionReviewCard: FC<{
             {userDisplayMeta(i18n, entry.user, submission.userId)}
           </p>
         </div>
-        <span class="submission-review-status">
+        {/* The data attribute is for the review script, which re-derives the
+            drift after grading in place: a fresh manual grade is stamped with
+            the current points, so its rewrite clears the mark, while an
+            approval copies the old figure and keeps it. */}
+        <span
+          class={
+            drift === null
+              ? "submission-review-status"
+              : "submission-review-status points-drift"
+          }
+          data-nominal-points={entry.nominalPoints ?? ""}
+        >
           {evaluationText(i18n, entry.evaluation)}
+          {drift === null ? null : <PointsDriftNote drift={drift} />}
         </span>
       </header>
       <p class="submission-review-meta">
@@ -2436,7 +2451,13 @@ const SubmissionReviewCard: FC<{
             assignmentId={assignmentId}
             context={context}
             courseId={courseId}
-            maxScore={entry.evaluation?.maxScore ?? entry.nominalPoints}
+            // The current declared points, preferred over the evaluation's
+            // stored figure: `nominalPointsFor` will stamp the new grade with
+            // the manifest's number, and the label must say the number the
+            // grade will actually be out of.
+            maxScore={
+              entry.nominalPoints ?? entry.evaluation?.maxScore ?? null
+            }
             submissionId={submission.id}
           />
         </details>
@@ -2518,10 +2539,24 @@ const SubmissionsReview: FC<{
     filter === "needs-review"
       ? entries.filter((entry) => submissionNeedsReview(entry.evaluation))
       : entries;
+  // Counted over every entry, not the filtered view: the banner announces a
+  // fact about the assignment's grades, which does not come and go with the
+  // needs-review toggle.
+  const anyDrift = entries.some(
+    (entry) =>
+      storedPointsDrift(entry.evaluation, entry.nominalPoints) !== null,
+  );
   const base = `/courses/${courseId}/instructor/assignments/${assignmentId}/submissions`;
 
   return (
     <>
+      {anyDrift ? (
+        <Notice tone="warn">
+          {i18n.t(
+            "Some scores here were graded when their exercises were worth different points. Each shows the points it was graded out of; the assignment total counts every exercise at its current points.",
+          )}
+        </Notice>
+      ) : null}
       <ReviewFilterBar
         base={base}
         filter={filter}

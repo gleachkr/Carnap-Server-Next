@@ -2392,6 +2392,11 @@ msgstr ""
 msgid "No line is left uncited, so there is no root to prove the goal (the lines cite each other in a cycle)."
 msgstr ""
 
+#: src/worker/web/components.tsx
+#: src/worker/web/ui-strings.ts
+msgid "no longer in the assignment"
+msgstr ""
+
 #: src/worker/exercises/multiple-choice/assessment.ts
 msgid "No option selected"
 msgstr ""
@@ -2513,6 +2518,11 @@ msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Nothing to preview yet"
+msgstr ""
+
+#: src/worker/web/components.tsx
+#: src/worker/web/ui-strings.ts
+msgid "now worth {points}"
 msgstr ""
 
 #: src/worker/application/grade-passback.ts
@@ -3223,6 +3233,11 @@ msgstr ""
 
 #: src/worker/application/admin.ts
 msgid "Site administrators cannot suspend their own account."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/gradebook.tsx
+msgid "Some scores here were graded when their exercises were worth different points. Each shows the points it was graded out of; the assignment total counts every exercise at its current points."
 msgstr ""
 
 #: src/worker/web/errors.tsx

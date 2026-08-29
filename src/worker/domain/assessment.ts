@@ -41,6 +41,20 @@ export interface Evaluation {
   readonly checkerVersion: string | null;
   readonly result: JsonValue;
   readonly score: number;
+  /**
+   * What the work was graded out of: the exercise's declared points, copied
+   * from the assignment's pinned revision at grading time. Every writer copies
+   * that same figure — the autograder via `nominalMaxScore`, hand grading via
+   * `nominalPointsFor`, approval from the automatic evaluation it stands
+   * behind — so this is never a number anyone typed.
+   *
+   * It is a historical record, not a cache. Repointing the assignment at a
+   * revision with different points does not restamp it: the verdict, the
+   * review queue, and every "4/5" display keep reading the denominator the
+   * student actually faced, while assignment totals divide by the current
+   * manifest's points (`calculateAssignmentScore`). When the two disagree,
+   * {@link storedPointsDrift} is how a view says so.
+   */
   readonly maxScore: number;
   readonly createdAt: Timestamp;
   readonly voidedAt: Timestamp | null;
@@ -87,6 +101,41 @@ export interface ViewerEvaluation
   readonly result: JsonValue | null;
   readonly score: number | null;
   readonly verdict: EvaluationVerdict;
+}
+
+/**
+ * How an evaluation's stored denominator disagrees with what the assignment
+ * counts the exercise at today, or null when it does not.
+ *
+ * The disagreement is real and deliberate: after a repoint that changed an
+ * exercise's points, the evaluation keeps saying what the work was graded out
+ * of while the total divides by the current figure. This is where a view asks
+ * so it can say so out loud — a tint and a note on the score, a banner over
+ * the page — rather than leaving a reader to reconcile "4/5" against a total
+ * out of 2 by arithmetic.
+ *
+ * A sealed evaluation (`maxScore: null`) never drifts: numbers a reader may
+ * not see cannot be annotated without being disclosed.
+ */
+export type StoredPointsDrift =
+  | { readonly kind: "changed"; readonly nominalPoints: number }
+  | { readonly kind: "removed" };
+
+export function storedPointsDrift(
+  evaluation: Pick<ViewerEvaluation, "maxScore"> | null,
+  nominalPoints: number | null,
+): StoredPointsDrift | null {
+  if (evaluation === null || evaluation.maxScore === null) {
+    return null;
+  }
+
+  if (nominalPoints === null) {
+    return { kind: "removed" };
+  }
+
+  return evaluation.maxScore === nominalPoints
+    ? null
+    : { kind: "changed", nominalPoints };
 }
 
 /**

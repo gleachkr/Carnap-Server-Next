@@ -89,6 +89,35 @@ the opposite of what it looks like: it changes how the submission reads on the
 review card — including whether it counts as full marks — while the total goes
 on dividing by the author's figure.
 
+## Two denominators
+
+A stored evaluation's maximum and an assignment's maximum answer different
+questions, and they are allowed to disagree.
+
+`evaluations.max_score` is historical evidence: what the work was graded out
+of, copied from the assignment's pinned revision at grading time. The
+verdict, the review queue, and every displayed "4/5" read it, so graded work
+keeps meaning what it meant when it was graded. The assignment total is a
+live projection: it divides by the sum of the *current* manifest's declared
+points (minus excused exercises), and its numerator is the sum of stored raw
+scores.
+
+Repointing a published assignment at a revision with different points is the
+one act that splits them, and it restamps nothing — rewriting evaluations
+would let a repoint retroactively re-judge old work, and deriving the stored
+maximum at read time would do the same thing implicitly. The projection is
+recomputed immediately (and pushed to any linked LMS), but each evaluation
+keeps its own denominator. A consequence to know about: a stored raw score
+feeds the numerator unscaled, so work graded 5/5 on an exercise now worth 2
+contributes 5 points against a denominator counting 2 — the same
+numerator-over-unchanged-denominator arithmetic that makes deliberate extra
+credit work.
+
+The views say so rather than reconcile. A page showing an affected score
+tints it gold and names the current figure ("now worth 2", or "no longer in
+the assignment" when the exercise has left the manifest), under a banner
+explaining that totals count every exercise at its current points.
+
 ## Policy-derived modifiers
 
 Availability, timing, attempt limits, resets, accommodations, overrides, late

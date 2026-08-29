@@ -9,7 +9,10 @@ import type {
   StudentAssignmentResults,
   SubmissionHistoryEntry,
 } from "../application/submissions";
-import type { ViewerEvaluation } from "../domain/assessment";
+import {
+  storedPointsDrift,
+  type ViewerEvaluation,
+} from "../domain/assessment";
 import type { AssignmentScore } from "../domain/grades";
 import type { AppBindings } from "../http";
 import {
@@ -18,7 +21,14 @@ import {
   instructorAssignmentCrumb,
   studentAssignmentCrumb,
 } from "./breadcrumbs";
-import { AnswerReview, LinkStrip, Sheet, TableScroll } from "./components";
+import {
+  AnswerReview,
+  LinkStrip,
+  Notice,
+  PointsDriftNote,
+  Sheet,
+  TableScroll,
+} from "./components";
 import { renderShell, useI18n } from "./layout";
 import { SortHeader, sortNumber } from "./table-sort";
 
@@ -301,6 +311,10 @@ const ResultExercise: FC<{ readonly entry: SubmissionHistoryEntry }> = ({
 }) => {
   const i18n = useI18n();
   const comment = instructorComment(entry.evaluation);
+  // Null whenever the numbers are sealed: a drift note names the stored
+  // denominator's disagreement, which cannot be said about a number the
+  // student may not see.
+  const drift = storedPointsDrift(entry.evaluation, entry.nominalPoints);
 
   return (
     <div class="result-exercise">
@@ -316,8 +330,9 @@ const ResultExercise: FC<{ readonly entry: SubmissionHistoryEntry }> = ({
         ) : entry.evaluation.score === null ? (
           <span class="small">{i18n.t("Score not released yet")}</span>
         ) : (
-          <span>
+          <span class={drift === null ? undefined : "points-drift"}>
             {entry.evaluation.score}/{entry.evaluation.maxScore}
+            {drift === null ? null : <PointsDriftNote drift={drift} />}
           </span>
         )}
       </div>
@@ -367,6 +382,13 @@ export function renderStudentAssignmentResults(
     );
   }
 
+  const anyDrift = model.results.attempts.some((attempt) =>
+    attempt.entries.some(
+      (entry) =>
+        storedPointsDrift(entry.evaluation, entry.nominalPoints) !== null,
+    ),
+  );
+
   return renderShell(
     context,
     { breadcrumb, title: i18n.t("Results") },
@@ -375,6 +397,13 @@ export function renderStudentAssignmentResults(
     // upstream. Saying so once at the top beats a page of "Not yet graded"
     // with nothing to explain it.
     <>
+      {anyDrift ? (
+        <Notice tone="warn">
+          {i18n.t(
+            "Some scores here were graded when their exercises were worth different points. Each shows the points it was graded out of; the assignment total counts every exercise at its current points.",
+          )}
+        </Notice>
+      ) : null}
       {model.results.released ? null : (
         <Sheet title={i18n.t("Results")}>
           <p>
