@@ -3163,6 +3163,10 @@ msgid "Scores across every graded assignment"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
 msgid "Scores, export, and submission review"
 msgstr ""
 

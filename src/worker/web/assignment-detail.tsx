@@ -1839,75 +1839,89 @@ const CorrectionForms: FC<{
     readonly contentItem: ContentItem;
     readonly contentRevision: ContentRevision;
   };
+  readonly gradedWorkExists: boolean;
   readonly revisions: readonly AssignmentRevisionOption[];
-}> = ({ context, courseId, detail, revisions }) => {
+}> = ({ context, courseId, detail, gradedWorkExists, revisions }) => {
   const i18n = useI18n();
   const baseAction = `/courses/${courseId}/instructor/assignments/${detail.assignment.id}`;
 
   return (
-    <div class="correction-bars">
-      <form
-        action={`${baseAction}/content-revision`}
-        class="create-bar"
-        method="post"
-      >
-        <CsrfInput context={context} />
-        <select
-          aria-label={i18n.t("Content revision to publish")}
-          name="contentRevisionId"
-          required
-        >
-          {revisions
-            .filter(({ item }) => item.id === detail.contentItem.id)
-            .map((option) => (
-              <RevisionOption
-                context={context}
-                option={option}
-                selected={option.revision.id === detail.contentRevision.id}
-              />
-            ))}
-        </select>
-        <input
-          aria-label={i18n.t("Correction note")}
-          name="note"
-          placeholder={i18n.t("What changed, optional")}
-        />
-        <button class="secondary" type="submit">
-          {i18n.t("Publish correction")}
-        </button>
-      </form>
-      {/* No exercises to name means no excuse to make — and a `required`
-          select with no options is a control that cannot be satisfied. That is
-          the ordinary case for a prose-only assignment, and also what an
-          unreadable artifact leaves behind, where the repoint form above is
-          the only one that can help. */}
-      {detail.artifact.manifest.length === 0 ? null : (
+    <>
+      {/* The same advisory shape as releasing grades on an open assignment:
+          the act is legitimate, so the page says what it will do rather than
+          asking twice. This is the before-the-fact half of the points-drift
+          story — the review and results pages mark each affected score after. */}
+      {gradedWorkExists ? (
+        <p class="notice">
+          {i18n.t(
+            "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points.",
+          )}
+        </p>
+      ) : null}
+      <div class="correction-bars">
         <form
-          action={`${baseAction}/excuses`}
+          action={`${baseAction}/content-revision`}
           class="create-bar"
           method="post"
         >
           <CsrfInput context={context} />
           <select
-            aria-label={i18n.t("Exercise to excuse")}
-            name="exerciseId"
+            aria-label={i18n.t("Content revision to publish")}
+            name="contentRevisionId"
             required
           >
-            {detail.artifact.manifest.map((item) => (
-              <option value={item.id}>{item.title ?? item.id}</option>
-            ))}
+            {revisions
+              .filter(({ item }) => item.id === detail.contentItem.id)
+              .map((option) => (
+                <RevisionOption
+                  context={context}
+                  option={option}
+                  selected={option.revision.id === detail.contentRevision.id}
+                />
+              ))}
           </select>
           <input
-            aria-label={i18n.t("Excuse reason")}
-            name="reason"
-            placeholder={i18n.t("Reason, optional")}
+            aria-label={i18n.t("Correction note")}
+            name="note"
+            placeholder={i18n.t("What changed, optional")}
           />
           <button class="secondary" type="submit">
-            {i18n.t("Excuse exercise")}
+            {i18n.t("Publish correction")}
           </button>
         </form>
-      )}
-    </div>
+        {/* No exercises to name means no excuse to make — and a `required`
+          select with no options is a control that cannot be satisfied. That is
+          the ordinary case for a prose-only assignment, and also what an
+          unreadable artifact leaves behind, where the repoint form above is
+          the only one that can help. */}
+        {detail.artifact.manifest.length === 0 ? null : (
+          <form
+            action={`${baseAction}/excuses`}
+            class="create-bar"
+            method="post"
+          >
+            <CsrfInput context={context} />
+            <select
+              aria-label={i18n.t("Exercise to excuse")}
+              name="exerciseId"
+              required
+            >
+              {detail.artifact.manifest.map((item) => (
+                <option value={item.id}>{item.title ?? item.id}</option>
+              ))}
+            </select>
+            <input
+              aria-label={i18n.t("Excuse reason")}
+              name="reason"
+              placeholder={i18n.t("Reason, optional")}
+            />
+            <button class="secondary" type="submit">
+              {i18n.t("Excuse exercise")}
+            </button>
+          </form>
+        )}
+      </div>
+    </>
   );
 };
 
@@ -2935,6 +2949,8 @@ export function renderInstructorAssignmentPage(
     readonly courseTitle: string;
     readonly detail: AssignmentDetail;
     readonly directory: UserDirectory;
+    /** Whether any student's score already sums recorded evaluations. */
+    readonly gradedWorkExists: boolean;
     readonly latePolicy: AssignmentLatePolicy | null;
     readonly notices: readonly string[];
     readonly overrides: ReadonlyMap<string, AssignmentOverride>;
@@ -3085,6 +3101,7 @@ export function renderInstructorAssignmentPage(
             context={context}
             courseId={courseId}
             detail={detail}
+            gradedWorkExists={model.gradedWorkExists}
             revisions={model.revisions}
           />
         }

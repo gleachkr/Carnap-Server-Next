@@ -1717,12 +1717,25 @@ async function instructorDetailPage(
   // earlier, and the sheet would claim there was no late penalty when there
   // was one.
   const latePolicy = await assignments.getLatePolicy(detail.assignment.id);
+  // Whether any recorded evaluation already counts toward a score: partial
+  // and complete are the two statuses summed from evaluations, and they are
+  // what the correction form's advisory is about. A draft has none.
+  const gradedWorkExists =
+    detail.assignment.state === "published" &&
+    (
+      await storesForContext(context).scores.listAssignmentScores(
+        detail.assignment.id,
+      )
+    ).some(
+      (score) => score.status === "partial" || score.status === "complete",
+    );
 
   return renderInstructorAssignmentPage(context, {
     courseId,
     courseTitle: await courseTitleFor(context, courseId),
     detail,
     directory,
+    gradedWorkExists,
     latePolicy,
     notices: instructorNotices(context.get("i18n"))
       .filter((entry) => url.searchParams.has(entry.param))

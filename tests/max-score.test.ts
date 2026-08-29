@@ -307,6 +307,8 @@ async function submitCorrect(
 }
 
 const BANNER_TEXT = "graded when their exercises were worth different points";
+const ADVISORY_TEXT =
+  "keeps each recorded score and the points it was graded out of";
 
 describe("storedPointsDrift", () => {
   test("nothing drifts without an evaluation or without its numbers", () => {
@@ -379,6 +381,19 @@ describe("two denominators after a repoint", () => {
         courseId,
         firstRevision,
       );
+      const base = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
+      const asInstructorPage = {
+        headers: { Accept: "text/html", Cookie: instructor.cookieHeader },
+      };
+
+      // Nothing has been graded yet, so the correction form carries no
+      // advisory: repointing a fresh assignment is routine.
+      const freshPage = await (
+        await appRequest(createTestApp(), base, asInstructorPage, env)
+      ).text();
+
+      expect(freshPage).not.toContain(ADVISORY_TEXT);
+
       const attemptId = await beginAttempt(
         env,
         student,
@@ -403,10 +418,14 @@ describe("two denominators after a repoint", () => {
         "q2",
       );
 
-      const base = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
-      const asInstructorPage = {
-        headers: { Accept: "text/html", Cookie: instructor.cookieHeader },
-      };
+      // With graded work recorded, the correction form warns before the
+      // fact: the advisory states what a repoint will and will not change.
+      const gradedPage = await (
+        await appRequest(createTestApp(), base, asInstructorPage, env)
+      ).text();
+
+      expect(gradedPage).toContain(ADVISORY_TEXT);
+
       const before = (await (
         await appRequest(
           createTestApp(),
