@@ -66,7 +66,13 @@
   border-radius: 0.25rem;
   outline: none;
 }
-.tree-node:focus-visible {
+/* The ring is a mode indicator, not a selection marker: it shows exactly
+   when arrow keys move between nodes rather than the text caret, because
+   that is what focus on this wrapper means — typing puts focus in a field
+   inside it, and Esc hands it back. `:focus` rather than `:focus-visible`:
+   the UA's modality heuristic hides the ring after mouse-first input, and
+   Esc out of a field is precisely when it must appear. */
+.tree-node:focus {
   outline: 2px solid var(--blue, #0b66d8);
   outline-offset: 2px;
 }
