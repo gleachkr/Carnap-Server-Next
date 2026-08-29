@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 
+import type { TurnstileVerifier } from "./application/auth";
 import type { LtiPlatformKeyResolver } from "./application/lti";
 import type { AppBindings, WorkerApp } from "./http";
 import { actorMiddleware, csrfMiddleware } from "./middleware/auth";
@@ -35,11 +36,20 @@ export interface CreateAppOptions {
   readonly lti?: {
     readonly keyResolver?: LtiPlatformKeyResolver;
   };
+  /**
+   * Test seam: verify Turnstile tokens against an injected verifier instead
+   * of calling Cloudflare's siteverify endpoint. Same reasoning as the LTI
+   * key resolver above.
+   */
+  readonly turnstile?: {
+    readonly verifier?: TurnstileVerifier;
+  };
 }
 
 export function createApp(options: CreateAppOptions = {}): WorkerApp {
   const app = new Hono<AppBindings>();
   const ltiKeyResolver = options.lti?.keyResolver;
+  const turnstileVerifier = options.turnstile?.verifier;
 
   // First of everything, because it is the only middleware that has to apply to
   // responses the rest of the stack never sees. It reads nothing and does no
@@ -72,6 +82,13 @@ export function createApp(options: CreateAppOptions = {}): WorkerApp {
   if (ltiKeyResolver !== undefined) {
     app.use("/lti/*", async (context, next) => {
       context.set("ltiKeyResolver", ltiKeyResolver);
+      await next();
+    });
+  }
+
+  if (turnstileVerifier !== undefined) {
+    app.use("*", async (context, next) => {
+      context.set("turnstileVerifier", turnstileVerifier);
       await next();
     });
   }

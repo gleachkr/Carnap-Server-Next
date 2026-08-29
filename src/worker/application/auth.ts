@@ -67,9 +67,48 @@ export interface LoginEmailSender {
   send(input: SendLoginEmailInput): Promise<void>;
 }
 
+export interface VerifyTurnstileInput {
+  /** Forwarded to the verifier as corroborating evidence, never decided on. */
+  readonly ipAddress: string | null;
+  /** The widget's response token, or null when the form carried none. */
+  readonly token: string | null;
+}
+
+/**
+ * The "prove a person is present" gate on asking for a login email.
+ *
+ * The per-IP throttle beneath it only stops the trivial single-host script — a
+ * botnet walks past any per-IP number, and the address limit protects one
+ * mailbox, not our sender reputation. A challenge token per request is the one
+ * control that prices mass mailing in money rather than in IP addresses, which
+ * is why, where it is configured at all, it applies to every request and not
+ * just to suspicious ones: an adaptive challenge keyed on the IP counter would
+ * never fire for exactly the distributed attacker it exists for.
+ *
+ * `verify` throws an {@link AppHttpError} unless the token proves a challenge
+ * was passed; the one implementation is Cloudflare Turnstile
+ * (`infrastructure/turnstile.ts`).
+ */
+export interface TurnstileVerifier {
+  verify(input: VerifyTurnstileInput): Promise<void>;
+}
+
 export interface StartNativeLoginInput {
   readonly email: string;
   readonly ipAddress?: string | null;
+  /**
+   * The deployment's challenge gate, or null where none is configured.
+   *
+   * Required on the *input*, not defaulted in the constructor, for the same
+   * reason `loginRateLimiter` stopped being skippable: an entry point that can
+   * make the server send mail must say out loud what its bot policy is. Both
+   * callers pass `turnstileForContext`, which reads the deployment's keys; a
+   * new caller that wants no gate has to write `turnstile: null` where a
+   * reviewer will see it.
+   */
+  readonly turnstile: TurnstileVerifier | null;
+  /** What the form or JSON body carried; null when the field was absent. */
+  readonly turnstileToken: string | null;
 }
 
 export interface StartedNativeLogin {
@@ -171,9 +210,22 @@ export class AuthService {
 
     assertEmail(email);
 
+    // Before the rate limiter, so a botted request is refused by the challenge
+    // it cannot answer rather than allowed to spend the shared IP budget —
+    // and after `assertEmail`, so garbage input costs no verification call.
+    if (input.turnstile !== null) {
+      await input.turnstile.verify({
+        ipAddress: input.ipAddress ?? null,
+        token: input.turnstileToken,
+      });
+    }
+
     await this.loginRateLimiter.check({
       email,
       ipAddress: input.ipAddress ?? null,
+      // A request that got this far past a configured verifier has answered a
+      // challenge, which is what lets the limiter apply the looser IP bound.
+      turnstileVerified: input.turnstile !== null,
     });
 
     const nowDate = this.options.now?.() ?? new Date();

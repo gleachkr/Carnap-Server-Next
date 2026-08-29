@@ -954,6 +954,10 @@ msgstr ""
 msgid "Compiled content"
 msgstr ""
 
+#: src/worker/infrastructure/turnstile.ts
+msgid "Complete the verification check to request a login link. If no check appeared on the form, enable JavaScript and reload the page."
+msgstr ""
+
 #: src/worker/web/profile-prompt.tsx
 msgid "Complete your profile"
 msgstr ""
@@ -1902,6 +1906,10 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Hide grades"
+msgstr ""
+
+#: src/worker/infrastructure/turnstile.ts
+msgid "Human verification is misconfigured for this deployment."
 msgstr ""
 
 #: src/worker/application/submissions.ts
@@ -3738,6 +3746,14 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The variant attribute must be simple, validity, or partial."
+msgstr ""
+
+#: src/worker/infrastructure/turnstile.ts
+msgid "The verification check did not pass or has expired. Please try again."
+msgstr ""
+
+#: src/worker/infrastructure/turnstile.ts
+msgid "The verification service could not be reached. Please try again shortly."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof/theory-panel.ts

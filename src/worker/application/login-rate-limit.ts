@@ -8,6 +8,13 @@ import { hashAuthToken } from "./tokens";
 export interface LoginRateLimitInput {
   readonly email: string;
   readonly ipAddress: string | null;
+  /**
+   * Whether this request already passed a Turnstile challenge. Required rather
+   * than defaulted, so the caller that knows has to say — a flag that quietly
+   * read as `false` would keep the tight IP bound on deployments that
+   * configured the challenge precisely to be rid of it.
+   */
+  readonly turnstileVerified: boolean;
 }
 
 export interface LoginRateLimiter {
@@ -48,11 +55,26 @@ export const LOGIN_RATE_LIMIT_PER_EMAIL = 5;
  */
 export const LOGIN_RATE_LIMIT_PER_IP = 40;
 
+/**
+ * The per-IP bound for a request that already passed a Turnstile challenge.
+ *
+ * Once every request carries a solved challenge, the IP counter's original
+ * job — stopping the free single-host script — is done better by the
+ * challenge, and what the counter was really costing was a ceiling on a
+ * lecture hall behind one campus NAT. So the bound loosens rather than
+ * disappears: it remains the tripwire for the residual case, a single host
+ * paying a solving farm to walk an address list, at a height no classroom
+ * plausibly reaches — three hundred distinct sign-ins through one egress
+ * address inside fifteen minutes.
+ */
+export const LOGIN_RATE_LIMIT_PER_IP_VERIFIED = 300;
+
 export interface StoredLoginRateLimiterOptions {
   readonly auth: AuthStore;
   readonly now?: () => Date;
   readonly perEmail?: number;
   readonly perIpAddress?: number;
+  readonly perIpAddressVerified?: number;
   readonly windowSeconds?: number;
 }
 
@@ -108,6 +130,8 @@ export function createStoredLoginRateLimiter(
     options.windowSeconds ?? LOGIN_RATE_LIMIT_WINDOW_SECONDS;
   const perEmail = options.perEmail ?? LOGIN_RATE_LIMIT_PER_EMAIL;
   const perIpAddress = options.perIpAddress ?? LOGIN_RATE_LIMIT_PER_IP;
+  const perIpAddressVerified =
+    options.perIpAddressVerified ?? LOGIN_RATE_LIMIT_PER_IP_VERIFIED;
 
   return {
     async check(input: LoginRateLimitInput): Promise<void> {
@@ -118,11 +142,16 @@ export function createStoredLoginRateLimiter(
       ];
 
       // Absent behind a proxy that forwards no client address, in which case
-      // the address limit carries this request on its own.
+      // the address limit carries this request on its own. Only the IP bound
+      // loosens for a challenge-verified request: the email bound protects a
+      // stranger's mailbox, which a paid-for challenge solve threatens exactly
+      // as much as a script does.
       if (input.ipAddress !== null) {
         limits.push({
           bucket: await bucketKey("ip", input.ipAddress),
-          limit: perIpAddress,
+          limit: input.turnstileVerified
+            ? perIpAddressVerified
+            : perIpAddress,
         });
       }
 

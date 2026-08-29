@@ -10,11 +10,13 @@ import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
 import { type AppBindings, clientIpAddress } from "../http";
 import { deferred } from "../i18n/deferred";
+import { turnstileForContext } from "../infrastructure/turnstile";
 import { storesForContext } from "../stores";
 import { clearSessionCookies, setSessionCookies } from "./session-cookies";
 
 interface StartLoginBody {
   readonly email?: unknown;
+  readonly turnstileToken?: unknown;
 }
 
 interface ConfirmLoginBody {
@@ -68,6 +70,12 @@ authRoutes.post("/login/start", async (context) => {
   const started = await authService(context).startNativeLogin({
     email: body.email,
     ipAddress: clientIpAddress(context),
+    turnstile: turnstileForContext(context),
+    turnstileToken:
+      typeof body.turnstileToken === "string" &&
+      body.turnstileToken.length > 0
+        ? body.turnstileToken
+        : null,
   });
   const includeLoginToken = context.env.CARNAP_ENV === "local";
 

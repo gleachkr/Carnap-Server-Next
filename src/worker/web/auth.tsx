@@ -2,10 +2,48 @@ import type { Context } from "hono";
 import type { FC } from "hono/jsx";
 
 import type { AppBindings } from "../http";
+import { allowTurnstileWidget } from "../middleware/security-headers";
 import { ErrorSummary, Notice, Sheet } from "./components";
 import { renderShell, useI18n } from "./layout";
 
 type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
+
+interface TurnstileWidget {
+  /** Turnstile localizes its own copy; this is the page's resolved tag. */
+  readonly language: string;
+  readonly siteKey: string;
+}
+
+/**
+ * The widget appears only when *both* keys are set, while the server enforces
+ * on the secret alone (`turnstileFromEnv`). The asymmetry is which way each
+ * misconfiguration fails: a secret without a site key refuses every login
+ * loudly on the first test sign-in, where a widget rendered without a secret
+ * to check its tokens would be theater — the reassuring checkbox with the
+ * gate it implies quietly off.
+ *
+ * Calling this is also what widens the page's CSP to Cloudflare's challenge
+ * origin, so the grant cannot outlive the widget it exists for.
+ */
+function turnstileWidget(
+  context: Context<AppBindings>,
+): TurnstileWidget | null {
+  const { TURNSTILE_SECRET_KEY, TURNSTILE_SITE_KEY } = context.env;
+
+  if (
+    TURNSTILE_SECRET_KEY === undefined ||
+    TURNSTILE_SITE_KEY === undefined
+  ) {
+    return null;
+  }
+
+  allowTurnstileWidget(context);
+
+  return {
+    language: context.get("language"),
+    siteKey: TURNSTILE_SITE_KEY,
+  };
+}
 
 /**
  * Signing in and signing up are one form, because they are one operation: the
@@ -20,7 +58,8 @@ type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 const LoginForm: FC<{
   readonly email?: string;
   readonly next?: string;
-}> = ({ email, next }) => {
+  readonly turnstile: TurnstileWidget | null;
+}> = ({ email, next, turnstile }) => {
   const i18n = useI18n();
 
   return (
@@ -31,6 +70,25 @@ const LoginForm: FC<{
         <br />
         <input name="email" required type="email" value={email ?? ""} />
       </label>
+      {turnstile === null ? null : (
+        <>
+          {/* Turnstile's script finds this container, renders the challenge
+              in it, and writes the passed token into a hidden
+              `cf-turnstile-response` input of this form — no code of ours
+              runs. Usually invisible: managed mode only escalates to a
+              visible check when the client looks suspicious. */}
+          <div
+            class="cf-turnstile"
+            data-language={turnstile.language}
+            data-sitekey={turnstile.siteKey}
+          ></div>
+          <script
+            async
+            defer
+            src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+          ></script>
+        </>
+      )}
       <button type="submit">{i18n.t("Send login link")}</button>
     </form>
   );
@@ -58,7 +116,7 @@ export function renderLoginPage(
         )}
         title={i18n.t("Account access")}
       >
-        <LoginForm next={model.next} />
+        <LoginForm next={model.next} turnstile={turnstileWidget(context)} />
       </Sheet>
     </>,
   );
@@ -80,7 +138,11 @@ export function renderLoginError(
     { showTitle: false, status: model.status, title: i18n.t("Log in") },
     <Sheet title={i18n.t("Account access")}>
       <ErrorSummary>{model.message}</ErrorSummary>
-      <LoginForm email={model.email} next={model.next} />
+      <LoginForm
+        email={model.email}
+        next={model.next}
+        turnstile={turnstileWidget(context)}
+      />
     </Sheet>,
   );
 }

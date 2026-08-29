@@ -20,6 +20,7 @@ import { type AppBindings, clientIpAddress } from "../http";
 import { i18nFor, isSelectableLocale, isSupportedLocale } from "../i18n";
 import { deferred } from "../i18n/deferred";
 import { loginEmailSenderFromEnv } from "../infrastructure/email/resend";
+import { turnstileForContext } from "../infrastructure/turnstile";
 import { storesForContext } from "../stores";
 import {
   renderLoginError,
@@ -184,11 +185,16 @@ webRoutes.post("/login", async (context) => {
   const form = await context.req.raw.formData();
   const email = fieldValue(form.get("email"));
   const next = safeNext(fieldValue(form.get("next"))) ?? null;
+  // Written into the form by Turnstile's own script; empty when the widget
+  // was absent, unsolved, or JavaScript was off.
+  const turnstileToken = fieldValue(form.get("cf-turnstile-response"));
 
   try {
     const started = await authService(context).startNativeLogin({
       email,
       ipAddress: clientIpAddress(context),
+      turnstile: turnstileForContext(context),
+      turnstileToken: turnstileToken.length === 0 ? null : turnstileToken,
     });
     const delivery = await deliverLoginEmail(context, started, next);
 

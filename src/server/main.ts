@@ -54,6 +54,8 @@ function readEnv(): Env {
     ...present("AUTH_LOGIN_EMAIL_FROM", process.env.AUTH_LOGIN_EMAIL_FROM),
     ...present("LTI_TOOL_PRIVATE_KEY", process.env.LTI_TOOL_PRIVATE_KEY),
     ...present("RESEND_API_KEY", process.env.RESEND_API_KEY),
+    ...present("TURNSTILE_SECRET_KEY", process.env.TURNSTILE_SECRET_KEY),
+    ...present("TURNSTILE_SITE_KEY", process.env.TURNSTILE_SITE_KEY),
   };
 }
 

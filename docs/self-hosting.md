@@ -106,6 +106,8 @@ places, so unsetting is the way to turn something off.
 | `AUTH_LOGIN_EMAIL_FROM` | — | The `From:` on login emails, e.g. `Carnap <login@example.edu>`. |
 | `AUTH_LOGIN_CONFIRM_URL` | the request's own origin, plus `/login/confirm` | Where login links point. |
 | `LTI_TOOL_PRIVATE_KEY` | — | The tool's signing key, as a JSON JWK. Only needed for LMS integration. |
+| `TURNSTILE_SITE_KEY` | — | Renders the human-verification widget on the login form. Set both keys or neither. |
+| `TURNSTILE_SECRET_KEY` | — | Enforces the widget: with it set, a login request without a passed challenge is refused. |
 
 `CARNAP_ENV` defaults to `production` rather than to the convenient value,
 because `local` weakens the session cookie and hands out login tokens over the
@@ -157,6 +159,32 @@ table, not Cloudflare's rate-limiting binding, so that a self-hosted instance is
 defended by the same code as the deployed one). If your instance needs different
 ones — a very large campus, or a private instance where the address limit is all
 you want — they are constants at the top of that file.
+
+### Human verification (Turnstile)
+
+The per-IP count only stops the trivial single-host script — a botnet walks
+past any per-IP number — and forty is a real ceiling for a lecture hall behind
+one campus NAT. If native email login will see classroom-scale use, put the
+form behind [Cloudflare Turnstile](https://developers.cloudflare.com/turnstile/)
+instead of raising the number: create a widget in the Cloudflare dashboard
+(free, and the instance itself does not need to be behind Cloudflare) and set
+`TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY`.
+
+With both set, the login form renders the challenge — usually an invisible
+one; Turnstile only escalates to a visible check when the client looks
+suspicious — and the server refuses to send mail without a passed token,
+verified against Cloudflare on every request. A verified request is held to a
+much looser per-IP bound (three hundred per window rather than forty), so a
+whole lecture hall signs in through one NAT while mass mailing now costs an
+attacker money per address rather than nothing. The per-address limit stays
+exactly as tight either way: a paid-for challenge solve threatens a stranger's
+mailbox as much as a script does.
+
+Set both keys or neither. The secret alone enforces — every login is refused,
+which you will notice on the first test sign-in — while the site key alone
+does nothing at all. Verification is one HTTPS call to
+`challenges.cloudflare.com` per login request and fails closed, so an
+air-gapped instance should leave the keys unset and keep the tight throttle.
 
 ## Behind a reverse proxy
 

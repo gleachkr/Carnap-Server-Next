@@ -43,7 +43,10 @@ export const NOSNIFF_HEADER = {
  * {@link cspForResponse}, each because exactly one thing we do needs a foreign
  * origin named — posting the deep-link selection back to the LMS, and being
  * framed by the LMS during a launch — and neither knows that origin until a
- * request is in hand.
+ * request is in hand. The login pages are the one further exception:
+ * {@link allowTurnstileWidget} widens `script-src` and `frame-src` below to
+ * Cloudflare's challenge origin, on exactly the responses that render the
+ * widget.
  */
 const CONTENT_SECURITY_POLICY = [
   // The floor, for the fetch directives that have one: `media-src`,
@@ -110,6 +113,28 @@ const CONTENT_SECURITY_POLICY = [
   // being fetched under one.
   "frame-src 'self'",
 ];
+
+/**
+ * Where the Turnstile widget's script and challenge iframe come from — the
+ * one foreign origin any page is allowed to *run*, and only the login pages
+ * at that. The passive-resource directives stay untouched: the widget needs
+ * `script-src` for `api.js` and `frame-src` for the challenge itself, and
+ * asking for exactly those two keeps this from quietly becoming a general
+ * third-party allowance.
+ */
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+
+/**
+ * Let this response run the Turnstile widget.
+ *
+ * Called from the view that renders the widget rather than from the route
+ * around it, for the same reason as {@link allowFormActionTo}: the permission
+ * and the markup it exists for are the same edit, and a page that stops
+ * rendering the widget stops granting the origin in the same breath.
+ */
+export function allowTurnstileWidget(context: Context<AppBindings>): void {
+  context.set("turnstileWidget", true);
+}
 
 /**
  * Let this response's forms post to one further origin.
@@ -207,7 +232,20 @@ function cspForResponse(context: Context<AppBindings>): string {
       ? "frame-ancestors 'self'"
       : `frame-ancestors 'self' ${ancestor}`;
 
-  return [...CONTENT_SECURITY_POLICY, formAction, frameAncestors].join("; ");
+  // Widened in place rather than assembled apart, so the constant above stays
+  // the single legible statement of the policy and this stays the exhaustive
+  // list of what a Turnstile page additionally permits.
+  const policy =
+    context.get("turnstileWidget") === true
+      ? CONTENT_SECURITY_POLICY.map((directive) =>
+          directive.startsWith("script-src ") ||
+          directive.startsWith("frame-src ")
+            ? `${directive} ${TURNSTILE_ORIGIN}`
+            : directive,
+        )
+      : CONTENT_SECURITY_POLICY;
+
+  return [...policy, formAction, frameAncestors].join("; ");
 }
 
 /**

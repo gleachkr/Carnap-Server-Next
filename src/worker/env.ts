@@ -19,4 +19,14 @@ export interface Env {
    */
   readonly LTI_TOOL_PRIVATE_KEY?: string;
   readonly RESEND_API_KEY?: string;
+  /**
+   * Cloudflare Turnstile, the human-verification gate on asking for a login
+   * email. The two keys travel together: the secret is what enforces (the
+   * server refuses ungated requests whenever it is set), the site key is what
+   * renders the widget that lets people pass. Set via `wrangler secret put` /
+   * the process environment; both unset means the gate is off and the tight
+   * per-IP throttle carries the login form alone.
+   */
+  readonly TURNSTILE_SECRET_KEY?: string;
+  readonly TURNSTILE_SITE_KEY?: string;
 }

@@ -413,7 +413,11 @@ describe("login rate limiting", () => {
         now: () => clock.now,
         windowSeconds: 60,
       });
-      const input = { email: "ada@example.test", ipAddress: null };
+      const input = {
+        email: "ada@example.test",
+        ipAddress: null,
+        turnstileVerified: false,
+      };
 
       for (let attempt = 0; attempt < LOGIN_RATE_LIMIT_PER_EMAIL; attempt++) {
         await limiter.check(input);

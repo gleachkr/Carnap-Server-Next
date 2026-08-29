@@ -1,6 +1,9 @@
 import type { Context, Hono } from "hono";
 
-import type { AuthenticatedActor } from "./application/auth";
+import type {
+  AuthenticatedActor,
+  TurnstileVerifier,
+} from "./application/auth";
 import type { LtiPlatformKeyResolver } from "./application/lti";
 import type { AppStores } from "./application/stores";
 import type { Env } from "./env";
@@ -53,6 +56,20 @@ export interface AppVariables {
   readonly ltiKeyResolver?: LtiPlatformKeyResolver;
   readonly requestId: string;
   readonly stores?: AppStores;
+  /**
+   * Set by tests to stand in for the Turnstile siteverify call; production
+   * requests build theirs from the environment. Read only through
+   * `turnstileForContext` in `infrastructure/turnstile.ts`.
+   */
+  readonly turnstileVerifier?: TurnstileVerifier;
+  /**
+   * Set when this response renders the Turnstile widget, whose script and
+   * challenge iframe come from Cloudflare — the one foreign origin any page is
+   * allowed to run. See `allowTurnstileWidget` in
+   * `middleware/security-headers.ts`, which is the only thing that should
+   * write it.
+   */
+  readonly turnstileWidget?: boolean;
 }
 
 export interface AppBindings {
