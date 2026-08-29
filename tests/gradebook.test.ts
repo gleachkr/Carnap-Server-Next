@@ -1,5 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
+import { timestampNow } from "../src/worker/domain/time";
 import type { Env } from "../src/worker/env";
 import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
@@ -802,6 +803,54 @@ Choose yes.
         "student_name,student_email,student_id,user_id,score,max_score,percent,status," +
           'calculated_at,"Modus ponens, twice (q1.a) /2"',
       );
+    });
+  });
+
+  test("a cell that opens like a formula is defused, not exported live", async () => {
+    await withStorage(async (storage, env) => {
+      const instructor = await login(env, "defuse-teacher@example.test");
+      const student = await login(env, "defuse-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        ["# Lesson", question("q1", 1)].join("\n\n"),
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      // A display name is the student's own text, and this one is what a
+      // spreadsheet would run the moment the instructor opened the export.
+      await storage.stores.users.updateProfile(
+        student.actorId,
+        { locale: null, name: '=HYPERLINK("https://evil.example","2,4")' },
+        timestampNow(),
+      );
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const csvResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/grades.csv`,
+        { headers: { Cookie: instructor.cookieHeader } },
+        env,
+      );
+      const csv = await csvResponse.text();
+
+      expect(csvResponse.status).toBe(200);
+      // The apostrophe goes on before the quoting decision, because quoting
+      // alone does not stop a spreadsheet from evaluating a leading =.
+      expect(csv).toContain(
+        `"'=HYPERLINK(""https://evil.example"",""2,4"")"`,
+      );
+      // The name is the row's first cell: had the prefix been skipped, the
+      // formula would sit right after a newline, bare or freshly quoted.
+      expect(csv).not.toContain("\n=");
+      expect(csv).not.toContain('\n"=');
     });
   });
 

@@ -249,11 +249,17 @@ function userSortKey(user: User): string {
 }
 
 function csvCell(value: string): string {
-  if (!/[",\n\r]/.test(value)) {
-    return value;
+  // A spreadsheet reads a cell opening with =, +, -, or @ (or a stray tab or
+  // carriage return) as a live formula — quoting does not defuse it — and
+  // these exports carry text students typed, their own names first among it.
+  // The leading apostrophe is the spreadsheets' own "this is text" marker.
+  const cell = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+
+  if (!/[",\n\r]/.test(cell)) {
+    return cell;
   }
 
-  return `"${value.replaceAll('"', '""')}"`;
+  return `"${cell.replaceAll('"', '""')}"`;
 }
 
 function percent(score: AssignmentScore): string {
