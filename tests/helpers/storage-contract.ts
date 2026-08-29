@@ -340,6 +340,50 @@ export function describeStorageContract(
       });
     });
 
+    test("expired sessions are swept when the next one is created", async () => {
+      await withStorage(async ({ stores }) => {
+        const user = await createUser(stores);
+
+        await stores.auth.createSession({
+          tokenHash: "session-stale",
+          userId: user.id,
+          csrfTokenHash: "csrf-stale",
+          createdAt: NOW,
+          expiresAt: LATER,
+        });
+        await stores.auth.createSession({
+          tokenHash: "session-live",
+          userId: user.id,
+          csrfTokenHash: "csrf-live",
+          createdAt: NOW,
+          expiresAt: "2026-01-03T03:04:05.000Z",
+        });
+
+        // The sweep rides along with the next sign-in, like the rate-limit
+        // prune above: creating a session at LATER deletes every row whose
+        // expiry has passed by then, and only those.
+        await stores.auth.createSession({
+          tokenHash: "session-next",
+          userId: user.id,
+          csrfTokenHash: "csrf-next",
+          createdAt: LATER,
+          expiresAt: "2026-01-03T04:04:05.000Z",
+        });
+
+        // Revocation is the probe that tells a deleted row from a merely
+        // expired one — it matches on the hash alone, expiry and all.
+        await expect(
+          stores.auth.revokeSession("session-stale", LATER),
+        ).resolves.toBeNull();
+        await expect(
+          stores.auth.revokeSession("session-live", LATER),
+        ).resolves.not.toBeNull();
+        await expect(
+          stores.auth.getValidSession("session-next", LATER),
+        ).resolves.not.toBeNull();
+      });
+    });
+
     test("platform capabilities and audit events can be stored", async () => {
       await withStorage(async ({ stores }) => {
         const admin = await createUser(stores, "admin-1");

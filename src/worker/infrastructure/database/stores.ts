@@ -704,6 +704,13 @@ class SqliteAuthStore implements AuthStore {
   }
 
   async createSession(input: CreateAuthSessionInput): Promise<AuthSession> {
+    // Reads filter expired rows out but nothing ever deletes them, so each
+    // sign-in sweeps the expired ones — the login-state bargain. Revoked rows
+    // keep their seat until their expiry passes; every row has one.
+    await this.db
+      .delete(authSessions)
+      .where(lte(authSessions.expiresAt, input.createdAt));
+
     return single(
       await this.db.insert(authSessions).values(input).returning(),
     );
