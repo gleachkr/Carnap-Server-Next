@@ -221,6 +221,15 @@ table button:not(:where(.modal-dialog button)) {
   margin-top: 1rem;
 }
 
+/* Turnstile renders into a bare div that takes no part in the form rhythm —
+   labels and buttons get their top margins from the content layer, and
+   without one of its own the widget sits flush against the email field's
+   bottom edge. The label's 0.9rem rather than the button's 1.1rem, because
+   the widget reads as another field to complete, not as an action. */
+.cf-turnstile {
+  margin-top: 0.9rem;
+}
+
 .logout-form {
   margin: 0;
   text-align: right;
