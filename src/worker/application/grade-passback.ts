@@ -97,7 +97,13 @@ export async function planGradeJob(
   }
 
   // AGS requires a positive scoreMaximum, so a zeroed assignment (every
-  // exercise excused) has no representable score.
+  // exercise excused) has no representable score. A score *above* the
+  // maximum, by contrast, goes out as-is: "The platform MUST support
+  // scoreGiven higher than scoreMaximum" (AGS v2.0 §3.4.4), which covers
+  // both deliberate extra credit and totals outrun by a points-lowering
+  // repoint. The same section says a platform re-scales against its line
+  // item's own maximum, so sending our current denominator with every score
+  // is how the column stays proportionate after the points change.
   if (score.maxScore <= 0) {
     return null;
   }
