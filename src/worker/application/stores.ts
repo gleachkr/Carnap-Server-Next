@@ -89,13 +89,32 @@ export interface UserStore {
    */
   markEmailVerified(id: AppId, verifiedAt: Timestamp): Promise<User | null>;
   /**
-   * Record the institution's identifier for this student. Only ever sets a null
-   * student_id; returns null when the user is missing or already has one.
+   * Fill in a name the account is missing. Only ever writes over a blank —
+   * null or whitespace — because a name the owner chose is theirs, and no
+   * launch gets to replace it; returns null when the user is missing or
+   * already has one.
    *
    * The blank test belongs in the statement rather than in the caller because
-   * two launches for the same student can be in flight at once — an LMS that
-   * opens several activities in one page does exactly that — and a
-   * read-then-write would let both see an empty column.
+   * the owner may save their profile between a launch's read and its write —
+   * a read-then-write would hand their just-chosen name to the platform.
+   */
+  adoptName(
+    id: AppId,
+    name: string,
+    updatedAt: Timestamp,
+  ): Promise<User | null>;
+  /**
+   * Record the institution's identifier for this person. The latest assertion
+   * wins: unlike {@link adoptName}, this writes over a differing stored value,
+   * because the value is the institution's fact and the platform speaking for
+   * the institution is the fresher source. Returns null when the user is
+   * missing or already carries exactly this value.
+   *
+   * The comparison belongs in the statement (`IS NOT`, so a null column
+   * matches too) rather than in the caller because two launches for the same
+   * person can be in flight at once — an LMS that opens several activities in
+   * one page does exactly that — and it spares a no-op row write on the
+   * common launch whose ID is already current.
    */
   adoptStudentId(
     id: AppId,

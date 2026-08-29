@@ -1405,12 +1405,13 @@ export class LtiService {
    * as-is and the link-approval path, which has only a name to offer, can say
    * so in a literal.
    *
-   * The rule is the name's rule, applied to a field that may not deserve it:
-   * a student ID is the institution's fact about a person rather than the
-   * person's own choice, so a platform that disagrees with a stored one may
-   * simply be right, and keeping the stale value is a failure mode the name
-   * was never exposed to. Left as-is deliberately, and conservatively — this
-   * writes less, not more — pending a decision on conflict handling.
+   * The two fields follow two rules, split by who owns the fact. A name is
+   * the account holder's: a launch fills a blank and never writes over a
+   * value, because a platform that disagrees with a name its owner chose
+   * does not get to win. A student ID is the institution's: the latest
+   * launch wins, because the platform speaking for the institution is the
+   * fresher source, and — with no form for the value anywhere — "correct it
+   * in the LMS and relaunch" is the only repair a wrong ID can have.
    */
   private async adoptAssertedProfile(
     user: User,
@@ -1438,15 +1439,18 @@ export class LtiService {
     // launch that creates an account never arrives here, so a test that lived
     // only here left that path storing whatever the platform sent.
     //
-    // The stored name is read through the shape normalizer rather than through
-    // `hasName`, whose narrowing would leave `user` typed `never` below.
+    // The `normalizeName(user.name)` half is a fast path and not the rule —
+    // the blank test `adoptName` carries in its `WHERE` clause is what
+    // decides, so an owner saving their profile between our read and this
+    // write keeps the name they typed. (Read through the shape normalizer
+    // rather than `hasName`, whose narrowing would type `user` `never` here.)
     if (name === null || normalizeName(user.name) !== null) {
       return user;
     }
 
-    const updated = await this.options.stores.users.updateProfile(
+    const updated = await this.options.stores.users.adoptName(
       user.id,
-      { locale: user.locale, name },
+      name,
       timestampNow(nowDate),
     );
 
@@ -1454,14 +1458,22 @@ export class LtiService {
   }
 
   /**
-   * The same fill-only-if-blank rule, but tested in the `WHERE` clause instead
-   * of here: `adoptStudentId` writes only over a null. An LMS that opens
-   * several Carnap activities on one page launches them concurrently, and a
-   * read-then-write would let two of those see an empty column and race.
+   * The institution's rule rather than the name's: `adoptStudentId` writes
+   * whenever the stored value differs, so the latest launch's assertion is
+   * what a grade export shows. A registrar correcting an ID fixes Carnap by
+   * relaunching — confirmed unfixable under the old fill-once rule, which
+   * kept the stale value silently and offered no repair anywhere else.
+   *
+   * The column is one per account, not one per platform, so a person
+   * launched from two institutions' LMSes would see the two assertions take
+   * turns. Accepted knowingly: that person may not exist, and if they turn
+   * up, the escape is scoping the ID onto `external_identities`, which
+   * already keys one row per platform.
    *
    * `normalizeStudentId` returning null covers both nothing-asserted and
-   * too-long-to-store; over-long is dropped rather than truncated because a
-   * truncated institutional ID still looks like one in a grade export.
+   * too-long-to-store, so a launch asserting nothing never erases a stored
+   * ID; over-long is dropped rather than truncated because a truncated
+   * institutional ID still looks like one in a grade export.
    */
   private async adoptAssertedStudentId(
     user: User,
@@ -1470,11 +1482,11 @@ export class LtiService {
   ): Promise<User> {
     const studentId = normalizeStudentId(asserted);
 
-    // The `user.studentId` half is a fast path and not the rule: it saves an
-    // update that would match no rows on every launch by a student who already
-    // has an ID, which is most of them after the first. Deleting it would
-    // change nothing but the query count — the `WHERE` clause is what decides.
-    if (studentId === null || user.studentId !== null) {
+    // The equality half is a fast path and not the rule: it saves an update
+    // that would match no rows on every launch whose ID is already current,
+    // which is most of them after the first. Deleting it would change nothing
+    // but the query count — the `WHERE` clause is what decides.
+    if (studentId === null || user.studentId === studentId) {
       return user;
     }
 

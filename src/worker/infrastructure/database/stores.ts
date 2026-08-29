@@ -492,6 +492,25 @@ class SqliteUserStore implements UserStore {
     );
   }
 
+  async adoptName(
+    id: AppId,
+    name: string,
+    updatedAt: string,
+  ): Promise<User | null> {
+    return nullableSingle(
+      await this.db
+        .update(users)
+        .set({ name, updatedAt })
+        .where(
+          and(
+            eq(users.id, id),
+            or(isNull(users.name), sql`trim(${users.name}) = ''`),
+          ),
+        )
+        .returning(),
+    );
+  }
+
   async adoptStudentId(
     id: AppId,
     studentId: string,
@@ -501,7 +520,10 @@ class SqliteUserStore implements UserStore {
       await this.db
         .update(users)
         .set({ studentId, updatedAt })
-        .where(and(eq(users.id, id), isNull(users.studentId)))
+        // `IS NOT`, not `!=`: the fill-a-null case must match too.
+        .where(
+          and(eq(users.id, id), sql`${users.studentId} is not ${studentId}`),
+        )
         .returning(),
     );
   }

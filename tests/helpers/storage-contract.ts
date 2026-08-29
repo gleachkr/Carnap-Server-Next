@@ -260,11 +260,39 @@ export function describeStorageContract(
           ),
         ).resolves.toBeNull();
 
-        // A student ID is written once and never over: the blank test lives in
-        // the statement, so two concurrent launches cannot both see an empty
-        // column. Null back means "somebody already filled it" — the same
-        // signal `markEmailVerified` gives, and the reason both are their own
-        // narrow method rather than fields of `updateProfile`.
+        // A name is only ever filled in, never written over — the blank test
+        // lives in the statement, so an owner saving their profile between a
+        // launch's read and its write keeps the name they typed. Whitespace
+        // counts as blank: stored, it would render as nobody.
+        const named = await stores.users.adoptName(
+          user.id,
+          "Augusta King",
+          "2026-01-06T00:00:00.000Z",
+        );
+
+        expect(named).toMatchObject({
+          name: "Augusta King",
+          updatedAt: "2026-01-06T00:00:00.000Z",
+        });
+        await expect(
+          stores.users.adoptName(user.id, "A. King", NOW),
+        ).resolves.toBeNull();
+        await stores.users.updateProfile(
+          user.id,
+          { locale: null, name: "   " },
+          NOW,
+        );
+        await expect(
+          stores.users.adoptName(user.id, "Ada Lovelace", NOW),
+        ).resolves.toMatchObject({ name: "Ada Lovelace" });
+        await expect(
+          stores.users.adoptName("missing-user", "Ada", NOW),
+        ).resolves.toBeNull();
+
+        // The student ID takes the opposite rule: the institution's latest
+        // assertion wins, so a differing value writes over a stored one. Null
+        // back means "already exactly this" (or no such user) — the no-op
+        // signal that spares a row write on the common relaunch.
         expect(user.studentId).toBeNull();
 
         const adopted = await stores.users.adoptStudentId(
@@ -278,11 +306,11 @@ export function describeStorageContract(
           updatedAt: "2026-01-06T00:00:00.000Z",
         });
         await expect(
-          stores.users.adoptStudentId(user.id, "99999999", NOW),
+          stores.users.adoptStudentId(user.id, "20261234", NOW),
         ).resolves.toBeNull();
-        await expect(stores.users.getById(user.id)).resolves.toMatchObject({
-          studentId: "20261234",
-        });
+        await expect(
+          stores.users.adoptStudentId(user.id, "99999999", NOW),
+        ).resolves.toMatchObject({ studentId: "99999999" });
         await expect(
           stores.users.adoptStudentId("missing-user", "20261234", NOW),
         ).resolves.toBeNull();

@@ -507,10 +507,12 @@ describe("LTI 1.3 core launches", () => {
     });
   });
 
-  // Fill-only-if-blank, as for the name — though whether that is the right rule
-  // for a fact the institution owns rather than the account holder is the open
-  // question this behaviour is pinned here to make visible.
-  test("a launch does not overwrite a student ID already recorded", async () => {
+  // The opposite of the name's rule, settled 2026-08-29: the ID is the
+  // institution's fact, so the latest launch wins. Under fill-once, a
+  // registrar's correction was confirmed (against the Moodle rig) to change
+  // nothing on relaunch — and with no form for the value anywhere, a wrong ID
+  // had no repair at all.
+  test("the latest launch's asserted student ID wins", async () => {
     await withLtiApp(async (app, env, stores, fixture) => {
       await instructorLaunch(app, env, {
         claims: { [CLAIM_LIS]: { person_sourcedid: "first" } },
@@ -525,7 +527,28 @@ describe("LTI 1.3 core launches", () => {
         "lms-instructor-1",
       );
 
-      expect((await stores.users.getById(userId))?.studentId).toBe("first");
+      expect((await stores.users.getById(userId))?.studentId).toBe("second");
+    });
+  });
+
+  // Latest-assertion-wins must not read "latest launch wins": a platform that
+  // stops sending the claim is saying nothing, not asserting an erasure.
+  test("a launch asserting no student ID leaves the stored one alone", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, {
+        claims: { [CLAIM_LIS]: { person_sourcedid: "20261234" } },
+      });
+      await instructorLaunch(app, env);
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      expect((await stores.users.getById(userId))?.studentId).toBe(
+        "20261234",
+      );
     });
   });
 

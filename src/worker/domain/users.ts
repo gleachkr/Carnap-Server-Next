@@ -21,14 +21,21 @@ export interface User {
    */
   readonly locale: string | null;
   /**
-   * The identifier the student's institution knows them by — a registrar's
+   * The identifier this person's institution knows them by — a registrar's
    * student number, not anything of ours. Only an LMS launch writes it, from
-   * the `lis.person_sourcedid` claim or a configured custom parameter; nobody
-   * can type one, here or on the profile form.
+   * the `lis.person_sourcedid` claim and nothing else; nobody can type one,
+   * here or on the profile form.
    *
-   * It exists for one job: letting an instructor join a Carnap grade export to
-   * a roster their institution produced, which an email address does poorly and
-   * our own {@link User.id} cannot do at all. Null is the ordinary value — every
+   * "Student" is a deliberate simplification, decided rather than overlooked:
+   * platforms send the claim for any launching person, so an instructor's row
+   * holds their staff number under this name too. Every surface that shows the
+   * value keeps the word — in a grade export every row is a student's, which
+   * is the one place the value does its job — and a role-neutral rename would
+   * buy a column migration and a CSV header break for no reader's benefit.
+   *
+   * That job: letting an instructor join a Carnap grade export to a roster
+   * their institution produced, which an email address does poorly and our own
+   * {@link User.id} cannot do at all. Null is the ordinary value — every
    * account that has never been launched into, and every platform that does not
    * share the claim.
    */
