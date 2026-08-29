@@ -24,7 +24,7 @@ import {
   ContentArtifactError,
   contentArtifactFromRevision,
 } from "./content/artifact";
-import { AppHttpError, badRequest, forbidden } from "./errors";
+import { AppHttpError, badRequest } from "./errors";
 import {
   assignmentAsAppliedTo,
   attemptActivity,
@@ -1298,12 +1298,12 @@ export class AssignmentService {
   ): Promise<ContentItem> {
     const item = await this.options.stores.content.getItem(revision.itemId);
 
-    if (item === null) {
+    // Somebody else's item is a miss here for the reason it is one in
+    // `ContentService.getItem`: naming an id is not a capability, and a
+    // refusal that distinguishes "not yours" from "no such thing" is an
+    // existence oracle whether it is reached by reading or by writing.
+    if (item === null || item.ownerUserId !== actor.user.id) {
       throw contentItemNotFound();
-    }
-
-    if (item.ownerUserId !== actor.user.id) {
-      throw forbidden("content_owner_required");
     }
 
     if (item.sourceFormat !== "markdown") {

@@ -9,6 +9,8 @@
  * thinking in the clock the course runs on, not in UTC.
  */
 
+import type { ContentSourceFormat } from "../domain/content";
+
 /**
  * Characters a filename cannot carry. The path separators and the Windows
  * reserved set, plus control and formatting codepoints — a right-to-left mark
@@ -129,17 +131,29 @@ export function csvDownloadHeaders(
 }
 
 /**
- * Headers for a content revision's source: Markdown, named for the item it
- * belongs to, and saved rather than displayed. `.md` because that is the
- * extension an editor opens and the upload field accepts back.
+ * Headers for a content revision's source: named for the item it belongs to,
+ * and saved rather than displayed.
+ *
+ * The extension and the type come from the revision's own format, because a
+ * download is for round-tripping — an author edits the file and uploads it
+ * back — and a theory saved as `.md` opens in the wrong editor and is offered
+ * back to an upload field that reads it as a lesson. `text/plain` for MM0 is
+ * the type `/theory.mm0` serves, chosen there for the same reason: a media
+ * type no browser knows only invites it to guess.
  */
-export function markdownDownloadHeaders(
+export function sourceDownloadHeaders(
+  format: ContentSourceFormat,
   name: DownloadName,
 ): Record<string, string> {
+  const [extension, type] =
+    format === "mm0"
+      ? (["mm0", "text/plain; charset=utf-8"] as const)
+      : (["md", "text/markdown; charset=utf-8"] as const);
+
   return {
     "Content-Disposition": attachmentDisposition(
-      downloadFilename(name, "md"),
+      downloadFilename(name, extension),
     ),
-    "Content-Type": "text/markdown; charset=utf-8",
+    "Content-Type": type,
   };
 }

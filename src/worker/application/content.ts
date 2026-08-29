@@ -17,7 +17,7 @@ import { requireContentAuthor } from "./authorization";
 import { compileCarnapMarkdown } from "./content/compiler";
 import { sha256Id } from "./content/hash";
 import { compileTheorySource } from "./content/mm0";
-import { AppHttpError, badRequest, forbidden } from "./errors";
+import { AppHttpError, badRequest } from "./errors";
 import type { AppStores } from "./stores";
 
 export interface ContentServiceOptions {
@@ -155,18 +155,28 @@ export class ContentService {
     return this.options.stores.content.listItemsForOwner(actor.user.id);
   }
 
+  /**
+   * An item, if it is yours.
+   *
+   * **Somebody else's is a miss, not a refusal.** An id is not a capability
+   * here — there is nothing an author could do holding a 403 that they could
+   * not do holding a 404 — so answering "forbidden" would only confirm that
+   * the id names something, one guess at a time. `theoryResolver` below
+   * already refuses to make that admission, since a lesson's `src=` would
+   * otherwise be an oracle for other people's revision ids; this is the same
+   * rule for every other way of asking, and `getItem` is where the whole
+   * content surface asks. A capability refusal is different and stays a 403:
+   * `content_author_required` does not depend on which id was named, so it
+   * tells a stranger nothing about what exists.
+   */
   async getItem(
     actor: AuthenticatedActor,
     itemId: AppId,
   ): Promise<ContentItem> {
     const item = await this.options.stores.content.getItem(itemId);
 
-    if (item === null) {
+    if (item === null || item.ownerUserId !== actor.user.id) {
       throw contentNotFound();
-    }
-
-    if (item.ownerUserId !== actor.user.id) {
-      throw forbidden("content_owner_required");
     }
 
     return item;
@@ -304,6 +314,16 @@ export class ContentService {
     });
   }
 
+  /**
+   * A revision, if its item is yours.
+   *
+   * The ownership check is written out rather than delegated to `getItem` so
+   * that **both** ways of missing answer in the same words. Both are already
+   * 404s, but a stranger's id would say `content_item_not_found` where a made
+   * up one says `content_revision_not_found`, and a caller who can tell those
+   * apart has the oracle back — quieter, and in the error code instead of the
+   * status. One question, one answer, as `theoryResolver` does it.
+   */
   async getRevision(
     actor: AuthenticatedActor,
     revisionId: AppId,
@@ -315,7 +335,11 @@ export class ContentService {
       throw revisionNotFound();
     }
 
-    await this.getItem(actor, revision.itemId);
+    const item = await this.options.stores.content.getItem(revision.itemId);
+
+    if (item === null || item.ownerUserId !== actor.user.id) {
+      throw revisionNotFound();
+    }
 
     return revision;
   }
@@ -336,7 +360,8 @@ export class ContentService {
    * Items rather than ids: the caller has already read them, so the ownership
    * check here is a restatement rather than a second round of reads, and this
    * method hands back nothing the caller could not have had by listing each
-   * item's revisions itself.
+   * item's revisions itself. The restatement answers as `getItem` does, so a
+   * caller cannot learn from the wording which of the two it tripped.
    */
   async latestRevisionIds(
     actor: AuthenticatedActor,
@@ -344,7 +369,7 @@ export class ContentService {
   ): Promise<Map<AppId, AppId>> {
     for (const item of items) {
       if (item.ownerUserId !== actor.user.id) {
-        throw forbidden("content_owner_required");
+        throw contentNotFound();
       }
     }
 

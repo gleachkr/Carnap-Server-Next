@@ -403,13 +403,22 @@ const RevisionEditor: FC<{
 /**
  * The Revisions sheet footer: a link to the manual editor (the rich authoring
  * flow, which gets its own route) plus a compact inline upload bar for creating
- * a revision straight from a Markdown file.
+ * a revision straight from a file.
+ *
+ * The picker is filtered by the item's format, and names the same extension
+ * the download hands out for it. That closes the round trip an author takes a
+ * revision out on: a theory saved as `.mm0` has to be offerable back, and a
+ * picker that only lists Markdown would hide the file they had just saved.
+ * The server reads whatever arrives either way — this is a hint about what to
+ * look for, not a check.
  */
 const RevisionFooterActions: FC<{
   readonly context: Context<AppBindings>;
   readonly itemId: string;
-}> = ({ context, itemId }) => {
+  readonly sourceFormat: ContentSourceFormat;
+}> = ({ context, itemId, sourceFormat }) => {
   const i18n = useI18n();
+  const theory = sourceFormat === "mm0";
 
   return (
     <div class="revision-actions">
@@ -421,8 +430,14 @@ const RevisionFooterActions: FC<{
       >
         <CsrfInput context={context} />
         <input
-          accept=".md,.markdown,.txt,text/markdown,text/plain"
-          aria-label={i18n.t("Carnap Markdown file")}
+          accept={
+            theory
+              ? ".mm0,.txt,text/plain"
+              : ".md,.markdown,.txt,text/markdown,text/plain"
+          }
+          aria-label={
+            theory ? i18n.t("MM0 file") : i18n.t("Carnap Markdown file")
+          }
           name="sourceFile"
           required
           type="file"
@@ -611,7 +626,11 @@ export function renderContentItem(
         )}
         footer={
           model.canAuthor ? (
-            <RevisionFooterActions context={context} itemId={model.item.id} />
+            <RevisionFooterActions
+              context={context}
+              itemId={model.item.id}
+              sourceFormat={model.item.sourceFormat}
+            />
           ) : undefined
         }
         title={i18n.t("Revisions")}

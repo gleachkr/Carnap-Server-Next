@@ -1798,7 +1798,9 @@ Which sentence is a tautology?
         env,
       );
 
-      expect(blocked.status).toBe(403);
+      // Not yours is not there: an author holding somebody else's id learns
+      // nothing from asking, which is the same answer a lesson's src= gets.
+      expect(blocked.status).toBe(404);
     });
   });
 
@@ -1864,7 +1866,7 @@ ${sampleSource("styled_doc")}`,
       expect(documentHtml.indexOf("maroon")).toBeGreaterThan(
         documentHtml.indexOf(CONTENT_STYLE_SHEET.href),
       );
-      expect(blocked.status).toBe(403);
+      expect(blocked.status).toBe(404);
     });
   });
 
@@ -2062,7 +2064,7 @@ describe("content source downloads", () => {
     });
   });
 
-  test("a revision of somebody else's item does not download", async () => {
+  test("a revision of somebody else's item does not download, and does not admit it exists", async () => {
     await withStorage(async (_storage, env) => {
       const author = await login(env, "owner-of-source@example.test");
       const item = await createContent(env, author);
@@ -2080,12 +2082,27 @@ describe("content source downloads", () => {
         { headers: { Cookie: stranger.cookieHeader } },
         env,
       );
+      const invented = await appRequest(
+        createTestApp(),
+        "/content/revisions/no-such-revision-at-all/source",
+        { headers: { Cookie: stranger.cookieHeader } },
+        env,
+      );
 
-      // The download is a read of the record, so it is refused where every
-      // other read of it is: ownership, not the authoring capability the
-      // stranger happens to hold.
-      expect(response.status).toBe(403);
-      expect(await response.text()).not.toContain("Choose the tautology.");
+      // The request id is the one thing that may differ between two answers:
+      // it is minted per request and says nothing about what was asked for.
+      const anonymized = (body: string): string =>
+        body.replace(/"requestId":"[^"]*"/, '"requestId":"-"');
+      const refused = anonymized(await response.text());
+
+      // A miss rather than a refusal, and the *same* miss a made-up id gets:
+      // a 403, or two 404s carrying different error codes, would confirm that
+      // the id names something — one guess at a time. This is the answer a
+      // lesson's src= has always had, now given to every way of asking.
+      expect(response.status).toBe(404);
+      expect(invented.status).toBe(404);
+      expect(refused).toBe(anonymized(await invented.text()));
+      expect(refused).not.toContain("Choose the tautology.");
     });
   });
 

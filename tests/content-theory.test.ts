@@ -466,6 +466,31 @@ describe("serving a hosted theory", () => {
       expect(response.status).toBe(404);
     });
   });
+
+  test("downloads as a theory, named and typed as one", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "author@example.test");
+      const revisionId = await hostTheory(env, author);
+      const response = await appRequest(
+        createTestApp(),
+        `/content/revisions/${revisionId}/source`,
+        { headers: { Cookie: author.cookieHeader } },
+        env,
+      );
+      const disposition = response.headers.get("content-disposition") ?? "";
+
+      // The download is for round-tripping — edit the file, upload it back —
+      // so it has to arrive as the kind of file it is. `/theory.mm0` above is
+      // the address to read one at, not a reason it cannot be saved.
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe(
+        "text/plain; charset=utf-8",
+      );
+      expect(disposition).toStartWith("attachment;");
+      expect(disposition).toContain('.mm0"');
+      expect(await response.text()).toBe(HOSTED_THEORY);
+    });
+  });
 });
 
 describe("saving an MM0 revision", () => {
@@ -625,6 +650,36 @@ describe("the pages an MM0 item gets", () => {
       // The address is the whole reason an author comes back to this page.
       expect(html).toContain(hostedTheoryPath(revisionId));
       expect(html).toContain("ax_k");
+    });
+  });
+
+  test("the upload picker offers the file each kind of item downloads as", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "author@example.test");
+      const page = async (itemId: string): Promise<string> => {
+        const response = await appRequest(
+          createTestApp(),
+          `/content/${itemId}`,
+          { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+          env,
+        );
+
+        expect(response.status).toBe(200);
+
+        return response.text();
+      };
+      const theory = await page(await createItem(env, author, "mm0"));
+      const lesson = await page(await createItem(env, author, "markdown"));
+
+      // The other half of the round trip: an author saves the source, edits
+      // it, and comes back to upload it. A picker filtered to Markdown would
+      // hide the `.mm0` file they had just been handed — and one filtered to
+      // MM0 would do the same to a lesson.
+      expect(theory).toContain('accept=".mm0,.txt,text/plain"');
+      expect(theory).not.toContain(".markdown");
+      expect(lesson).toContain(
+        'accept=".md,.markdown,.txt,text/markdown,text/plain"',
+      );
     });
   });
 });

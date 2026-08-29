@@ -2220,6 +2220,10 @@ msgid "Membership updated."
 msgstr "Mitgliedschaft aktualisiert."
 
 #: src/worker/web/content.tsx
+msgid "MM0 file"
+msgstr ""
+
+#: src/worker/web/content.tsx
 msgid "MM0 source"
 msgstr ""
 

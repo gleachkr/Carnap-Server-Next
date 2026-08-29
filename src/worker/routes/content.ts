@@ -45,7 +45,7 @@ import {
   artifactDocumentProps,
   contentDocumentHtml,
 } from "../web/content-document";
-import { markdownDownloadHeaders } from "../web/download";
+import { sourceDownloadHeaders } from "../web/download";
 import {
   fieldValue,
   isFormSubmission,
@@ -504,11 +504,16 @@ async function revisionPage(
 }
 
 /**
- * A revision's Markdown source as a file, for an author who would rather work
- * on it in their own editor and upload the result. The source is what a
- * revision is made of, so this is a download of the record itself rather than
- * an export of it — no rendering, no compiled artifact, nothing that would not
- * compile back to the same revision.
+ * A revision's source as a file, for an author who would rather work on it in
+ * their own editor and upload the result. The source is what a revision is
+ * made of, so this is a download of the record itself rather than an export of
+ * it — no rendering, no compiled artifact, nothing that would not compile back
+ * to the same revision.
+ *
+ * Both formats, named as themselves: a theory is a file an author edits and
+ * uploads back like any other, and `/theory.mm0` is the address to read one
+ * at, not a reason a theory cannot be saved. The one route serves either
+ * because the record is the same record — only its name and type differ.
  */
 async function revisionSourceDownload(
   context: Context<AppBindings>,
@@ -528,7 +533,7 @@ async function revisionSourceDownload(
   const item = await service.getItem(actor, revision.itemId);
 
   return new Response(revision.sourceText, {
-    headers: markdownDownloadHeaders({
+    headers: sourceDownloadHeaders(revision.sourceFormat, {
       // When the revision was saved, not when it was downloaded: the file is a
       // copy of a fixed thing, and two downloads of it should land on the same
       // name rather than accumulate in a folder. A content item belongs to no
