@@ -2863,6 +2863,10 @@ msgstr "Publish assignment"
 msgid "Publish correction"
 msgstr "Publish correction"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Publish this correction?"
+msgstr "Publish this correction?"
+
 #: src/worker/web/labels.ts
 msgid "Published"
 msgstr "Published"

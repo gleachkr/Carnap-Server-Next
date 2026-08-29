@@ -1847,21 +1847,45 @@ const CorrectionForms: FC<{
 
   return (
     <>
-      {/* The same advisory shape as releasing grades on an open assignment:
-          the act is legitimate, so the page says what it will do rather than
-          asking twice. This is the before-the-fact half of the points-drift
-          story — the review and results pages mark each affected score after. */}
+      {/* The before-the-fact half of the points-drift story: with graded
+          work recorded, publishing a correction asks once before it goes,
+          saying what it will and will not change — the review and results
+          pages mark each affected score after. Only rendered while it can
+          matter, so the ordinary no-grades repoint stays one click. Without
+          JS the form posts directly, like every enhancement in the shell. */}
       {gradedWorkExists ? (
-        <p class="notice">
-          {i18n.t(
-            "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points.",
-          )}
-        </p>
+        <dialog class="modal-dialog" id="confirm-correction">
+          <form method="dialog">
+            <header class="modal-dialog-header">
+              <h3>{i18n.t("Publish this correction?")}</h3>
+              <button aria-label={i18n.t("Close")} type="submit">
+                ×
+              </button>
+            </header>
+            <p>
+              {i18n.t(
+                "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points.",
+              )}
+            </p>
+            <div class="sheet-actions">
+              <button data-confirm-submit="repoint-form" type="button">
+                {i18n.t("Publish correction")}
+              </button>
+              <button class="secondary" type="submit">
+                {i18n.t("Cancel")}
+              </button>
+            </div>
+          </form>
+        </dialog>
       ) : null}
       <div class="correction-bars">
         <form
           action={`${baseAction}/content-revision`}
           class="create-bar"
+          data-confirm-dialog={
+            gradedWorkExists ? "confirm-correction" : undefined
+          }
+          id="repoint-form"
           method="post"
         >
           <CsrfInput context={context} />

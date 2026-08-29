@@ -68,6 +68,63 @@ const DIALOG_SCRIPT = `
   });
 })();`;
 
+const CONFIRM_SUBMIT_SCRIPT = `
+(() => {
+  // A form naming a dialog in data-confirm-dialog does not submit on the
+  // first attempt: the dialog opens in its place, and only its confirm
+  // button — data-confirm-submit naming the form's id — sends the real
+  // submission. Without JS the form posts directly, the same graceful
+  // downgrade every enhancement here makes.
+  document.addEventListener("submit", (event) => {
+    const form = event.target;
+
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+
+    const targetId = form.dataset.confirmDialog;
+
+    if (targetId === undefined) {
+      return;
+    }
+
+    const dialog = document.getElementById(targetId);
+
+    if (!(dialog instanceof HTMLDialogElement)) {
+      return;
+    }
+
+    event.preventDefault();
+    dialog.showModal();
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) {
+      return;
+    }
+
+    const button = event.target.closest("[data-confirm-submit]");
+
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+
+    const form = document.getElementById(button.dataset.confirmSubmit || "");
+    const dialog = button.closest("dialog");
+
+    if (dialog instanceof HTMLDialogElement) {
+      dialog.close();
+    }
+
+    if (form instanceof HTMLFormElement) {
+      // submit(), not requestSubmit(): the interception above must not fire
+      // a second time, and the browser already ran constraint validation
+      // before the submit event this confirms was intercepted.
+      form.submit();
+    }
+  });
+})();`;
+
 const CONTENT_FRAME_SCRIPT = `
 (() => {
   window.addEventListener("message", (event) => {
@@ -635,6 +692,7 @@ export const TABLE_SORT_SCRIPT = `
 /** Every shell script, in the order they were emitted when they were inline. */
 export const SHELL_SCRIPT = [
   DIALOG_SCRIPT,
+  CONFIRM_SUBMIT_SCRIPT,
   CONTENT_FRAME_SCRIPT,
   TIMESTAMP_DISPLAY_SCRIPT,
   REVISION_OPTION_SCRIPT,

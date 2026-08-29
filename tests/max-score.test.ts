@@ -386,13 +386,14 @@ describe("two denominators after a repoint", () => {
         headers: { Accept: "text/html", Cookie: instructor.cookieHeader },
       };
 
-      // Nothing has been graded yet, so the correction form carries no
-      // advisory: repointing a fresh assignment is routine.
+      // Nothing has been graded yet, so the correction form asks nothing:
+      // repointing a fresh assignment stays one click.
       const freshPage = await (
         await appRequest(createTestApp(), base, asInstructorPage, env)
       ).text();
 
       expect(freshPage).not.toContain(ADVISORY_TEXT);
+      expect(freshPage).not.toContain("confirm-correction");
 
       const attemptId = await beginAttempt(
         env,
@@ -418,13 +419,18 @@ describe("two denominators after a repoint", () => {
         "q2",
       );
 
-      // With graded work recorded, the correction form warns before the
-      // fact: the advisory states what a repoint will and will not change.
+      // With graded work recorded, publishing a correction asks first: the
+      // form is wired to a confirmation dialog that states what a repoint
+      // will and will not change.
       const gradedPage = await (
         await appRequest(createTestApp(), base, asInstructorPage, env)
       ).text();
 
       expect(gradedPage).toContain(ADVISORY_TEXT);
+      expect(gradedPage).toContain(
+        'data-confirm-dialog="confirm-correction"',
+      );
+      expect(gradedPage).toContain('data-confirm-submit="repoint-form"');
 
       const before = (await (
         await appRequest(
