@@ -148,7 +148,10 @@ describe("language specs", () => {
   });
 
   test("an id no spec ships under is `null`, not a throw", () => {
-    expect(languageById("forallx-magnus")).toBeNull();
+    // `gentzen-lk` is the pointed case: a theory that ships, is named by the
+    // same stem convention, and is *not* a language — it declares no `@syntax`
+    // at all. Registering it would have to be deliberate.
+    expect(languageById("gentzen-lk")).toBeNull();
   });
 
   test("a language is built once and shared", () => {
@@ -279,6 +282,74 @@ describe("language specs", () => {
 
       expect(printTerm(lang, applied.term, "engine")).toBe(
         "((P (snil)) ∧ (F (f (snil))))",
+      );
+    });
+  });
+
+  describe("forallx-magnus", () => {
+    const id = "forallx-magnus";
+
+    test("atomic sentences are juxtaposed, and print that way", () => {
+      expect(display(id, "Rab")).toBe("Rab");
+      expect(display(id, "@x3yRxy")).toBe("∀x∃yRxy");
+      // Parenthesised arguments are the *other* edition's spelling, but they
+      // read here too — a group around a single argument, or around the
+      // sequence — which is what lets a goal statement's engine text and a
+      // student's line be the same string.
+      expect(display(id, "F(a)")).toBe("Fa");
+      expect(display(id, "R(a,b)")).toBe("Rab");
+    });
+
+    test("conjunction prints as `&`, this book's own glyph", () => {
+      expect(display(id, "P /\\ Q")).toBe("P & Q");
+      expect(display(id, "~Fa & ~Ga")).toBe("¬Fa & ¬Ga");
+    });
+
+    test("two rungs: ∧ and ∨ tighter than → and ↔, and neither pair chains", () => {
+      expect(display(id, "P & Q \\/ R")).toBe("(P & Q) ∨ R");
+      // The nesting Calgary refuses is exactly what a second rung is for.
+      expect(display(id, "P & Q -> R")).toBe("(P & Q) → R");
+      expect(refusal(id, "P -> Q -> R")).toContain("chain_refused");
+      expect(refusal(id, "P -> Q <-> R")).toContain("mix_refused");
+    });
+
+    test("`A` stays a predicate letter and `v` stays a name", () => {
+      // Carnap reads `AxFx` as `∀x Fx`, resolving the collision by parser
+      // try-order. An MM0 math token has one meaning, so this file spells the
+      // quantifiers `@`/`3` instead and `A` never means ∀. `v` is one of the
+      // names a–w, so it cannot be a disjunction either.
+      expect(refusal(id, "AxFx")).toContain("unexpected_token");
+      expect(refusal(id, "P v Q")).toContain("unexpected_token");
+      expect(display(id, "@xFx")).toBe("∀xFx");
+    });
+
+    test("every sentence is closed", () => {
+      expect(refusal(id, "Fx")).toContain("free_variable");
+    });
+
+    test("a sequent is not a sentence, and the spec says which sort is", () => {
+      const lang = language(id);
+
+      expect(sentenceSort(lang)).toBe("wff");
+      expect(
+        lang.parse("P ⊢ Q", { sort: "wff" }).ok ? "parsed" : "refused",
+      ).toBe("refused");
+      expect(lang.parse("P ; Q ⊢ P", { sort: "judgement" }).ok).toBe(true);
+    });
+
+    test("engine mode writes the argument sequence out", () => {
+      const lang = language(id);
+      const result = lang.parse("P & Rab");
+
+      if (!result.ok) {
+        throw new Error("expected 'P & Rab' to parse");
+      }
+
+      // The elided empty sequence of a sentence letter, and the comma the
+      // student never types — both are the engine's spelling, which is what
+      // reaches the compiler.
+      expect(printTerm(lang, result.term, "engine")).toBe(
+        "((P (snil)) & (R (a , b)))",
       );
     });
   });

@@ -134,6 +134,16 @@ serve a theory that says nothing. `logic/theories/forallx-calgary-2019.mm0`
 needs the context separator `;` (its comma is the student's argument separator,
 since that file is also the course's language) and no exercise set from it
 writes `context=` anywhere.
+
+`logic/theories/forallx-magnus.mm0` — the original *forallx*, the other Fitch
+textbook shipped here — is the same in that respect and differs in one that
+shows up at this layer: its `¬I` and `¬E` are reductios onto an explicit
+contradictory pair rather than onto `⊥`, which the language does not have, so
+each takes **two** premises. Both come out of one subproof, and the citation
+names that subproof twice, once at each contradictory line —
+`neg_intro 2-4 2-5`. A range citation lowers to its last line and nothing
+else, which is why one range cannot deliver both.
+
 Each proof line is `<formula> :<rule> <refs>`; the justification
 is taken after the line's *last* colon, so formulas whose notation uses `:` (e.g.
 a modal `w : a`) still parse.

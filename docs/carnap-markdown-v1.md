@@ -567,7 +567,12 @@ Build a model in which both of these come out true.
 ::::
 ```
 
-Notation is **forallx: Calgary, 2019 and later**: `Ax`/`Ex` (or `∀`/`∃`, `@`/`3`)
+Notation is whatever `system=` names; the default, and everything described
+here, is **forallx: Calgary, 2019 and later**. A set written for the original
+*forallx* takes `system="forallx-magnus"` and is written in that book's
+notation instead — juxtaposed predicates (`Fa`, `Rab`), `&` for conjunction,
+`@x`/`3x` for the quantifiers. The differences are tabulated under "Which
+forallx" below. The Calgary notation: `Ax`/`Ex` (or `∀`/`∃`, `@`/`3`)
 immediately followed by a variable from `s`–`z`; predicates any uppercase letter
 with parentheses (`F(x)`, `R(x,y)`), a bare uppercase letter being a sentence
 letter; names `a`–`e`; function letters `f`–`r`, a bare one being a constant and
@@ -641,7 +646,7 @@ fixes `f(0) = 1` and leaves every other argument to the student — so under
 
 Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
 attributes it accepts `variant` (`simple` | `validity` | `constraint`), `system` (an `aufbau-mm0` block name or a language spec id;
-only `forallx-calgary-2019` today — see "Languages and theories" below), `counterexample-to` (`validity`/`tautology` |
+`forallx-calgary-2019` or `forallx-magnus` today — see "Languages and theories" below), `counterexample-to` (`validity`/`tautology` |
 `equivalence` | `inconsistency`/`contradiction` — the property the targeted
 sentences must have, defaulting to all-true for `simple` and `constraint` and
 all-false for `validity`), `check` (`on` | `off` — this type's older spelling
@@ -763,15 +768,16 @@ block is one line and no body:
 
 These paths are real. Open one in a browser and you get the theory itself — the
 axiom names your students will cite, and the commentary that ships with them.
-Three are available:
+Four are available:
 
 | Path | System |
 | --- | --- |
 | `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment. Sequents `Γ ; φ ⊢ ψ`; the Fitch and Prawitz surfaces are built for it. Also the language `system="forallx-calgary-2019"` names. |
+| `/theories/forallx-magnus.mm0` | *forallx* (P.D. Magnus, the original) — system QL: the same Fitch shape, but the book's own rules and notation. Also the language `system="forallx-magnus"` names. |
 | `/theories/gentzen-lk.mm0` | Classical LK, a multi-conclusion sequent calculus with both sides comma-separated. An LK derivation is a tree, so this is the tree surface's system. |
 | `/theories/carnap-prop.mm0` | Carnap's default `prop` — a propositional *signature* with no rules of its own, which is what the truth-table type reads. Name it here and add your own rules in the block body to build a system over its notation. |
 
-A `src` must be a path this site serves — one of the three above, or one of
+A `src` must be a path this site serves — one of the four above, or one of
 yours (below). A theory kept on another server is not supported: the text is
 frozen into the exercise when you save, and putting a third party's uptime
 inside that save — and inside the live preview, which compiles in your browser
@@ -933,18 +939,19 @@ and what an `aufbau-mm0` block declares.
 A **language spec** is what a formula is written in — the same sorts and terms,
 plus `@syntax` annotations saying how a student *spells* them: which brackets
 group, which spellings of `∧` are accepted, which of them is canonical, and
-which conventions the book refuses (forallx will not read `P → Q → R` or
-`P ∧ Q → R`, and will not let you write `(P)`). Two ship, and `system=` names
-either of them by id:
+which conventions the book refuses (forallx: Calgary will not read `P → Q → R`
+or `P ∧ Q → R`, and will not let you write `(P)`). Three ship, and `system=`
+names any of them by id:
 
 | Id | Language |
 | --- | --- |
-| `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — the model and translation types. |
+| `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — predicates with parentheses, `∧` canonical. |
+| `forallx-magnus` | *forallx* (P.D. Magnus) first-order syntax — predicates juxtaposed (`Fa`, `Rab`), `&` canonical. |
 | `carnap-prop` | Carnap's default `prop` — the truth-table type's default, ASCII connectives and 52 sentence letters. |
 
 They live in `src/worker/logic/theories/` alongside the proof systems, and are
 served at `/theories/<id>.mm0` like them — a language and a proof system are the
-same kind of artifact, and forallx: Calgary is one file playing both parts.
+same kind of artifact, and each forallx edition is one file playing both parts.
 Being MM0 is not a formality: an exercise type reads one by asking what role
 each constructor plays (`@syntax role conjunction`), so nothing in the server
 knows that this book calls conjunction `/\` or that book calls it `∧`. Adding a
@@ -1053,8 +1060,8 @@ reader is shown. For forallx that is the glyphs (`∀x(F(x) → G(x))`); for
 `carnap-prop`, which declares nothing but ASCII, it is the ASCII you typed.
 Either way it is text the parser accepts back.
 
-**A language and a proof system can be one file, and for forallx they are.**
-`system="forallx-calgary-2019"` on a model or translation exercise and
+**A language and a proof system can be one file, and for both forallx editions
+they are.** `system="forallx-calgary-2019"` on a model or translation exercise and
 `src="/theories/forallx-calgary-2019.mm0"` on an `aufbau-mm0` block resolve to
 the same bytes, so a course cannot set a model exercise and a Fitch proof that
 disagree about what `A` means. What made it possible is a sort: `⊢` yields a
@@ -1069,6 +1076,38 @@ exercise has to repeat it. And the ASCII quantifiers `A`/`E` are student
 spellings only: `A` is also a predicate letter, one file cannot declare it as
 both, so the notation comes off and an elaboration rule puts the spelling back
 for input. `∀`, `∃`, `@` and `3` are unaffected.
+
+### Which forallx
+
+Two editions ship, and they are different books, not one book in two spellings.
+Pick by which one your course assigns; a lesson written for one does not compile
+against the other, which is the point — the rules really do differ.
+
+|  | `forallx-calgary-2019` | `forallx-magnus` |
+| --- | --- | --- |
+| Atomic sentences | `F(x)`, `R(a,b)` | `Fx`, `Rab` — juxtaposed, no punctuation |
+| Conjunction, as shown | `∧` | `&` |
+| Names / variables / functions | `a`–`e` / `s`–`z` / `f`–`r` | `a`–`w` / `x`–`z` / none |
+| ASCII quantifiers | `A`/`E`, `@`/`3` | `@`/`3` only |
+| `⊥` | yes, with `X` (explosion) and `IP` | no — a contradiction is an explicit pair |
+| `∨E` | proof by cases, two subproofs | modus tollendo ponens: `φ ∨ ψ`, `¬φ` ⊢ `ψ` |
+| `¬I` / `¬E` | one subproof, ending in `⊥` | two premises, `ψ` and `¬ψ`, under the assumption |
+| `P ∧ Q → R` | refused; bracket it | reads — `∧`/`∨` bind tighter than `→`/`↔` |
+| `(P)` | refused; groups take binary compounds only | reads |
+
+Magnus's reductios take two premises because the system has no `⊥` to collapse
+them into one. In a Fitch proof both come out of the same subproof, so the
+citation names that subproof twice, once at each of the two contradictory
+lines — `neg_intro 2-4 2-5`, where line 4 is `ψ` and line 5 is `¬ψ`. Two
+sibling subproofs satisfy the rule equally well. The rule names are otherwise
+the ones Calgary uses, and each theory's own header has the full table.
+
+Magnus's `A` and `E` are **not** given back as quantifier spellings. Carnap
+reads `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, by
+trying one reading and backing out of it; under juxtaposition no rewrite can
+do that, so this edition spells the quantifiers `@x` and `3x` (or `∀x`, `∃x`)
+and `A` is only ever a predicate letter. It is the one habit that does not
+transfer.
 
 ### Formulas in a proof
 

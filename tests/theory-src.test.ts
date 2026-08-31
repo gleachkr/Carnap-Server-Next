@@ -190,7 +190,7 @@ term and (a b: wff): wff;
   test("a path no theory answers to says so, and lists what does", async () => {
     const codes = await codesFor(
       lesson(
-        `:::aufbau-mm0{name="forallx" src="/theories/forallx-magnus.mm0"}\n:::`,
+        `:::aufbau-mm0{name="forallx" src="/theories/no-such-theory.mm0"}\n:::`,
       ),
     );
 

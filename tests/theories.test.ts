@@ -72,7 +72,7 @@ describe("built-in theories", () => {
 
   test("an unknown theory file is a 404, not an empty theory", async () => {
     const response = await createApp().request(
-      "/theories/forallx-magnus.mm0",
+      "/theories/no-such-theory.mm0",
     );
 
     expect(response.status).toBe(404);

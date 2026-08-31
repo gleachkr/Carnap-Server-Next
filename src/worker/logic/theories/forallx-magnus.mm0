@@ -1,0 +1,590 @@
+-- forallx (P.D. Magnus, the original) as one artifact: the language a student
+-- writes *and* the natural-deduction system QL they write proofs in — the same
+-- convergence its Calgary descendant makes, for the same reason. A model or
+-- translation exercise and a Fitch proof set from this file cannot disagree
+-- about what `A` means, because there is only one declaration of it.
+--
+-- Served at `/theories/forallx-magnus.mm0`, which is what an `:::aufbau-mm0`
+-- block names with `src=`; the same text is registered as the language id
+-- `forallx-magnus`, which is what a `system=` names.
+--
+-- Read `forallx-calgary-2019.mm0` first: the sort layout, the judgement layer,
+-- the equational layer, the substitution rewrites and the eigenvariable
+-- treatment are all the same design and its header is where they are argued
+-- for. This header says only what is *Magnus's*, which is more than the name
+-- suggests — Calgary re-cut the proof system as well as the notation.
+--
+-- ## What differs from Calgary, and why a lesson does not port by itself
+--
+-- **Atomic sentences are juxtaposed**: `Fa`, `Rab`, `Rabc` — no parentheses,
+-- no commas. `@syntax juxtaposed` on the argument-sequence combiner is what
+-- says so; adjacency at `seq` denotes `scomma`, and the empty sequence stays
+-- elided so a bare `P` is still a sentence letter. Carnap says the same thing
+-- with `parsePredicateSymbolNoParen`.
+--
+-- **There is no `⊥` and no `⊤`.** Magnus's system never names a contradiction;
+-- it exhibits one, as a pair of lines `ψ` and `¬ψ`. So there is no explosion
+-- rule and no separate IP either — `¬E` *is* the classical reductio. Carnap
+-- spells this `hasBooleanConstants = False`.
+--
+-- **`∨E` is modus tollendo ponens, not proof by cases**: from `φ ∨ ψ` and one
+-- disjunct's negation, the other disjunct. Calgary's three-part `or_elim` is
+-- not in this system, and a lesson that cites it will not compile here.
+--
+-- **`¬I` and `¬E` take two premises each**, being reductios onto an explicit
+-- contradictory pair rather than onto `⊥`. In a Fitch proof both premises come
+-- out of one subproof, so the citation names that subproof twice, once at each
+-- of the two contradictory lines:
+--
+--     |  P              :ax
+--     |  |  ¬ Q         :ax
+--     |  |  P           :reit 1
+--     |  |  ¬ P         :and_elim_l 4    (say)
+--     |  Q              :neg_elim 2-3 2-4
+--
+-- Two *sibling* subproofs (`neg_elim 2-3 4-5`) satisfy the rule equally well;
+-- what the rule wants is a proof of `ψ` and a proof of `¬ψ`, each under the
+-- assumption being discharged. The Fitch translator maps a range `a-b` to its
+-- last line and nothing else, which is why one range cannot deliver both.
+--
+-- **The lexicon is Magnus's**: predicates `A`–`Z` (variadic, so one letter
+-- covers every arity), names `a`–`w`, variables `x`–`z`, identity, and **no
+-- function symbols** — Carnap's `magnusFOLParserOptions` sets `functionParser`
+-- to `Nothing`, and a term here is a name or a variable, full stop. A course
+-- that wants function symbols declares them in an `aufbau-mm0` block extending
+-- this file, or sets its proofs in Calgary.
+--
+-- **No `A`/`E` spelling for the quantifiers, unlike Carnap.** Carnap reads
+-- `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, resolving
+-- the collision by parser try-order with backtracking. This file cannot: an
+-- MM0 math token has one meaning, so — as in Calgary — `A` stays a predicate
+-- letter and the quantifier gets ASCII spellings of its own, `@` and `3`. The
+-- input-only elaboration Calgary uses to give `A`/`E` back is not available
+-- here either, because it is a token rewrite with no backtracking and
+-- juxtaposition makes `AxAxx` genuinely ambiguous with it. Type `@x` or `∀x`.
+-- This is the one place a student's habits from Carnap will not transfer.
+--
+-- **`v` is not a disjunction spelling**, because `v` is one of the names.
+--
+-- Two things Calgary's header explains that apply here unchanged: the context
+-- join is `;` rather than `,` (the comma is the argument separator inside the
+-- engine's spelling of `Rab`), and **axiom binders are spelled with two
+-- letters** (`ph`, `ga`, `sq`, `te`), because every single lowercase letter is
+-- lexicon. Every rule's conclusion also joins one extra *slack* context binder
+-- — implicit weakening, which is what lets the Fitch translator give every
+-- line its full ambient scope.
+--
+-- ## forallx (Magnus) rule → axiom name
+--
+--   AS / PR (assumption, premise) ... ax          R (reiteration) ..... reit
+--   &I / &E ......... and_intro / and_elim_l / and_elim_r
+--   ∨I .............. or_intro_l / or_intro_r
+--   ∨E .............. or_elim_l / or_elim_r
+--   →I / →E ......... imp_intro / imp_elim
+--   ↔I / ↔E ......... iff_intro / iff_elim_l / iff_elim_r
+--   ¬I / ¬E ......... neg_intro / neg_elim
+--   =I / =E ......... eq_intro_nd / eq_replace
+--   ∀I / ∀E ......... all_intro / all_elim
+--   ∃I / ∃E ......... ex_intro / ex_elim
+--
+-- An `_l`/`_r` suffix names the side of the **conclusion**, throughout: from
+-- `φ ∧ ψ`, `and_elim_l` gives `φ`; from `φ ∨ ψ` and `¬ψ`, `or_elim_l` gives
+-- `φ`; from `φ ↔ ψ` and `φ`, `iff_elim_l` gives `ψ` — the left premise's
+-- partner. These are the basic rules only. Magnus's derived and replacement
+-- rules (MT, HS, DIL, DN, MC, Comm, DeM, ↔ex, QN) are provable from them and
+-- are deliberately not axioms here, exactly as Calgary's DS and LEM are not.
+
+-- The surface delimiter set: where one chunk of student input ends and the next
+-- begins, fixed before anything is looked up. The lexicon letters are listed
+-- because juxtaposition leaves no punctuation in `Rab` for anything else to
+-- break on; the price, as `carnap-prop.mm0` explains, is that a name here can
+-- only ever be one character.
+--| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
+--| @syntax delimiter $ a b c d e f g h i j k l m n o p q r s t u v w x y z $
+--| @syntax delimiter $ ( ) [ ] , $
+--| @syntax delimiter $ - ~ ¬ /\ ^ & ∧ \/ | ∨ $
+--| @syntax delimiter $ -> => ⊃ > → <-> <=> <> ≡ ↔ $
+--| @syntax delimiter $ @ 3 ∀ ∃ = $
+--| @syntax brackets ( ) [ ]
+--| @syntax lint closed-sentences
+--| @syntax display drop-outer-parens
+delimiter $ ( ) [ ] , ; / { } $;
+
+-- `sentence` is uninterpreted metadata to @aufbau/syntax — it records which sort
+-- *this application* reads student input at. See Calgary's note on `provable`.
+--| @syntax role sentence
+provable sort wff;
+sort ctx;
+provable sort judgement;
+
+--| @vars x y z
+sort var;
+--| @vars a b c d e f g h i j k l m n o p q r s t u v w
+sort name;
+sort tm;
+sort seq;
+
+term v2t (x: var): tm;
+coercion v2t: var > tm;
+term n2t (a: name): tm;
+coercion n2t: name > tm;
+term t2s (te: tm): seq;
+coercion t2s: tm > seq;
+
+-- Argument sequences, so a predicate letter is variadic: `Fa`, `Rab`, `Rabc`
+-- share one letter. `@syntax juxtaposed` is Magnus's whole atomic-sentence
+-- notation: adjacency of two `seq` expressions denotes the combiner, so the
+-- student writes no separator at all, while the engine still reads and prints
+-- the declared `,`. The combiner is associative and nothing else — argument
+-- order and multiplicity are meaning-bearing — while contexts, which really are
+-- unordered, keep the full ACUI treatment. The empty sequence is elided:
+-- writing it is optional, printing it is suppressed, which is what makes a bare
+-- `P` a sentence letter.
+--| @syntax elided
+term snil: seq;
+--| @syntax juxtaposed
+--| @acui seq_assoc _ snil _
+term scomma (sq tq: seq): seq;
+infixl scomma: $,$ prec 10;
+
+-- The predicate letters; nullary use (a sentence letter) is the elided
+-- empty sequence.
+term A (sq: seq): wff;
+term B (sq: seq): wff;
+term C (sq: seq): wff;
+term D (sq: seq): wff;
+term E (sq: seq): wff;
+term F (sq: seq): wff;
+term G (sq: seq): wff;
+term H (sq: seq): wff;
+term I (sq: seq): wff;
+term J (sq: seq): wff;
+term K (sq: seq): wff;
+term L (sq: seq): wff;
+term M (sq: seq): wff;
+term N (sq: seq): wff;
+term O (sq: seq): wff;
+term P (sq: seq): wff;
+term Q (sq: seq): wff;
+term R (sq: seq): wff;
+term S (sq: seq): wff;
+term T (sq: seq): wff;
+term U (sq: seq): wff;
+term V (sq: seq): wff;
+term W (sq: seq): wff;
+term X (sq: seq): wff;
+term Y (sq: seq): wff;
+term Z (sq: seq): wff;
+
+--| @syntax role negation
+term not (ph: wff): wff;
+prefix not: $-$ prec 40;
+prefix not: $~$ prec 40;
+prefix not: $¬$ prec 40;
+
+-- Magnus's operator table puts `∧` and `∨` on one rung, both left-associating,
+-- and `→` and `↔` on a looser rung, both *non*-associating. The rungs are what
+-- the precedences say; the non-association is what the `forbid` list says —
+-- `chain` refuses `P → Q → R`, `mix` refuses `P → Q ↔ R`. `nest` is not
+-- forbidden, because a tighter-rung operand is exactly what the two rungs are
+-- for: `P ∧ Q → R` reads, where in Calgary it does not.
+-- `&`, not `∧`, is declared last and so is the one a conjunction prints as:
+-- this book's own glyph, and the one Carnap's `magnusNotation` rewrites `∧`
+-- into for display. Every other connective's canonical spelling is already the
+-- book's.
+--| @syntax role conjunction
+term and (ph ps: wff): wff;
+infixl and: $/\$ prec 30;
+infixl and: $^$ prec 30;
+infixl and: $∧$ prec 30;
+infixl and: $&$ prec 30;
+
+--| @syntax role disjunction
+term or (ph ps: wff): wff;
+infixl or: $\/$ prec 30;
+infixl or: $|$ prec 30;
+infixl or: $∨$ prec 30;
+
+--| @syntax role conditional
+--| @syntax forbid chain mix
+term imp (ph ps: wff): wff;
+infixr imp: $->$ prec 20;
+infixr imp: $=>$ prec 20;
+infixr imp: $⊃$ prec 20;
+infixr imp: $>$ prec 20;
+infixr imp: $→$ prec 20;
+
+--| @syntax role biconditional
+--| @syntax forbid chain mix
+term iff (ph ps: wff): wff;
+infixr iff: $<->$ prec 20;
+infixr iff: $<=>$ prec 20;
+infixr iff: $<>$ prec 20;
+infixr iff: $≡$ prec 20;
+infixr iff: $↔$ prec 20;
+
+-- `@` and `3` are the ASCII quantifier spellings, as in Calgary. `A` and `E`
+-- are *not* offered: see the header — they are predicate letters, and under
+-- juxtaposition no rewrite can tell `AxAxx` apart from a nest of quantifiers.
+--| @syntax role forall
+term all {x: var} (ph: wff x): wff;
+prefix all: $@$ prec 40;
+prefix all: $∀$ prec 40;
+
+--| @syntax role exists
+term ex {x: var} (ph: wff x): wff;
+prefix ex: $3$ prec 40;
+prefix ex: $∃$ prec 40;
+
+--| @syntax role identity
+term ideq (te ue: tm): wff;
+infixl ideq: $=$ prec 50;
+
+-- Substitution as an ordinary term, pushed through the syntax by the @rewrite
+-- equations below so the normalizer can compute the instances the quantifier
+-- rules produce.
+term sb_t {x: var} (te: tm x) (ue: tm x): tm;
+notation sb_t {x: var} (te: tm x) (ue: tm x): tm =
+  ($tsub$:41) x ($/$:0) te ue;
+term sb_s {x: var} (te: tm x) (sq: seq x): seq;
+notation sb_s {x: var} (te: tm x) (sq: seq x): seq =
+  ($subst$:41) x ($/$:0) te sq;
+term sb_f {x: var} (te: tm x) (ph: wff x): wff;
+notation sb_f {x: var} (te: tm x) (ph: wff x): wff =
+  (${$:41) x ($/$:0) te ($}$:0) ph;
+
+-- The judgement layer. Nothing below is student-writable: every one of these
+-- lands in `judgement`, and student input is read at `wff`.
+term emp: ctx;
+notation emp: ctx = ($_$:max);
+-- The join is `;` because the comma is already the argument separator of the
+-- engine's spelling of an atomic sentence, and MM0 gives a math token one
+-- meaning. `context-join` and `turnstile` are how the proof exercise types
+-- learn to write a sequent in *this* theory's notation.
+--| @syntax role context-join
+--| @acui ctx_assoc ctx_comm emp ctx_idem
+term join (ga de: ctx): ctx;
+infixl join: $;$ prec 5;
+term hyp (ph: wff): ctx;
+coercion hyp: wff > ctx;
+--| @syntax role turnstile
+term nd (ga: ctx) (ph: wff): judgement;
+infixl nd: $⊢$ prec 0;
+
+term weq (ph ps: wff): judgement;
+infixl weq: $⟺$ prec 1;
+term teq (te ue: tm): judgement;
+infixl teq: $≐$ prec 1;
+term sqeq (sq tq: seq): judgement;
+infixl sqeq: $≗$ prec 1;
+term ctx_eq (ga de: ctx): judgement;
+infixl ctx_eq: $≜$ prec 1;
+term jeq (jj kk: judgement): judgement;
+infixl jeq: $⟚$ prec 1;
+
+-- The equational layer: one @relation bundle per sort. Only `judgement` carries
+-- a transport member, since it is the only provable sort; a rewrite inside a
+-- formula lifts through hyp_congr and nd_congr to a `⟚` the transport can use.
+--| @relation wff weq weq_refl weq_trans weq_sym _
+axiom weq_refl (ph: wff): $ ph ⟺ ph $;
+axiom weq_trans (ph ps ch: wff): $ ph ⟺ ps $ > $ ps ⟺ ch $ > $ ph ⟺ ch $;
+axiom weq_sym (ph ps: wff): $ ph ⟺ ps $ > $ ps ⟺ ph $;
+
+--| @relation tm teq teq_refl teq_trans teq_sym _
+axiom teq_refl (te: tm): $ te ≐ te $;
+axiom teq_trans (te ue ve: tm): $ te ≐ ue $ > $ ue ≐ ve $ > $ te ≐ ve $;
+axiom teq_sym (te ue: tm): $ te ≐ ue $ > $ ue ≐ te $;
+
+--| @relation seq sqeq sqeq_refl sqeq_trans sqeq_sym _
+axiom sqeq_refl (sq: seq): $ sq ≗ sq $;
+axiom sqeq_trans (sq tq uq: seq): $ sq ≗ tq $ > $ tq ≗ uq $ > $ sq ≗ uq $;
+axiom sqeq_sym (sq tq: seq): $ sq ≗ tq $ > $ tq ≗ sq $;
+axiom seq_assoc (sq tq uq: seq): $ ((sq , tq) , uq) ≗ (sq , (tq , uq)) $;
+
+--| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
+axiom ctx_refl (ga: ctx): $ ctx_eq ga ga $;
+axiom ctx_trans (ga de si: ctx):
+  $ ctx_eq ga de $ > $ ctx_eq de si $ > $ ctx_eq ga si $;
+axiom ctx_sym (ga de: ctx): $ ctx_eq ga de $ > $ ctx_eq de ga $;
+axiom ctx_assoc (ga de si: ctx):
+  $ ctx_eq ((ga ; de) ; si) (ga ; (de ; si)) $;
+axiom ctx_comm (ga de: ctx): $ ctx_eq (ga ; de) (de ; ga) $;
+axiom ctx_idem (ga: ctx): $ ctx_eq (ga ; ga) ga $;
+axiom ctx_unit (ga: ctx): $ ctx_eq (_ ; ga) ga $;
+
+--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
+axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
+axiom jeq_trans (jj kk ll: judgement): $ jj ⟚ kk $ > $ kk ⟚ ll $ > $ jj ⟚ ll $;
+axiom jeq_sym (jj kk: judgement): $ jj ⟚ kk $ > $ kk ⟚ jj $;
+axiom jeq_mp (jj kk: judgement): $ jj ⟚ kk $ > $ jj $ > $ kk $;
+
+--| @congr
+axiom join_congr (ga de si ta: ctx):
+  $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ ctx_eq (ga ; si) (de ; ta) $;
+--| @congr
+axiom hyp_congr (ph ps: wff): $ ph ⟺ ps $ > $ ctx_eq (hyp ph) (hyp ps) $;
+--| @congr
+axiom nd_congr (ga de: ctx) (ph ps: wff):
+  $ ctx_eq ga de $ > $ ph ⟺ ps $ > $ (ga ⊢ ph) ⟚ (de ⊢ ps) $;
+--| @congr
+axiom scomma_congr (sq tq uq vq: seq):
+  $ sq ≗ tq $ > $ uq ≗ vq $ > $ (sq , uq) ≗ (tq , vq) $;
+--| @congr
+axiom t2s_congr (te ue: tm): $ te ≐ ue $ > $ (t2s te) ≗ (t2s ue) $;
+--| @congr
+axiom not_congr (ph ps: wff): $ ph ⟺ ps $ > $ ¬ ph ⟺ ¬ ps $;
+--| @congr
+axiom and_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ∧ ch) ⟺ (ps ∧ th) $;
+--| @congr
+axiom or_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ∨ ch) ⟺ (ps ∨ th) $;
+--| @congr
+axiom imp_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph → ch) ⟺ (ps → th) $;
+--| @congr
+axiom iff_congr (ph ps ch th: wff):
+  $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ↔ ch) ⟺ (ps ↔ th) $;
+--| @congr
+axiom ideq_congr (te ue ve we: tm):
+  $ te ≐ ue $ > $ ve ≐ we $ > $ (te = ve) ⟺ (ue = we) $;
+--| @congr
+axiom all_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∀ x ph ⟺ ∀ x ps $;
+--| @congr
+axiom ex_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∃ x ph ⟺ ∃ x ps $;
+--| @congr
+axiom A_congr (sq tq: seq): $ sq ≗ tq $ > $ A sq ⟺ A tq $;
+--| @congr
+axiom B_congr (sq tq: seq): $ sq ≗ tq $ > $ B sq ⟺ B tq $;
+--| @congr
+axiom C_congr (sq tq: seq): $ sq ≗ tq $ > $ C sq ⟺ C tq $;
+--| @congr
+axiom D_congr (sq tq: seq): $ sq ≗ tq $ > $ D sq ⟺ D tq $;
+--| @congr
+axiom E_congr (sq tq: seq): $ sq ≗ tq $ > $ E sq ⟺ E tq $;
+--| @congr
+axiom F_congr (sq tq: seq): $ sq ≗ tq $ > $ F sq ⟺ F tq $;
+--| @congr
+axiom G_congr (sq tq: seq): $ sq ≗ tq $ > $ G sq ⟺ G tq $;
+--| @congr
+axiom H_congr (sq tq: seq): $ sq ≗ tq $ > $ H sq ⟺ H tq $;
+--| @congr
+axiom I_congr (sq tq: seq): $ sq ≗ tq $ > $ I sq ⟺ I tq $;
+--| @congr
+axiom J_congr (sq tq: seq): $ sq ≗ tq $ > $ J sq ⟺ J tq $;
+--| @congr
+axiom K_congr (sq tq: seq): $ sq ≗ tq $ > $ K sq ⟺ K tq $;
+--| @congr
+axiom L_congr (sq tq: seq): $ sq ≗ tq $ > $ L sq ⟺ L tq $;
+--| @congr
+axiom M_congr (sq tq: seq): $ sq ≗ tq $ > $ M sq ⟺ M tq $;
+--| @congr
+axiom N_congr (sq tq: seq): $ sq ≗ tq $ > $ N sq ⟺ N tq $;
+--| @congr
+axiom O_congr (sq tq: seq): $ sq ≗ tq $ > $ O sq ⟺ O tq $;
+--| @congr
+axiom P_congr (sq tq: seq): $ sq ≗ tq $ > $ P sq ⟺ P tq $;
+--| @congr
+axiom Q_congr (sq tq: seq): $ sq ≗ tq $ > $ Q sq ⟺ Q tq $;
+--| @congr
+axiom R_congr (sq tq: seq): $ sq ≗ tq $ > $ R sq ⟺ R tq $;
+--| @congr
+axiom S_congr (sq tq: seq): $ sq ≗ tq $ > $ S sq ⟺ S tq $;
+--| @congr
+axiom T_congr (sq tq: seq): $ sq ≗ tq $ > $ T sq ⟺ T tq $;
+--| @congr
+axiom U_congr (sq tq: seq): $ sq ≗ tq $ > $ U sq ⟺ U tq $;
+--| @congr
+axiom V_congr (sq tq: seq): $ sq ≗ tq $ > $ V sq ⟺ V tq $;
+--| @congr
+axiom W_congr (sq tq: seq): $ sq ≗ tq $ > $ W sq ⟺ W tq $;
+--| @congr
+axiom X_congr (sq tq: seq): $ sq ≗ tq $ > $ X sq ⟺ X tq $;
+--| @congr
+axiom Y_congr (sq tq: seq): $ sq ≗ tq $ > $ Y sq ⟺ Y tq $;
+--| @congr
+axiom Z_congr (sq tq: seq): $ sq ≗ tq $ > $ Z sq ⟺ Z tq $;
+
+-- Alpha-renaming, for @freshen when a context already binds the variable a
+-- quantifier rule wants.
+--| @alpha x y
+axiom all_alpha {x y: var} (ph: wff x y): $ ∀ x ph ⟺ ∀ y ({x/y} ph) $;
+--| @alpha x y
+axiom ex_alpha {x y: var} (ph: wff x y): $ ∃ x ph ⟺ ∃ y ({x/y} ph) $;
+
+-- Push {x/te} through the syntax. At a predicate the substitution moves onto
+-- the argument sequence, then distributes over `,` one at a time. There are no
+-- function letters here, so the `tm` layer bottoms out at a variable or a name.
+--| @rewrite
+axiom sb_f_not {x: var} (te: tm x) (ph: wff x): $ {x/te} (¬ ph) ⟺ ¬ ({x/te} ph) $;
+--| @rewrite
+axiom sb_f_and {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph ∧ ps) ⟺ ({x/te} ph ∧ {x/te} ps) $;
+--| @rewrite
+axiom sb_f_or {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph ∨ ps) ⟺ ({x/te} ph ∨ {x/te} ps) $;
+--| @rewrite
+axiom sb_f_imp {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph → ps) ⟺ ({x/te} ph → {x/te} ps) $;
+--| @rewrite
+axiom sb_f_iff {x: var} (te: tm x) (ph ps: wff x):
+  $ {x/te} (ph ↔ ps) ⟺ ({x/te} ph ↔ {x/te} ps) $;
+--| @rewrite
+axiom sb_f_ideq {x: var} (te: tm x) (ue ve: tm x):
+  $ {x/te} (ue = ve) ⟺ ((tsub x / te ue) = (tsub x / te ve)) $;
+--| @rewrite
+axiom sb_f_all {x y: var} (te: tm x) (ph: wff x y):
+  $ {x/te} (∀ y ph) ⟺ ∀ y ({x/te} ph) $;
+--| @rewrite
+axiom sb_f_ex {x y: var} (te: tm x) (ph: wff x y):
+  $ {x/te} (∃ y ph) ⟺ ∃ y ({x/te} ph) $;
+--| @rewrite
+axiom sb_f_id {x: var} (ph: wff x): $ {x/x} ph ⟺ ph $;
+--| @rewrite
+axiom sb_f_irrel {x: var} (te: tm x) (ph: wff): $ {x/te} ph ⟺ ph $;
+--| @rewrite
+axiom sb_f_A {x: var} (te: tm x) (sq: seq x): $ {x/te} (A sq) ⟺ A (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_B {x: var} (te: tm x) (sq: seq x): $ {x/te} (B sq) ⟺ B (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_C {x: var} (te: tm x) (sq: seq x): $ {x/te} (C sq) ⟺ C (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_D {x: var} (te: tm x) (sq: seq x): $ {x/te} (D sq) ⟺ D (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_E {x: var} (te: tm x) (sq: seq x): $ {x/te} (E sq) ⟺ E (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_F {x: var} (te: tm x) (sq: seq x): $ {x/te} (F sq) ⟺ F (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_G {x: var} (te: tm x) (sq: seq x): $ {x/te} (G sq) ⟺ G (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_H {x: var} (te: tm x) (sq: seq x): $ {x/te} (H sq) ⟺ H (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_I {x: var} (te: tm x) (sq: seq x): $ {x/te} (I sq) ⟺ I (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_J {x: var} (te: tm x) (sq: seq x): $ {x/te} (J sq) ⟺ J (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_K {x: var} (te: tm x) (sq: seq x): $ {x/te} (K sq) ⟺ K (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_L {x: var} (te: tm x) (sq: seq x): $ {x/te} (L sq) ⟺ L (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_M {x: var} (te: tm x) (sq: seq x): $ {x/te} (M sq) ⟺ M (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_N {x: var} (te: tm x) (sq: seq x): $ {x/te} (N sq) ⟺ N (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_O {x: var} (te: tm x) (sq: seq x): $ {x/te} (O sq) ⟺ O (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_P {x: var} (te: tm x) (sq: seq x): $ {x/te} (P sq) ⟺ P (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Q {x: var} (te: tm x) (sq: seq x): $ {x/te} (Q sq) ⟺ Q (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_R {x: var} (te: tm x) (sq: seq x): $ {x/te} (R sq) ⟺ R (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_S {x: var} (te: tm x) (sq: seq x): $ {x/te} (S sq) ⟺ S (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_T {x: var} (te: tm x) (sq: seq x): $ {x/te} (T sq) ⟺ T (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_U {x: var} (te: tm x) (sq: seq x): $ {x/te} (U sq) ⟺ U (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_V {x: var} (te: tm x) (sq: seq x): $ {x/te} (V sq) ⟺ V (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_W {x: var} (te: tm x) (sq: seq x): $ {x/te} (W sq) ⟺ W (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_X {x: var} (te: tm x) (sq: seq x): $ {x/te} (X sq) ⟺ X (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Y {x: var} (te: tm x) (sq: seq x): $ {x/te} (Y sq) ⟺ Y (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Z {x: var} (te: tm x) (sq: seq x): $ {x/te} (Z sq) ⟺ Z (subst x / te sq) $;
+--| @rewrite
+axiom sb_s_comma {x: var} (te: tm x) (sq tq: seq x):
+  $ (subst x / te (sq , tq)) ≗ ((subst x / te sq) , (subst x / te tq)) $;
+--| @rewrite
+axiom sb_s_t2s {x: var} (te: tm x) (ue: tm x):
+  $ (subst x / te (t2s ue)) ≗ (t2s (tsub x / te ue)) $;
+--| @rewrite
+axiom sb_t_var {x: var} (te: tm x): $ (tsub x / te x) ≐ te $;
+--| @rewrite
+axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
+
+-- The rules of Magnus's system QL — the basic rules the textbook introduces as
+-- the proof system itself, not the derived and replacement rules of chapter 5,
+-- which are provable from these. Beyond the textbook statement, every rule's
+-- conclusion joins one extra *slack* context binder: implicit weakening, so a
+-- line may state its conclusion in a larger ambient scope than its premises
+-- inhabit. The Fitch translator's ambient contexts depend on it; the
+-- dependency-context emitters (Prawitz, tree) simply bind it empty.
+axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
+axiom reit (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph $;
+
+-- Conjunction (&)
+axiom and_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
+axiom and_elim_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ph $;
+axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps $;
+
+-- Disjunction (∨). The elimination is Magnus's: modus tollendo ponens, one
+-- disjunct from the disjunction and the other's negation. There is no
+-- proof-by-cases rule in this system.
+axiom or_intro_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph ∨ ps $;
+axiom or_intro_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ph ∨ ps $;
+axiom or_elim_l (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∨ ps $ > $ de ⊢ ¬ ps $ > $ ga ; de ; si ⊢ ph $;
+axiom or_elim_r (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∨ ps $ > $ de ⊢ ¬ ph $ > $ ga ; de ; si ⊢ ps $;
+
+-- Conditional (→)
+axiom imp_intro (ga de: ctx) (ph ps: wff):
+  $ ga ; ph ⊢ ps $ > $ ga ; de ⊢ ph → ps $;
+axiom imp_elim (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph → ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
+
+-- Biconditional (↔)
+axiom iff_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ; ph ⊢ ps $ > $ de ; ps ⊢ ph $ > $ ga ; de ; si ⊢ ph ↔ ps $;
+axiom iff_elim_l (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ↔ ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
+axiom iff_elim_r (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ↔ ps $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph $;
+
+-- Negation. Both rules are reductios onto an explicit contradictory pair —
+-- this language has no ⊥ to collapse the two premises into one — so each takes
+-- a proof of ψ and a proof of ¬ψ under the assumption it discharges. ¬E is
+-- the classical one: it discharges ¬φ and concludes φ, which is why the system
+-- needs no separate indirect-proof rule.
+axiom neg_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ; ph ⊢ ps $ > $ de ; ph ⊢ ¬ ps $ > $ ga ; de ; si ⊢ ¬ ph $;
+axiom neg_elim (ga de si: ctx) (ph ps: wff):
+  $ ga ; ¬ ph ⊢ ps $ > $ de ; ¬ ph ⊢ ¬ ps $ > $ ga ; de ; si ⊢ ph $;
+
+-- Identity (=I is reflexivity under ⊢; =E is Leibniz replacement)
+axiom eq_intro_nd (ga: ctx) (te: tm): $ ga ⊢ te = te $;
+
+--| @view (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z) (ps ch: wff): $ ga ⊢ te = ue $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ch $
+--| @abstract ph ps ch z te ue
+--| @fresh z
+axiom eq_replace (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z):
+  $ ga ⊢ te = ue $ > $ de ⊢ {z/te} ph $ > $ ga ; de ; si ⊢ {z/ue} ph $;
+
+-- Quantifiers. ∀I in textbook form: from Γ ⊢ φ(a) conclude Γ ⊢ ∀x φ(x),
+-- provided the name a occurs in neither Γ nor φ. That proviso is dependency
+-- typing — ga, de and ph carry an x-dependency but no a-dependency, and the
+-- omission *is* the eigenvariable condition, re-checked by the verifier against
+-- the MMB. See Calgary's header for what it cost to learn to read these lists.
+--| @view {x: var} {a: name} (ga de: ctx x) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∀ x ph $
+--| @recover a ps ph x
+axiom all_intro {x: var} {a: name} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ {x/a} ph $ > $ ga ; de ⊢ ∀ x ph $;
+
+--| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ ps $
+--| @recover te ps ph x
+axiom all_elim {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
+  $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ {x/te} ph $;
+
+--| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∃ x ph $
+--| @recover te ps ph x
+axiom ex_intro {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
+  $ ga ⊢ {x/te} ph $ > $ ga ; de ⊢ ∃ x ph $;
+
+--| @view {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ps: wff) (ch: wff x): $ ga ⊢ ∃ x ph $ > $ de ; ps ⊢ ch $ > $ ga ; de ; si ⊢ ch $
+--| @recover a ps ph x
+axiom ex_elim {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ch: wff x):
+  $ ga ⊢ ∃ x ph $ > $ de ; {x/a} ph ⊢ ch $ > $ ga ; de ; si ⊢ ch $;

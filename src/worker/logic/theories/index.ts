@@ -7,8 +7,9 @@
  * directly. An `:::aufbau-mm0` block names one by its path instead of carrying
  * three hundred lines of MM0 in the lesson source.
  *
- * **A theory may also be a language.** `forallx-calgary-2019.mm0` carries
- * `@syntax` annotations and is registered by `../specs` under the language id
+ * **A theory may also be a language.** Both forallx files —
+ * `forallx-calgary-2019.mm0` and `forallx-magnus.mm0` — carry
+ * `@syntax` annotations and are registered by `../specs` under the language id
  * of the same stem, so `system=` on a model or translation exercise and `src=`
  * on a proof exercise's theory block name the same bytes and cannot disagree
  * about what `A` means. Two things follow for anyone reading these files. The annotations
@@ -41,15 +42,16 @@
  * loader configuration under workerd, `bun build`, or `bun test` alike (see
  * `src/text-modules.d.ts`). Unlike a spec, a theory is not parsed here — it is
  * text handed to the engine — so there is nothing for this module to validate.
- * What proves these two good is that `scripts/forallx-verify.ts` and
- * `scripts/gentzen-verify.ts` compile real proofs against them through the real
- * compiler and verifier.
+ * What proves these good is that `scripts/forallx-verify.ts`,
+ * `scripts/magnus-verify.ts` and `scripts/gentzen-verify.ts` compile real
+ * proofs against them through the real compiler and verifier.
  */
 
 import carnapProp from "./carnap-prop.mm0" with { type: "text" };
 import forallxCalgary2019 from "./forallx-calgary-2019.mm0" with {
   type: "text",
 };
+import forallxMagnus from "./forallx-magnus.mm0" with { type: "text" };
 import gentzenLk from "./gentzen-lk.mm0" with { type: "text" };
 
 /** Every built-in artifact's URL begins here, which is what the route matches on. */
@@ -63,6 +65,7 @@ export const THEORY_ROUTE_PREFIX = "/theories/";
 export const THEORY_SOURCES: Readonly<Record<string, string>> = {
   "carnap-prop.mm0": carnapProp,
   "forallx-calgary-2019.mm0": forallxCalgary2019,
+  "forallx-magnus.mm0": forallxMagnus,
   "gentzen-lk.mm0": gentzenLk,
 };
 
