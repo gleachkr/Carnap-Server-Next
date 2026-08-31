@@ -16,6 +16,8 @@ import {
   proofFormulaReader,
   proofTheoryText,
 } from "../../src/worker/exercises/aufbau-proof/formulas";
+import { ruleCitationShapes } from "../../src/worker/exercises/aufbau-proof-fitch/citations";
+import type { RuleCitationShape } from "../../src/worker/exercises/aufbau-proof-fitch/translate";
 import { withSystemText } from "../../src/worker/exercises/systems";
 import { THEORY_SOURCES } from "../../src/worker/logic/theories";
 
@@ -46,6 +48,7 @@ export function magnusExercise(
   goalName: string,
   theoremDecl: string,
 ): {
+  readonly citationShapes: ReadonlyMap<string, RuleCitationShape>;
   readonly mm0: string;
   readonly readSentence: ProofFormulaReader;
 } {
@@ -56,6 +59,7 @@ export function magnusExercise(
   const resolved = proofTheoryText(frozen as { readonly source?: string });
 
   return {
+    citationShapes: ruleCitationShapes(resolved.source),
     mm0: resolved.mm0,
     readSentence: proofFormulaReader(resolved.source, "sentence", goalName),
   };

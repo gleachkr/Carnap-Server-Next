@@ -1096,11 +1096,16 @@ against the other, which is the point — the rules really do differ.
 | `(P)` | refused; groups take binary compounds only | reads |
 
 Magnus's reductios take two premises because the system has no `⊥` to collapse
-them into one. In a Fitch proof both come out of the same subproof, so the
-citation names that subproof twice, once at each of the two contradictory
-lines — `neg_intro 2-4 2-5`, where line 4 is `ψ` and line 5 is `¬ψ`. Two
-sibling subproofs satisfy the rule equally well. The rule names are otherwise
-the ones Calgary uses, and each theory's own header has the full table.
+them into one. In a Fitch proof both come out of the same subproof, and the
+citation is the book's: **one range whose subproof ends with the contradictory
+pair** — `neg_intro 2-5`, where line 4 is `ψ` and line 5 is `¬ψ`, in that
+order. How many premises a range supplies is inferred from the rule's own
+signature (premises assuming the same formula are one cited subproof), not
+declared anywhere. Citing the subproof once per premise — `neg_intro 2-4 2-5`
+— is the explicit spelling and works identically, and it is also the shape for
+two sibling subproofs, which satisfy the rule equally well. The rule names are
+otherwise the ones Calgary uses, and each theory's own header has the full
+table.
 
 Magnus's `A` and `E` are **not** given back as quantifier spellings. Carnap
 reads `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, by

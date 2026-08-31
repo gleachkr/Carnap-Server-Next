@@ -139,10 +139,21 @@ writes `context=` anywhere.
 textbook shipped here — is the same in that respect and differs in one that
 shows up at this layer: its `¬I` and `¬E` are reductios onto an explicit
 contradictory pair rather than onto `⊥`, which the language does not have, so
-each takes **two** premises. Both come out of one subproof, and the citation
-names that subproof twice, once at each contradictory line —
-`neg_intro 2-4 2-5`. A range citation lowers to its last line and nothing
-else, which is why one range cannot deliver both.
+each takes **two** premises drawn from one subproof. The citation is the
+book's own — one range, whose subproof *ends* with the contradictory pair:
+`neg_intro 2-5`, supplying lines 4 and 5. What makes a lone range able to
+deliver two premises is not translator knowledge of the rule but the
+**citation-shape table** [`citations.ts`](./citations.ts) derives from the
+rule signatures themselves: premises that assume the same formula form one
+cited subproof, a premise that assumes nothing is a plain line — the
+`indirectInference` table of Carnap's Haskell, inferred rather than declared.
+The explicit spelling, one ref per premise naming the subproof twice
+(`neg_intro 2-4 2-5`), lowers to the same `.auf` and stays legal; the two are
+told apart by ref count, which can only coincide when they agree. One
+strictness the derived shape carries that Carnap's checker did not: the pair
+must be the subproof's *last two lines* in the rule's own order (`ψ`, then
+`¬ψ` — the book's schema). Carnap tried premise permutations; a
+permutation-tolerant lowering is a separate feature, deliberately not built.
 
 Each proof line is `<formula> :<rule> <refs>`; the justification
 is taken after the line's *last* colon, so formulas whose notation uses `:` (e.g.

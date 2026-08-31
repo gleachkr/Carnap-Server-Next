@@ -31,6 +31,16 @@
  *    slack the conclusion could only be the exact join of the cited contexts.
  *  - A ref `n` becomes `ln`; a range `a-b` becomes `lb` (the subproof's last
  *    line, whose context still carries the assumption being discharged).
+ *  - A rule that draws *several* premises from one subproof — Magnus's `¬I`,
+ *    whose contradictory pair are two premises sharing one assumption — can be
+ *    cited with a single range, the textbook's own shape: the range supplies
+ *    the subproof's last k lines, one per premise. Which rules read that way
+ *    is not this module's knowledge: the caller derives it from the rule
+ *    signatures (see `citations.ts`) and passes it as `citationShapes`. The
+ *    grouped lowering only engages when the citation has exactly one ref per
+ *    *slot* and the rule has more premises than slots; a citation with one
+ *    ref per premise keeps the plain lowering, so both spellings stay legal
+ *    and unambiguous — the counts can only coincide when the two agree anyway.
  *  - Citations are checked for **accessibility**: a plain ref must lie on the
  *    citing line's open scope path, and a cited subproof's parent scope must be
  *    on that path. The engine would reject almost every violation anyway (the
@@ -71,6 +81,9 @@ export type FitchDiagnosticCode =
   | "missing_rule"
   | "range_depth_mismatch"
   | "range_escapes_subproof"
+  | "range_expected"
+  | "range_tail_depth_mismatch"
+  | "range_too_short"
   | "unknown_reference";
 
 /**
@@ -130,6 +143,36 @@ export interface TranslatedFitchProof {
   readonly lineSpans: readonly FitchLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
   readonly proofText: string;
+}
+
+/**
+ * One citation ref of a rule, and which of the rule's premises it supplies.
+ *
+ * A `line` slot is an ordinary earlier step. A `range` slot is a subproof
+ * citation `a-b`; its final lines map onto `premises` in order, so a slot with
+ * one premise contributes the subproof's last line (the lowering every range
+ * has always had) and a slot with k contributes the last k — Magnus's `¬I`,
+ * where the contradictory pair are the two lines the box ends with. Premise
+ * indices rather than positions, because nothing guarantees a group's members
+ * sit next to each other in the rule's own premise order.
+ */
+export interface CitationSlot {
+  readonly kind: "line" | "range";
+  /** Rule premise indices this ref supplies, in the order the lines map on. */
+  readonly premises: readonly number[];
+}
+
+/**
+ * How one rule's citation names its premises — the information Carnap's
+ * `indirectInference` table declared by hand, here *derived* from the rule's
+ * own signature (see `citations.ts`) and handed to the translator, which
+ * stays as theory-agnostic as ever: it applies the shape, it never infers it.
+ */
+export interface RuleCitationShape {
+  /** How many premises the rule takes — the ref count of the plain spelling. */
+  readonly premiseCount: number;
+  /** One entry per citation ref, in premise order of each slot's first member. */
+  readonly slots: readonly CitationSlot[];
 }
 
 interface Reference {
@@ -420,6 +463,115 @@ function walkFitch(
 }
 
 /**
+ * Lower one line's citations to `.auf` labels, in rule-premise order.
+ *
+ * The grouped lowering engages only when the rule's shape is known, the rule
+ * has more premises than citation slots (some subproof supplies several), and
+ * the student wrote exactly one ref per slot. Everything else — no shape, the
+ * one-ref-per-premise spelling, a ref count that matches neither — takes the
+ * plain lowering every proof has always had, so the two spellings coexist and
+ * a malformed count stays the compiler's arity complaint, as before.
+ *
+ * A multi-premise slot's range must genuinely end with the lines it claims:
+ * they have to exist after the assumption (`range_too_short`) and sit in the
+ * cited box itself, not a nested or sibling one (`range_tail_depth_mismatch`).
+ * On any complaint the lowering still emits best-effort labels; a diagnostic
+ * already blocks compilation.
+ */
+function lowerReferences(
+  line: ParsedLine,
+  shape: RuleCitationShape | undefined,
+  parsed: readonly ParsedLine[],
+  diagnostics: FitchDiagnostic[],
+): readonly number[] {
+  const grouped =
+    shape !== undefined &&
+    shape.slots.length < shape.premiseCount &&
+    line.refs.length === shape.slots.length;
+
+  if (!grouped) {
+    return line.refs.map((ref) => ref.label);
+  }
+
+  const byPremise: number[] = [];
+
+  for (const [slotIndex, slot] of shape.slots.entries()) {
+    const ref = line.refs[slotIndex];
+
+    if (ref === undefined) {
+      continue; // unreachable: the lengths were compared above
+    }
+
+    const count = slot.premises.length;
+
+    if (count === 1) {
+      byPremise[slot.premises[0] ?? 0] = ref.label;
+      continue;
+    }
+
+    const fallback = () => {
+      for (const premise of slot.premises) {
+        byPremise[premise] = ref.label;
+      }
+    };
+
+    if (ref.rangeStart === null) {
+      diagnostics.push({
+        code: "range_expected",
+        params: { token: `${ref.label}` },
+        sourceLine: line.sourceLine,
+      });
+      fallback();
+      continue;
+    }
+
+    // The k lines all come after the assumption that opens the subproof.
+    if (ref.label - ref.rangeStart < count) {
+      diagnostics.push({
+        code: "range_too_short",
+        params: { lines: `${count}` },
+        sourceLine: line.sourceLine,
+      });
+      fallback();
+      continue;
+    }
+
+    // …and in the cited box itself. Same *scope*, not merely same depth: a
+    // sibling split re-boxes at the same indentation, and a pair straddling
+    // the seam is two boxes' last lines, not one box's last two.
+    const lastLine = parsed[ref.label - 1];
+    const sameScope = (step: number): boolean => {
+      const at = parsed[step - 1];
+      return (
+        at !== undefined &&
+        lastLine !== undefined &&
+        at.scopePath.length === lastLine.scopePath.length &&
+        at.scopePath.every((scope, i) => lastLine.scopePath[i] === scope)
+      );
+    };
+
+    for (let step = ref.label - count + 1; step < ref.label; step += 1) {
+      if (!sameScope(step)) {
+        diagnostics.push({
+          code: "range_tail_depth_mismatch",
+          params: { lines: `${count}` },
+          sourceLine: line.sourceLine,
+        });
+        break;
+      }
+    }
+
+    for (const [offset, premise] of slot.premises.entries()) {
+      byPremise[premise] = ref.label - count + 1 + offset;
+    }
+  }
+
+  // Sparse holes cannot arise from a well-formed shape; `filter` drops them
+  // if a malformed one ever produces any, leaving the compiler to complain.
+  return byPremise.filter((label) => label !== undefined);
+}
+
+/**
  * Translate Fitch `fitchText` into `.auf` for `goalName`, treating a line that
  * cites `assumptionRule` with no earlier premises as an assumption, and writing
  * `sequentSymbol` as the turnstile of every emitted sequent and
@@ -444,6 +596,7 @@ export function fitchToAuf(
   sequentSymbol: string,
   contextSymbol = ",",
   readFormula: ProofFormulaReader = ENGINE_TEXT,
+  citationShapes?: ReadonlyMap<string, RuleCitationShape>,
 ): TranslatedFitchProof {
   const {
     diagnostics,
@@ -546,7 +699,14 @@ export function fitchToAuf(
 
     const contextText =
       formulas.length === 0 ? "_" : formulas.join(` ${contextSymbol} `);
-    const refText = line.refs.map((ref) => `l${ref.label}`).join(", ");
+    const refText = lowerReferences(
+      line,
+      citationShapes?.get(line.rule),
+      parsed,
+      diagnostics,
+    )
+      .map((label) => `l${label}`)
+      .join(", ");
     bodyLines.push(
       `l${index + 1}: $ ${contextText} ${sequentSymbol} ${line.formula} $ by ${line.rule} [${refText}]`,
     );

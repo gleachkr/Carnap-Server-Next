@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { MAGNUS_CASES } from "./helpers/magnus-cases";
-import { magnusExercise } from "./helpers/magnus-theory";
+import {
+  MAGNUS_THEORY_SOURCE,
+  magnusExercise,
+} from "./helpers/magnus-theory";
 
 /**
  * The forallx (P.D. Magnus) theory and its Fitch encoding. Every basic rule of
@@ -15,12 +19,15 @@ import { magnusExercise } from "./helpers/magnus-theory";
  *
  * The two Magnus-specific shapes get a test of their own below: a line written
  * in the book's juxtaposed notation reaching the compiler as an argument
- * sequence, and a reductio citing one subproof at each of its two
- * contradictory lines.
+ * sequence, and a reductio whose two premises come from one cited subproof —
+ * in the book's single-range spelling and in the explicit one-ref-per-premise
+ * spelling, which lower to the same `.auf`.
  */
 
 describe("forallx (Magnus) theory", () => {
   test("every worked case translates without structural diagnostics", () => {
+    const citationShapes = ruleCitationShapes(MAGNUS_THEORY_SOURCE);
+
     for (const testCase of MAGNUS_CASES) {
       const { diagnostics } = fitchToAuf(
         testCase.fitch,
@@ -28,6 +35,8 @@ describe("forallx (Magnus) theory", () => {
         "ax",
         "⊢",
         ";",
+        undefined,
+        citationShapes,
       );
       expect(diagnostics, testCase.name).toEqual([]);
     }
@@ -35,7 +44,7 @@ describe("forallx (Magnus) theory", () => {
 
   test("every worked case's lines read in the theory's own language", () => {
     for (const testCase of MAGNUS_CASES) {
-      const { readSentence } = magnusExercise(
+      const { citationShapes, readSentence } = magnusExercise(
         testCase.goalName,
         testCase.theoremDecl,
       );
@@ -46,6 +55,7 @@ describe("forallx (Magnus) theory", () => {
         "⊢",
         ";",
         readSentence,
+        citationShapes,
       );
       expect(
         formulaProblems.map((one) => one.error.message),
@@ -72,39 +82,48 @@ describe("forallx (Magnus) theory", () => {
     expect(proofText).toContain("(∀ x ((F (x)) → (G (x))))");
   });
 
-  test("a reductio cites one subproof at each of its contradictory lines", () => {
-    // Magnus's ¬I has no ⊥ to collapse its two premises into one, so the
-    // citation names the subproof twice — once ending at ψ, once at ¬ψ — and
-    // both refs lower to lines whose context still carries the assumption
-    // being discharged. This is the one citation shape a student arriving
-    // from Calgary has to learn, so it is pinned rather than left to the
-    // verify script.
-    const { proofText, diagnostics } = fitchToAuf(
+  test("a reductio's two spellings lower to the same proof", () => {
+    // Magnus's ¬I has no ⊥ to collapse its two premises into one. The book
+    // cites one subproof ending with the contradictory pair — `neg_intro 2-4`
+    // — and the citation table derived from the rule's own signature is what
+    // lets that one range supply both premises, as the box's last two lines
+    // in premise order. The explicit spelling, one ref per premise naming the
+    // subproof twice, lowers to the byte-identical `.auf`; both stay legal,
+    // told apart by their ref count. Pinned rather than left to the verify
+    // script because this is the shape students actually type.
+    const fitch = (citation: string): string =>
       [
         "p           :ax",
         "    ~p      :ax",
         "    p       :reit 1",
         "    ~p      :reit 2",
-        "~~p         :neg_intro 2-3 2-4",
-      ].join("\n"),
+        `~~p         :neg_intro ${citation}`,
+      ].join("\n");
+    const citationShapes = ruleCitationShapes(MAGNUS_THEORY_SOURCE);
+    const lowered = [
       "dni",
-      "ax",
-      "⊢",
-      ";",
-    );
+      "----",
+      "l1: $ p ⊢ p $ by ax []",
+      "l2: $ p ; ~p ⊢ ~p $ by ax []",
+      "l3: $ p ; ~p ⊢ p $ by reit [l1]",
+      "l4: $ p ; ~p ⊢ ~p $ by reit [l2]",
+      "l5: $ p ⊢ ~~p $ by neg_intro [l3, l4]",
+    ].join("\n");
 
-    expect(diagnostics).toEqual([]);
-    expect(proofText).toBe(
-      [
+    for (const citation of ["2-4", "2-3 2-4"]) {
+      const { proofText, diagnostics } = fitchToAuf(
+        fitch(citation),
         "dni",
-        "----",
-        "l1: $ p ⊢ p $ by ax []",
-        "l2: $ p ; ~p ⊢ ~p $ by ax []",
-        "l3: $ p ; ~p ⊢ p $ by reit [l1]",
-        "l4: $ p ; ~p ⊢ ~p $ by reit [l2]",
-        "l5: $ p ⊢ ~~p $ by neg_intro [l3, l4]",
-      ].join("\n"),
-    );
+        "ax",
+        "⊢",
+        ";",
+        undefined,
+        citationShapes,
+      );
+
+      expect(diagnostics, citation).toEqual([]);
+      expect(proofText, citation).toBe(lowered);
+    }
   });
 
   test("a lesson names the shipped id with no block, and freezes the artifact", async () => {

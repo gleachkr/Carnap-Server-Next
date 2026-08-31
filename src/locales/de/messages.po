@@ -3491,6 +3491,14 @@ msgstr "Das Attribut check muss cells, terse oder off sein."
 msgid "The check attribute must be on or off."
 msgstr "Das Attribut check muss on oder off sein."
 
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "The cited subproof must end with the {lines} lines this rule uses, at its own level."
+msgstr "Der zitierte Teilbeweis muss mit den {lines} Zeilen enden, die diese Regel verwendet — auf seiner eigenen Ebene."
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "The cited subproof needs {lines} lines after its assumption."
+msgstr "Der zitierte Teilbeweis braucht {lines} Zeilen nach seiner Annahme."
+
 #: src/worker/application/assignments.ts
 #: src/worker/application/content.ts
 msgid "The content item was not found."
@@ -4008,6 +4016,10 @@ msgstr "Diese Zeile ist kein Gegenbeispiel."
 #: src/worker/exercises/truth-table/strings.ts
 msgid "This row isn't filled in correctly yet."
 msgstr "Diese Zeile ist noch nicht richtig ausgefüllt."
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”."
+msgstr "Diese Regel bezieht ihre Prämissen aus einem Teilbeweis — zitieren Sie einen Bereich „a-b“, nicht die Zeile „{token}“."
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Conjunctive Normal Form."

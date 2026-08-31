@@ -3491,6 +3491,14 @@ msgstr "The check attribute must be cells, terse, or off."
 msgid "The check attribute must be on or off."
 msgstr "The check attribute must be on or off."
 
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "The cited subproof must end with the {lines} lines this rule uses, at its own level."
+msgstr "The cited subproof must end with the {lines} lines this rule uses, at its own level."
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "The cited subproof needs {lines} lines after its assumption."
+msgstr "The cited subproof needs {lines} lines after its assumption."
+
 #: src/worker/application/assignments.ts
 #: src/worker/application/content.ts
 msgid "The content item was not found."
@@ -4008,6 +4016,10 @@ msgstr "This row isn't a counterexample."
 #: src/worker/exercises/truth-table/strings.ts
 msgid "This row isn't filled in correctly yet."
 msgstr "This row isn't filled in correctly yet."
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+msgid "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”."
+msgstr "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”."
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Conjunctive Normal Form."

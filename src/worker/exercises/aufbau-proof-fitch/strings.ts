@@ -59,6 +59,20 @@ function buildFitchDiagnosticStrings(i18n: Translator) {
       "Reference “{token}” is not an earlier proof step.",
       placeholders("token"),
     ),
+    "The cited subproof must end with the {lines} lines this rule uses, at its own level.":
+      i18n.t(
+        "The cited subproof must end with the {lines} lines this rule uses, at its own level.",
+        placeholders("lines"),
+      ),
+    "The cited subproof needs {lines} lines after its assumption.": i18n.t(
+      "The cited subproof needs {lines} lines after its assumption.",
+      placeholders("lines"),
+    ),
+    "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”.":
+      i18n.t(
+        "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”.",
+        placeholders("token"),
+      ),
     "The justification after ':' must name a rule.": i18n.t(
       "The justification after ':' must name a rule.",
     ),
@@ -107,5 +121,11 @@ export const FITCH_DIAGNOSTIC_MESSAGES: Readonly<
     "A cited subproof must begin and end at the same indentation level.",
   range_escapes_subproof:
     "A cited subproof must not reach back out to a shallower line.",
+  range_expected:
+    "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”.",
+  range_tail_depth_mismatch:
+    "The cited subproof must end with the {lines} lines this rule uses, at its own level.",
+  range_too_short:
+    "The cited subproof needs {lines} lines after its assumption.",
   unknown_reference: "Reference “{token}” is not an earlier proof step.",
 };

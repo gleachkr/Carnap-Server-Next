@@ -24,6 +24,7 @@ import {
   proofTheoryText,
 } from "../src/worker/exercises/aufbau-proof/formulas";
 import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import { SHOWCASE_DEMO_SOURCE } from "../tests/helpers/showcase-demo";
@@ -83,6 +84,7 @@ function lower(
       publicData.sequentSymbol ?? "⊢",
       publicData.contextSymbol ?? ",",
       proofFormulaReader(source, "sentence", publicData.goalName),
+      ruleCitationShapes(source),
     );
 
     if (translated.diagnostics.length > 0) {
@@ -192,6 +194,7 @@ for (const node of compiled.artifact.document.nodes) {
       publicData.sequentSymbol ?? "⊢",
       publicData.contextSymbol ?? ",",
       proofFormulaReader(source, "sentence", publicData.goalName),
+      ruleCitationShapes(source),
     );
 
     if (

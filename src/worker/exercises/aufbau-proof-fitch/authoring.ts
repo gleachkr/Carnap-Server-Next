@@ -25,6 +25,8 @@ import {
   starterFormulaReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
+import { theoryLanguageSource } from "../aufbau-proof/formulas";
+import { ruleCitationShapes } from "./citations";
 import { fitchToAuf } from "./translate";
 import type { AufbauProofFitchPublicData } from "./types";
 import {
@@ -173,6 +175,7 @@ export async function compileAufbauProofFitch(
       sequentSymbol,
       contextSymbol,
       starterFormulaReader(theory, header, "sentence"),
+      ruleCitationShapes(theoryLanguageSource(theory, header.theoremDecl)),
     );
 
     for (const problem of translated.formulaProblems) {

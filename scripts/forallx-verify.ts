@@ -29,7 +29,10 @@ const compiler = await loadCompiler({ wasmBytes });
 
 let passed = 0;
 for (const testCase of FORALLX_CASES) {
-  const { mm0, readSentence } = forallxExercise(testCase.goalName, testCase.theoremDecl);
+  const { citationShapes, mm0, readSentence } = forallxExercise(
+    testCase.goalName,
+    testCase.theoremDecl,
+  );
   const translation = fitchToAuf(
     testCase.fitch,
     testCase.goalName,
@@ -37,6 +40,7 @@ for (const testCase of FORALLX_CASES) {
     "⊢",
     ";",
     readSentence,
+    citationShapes,
   );
 
   if (translation.formulaProblems.length > 0 && testCase.shouldFail !== true) {

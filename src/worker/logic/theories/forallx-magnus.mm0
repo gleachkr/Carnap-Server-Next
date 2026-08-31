@@ -33,19 +33,23 @@
 --
 -- **`¬I` and `¬E` take two premises each**, being reductios onto an explicit
 -- contradictory pair rather than onto `⊥`. In a Fitch proof both premises come
--- out of one subproof, so the citation names that subproof twice, once at each
--- of the two contradictory lines:
+-- out of one subproof, cited the book's way — one range, whose subproof *ends*
+-- with the pair, `ψ` then `¬ψ`:
 --
---     |  P              :ax
+--     |  P ∧ ¬ P        :ax
 --     |  |  ¬ Q         :ax
---     |  |  P           :reit 1
---     |  |  ¬ P         :and_elim_l 4    (say)
---     |  Q              :neg_elim 2-3 2-4
+--     |  |  P           :and_elim_l 1
+--     |  |  ¬ P         :and_elim_r 1
+--     |  Q              :neg_elim 2-4
 --
--- Two *sibling* subproofs (`neg_elim 2-3 4-5`) satisfy the rule equally well;
--- what the rule wants is a proof of `ψ` and a proof of `¬ψ`, each under the
--- assumption being discharged. The Fitch translator maps a range `a-b` to its
--- last line and nothing else, which is why one range cannot deliver both.
+-- That one range can supply two premises is inferred from this very
+-- signature — two premises assuming the same formula are one cited subproof
+-- (see `exercises/aufbau-proof-fitch/citations.ts`). The explicit spelling,
+-- one ref per premise naming the subproof twice (`neg_elim 2-3 2-4`), lowers
+-- to the same proof; it is also how two *sibling* subproofs are cited
+-- (`neg_elim 2-3 4-5`), which satisfy the rule equally well — what the rule
+-- wants is a proof of `ψ` and a proof of `¬ψ`, each under the assumption
+-- being discharged.
 --
 -- **The lexicon is Magnus's**: predicates `A`–`Z` (variadic, so one letter
 -- covers every arity), names `a`–`w`, variables `x`–`z`, identity, and **no

@@ -47,6 +47,7 @@ import {
   proofFormulaReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
+import { ruleCitationShapes } from "../../worker/exercises/aufbau-proof-fitch/citations";
 import {
   type AufbauProofFitchStringId,
   FITCH_DIAGNOSTIC_MESSAGES,
@@ -54,6 +55,7 @@ import {
 import {
   fitchScopeGeometry,
   fitchToAuf,
+  type RuleCitationShape,
 } from "../../worker/exercises/aufbau-proof-fitch/translate";
 import type { AufbauProofFitchPublicData } from "../../worker/exercises/aufbau-proof-fitch/types";
 import { loadProofCompiler } from "../proof-compiler";
@@ -309,6 +311,9 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   /** Reads a typed line in the theory's language; passes text through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
+  /** How each rule's citation names its premises, derived from the theory's
+   *  own rule signatures. See `aufbau-proof-fitch/citations.ts`. */
+  private citationShapes: ReadonlyMap<string, RuleCitationShape> = new Map();
   private goalName = "";
   private assumptionRule = "ax";
   /** The theory's turnstile; artifacts compiled before `sequent=` existed have
@@ -353,6 +358,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       "sentence",
       data.goalName,
     );
+    this.citationShapes = ruleCitationShapes(theory.source);
     this.goalName = data.goalName;
     this.assumptionRule = data.assumptionRule;
     if (typeof data.sequentSymbol === "string" && data.sequentSymbol !== "") {
@@ -524,6 +530,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       this.sequentSymbol,
       this.contextSymbol,
       this.readFormula,
+      this.citationShapes,
     );
   }
 

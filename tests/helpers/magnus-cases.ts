@@ -15,8 +15,12 @@
  *    theory's own language before it reaches the compiler.
  *  - **`¬I`, `¬E` and `∨E` are Magnus's**, not Calgary's. The reductio rules
  *    take two premises rather than one ending in `⊥` (this language has no
- *    `⊥`), which in Fitch means citing one subproof at each of its two
- *    contradictory lines: `neg_intro 2-4 2-5`. `∨E` is modus tollendo ponens.
+ *    `⊥`), which in Fitch is cited the book's way — one range whose subproof
+ *    *ends* with the contradictory pair, `neg_intro 2-5` — because the
+ *    citation table derived from the rule signatures (`citations.ts`) lets
+ *    one range supply both premises. Citing the subproof once per premise
+ *    (`neg_intro 2-4 2-5`) is the explicit spelling and stays legal; `dne`
+ *    below keeps a case in it. `∨E` is modus tollendo ponens.
  *
  * A goal that quantifies over formulas binds single letters — `p`, `q`, `r` —
  * which are also names in this theory's lexicon. That shadowing is deliberate
@@ -134,7 +138,10 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     // at each of the two lines that contradict. This is the shape every
     // reductio in this system has, and the one thing about it a student
     // arriving from Calgary has to learn.
-    name: "dni (¬I, cited at both contradictory lines)",
+    // The book's own citation shape: one range, whose subproof ends with the
+    // contradictory pair. The signature-derived citation table (citations.ts)
+    // is what lets the translator draw two premises from it.
+    name: "dni (¬I, one range supplying the contradictory pair)",
     theoremDecl: "theorem dni (p: wff): $ p ⊢ ¬ ¬ p $;",
     goalName: "dni",
     fitch: [
@@ -142,13 +149,15 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "    ~p      :ax",
       "    p       :reit 1",
       "    ~p      :reit 2",
-      "~~p         :neg_intro 2-3 2-4",
+      "~~p         :neg_intro 2-4",
     ].join("\n"),
   },
   {
     // ¬E is the *classical* reductio — it discharges ¬φ and concludes φ — which
-    // is why this system needs no separate indirect-proof rule.
-    name: "dne (¬E)",
+    // is why this system needs no separate indirect-proof rule. Cited the
+    // explicit way, one ref per premise naming the subproof twice: the
+    // spelling every proof written before the citation table stays legal in.
+    name: "dne (¬E, explicit one-ref-per-premise citation)",
     theoremDecl: "theorem dne (p: wff): $ ¬ ¬ p ⊢ p $;",
     goalName: "dne",
     fitch: [
@@ -173,7 +182,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "    ~p          :and_elim_l 1",
       "    q           :or_elim_r 2 3",
       "    ~q          :and_elim_r 1",
-      "~(p \\/ q)       :neg_intro 2-4 2-5",
+      "~(p \\/ q)       :neg_intro 2-5",
     ].join("\n"),
   },
   {

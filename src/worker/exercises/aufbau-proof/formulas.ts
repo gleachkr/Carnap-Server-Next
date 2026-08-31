@@ -279,6 +279,23 @@ export function readNodeFormulas<
 }
 
 /**
+ * The theory as a language object, for machinery that reads the theory's *own
+ * statements* rather than a student's formulas — the Fitch citation-shape
+ * classifier walks the rule signatures this way. Shares the
+ * {@link proofLanguage} cache, so a widget already reading lines from the same
+ * source pays for no second parse. `null` where the theory is not a language,
+ * for the same three reasons as every reader here.
+ */
+export function theoryLanguage(
+  source: string | null | undefined,
+): SurfaceLanguage | null {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+
+  return read === null ? null : read.language;
+}
+
+/**
  * The theory as a *language* with one exercise's goal declaration appended, or
  * `null` where it is not a language — what the compiler itself needs, having
  * the theory and the declaration in hand and no table yet to join against.
