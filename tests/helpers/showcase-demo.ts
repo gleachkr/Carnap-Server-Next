@@ -7,8 +7,8 @@
  *
  * Shared by `tests/showcase-demo.test.ts` (which compiles it, so a directive that
  * changes shape breaks a test rather than a demo) and `scripts/seed-showcase-demo.ts`.
- * The three worked proofs are engine-verified by `scripts/showcase-verify.ts`; the
- * last Fitch exercise is deliberately unfinished.
+ * The four worked proofs are engine-verified by `scripts/showcase-verify.ts`; the
+ * last two Fitch exercises are deliberately unfinished.
  */
 export const SHOWCASE_DEMO_SOURCE = `# A tour of the exercise types
 
@@ -351,7 +351,7 @@ To infer \`Q\` from \`P → Q\` by modus ponens, what else must you have? (Here
 
 ## 12. A proof, as proof lines
 
-Now the engine-checked proof types. All three share one machine: the browser
+Now the engine-checked proof types. All four share one machine: the browser
 compiles the student's proof to a certificate as they type — the ✓ appears when
 it goes through — and the server re-checks that certificate on submit, against
 the goal frozen into the exercise.
@@ -459,7 +459,56 @@ theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ 
 ∃ x G(x)              :ex_elim 1 3-6
 :::
 
-## 15. Your turn
+## 15. The same proof, as a Prawitz tree
+
+\`aufbau-proof-prawitz\` draws the fourth picture: bare formulas with their
+premises above the inference line, and discharge written as a **label** rather
+than as a box. This is the ∃E above again, node for node. The assumption
+\`F(b)\` is bracketed and marked \`1\`, and the ∃E carries the same mark to say it
+is the rule that discharges it. No context is written anywhere — each node's is
+worked out from which assumptions above it are still standing, which is also
+why nothing from a sibling branch can trip the ∃E's fresh-name condition.
+
+Starter lines are the same linear form as section 12, with the discharge marks
+riding as trailing \`-- label:\` comments; the context left of each \`⊢\` is
+discarded on parse and re-derived from the labels, so any proof the engine
+accepts is a starter this editor will open.
+
+\`\`\`md
+:::aufbau-proof-prawitz{system="forallx" id="pf_prawitz" title="Existential elimination, drawn" points="3"}
+The same ∃E as a tree. Select a finished tree and apply a rule below it, or add
+a premise above a line; label an assumption and repeat the label on the rule
+that discharges it.
+
+theorem exelimdrawn {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
+----
+l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by ax []
+l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by ax []
+l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by all_elim [l2]
+l4: $ F(b) ⊢ F(b) $ by ax [] -- label:1
+l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by imp_elim [l3, l4]
+l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ex_intro [l5]
+l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ex_elim [l1, l6] -- label:1
+:::
+\`\`\`
+
+:::aufbau-proof-prawitz{system="forallx" id="pf_prawitz" title="Existential elimination, drawn" points="3"}
+The same ∃E as a tree. Select a finished tree and apply a rule below it, or add
+a premise above a line; label an assumption and repeat the label on the rule
+that discharges it.
+
+theorem exelimdrawn {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
+----
+l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by ax []
+l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by ax []
+l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by all_elim [l2]
+l4: $ F(b) ⊢ F(b) $ by ax [] -- label:1
+l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by imp_elim [l3, l4]
+l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ex_intro [l5]
+l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ex_elim [l1, l6] -- label:1
+:::
+
+## 16. Your turn
 
 The last one is not done for you. Assume \`¬ P\` for contradiction, derive \`⊥\`
 with \`neg_elim\`, and close the subproof with \`ip\`, citing its range.
@@ -482,7 +531,7 @@ theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
 ¬ ¬ P    :ax
 :::
 
-## 16. The same exercise, told nothing
+## 17. The same exercise, told nothing
 
 Every exercise takes a \`feedback\` attribute saying how much the student is told
 about whether the work is right. This one is the exercise above with
@@ -515,7 +564,7 @@ theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $
 ¬ ¬ P    :ax
 :::
 
-## 17. Submit as the only feedback
+## 18. Submit as the only feedback
 
 \`exam\` decides whether wrong work is *kept*, and it is a separate question from
 whether the student is told anything. Writing both — \`exam="false"\` so a wrong

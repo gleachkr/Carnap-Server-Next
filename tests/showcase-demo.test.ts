@@ -11,7 +11,7 @@ import { SHOWCASE_DEMO_SOURCE } from "./helpers/showcase-demo";
  * each directive's source in a code fence next to the live exercise, so a syntax
  * change that breaks the exercise breaks this test too.
  *
- * Whether the three worked proofs actually verify against the engine is checked
+ * Whether the four worked proofs actually verify against the engine is checked
  * by `bun run scripts/showcase-verify.ts` (the compiler is client-only and
  * untyped, so it stays out of `bun test`).
  */
@@ -26,6 +26,7 @@ const EXPECTED_KINDS = [
   "aufbau-proof@1",
   "aufbau-proof-tree@1",
   "aufbau-proof-fitch@1",
+  "aufbau-proof-prawitz@1",
 ];
 
 describe("showcase demo lesson", () => {
@@ -72,6 +73,7 @@ describe("showcase demo lesson", () => {
       "pf_lines",
       "pf_tree",
       "pf_fitch",
+      "pf_prawitz",
       "pf_yours",
       "pf_sealed",
       "sa_commit",
@@ -105,7 +107,7 @@ describe("showcase demo lesson", () => {
     const exercises = compiled.artifact.document.nodes.filter(
       (node) => node.kind === "exercise",
     );
-    expect(exercises).toHaveLength(18);
+    expect(exercises).toHaveLength(19);
   });
 
   test("the closing Fitch exercise is left for the student to finish", async () => {
