@@ -40,9 +40,10 @@
  * string map to word.
  */
 
-import type { AssertStatement, Scope } from "@aufbau/syntax";
+import type { AssertStatement, Scope, Statement } from "@aufbau/syntax";
 import {
   parseSpec,
+  parseStatements,
   printTerm,
   SurfaceLanguage,
   stripSyntaxAnnotations,
@@ -434,17 +435,34 @@ export function goalBinderScope(
   source: string | null | undefined,
   goalName: string,
 ): Scope {
-  const read =
-    source === null || source === undefined ? null : proofLanguage(source);
   const scope = new Map<string, string>();
 
-  if (read === null) {
-    return scope;
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+
+  for (const binder of findGoal(
+    read?.language.spec.statements ?? [],
+    goalName,
+  )?.binders ?? []) {
+    if ("sort" in binder.type) {
+      scope.set(binder.name, binder.type.sort);
+    }
   }
 
+  return scope;
+}
+
+/**
+ * The last statement declaring `goalName` — last, because the goal declaration
+ * is appended to the theory and a name it collides with was declared earlier.
+ */
+function findGoal(
+  statements: readonly Statement[],
+  goalName: string,
+): AssertStatement | null {
   let goal: AssertStatement | null = null;
 
-  for (const statement of read.language.spec.statements) {
+  for (const statement of statements) {
     if (
       (statement.kind === "theorem" || statement.kind === "axiom") &&
       statement.name === goalName
@@ -453,11 +471,89 @@ export function goalBinderScope(
     }
   }
 
-  for (const binder of goal?.binders ?? []) {
-    if ("sort" in binder.type) {
-      scope.set(binder.name, binder.type.sort);
-    }
+  return goal;
+}
+
+/** Statement lists for theories that are not languages, keyed like the specs. */
+const statementLists = new Map<string, readonly Statement[]>();
+
+/**
+ * Every statement a theory text declares, whether or not it is a *language*.
+ *
+ * "Not a language" is a claim about reading **formulas**: `proofLanguage`
+ * returns null for a file that declares no `@syntax role sentence`, because
+ * without a lexicon there is no way to read `¬ F(a)` as anything but
+ * characters. Reading a **declaration** needs none of that — `theorem t (a b:
+ * wff): $ a , b ==> b $;` splits into a name, two binders and a statement by
+ * MM0's own grammar, and `parseStatements` does exactly that for `gentzen-lk`
+ * with no diagnostics. So the two questions are kept apart: a caller that
+ * wants to *understand* the formula goes through the language, and a caller
+ * that only wants to know where the declaration ends and the question begins
+ * comes here.
+ *
+ * A language's statements come free, having been read into its spec already;
+ * anything else is read once and memoized on the text, like the specs beside
+ * it.
+ */
+function theoryStatements(source: string): readonly Statement[] {
+  const read = proofLanguage(source);
+
+  if (read !== null) {
+    return read.language.spec.statements;
   }
 
-  return scope;
+  const cached = statementLists.get(source);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  let statements: readonly Statement[] = [];
+
+  try {
+    statements = parseStatements(source).statements;
+  } catch {
+    statements = [];
+  }
+
+  statementLists.set(source, statements);
+
+  return statements;
+}
+
+/**
+ * The goal as a *statement* — what the student was asked to prove — or `null`
+ * where the text declares no such goal to read.
+ *
+ * A goal is stored as an MM0 declaration, and a declaration says more than the
+ * question does. `theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a)
+ * ⊢ G(a) $` names the theorem, binds its schematic letters and its bound
+ * variable, and wraps the statement in `$ … $` — and none of that is the
+ * exercise. The name is the engine's handle on the goal, and is not even the
+ * id the student meets in a gradebook; `{x: var}` is what makes `∀ x` legal at
+ * all. So what comes back is the `>`-chain alone, which is the tree and
+ * Prawitz editors' `goalFormula` for every goal that has no `>` in it.
+ *
+ * Reading the parsed statement rather than cutting the declaration text at its
+ * first `$` is what keeps a hypothesis binder (`(h: $ … $)`) from being taken
+ * for the statement. Whether the theory is a language does not come into it
+ * (see {@link theoryStatements}): the formulas inside stay whatever they were,
+ * engine text or surface, and only the bookkeeping around them comes off.
+ */
+export function goalStatementText(
+  source: string | null | undefined,
+  goalName: string,
+): string | null {
+  const goal =
+    source === null || source === undefined
+      ? null
+      : findGoal(theoryStatements(source), goalName);
+
+  if (goal === null) {
+    return null;
+  }
+
+  return [...goal.hypotheses, goal.conclusion]
+    .map((part) => ("text" in part ? part.text.trim() : part.sort))
+    .join(" > ");
 }

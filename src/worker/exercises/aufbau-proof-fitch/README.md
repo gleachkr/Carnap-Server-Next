@@ -117,6 +117,17 @@ b       :imp_elim 1 2
 
 Prose is the prompt; a `theorem <name>: $ Γ ⊢ φ $` line states the goal, a `----`
 underline separates it, then the starter Fitch proof (which may be empty).
+
+**A declaration is how a goal is stored, not how it is asked.** The widget's
+"Prove" row and the review's `Goal` line show the *statement* — `Γ ⊢ φ` alone,
+by way of `goalStatementText` — with the theorem's name, its binders and its
+`$ … $` taken off, which is what the tree and Prawitz editors have always
+shown. The name is the engine's handle on the goal and is free to differ from
+the exercise's `id`; a `{x: var}` binder exists to make `∀ x` legal and says
+nothing to a student. This holds over a theory that is not a language too:
+being a language decides whether the *formula* can be read as surface text,
+while splitting a declaration off its statement is MM0's own grammar and needs
+no lexicon. The declaration is shown only if no such goal is declared at all.
 Attributes match `aufbau-proof` (`system`, `id`, `title`, `points`, `exam`,
 `feedback`,
 `options`) plus an optional **`assumption`** naming the theory's assumption axiom

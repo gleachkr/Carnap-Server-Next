@@ -17,10 +17,13 @@ import type { JsonValue } from "../../domain/json";
 // The certificate is the trust boundary, so the Fitch type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's Fitch text or the translated proof).
-import { proofTheoryText } from "../aufbau-proof/formulas";
+import { goalStatementText, proofTheoryText } from "../aufbau-proof/formulas";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofFitchReview } from "./read-only-view";
-import type { AufbauProofFitchAnswerData } from "./types";
+import type {
+  AufbauProofFitchAnswerData,
+  AufbauProofFitchPublicData,
+} from "./types";
 import {
   AUFBAU_PROOF_FITCH_ANSWER_KIND,
   AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
@@ -55,6 +58,31 @@ function decodeBase64(value: string): Uint8Array | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * The goal a review names, in the terms the student was asked it: the statement
+ * the theorem declares, not the theorem's name. The name is the engine's handle
+ * on the goal and means nothing to a reader — least of all here, where it sits
+ * beside the exercise id it is free to differ from.
+ *
+ * The name is still the fallback, as it was the whole of this line before, for
+ * a declaration this artifact's text does not carry.
+ */
+function reviewGoal(
+  publicData: AufbauProofFitchPublicData | null,
+  declaration: ExerciseManifestItem,
+): string {
+  if (publicData === null) {
+    return declaration.id;
+  }
+
+  return (
+    goalStatementText(
+      proofTheoryText(publicData).source,
+      publicData.goalName,
+    ) ?? publicData.goalName
+  );
 }
 
 export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
@@ -219,10 +247,13 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
     const publicData = isAufbauProofFitchPublicData(declaration.publicData)
       ? declaration.publicData
       : null;
-    const goalName = publicData?.goalName ?? declaration.id;
-
     return {
-      details: [{ label: context.i18n.t("Goal"), value: goalName }],
+      details: [
+        {
+          label: context.i18n.t("Goal"),
+          value: reviewGoal(publicData, declaration),
+        },
+      ],
       elementHtml: renderAufbauProofFitchReview(
         {
           assumptionRule:

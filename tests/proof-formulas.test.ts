@@ -5,6 +5,7 @@ import {
   ENGINE_TEXT,
   goalBinderScope,
   goalBinderShadows,
+  goalStatementText,
   hasTheoryText,
   proofFormulaReader,
   proofTheoryText,
@@ -226,6 +227,56 @@ describe("goalBinderScope", () => {
         testCase.name,
       ).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * What the Fitch widget puts in its "Prove" row, and what a review names as
+ * the goal. A declaration is how a goal is stored; this is how it is asked.
+ */
+describe("goalStatementText", () => {
+  const statementOf = (theoremDecl: string, goalName: string) =>
+    goalStatementText(`${FORALLX_THEORY_SOURCE}\n${theoremDecl}`, goalName);
+
+  test("the theorem's name and binders are not part of the question", () => {
+    expect(statementOf(SCHEMATIC, "mp")).toBe("(a → b) ; a ⊢ b");
+  });
+
+  test("a bound-variable binder goes too", () => {
+    // `{x: var}` is what makes `∀ x` legal; it says nothing to a student.
+    expect(statementOf(CONCRETE, "t")).toBe("∀ x (F(x) → G(x)) ⊢ G(a)");
+  });
+
+  test("a hypothesis binder is not mistaken for the statement", () => {
+    // The case that decides this is read from the parsed statement rather
+    // than cut at the declaration's first `$`: here that `$` opens `(h: $ F(a)
+    // $)`, a binder, and the statement is the one after it.
+    expect(
+      statementOf("theorem h {a: name} (h: $ F(a) $): $ _ ⊢ F(a) $;", "h"),
+    ).toBe("_ ⊢ F(a)");
+  });
+
+  test("a `>`-chain keeps its hypotheses", () => {
+    expect(
+      statementOf("theorem g (a b: wff): $ _ ⊢ a $ > $ _ ⊢ b $;", "g"),
+    ).toBe("_ ⊢ a > _ ⊢ b");
+  });
+
+  test("a theory that is not a language still has a declaration to read", () => {
+    // Being a language decides whether a *formula* can be read; a declaration
+    // splits by MM0's own grammar, which `gentzen-lk` obeys like any other
+    // file. The statement comes back as engine text, because that is what it
+    // was — what comes off is the name, the binders and the `$ … $`.
+    expect(
+      goalStatementText(
+        `${GENTZEN}\ntheorem t (a b: wff): $ a ==> b $;`,
+        "t",
+      ),
+    ).toBe("a ==> b");
+  });
+
+  test("a goal the source does not declare is null, not empty", () => {
+    expect(statementOf(SCHEMATIC, "not_the_goal")).toBeNull();
   });
 });
 

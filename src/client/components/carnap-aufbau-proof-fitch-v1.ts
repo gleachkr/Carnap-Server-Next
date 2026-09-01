@@ -43,6 +43,7 @@ import {
 import type { ProofFormulaReader } from "../../worker/exercises/aufbau-proof/formulas";
 import {
   ENGINE_TEXT,
+  goalStatementText,
   hasTheoryText,
   proofFormulaReader,
   proofTheoryText,
@@ -143,7 +144,32 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-/** The theorem declaration line to show the student ("what to prove"). */
+/**
+ * What to show the student as the goal, given the exercise's two theory texts.
+ *
+ * The statement the goal declares, with the theorem's name, its binders and
+ * its `$ … $` taken off — the same thing the tree and Prawitz editors show,
+ * and the same register as the surface text the student types below it. A
+ * declaration is how a goal is *stored*, not how it is asked: `unimp {x: var}
+ * {a: name}` names an engine handle that is not even the exercise id, and
+ * binds a variable whose only job is to make `∀ x` legal.
+ *
+ * Whether the theory is a *language* does not come into it — that decides how
+ * the formulas are read, not how the declaration around them splits. The
+ * fallback is the declaration this row used to show, reached only when the
+ * text declares no such goal at all, where showing the line as written beats
+ * showing nothing.
+ */
+function goalText(
+  theory: { readonly mm0: string; readonly source: string | null },
+  goalName: string,
+): string {
+  return (
+    goalStatementText(theory.source, goalName) ?? goalDeclaration(theory.mm0)
+  );
+}
+
+/** The theorem declaration line, its keyword and trailing `;` taken off. */
 function goalDeclaration(mm0: string): string {
   const lines = mm0.split("\n");
   for (let index = lines.length - 1; index >= 0; index -= 1) {
@@ -390,10 +416,10 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     const label = document.createElement("span");
     label.className = "proof-goal-label";
     label.textContent = this.t("Prove");
-    const decl = document.createElement("span");
-    decl.className = "proof-goal-decl";
-    decl.textContent = goalDeclaration(this.mm0);
-    goal.append(label, decl);
+    const statement = document.createElement("span");
+    statement.className = "proof-goal-statement";
+    statement.textContent = goalText(theory, this.goalName);
+    goal.append(label, statement);
     container.insertBefore(goal, actionsSlot);
 
     const host = document.createElement("div");

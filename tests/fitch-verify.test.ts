@@ -45,6 +45,23 @@ a       :ax
 b       :imp_elim 1 2
 :::`;
 
+/**
+ * The same exercise over a theory that *is* a language — forallx (Magnus),
+ * whose goal carries the two things a declaration says and a question does
+ * not: a theorem name, and a `{x: var}` binder that exists to make `∀ x`
+ * legal. Neither belongs in front of a student.
+ */
+const LANGUAGE_SOURCE = `:::aufbau-mm0{name="fx" src="/theories/forallx-magnus.mm0"}
+:::
+
+:::aufbau-proof-fitch{system="fx" id="u1" points="2"}
+Prove it.
+
+theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
+----
+∀x(Fx → Gx)  :ax
+:::`;
+
 const FITCH_TEXT = [
   "a → b   :ax",
   "a       :ax",
@@ -143,7 +160,13 @@ describe("aufbau-proof-fitch assessment", () => {
       REVIEW_CONTEXT,
     );
     expect(review.summary).toBe("Aufbau Fitch proof");
-    expect(review.details?.[0]).toEqual({ label: "Goal", value: "mp" });
+    // The helper theory declares no `@syntax`, so its formulas are never read
+    // as surface text — and the goal is still named by its statement, because
+    // splitting a declaration is MM0 grammar and needs no lexicon.
+    expect(review.details?.[0]).toEqual({
+      label: "Goal",
+      value: "(a → b) , a ⊢ b",
+    });
     expect(review.elementHtml).toContain("data-review");
     expect(review.elementHtml).toContain("imp_elim 1 2");
     // The bundle loads on review pages so the element upgrades to a read-only
@@ -152,6 +175,31 @@ describe("aufbau-proof-fitch assessment", () => {
       "/assets/components/carnap-aufbau-proof-fitch-v1.js",
     );
     expect(review.elementHtml).toContain('data-assumption-rule="ax"');
+  });
+
+  test("over a language, the review names the statement the student proved", async () => {
+    const compiled = await compileCarnapMarkdown(LANGUAGE_SOURCE);
+    if (!compiled.ok) {
+      throw new Error(
+        `compile failed: ${compiled.diagnostics.map((d) => d.code).join(", ")}`,
+      );
+    }
+    const item = compiled.artifact.manifest.find(
+      (entry) => entry.id === "u1",
+    );
+    if (item === undefined) {
+      throw new Error("no u1 exercise");
+    }
+
+    const review = type.reviewAnswer(
+      normalizedAnswer(GOOD_MMB_BASE64),
+      item,
+      REVIEW_CONTEXT,
+    );
+    expect(review.details?.[0]).toEqual({
+      label: "Goal",
+      value: "∀ x (F(x) → G(x)) ; F(a) ⊢ G(a)",
+    });
   });
 });
 

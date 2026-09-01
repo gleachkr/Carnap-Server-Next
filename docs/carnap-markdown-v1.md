@@ -1263,6 +1263,14 @@ b       :imp_elim 1 2
 :::
 ```
 
+The student is shown the goal's **statement**, not the declaration you wrote it
+as: `(a → b) , a ⊢ b`, with the theorem's name, its binders and its `$ … $`
+dropped — the same thing the tree and Prawitz editors show. The name is the
+engine's handle on the goal and need not match the exercise `id`; a `{x: var}`
+binder is there to make `∀ x` legal and means nothing to a reader. This does
+not depend on the system being a language — that decides whether the formula
+itself reads as surface text; taking a declaration apart is MM0 grammar.
+
 A discharging proof indents its assumption and cites the subproof's range; the
 translator drops the discharged assumption from the context automatically:
 
