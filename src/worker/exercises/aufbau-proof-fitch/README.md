@@ -124,10 +124,10 @@ by way of `goalStatementText` — with the theorem's name, its binders and its
 `$ … $` taken off, which is what the tree and Prawitz editors have always
 shown. The name is the engine's handle on the goal and is free to differ from
 the exercise's `id`; a `{x: var}` binder exists to make `∀ x` legal and says
-nothing to a student. This holds over a theory that is not a language too:
-being a language decides whether the *formula* can be read as surface text,
-while splitting a declaration off its statement is MM0's own grammar and needs
-no lexicon. The declaration is shown only if no such goal is declared at all.
+nothing to a student. This holds over a theory that names no sentence sort too:
+that role decides whether the *formula* can be read as surface text, while
+splitting a declaration off its statement is MM0's own grammar and needs no
+lexicon. The declaration is shown only if no such goal is declared at all.
 Attributes match `aufbau-proof` (`system`, `id`, `title`, `points`, `exam`,
 `feedback`,
 `options`) plus an optional **`assumption`** naming the theory's assumption axiom
@@ -196,8 +196,8 @@ rules would need the translator to accept a set.
 
 ## Formulas are read in the theory's language
 
-Where the theory is also a *language* — it declares `@syntax role sentence`, as
-`forallx-calgary-2019` does — each line's formula is parsed against that spec and re-printed
+Where the theory names the sort a line is read at — `@syntax role sentence`,
+as `forallx-calgary-2019` does — each line's formula is parsed against that spec and re-printed
 in engine notation before it reaches the compiler. `Ax(F(x) -> G(x))   :ax` goes in;
 `l1: $ … ⊢ (∀ x ((F (x)) → (G (x)))) $ by ax []` comes out. The compiler's math parser wants every token
 whitespace-separated and every compound operand parenthesized; the book wants
@@ -210,10 +210,13 @@ unification failure. And the spec's lints start applying to proofs: forallx
 admits parentheses only around a two-place connective, so `∀ x (x = x)` is now
 refused and must be written `∀ x x = x`.
 
-**One condition: the theory must be a language** (`gentzen-lk` is not, and
-reads as it always did). It is carried by *which theory text `publicData`
-holds*: `source` (the artifact `@syntax` and all) means read it, `mm0` (already
-stripped) means do not.
+**One condition: the theory must name the sort a line is read at** — the one
+carrying `@syntax role sentence`. `gentzen-lk` names none and reads as it
+always did. That is not a claim that such a file is no language: it parses,
+and the language built from it reads its own notations quite happily. It
+simply never says which sort a student's line is in, and nothing here will
+guess one. A pre-#250 artifact, frozen with the stripped `mm0` and no `source`
+at all, has no text to ask and reads as engine text for that reason instead.
 
 A goal stated as a rule schema is read in **its own binders**. `theorem mp
 (a b: wff): $ (a → b) ; a ⊢ b $` is about *any* sentences, and its `a` is not

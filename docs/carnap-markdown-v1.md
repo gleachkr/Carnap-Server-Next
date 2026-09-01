@@ -1116,9 +1116,9 @@ transfer.
 
 ### Formulas in a proof
 
-A Fitch, tree or Prawitz proof set in a theory that is also a language has its
-formulas **read in that language**, exactly as a model or translation exercise
-does. The student types `Ax(F(x) -> G(x))`; the widget reads it and hands the
+A Fitch, tree or Prawitz proof set in a theory that says which sort its
+formulas are in has them **read in that theory's language**, exactly as a model
+or translation exercise does. The student types `Ax(F(x) -> G(x))`; the widget reads it and hands the
 compiler `(∀ x ((F (x)) → (G (x))))`. Two things come with that:
 
 - A formula that will not read is caught in the widget, with the complaint
@@ -1132,9 +1132,14 @@ compiler `(∀ x ((F (x)) → (G (x))))`. Two things come with that:
   doing anything. Both spellings mean the same thing to the engine; only one is
   the book's.
 
-**One condition, or the proof stays engine text: the theory must be a
-language.** `gentzen-lk` declares no `@syntax` at all, and proofs in it read as
-they always did.
+**One condition, or the proof stays engine text: the theory must name the sort
+to read at** — `@syntax role sentence` for a Fitch or Prawitz line, and for a
+tree node the sort `@syntax role turnstile` yields. `gentzen-lk` declares no
+`@syntax` at all, so it names neither and proofs in it read as they always did.
+Its formulas are perfectly readable in the abstract — the file declares its own
+notations and Carnap can parse them — but nothing will guess which sort a
+student's line is written in, and guessing wrong is the kind of mistake that
+does not announce itself.
 
 A goal stated as a *rule schema* is read too, in its own binders. `theorem mp
 (a b: wff): $ (a → b) ; a ⊢ b $` binds `a` and `b` as stand-ins for any

@@ -45,8 +45,8 @@
  * student may write `~Ax F(x)` where the compiler needs `(¬ (∀ x (F (x))))`.
  * That happens before anything else here, which also means two assumptions
  * spelled differently but meaning the same thing answer to one discharge mark.
- * A theory that is not a language passes every node through untouched — see
- * `aufbau-proof/formulas.ts`.
+ * A theory that names no sentence sort passes every node through untouched —
+ * see `aufbau-proof/formulas.ts`.
  *
  * Structural problems (a discharge mark no assumption answers to, mixed
  * formulas under one mark, an assumption with premises) are returned as

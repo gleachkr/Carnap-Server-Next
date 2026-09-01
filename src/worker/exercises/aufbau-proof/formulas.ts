@@ -19,9 +19,17 @@
  * discipline, its refusal of open sentences — start applying to proofs, having
  * previously applied only to the exercise types that parse.
  *
- * **One condition: the theory must declare `@syntax role sentence`.** That is
- * a file saying it is also a *language*, which is exactly the question being
- * asked; `gentzen-lk` declares no `@syntax` at all and reads as it always did.
+ * **One condition: the theory must name a sort to read this shape at.** For a
+ * Fitch or Prawitz line that is the sort carrying `@syntax role sentence`; for
+ * a tree node it is the sort the turnstile yields, falling back to the sentence
+ * sort. A file naming neither — `gentzen-lk`, which declares no `@syntax` at
+ * all — reads as it always did.
+ *
+ * Note what that condition is *not* (#274). `gentzen-lk` parses as a spec, and
+ * the `SurfaceLanguage` built from it reads that file's own formulas quite
+ * happily, off the ordinary MM0 notations it declares. It is a language; it
+ * simply never says which sort a student's line is in, and nothing here will
+ * guess one. The gate is on the sort, asked where the sort is needed.
  *
  * There used to be a second condition, and getting rid of it is what #253 was
  * (see {@link goalBinderScope}). A goal that binds metavariables —
@@ -43,7 +51,6 @@
 import type { AssertStatement, Scope, Statement } from "@aufbau/syntax";
 import {
   parseSpec,
-  parseStatements,
   printTerm,
   SurfaceLanguage,
   stripSyntaxAnnotations,
@@ -85,20 +92,27 @@ export type ProofFormulaReader = (text: string) => ProofFormulaReading;
  */
 const languages = new Map<string, ProofLanguage | null>();
 
-/** A theory that is also a language, with the sort it reads a sentence at. */
+/** A theory read as a language, and the sort it calls a sentence if it says. */
 interface ProofLanguage {
   readonly language: SurfaceLanguage;
-  readonly sentence: string;
+  /** `undefined` where the spec carries no `@syntax role sentence`. */
+  readonly sentence: string | undefined;
 }
 
 /**
- * The theory read as a language, or `null` where it is not one.
+ * The theory read as a language, or `null` where the text will not read at all.
  *
- * `null` covers three cases that all mean the same thing downstream: the text
- * does not read as a spec, it reads but declares no sentence sort, or the
- * caller had no source to offer (a pre-#250 artifact, which froze only the
- * stripped engine text). None of them is an error — every one of them is a
- * proof that goes on being written in engine text.
+ * Every MM0 file that parses is a language here. `new SurfaceLanguage(spec)`
+ * asks for no `@syntax`, and one built from a file that declares none still
+ * reads that file's own notations — `gentzen-lk`'s `infixl seq: $==>$` is a
+ * notation like any other. What such a file lacks is a lexicon, delimiters and
+ * roles, and among the roles the one that says which sort a student's formula
+ * is in. That question is asked at the point of use ({@link sortFor}) and not
+ * here, because it is a different question and its answer differs by shape.
+ *
+ * So `null` means one of two things, neither of them "not a language": the text
+ * does not read as a spec, or the caller had no source to offer (a pre-#250
+ * artifact, which froze only the stripped engine text).
  */
 function proofLanguage(source: string): ProofLanguage | null {
   const cached = languages.get(source);
@@ -114,8 +128,7 @@ function proofLanguage(source: string): ProofLanguage | null {
 
     if (!diagnostics.some((one) => one.severity === "error")) {
       const language = new SurfaceLanguage(spec);
-      const sentence = sentenceSort(language);
-      read = sentence === undefined ? null : { language, sentence };
+      read = { language, sentence: sentenceSort(language) };
     }
   } catch {
     read = null;
@@ -127,13 +140,20 @@ function proofLanguage(source: string): ProofLanguage | null {
 }
 
 /**
- * The sort a shape reads at.
+ * The sort a shape reads at, or `undefined` where the theory names none — the
+ * whole of the condition on reading a formula rather than passing it through.
  *
  * A `sequent` falls back to the sentence sort when the theory declares no
  * turnstile: a tree over a theory whose nodes are bare formulas is a coherent
- * thing to build, and it is the sentence sort that such a node holds.
+ * thing to build, and it is the sentence sort that such a node holds. The
+ * preference runs the other way too, and that is the shape's whole point: a
+ * theory naming a turnstile but no sentence has tree nodes that read and Fitch
+ * lines that do not, which is exactly what it has said about itself.
  */
-function sortFor(read: ProofLanguage, shape: ProofFormulaShape): string {
+function sortFor(
+  read: ProofLanguage,
+  shape: ProofFormulaShape,
+): string | undefined {
   if (shape === "sentence") {
     return read.sentence;
   }
@@ -152,7 +172,7 @@ export const ENGINE_TEXT: ProofFormulaReader = (text) => ({ ok: true, text });
 
 /**
  * The reader for a proof exercise's frozen theory text, or {@link ENGINE_TEXT}
- * when that text is not a language.
+ * when that text names no sort to read this shape at.
  *
  * `source` is the artifact as *written* — `@syntax` annotations intact, since
  * they are what carries the lexicon, the delimiters and the elab rules. The
@@ -172,13 +192,13 @@ export function proofFormulaReader(
 ): ProofFormulaReader {
   const read =
     source === null || source === undefined ? null : proofLanguage(source);
+  const sort = read === null ? undefined : sortFor(read, shape);
 
-  if (read === null) {
+  if (read === null || sort === undefined) {
     return ENGINE_TEXT;
   }
 
   const { language } = read;
-  const sort = sortFor(read, shape);
   const scope = goalBinderScope(source, goalName);
 
   return (text) => {
@@ -204,9 +224,10 @@ export function proofFormulaReader(
  * both would put a second copy of a 30 KB artifact in the page for every
  * exercise set from it.
  *
- * A `source` of `null` is the honest state of an artifact whose theory is not
- * a language — and of any artifact compiled before `source` existed, which is
- * why the pass-through path stays. Both go on as engine text.
+ * A `source` of `null` is the honest state of an artifact compiled before
+ * `source` existed, which froze the stripped text and nothing else; there is
+ * no language to read it in and it goes on as engine text. Every artifact
+ * since carries a source, whatever its theory does or does not declare.
  */
 export function proofTheoryText(data: {
   readonly mm0?: string;
@@ -284,8 +305,10 @@ export function readNodeFormulas<
  * statements* rather than a student's formulas — the Fitch citation-shape
  * classifier walks the rule signatures this way. Shares the
  * {@link proofLanguage} cache, so a widget already reading lines from the same
- * source pays for no second parse. `null` where the theory is not a language,
- * for the same three reasons as every reader here.
+ * source pays for no second parse. `null` only where there is no text or it
+ * will not read as a spec: a theory that names no sentence sort still declares
+ * the rules this walks, and refusing it here would be answering a question
+ * nobody asked.
  */
 export function theoryLanguage(
   source: string | null | undefined,
@@ -297,17 +320,23 @@ export function theoryLanguage(
 }
 
 /**
- * The theory as a *language* with one exercise's goal declaration appended, or
- * `null` where it is not a language — what the compiler itself needs, having
- * the theory and the declaration in hand and no table yet to join against.
+ * The theory with one exercise's goal declaration appended — what the compiler
+ * itself needs, having the theory and the declaration in hand and no table yet
+ * to join against.
+ *
+ * A join and nothing else, deliberately: every reader in this module takes the
+ * text and asks the spec what it can do with it, so an author's diagnostic and
+ * the student's squiggle come from one text rather than from two decisions
+ * that could disagree. It builds the same text `systemText` in
+ * `exercises/systems.ts` builds at the join — the same source, the same
+ * newline, the same declaration — since that is what the widget is handed
+ * later, and the caches here are keyed on it.
  */
 export function theoryLanguageSource(
   theory: { readonly source: string },
   theoremDecl: string,
-): string | null {
-  return proofLanguage(theory.source) === null
-    ? null
-    : `${theory.source}\n${theoremDecl}`;
+): string {
+  return `${theory.source}\n${theoremDecl}`;
 }
 
 /**
@@ -474,53 +503,6 @@ function findGoal(
   return goal;
 }
 
-/** Statement lists for theories that are not languages, keyed like the specs. */
-const statementLists = new Map<string, readonly Statement[]>();
-
-/**
- * Every statement a theory text declares, whether or not it is a *language*.
- *
- * "Not a language" is a claim about reading **formulas**: `proofLanguage`
- * returns null for a file that declares no `@syntax role sentence`, because
- * without a lexicon there is no way to read `¬ F(a)` as anything but
- * characters. Reading a **declaration** needs none of that — `theorem t (a b:
- * wff): $ a , b ==> b $;` splits into a name, two binders and a statement by
- * MM0's own grammar, and `parseStatements` does exactly that for `gentzen-lk`
- * with no diagnostics. So the two questions are kept apart: a caller that
- * wants to *understand* the formula goes through the language, and a caller
- * that only wants to know where the declaration ends and the question begins
- * comes here.
- *
- * A language's statements come free, having been read into its spec already;
- * anything else is read once and memoized on the text, like the specs beside
- * it.
- */
-function theoryStatements(source: string): readonly Statement[] {
-  const read = proofLanguage(source);
-
-  if (read !== null) {
-    return read.language.spec.statements;
-  }
-
-  const cached = statementLists.get(source);
-
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  let statements: readonly Statement[] = [];
-
-  try {
-    statements = parseStatements(source).statements;
-  } catch {
-    statements = [];
-  }
-
-  statementLists.set(source, statements);
-
-  return statements;
-}
-
 /**
  * The goal as a *statement* — what the student was asked to prove — or `null`
  * where the text declares no such goal to read.
@@ -536,18 +518,20 @@ function theoryStatements(source: string): readonly Statement[] {
  *
  * Reading the parsed statement rather than cutting the declaration text at its
  * first `$` is what keeps a hypothesis binder (`(h: $ … $)`) from being taken
- * for the statement. Whether the theory is a language does not come into it
- * (see {@link theoryStatements}): the formulas inside stay whatever they were,
- * engine text or surface, and only the bookkeeping around them comes off.
+ * for the statement. What the theory declares about *reading* does not come
+ * into it: splitting a declaration is MM0's own grammar, so a theory naming no
+ * sentence sort has a statement to show like any other. The formulas inside
+ * stay whatever they were, engine text or surface, and only the bookkeeping
+ * around them comes off.
  */
 export function goalStatementText(
   source: string | null | undefined,
   goalName: string,
 ): string | null {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
   const goal =
-    source === null || source === undefined
-      ? null
-      : findGoal(theoryStatements(source), goalName);
+    read === null ? null : findGoal(read.language.spec.statements, goalName);
 
   if (goal === null) {
     return null;

@@ -22,10 +22,10 @@
  * particular theory. Assumption identity is the engine-mode print of the
  * formula, one canonical spelling per term.
  *
- * Everything is conservative. A theory that is not a language, or declares no
- * turnstile or context-join role, gets an empty table; a rule whose premises
- * will not parse, or whose context holds something this walk does not
- * recognize (a premise assuming two formulas at once, say), simply gets no
+ * Everything is conservative. A theory whose text will not read, or that
+ * declares no turnstile or context-join role, gets an empty table; a rule
+ * whose premises will not parse, or whose context holds something this walk
+ * does not recognize (a premise assuming two formulas at once, say), gets no
  * entry. No entry means the translator's plain lowering — which is the correct
  * reading for every such rule we know of — so misclassification degrades to
  * the status quo, never to a wrong proof.
@@ -56,7 +56,7 @@ const tables = new Map<string, ReadonlyMap<string, RuleCitationShape>>();
 /**
  * The citation shape of every rule the theory's signature classifies, keyed by
  * rule name. Callers hand the result to `fitchToAuf`; an empty map (a theory
- * that is not a language, or names no sequent structure) is always safe.
+ * whose text will not read, or that names no sequent structure) is always safe.
  */
 export function ruleCitationShapes(
   source: string | null | undefined,

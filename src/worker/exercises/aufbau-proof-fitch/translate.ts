@@ -53,9 +53,9 @@
  * necessarily reach the `.auf` as typed: `readFormula` reads each one in the
  * theory's own language and gives back the engine spelling, so a student may
  * write `Ax(F(x) -> G(x))` where the compiler needs `(∀ x ((F (x)) → (G (x))))`.
- * A theory that is not a language passes them through untouched, which is
+ * A theory that names no sentence sort passes them through untouched, which is
  * what every proof did before the reader existed. See
- * `aufbau-proof/formulas.ts` for the two conditions.
+ * `aufbau-proof/formulas.ts` for the condition and what it is not.
  *
  * Structural problems (bad dedent, unknown/misordered/inaccessible references,
  * a subproof citation whose ends don't bracket one subproof, a line with no

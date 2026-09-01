@@ -62,8 +62,8 @@ declared `aufbau-mm0` name earlier in the document), `id`, `title`, `points`,
 
 ## Formulas are read in the theory's language
 
-Where the theory is also a *language* — it declares `@syntax role sentence`, as
-`forallx-calgary-2019` does — each node's *sequent* — a tree node states the whole judgement, so it is read at the sort the turnstile yields rather than at the sentence sort is parsed against that spec and re-printed
+Where the theory names the sort a node is read at — what its `@syntax role
+turnstile` yields, as `forallx-calgary-2019` declares — each node's *sequent* — a tree node states the whole judgement, so it is read at the sort the turnstile yields rather than at the sentence sort is parsed against that spec and re-printed
 in engine notation before it reaches the compiler. `Ax(F(x)->G(x)) ; F(a) ⊢ G(a)` goes in;
 `(((∀ x ((F (x)) → (G (x)))) ; (F (a))) ⊢ (G (a)))` comes out. The compiler's math parser wants every token
 whitespace-separated and every compound operand parenthesized; the book wants
@@ -76,10 +76,14 @@ unification failure. And the spec's lints start applying to proofs: forallx
 admits parentheses only around a two-place connective, so `∀ x (x = x)` is now
 refused and must be written `∀ x x = x`.
 
-**One condition: the theory must be a language** (`gentzen-lk` is not, and
-reads as it always did). It is carried by *which theory text `publicData`
-holds*: `source` (the artifact `@syntax` and all) means read it, `mm0` (already
-stripped) means do not.
+**One condition: the theory must name the sort a node is read at** — the sort
+its `@syntax role turnstile` yields, falling back to the sentence sort where it
+declares no turnstile. `gentzen-lk` names neither and reads as it always did.
+That is not a claim that such a file is no language: it parses, and the
+language built from it reads its own notations quite happily. It simply never
+says which sort a student's node is in, and nothing here will guess one. A
+pre-#250 artifact, frozen with the stripped `mm0` and no `source` at all, has
+no text to ask and reads as engine text for that reason instead.
 
 A goal stated as a rule schema is read in **its own binders**. `theorem mp
 (a b: wff): $ (a → b) ; a ⊢ b $` is about *any* sentences, and its `a` is not

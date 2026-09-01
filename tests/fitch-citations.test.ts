@@ -85,9 +85,11 @@ describe("ruleCitationShapes — classification", () => {
   });
 
   test("a theory that names no sequent structure gets the empty table", () => {
-    // gentzen-lk declares no @syntax at all, so it is not a language and no
-    // rule classifies — which is the safe answer: every citation keeps the
-    // plain lowering it has today.
+    // gentzen-lk declares no @syntax at all, so it names no turnstile role and
+    // no rule classifies — which is the safe answer: every citation keeps the
+    // plain lowering it has today. Its rule *statements* are read like any
+    // other theory's; what is missing is the role that says which term is the
+    // turnstile, so the walk has nothing to walk (#274).
     expect(ruleCitationShapes(THEORY_SOURCES["gentzen-lk.mm0"]).size).toBe(0);
     expect(ruleCitationShapes(null).size).toBe(0);
   });

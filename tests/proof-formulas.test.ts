@@ -141,9 +141,13 @@ describe("proofFormulaReader", () => {
     expect(read("Ax(F(x)->G(x)) ; F(a) ⊢ G(a)").ok).toBe(false);
   });
 
-  test("a theory that is not a language passes everything through", () => {
-    // `gentzen-lk` declares no `@syntax` at all, so it names no sentence sort
-    // and nothing here is willing to guess one.
+  test("a theory that names no sort to read at passes everything through", () => {
+    // `gentzen-lk` declares no `@syntax` at all, so it names neither a
+    // sentence sort nor a turnstile role, and nothing here is willing to guess
+    // one. It is a perfectly good language otherwise — its own notations read
+    // fine — which is why the gate is on the sort and not on language-hood
+    // (#274). This is the whole behavioural claim of that change: the set of
+    // theories that pass through is exactly the set that passed through before.
     const gentzen = proofFormulaReader(GENTZEN, "sequent", "t");
 
     expect(gentzen("Γ ==> Δ")).toEqual({ ok: true, text: "Γ ==> Δ" });
@@ -210,11 +214,20 @@ describe("goalBinderScope", () => {
     );
   });
 
-  test("a theory that is not a language has no scope to give", () => {
-    // Nothing reads those lines, so there is nothing to shadow.
+  test("a theory that names no sentence sort still has binders", () => {
+    // The scope is read off the *declaration*, which is MM0's own grammar and
+    // not a question about notation, so it is populated here even though no
+    // formula of this theory will be parsed in it (#274). Nothing downstream
+    // is misled by that: the scope only ever reaches `language.parse`, and
+    // `proofFormulaReader` has already returned the pass-through above.
     expect(
       goalBinderScope(`${GENTZEN}\ntheorem t (a b: wff): $ a ⊢ b $;`, "t"),
-    ).toEqual(new Map());
+    ).toEqual(
+      new Map([
+        ["a", "wff"],
+        ["b", "wff"],
+      ]),
+    );
   });
 
   test("every worked forallx case names a goal the scope can find", () => {
@@ -262,11 +275,11 @@ describe("goalStatementText", () => {
     ).toBe("_ ⊢ a > _ ⊢ b");
   });
 
-  test("a theory that is not a language still has a declaration to read", () => {
-    // Being a language decides whether a *formula* can be read; a declaration
-    // splits by MM0's own grammar, which `gentzen-lk` obeys like any other
-    // file. The statement comes back as engine text, because that is what it
-    // was — what comes off is the name, the binders and the `$ … $`.
+  test("a theory that names no sentence sort still has a declaration", () => {
+    // Naming a sentence sort decides whether a *formula* is read; a
+    // declaration splits by MM0's own grammar, which `gentzen-lk` obeys like
+    // any other file. The statement comes back as engine text, because that is
+    // what it was — what comes off is the name, the binders and the `$ … $`.
     expect(
       goalStatementText(
         `${GENTZEN}\ntheorem t (a b: wff): $ a ==> b $;`,
@@ -317,10 +330,19 @@ describe("goalBinderShadows", () => {
     expect(shadowsOf(CONCRETE, "t")).toEqual([]);
   });
 
-  test("a theory that is not a language has nothing to shadow", () => {
-    expect(
-      goalBinderShadows(`${GENTZEN}\ntheorem t (a b: wff): $ a ⊢ b $;`, "t"),
-    ).toEqual([]);
+  test("a theory that names no sentence sort has a vocabulary all the same", () => {
+    // `a` and `b` are nothing in `gentzen-lk`, so binding them displaces
+    // nothing — but `P` is a term it declares and spells, and rebinding that
+    // does cost the author the spelling for the length of the exercise. The
+    // warning is honest over any theory whose text reads, which is why it is
+    // no longer skipped for the ones that name no sentence sort (#274).
+    const shadowsOfGentzen = (theoremDecl: string) =>
+      goalBinderShadows(`${GENTZEN}\n${theoremDecl}`, "t");
+
+    expect(shadowsOfGentzen("theorem t (a b: wff): $ a ⊢ b $;")).toEqual([]);
+    expect(shadowsOfGentzen("theorem t (P: wff): $ P ⊢ P $;")).toEqual([
+      { kind: "notation", name: "P", sort: "wff" },
+    ]);
   });
 
   test("the whole forallx corpus, split by whether it shadows", () => {

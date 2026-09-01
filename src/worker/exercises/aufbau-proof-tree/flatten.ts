@@ -20,7 +20,8 @@
  * parenthesized and spaced. Unlike the Fitch and Prawitz types, whose lines
  * are bare formulas the translator wraps in a sequent, a tree node carries the
  * *whole* judgement — so its text is read at the sort the turnstile yields.
- * A theory that is not a language passes every node through untouched.
+ * A theory that names neither a turnstile role nor a sentence sort passes every
+ * node through untouched.
  */
 
 import type {
