@@ -179,11 +179,22 @@ What is still not offered, because nothing draws it:
 - a long displayed formula does not break across lines; it scrolls sideways
   inside its own box rather than widening the page
 
-And one that differs by browser: the column alignment of `\begin{aligned}` and
-of an `array` column template's `r`/`l`. Firefox lines the columns up; Chromium
-centres them. No CSS reaches it — an `<mtd>`'s content is a math layout box,
-not an inline one — so a formula whose *meaning* depends on where its columns
-sit is best written as separate displayed lines.
+Two more differ by browser, and no CSS reaches either. The first is the column
+alignment of `\begin{aligned}` and of an `array` column template's `r`/`l`:
+Firefox lines the columns up, Chromium centres them, because an `<mtd>`'s
+content is a math layout box rather than an inline one. A formula whose
+*meaning* depends on where its columns sit is best written as separate
+displayed lines.
+
+The second is the horizontal brace of `\underbrace` and `\overbrace`. A brace
+too wide for any single glyph the font carries is assembled from parts, and
+Chromium (152, measured) assembles it to a length that does not track the
+expression underneath: it may stop well short of the end or overshoot it,
+leaving a hook or the centre spike somewhere inside. Firefox is right at every
+width, and both engines are right for a brace short enough to be one glyph —
+two or three characters, in STIX Two Math. This is the browser's arithmetic
+rather than the font's; it reproduces just as badly with Noto Sans Math. Until
+it is fixed, a brace over more than a couple of terms is worth avoiding.
 
 Colour commands (`\textcolor`, `\color`) are not enabled: they work by writing
 a `style` attribute, which the sanitizer strips, so they would silently do
