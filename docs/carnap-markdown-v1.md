@@ -159,21 +159,31 @@ math { font-family: "Latin Modern Math", math; }
 :::
 ```
 
-The TeX packages enabled are `base`, `ams`, `boldsymbol`, `braket`,
+The TeX packages enabled are `base`, `ams`, `boldsymbol`, `braket`, `cancel`,
 `mathtools`, `newcommand`, `textmacros`, `unicode` and `verb`. A formula that
 does not parse fails the save with an `invalid_math` diagnostic on its own
 line, rather than being stored as an error box for a student to find.
 
-Some things browsers do not draw, and this dialect therefore does not offer:
+Browsers implement MathML Core, which drops several of the presentation
+attributes MathJax writes. The compiler draws the common ones back on with CSS
+instead, so `\hline`, a `|` in an `array` column template, `\boxed`, `\fbox`,
+`\cancel`, `\bcancel` and `\xcancel` all come out the same in every engine.
+
+What is still not offered, because nothing draws it:
 
 - `bussproofs` (`\begin{prooftree}`) — use the `:::aufbau-proof-tree` or
   `:::aufbau-proof-prawitz` directives, which are better at it anyway
-- rules inside `\begin{array}`, and `\hline`
-- `\cancel` and `\enclose`
-- `\underbrace` draws a line rather than a brace
-- `\begin{aligned}` column alignment differs between Chromium and Firefox
+- `\cancelto`, whose arrow no CSS draws; it fails the save rather than
+  typesetting as a plain crossing-out
+- `\enclose`, which takes notations far past the handful above
 - a long displayed formula does not break across lines; it scrolls sideways
   inside its own box rather than widening the page
+
+And one that differs by browser: the column alignment of `\begin{aligned}` and
+of an `array` column template's `r`/`l`. Firefox lines the columns up; Chromium
+centres them. No CSS reaches it — an `<mtd>`'s content is a math layout box,
+not an inline one — so a formula whose *meaning* depends on where its columns
+sit is best written as separate displayed lines.
 
 Colour commands (`\textcolor`, `\color`) are not enabled: they work by writing
 a `style` attribute, which the sanitizer strips, so they would silently do

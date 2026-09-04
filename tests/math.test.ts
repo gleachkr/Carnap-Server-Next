@@ -226,6 +226,106 @@ describe("the MathML the sanitizer allows", () => {
   });
 });
 
+describe("the lines MathML Core dropped", () => {
+  test("draws a table's rules with classes, and stops naming attributes", async () => {
+    const rendered = await html(
+      "$$\\begin{array}{c|c} a & b \\\\ \\hline c & d \\end{array}$$",
+    );
+
+    // Both halves matter: Firefox still honours `columnlines`, so a class that
+    // arrived beside the attribute would draw every rule twice there.
+    expect(rendered).not.toContain("columnlines");
+    expect(rendered).not.toContain("rowlines");
+    expect(rendered).toContain('class="math-ruled"');
+    expect(rendered).toContain(
+      '<mtd class="math-column-rule math-row-rule"><mi>a</mi></mtd>',
+    );
+    expect(rendered).toContain('<mtd class="math-row-rule"><mi>b</mi></mtd>');
+    // Bottom row: the column rule stays, the row rule below it does not.
+    expect(rendered).toContain(
+      '<mtd class="math-column-rule"><mi>c</mi></mtd>',
+    );
+    expect(rendered).toContain("<mtd><mi>d</mi></mtd>");
+  });
+
+  test("does not rule the edge of a table whose rule list is one value", async () => {
+    // `columnlines="solid"` covers *gaps*, and a two-column table has one. Read
+    // as a per-column list — MathML repeats a list's last entry — it would draw
+    // a rule down the right-hand edge that the author never wrote.
+    const rendered = await html("$$\\begin{array}{c|c} a & b \\end{array}$$");
+
+    expect(rendered).toContain(
+      '<mtd class="math-column-rule"><mi>a</mi></mtd>',
+    );
+    expect(rendered).toContain("<mtd><mi>b</mi></mtd>");
+  });
+
+  test("keeps a frame and a leading rule as an enclosure around the table", async () => {
+    const framed = await html("$$\\begin{array}{|c|} a \\end{array}$$");
+    const ruled = await html("$$\\begin{array}{c} \\hline a \\end{array}$$");
+
+    expect(framed).toContain(
+      '<mrow class="math-enclose-left math-enclose-right">',
+    );
+    expect(ruled).toContain('<mrow class="math-enclose-top">');
+  });
+
+  test("turns an enclosure into an mrow, element and all", async () => {
+    const boxed = await html("$\\boxed{x}$");
+
+    // Not just the class: a `<menclose>` whose notation Firefox cannot read
+    // draws a long-division sign, so the element itself has to go.
+    expect(boxed).toContain('<mrow class="math-enclose-box">');
+    expect(boxed).not.toContain("menclose");
+    expect(boxed).not.toContain("notation");
+  });
+
+  test("draws both strikes of an \\xcancel on one row", async () => {
+    expect(await html("$\\cancel{x}$")).toContain(
+      '<mrow class="math-enclose-strike-up">',
+    );
+    expect(await html("$\\xcancel{x}$")).toContain(
+      '<mrow class="math-enclose-strike-up math-enclose-strike-down">',
+    );
+  });
+
+  test("refuses an enclosure it cannot draw rather than dropping it", async () => {
+    // `\cancelto` wants an arrow, which no border or gradient draws. Failing
+    // the save is what stops it being stored as a bare formula whose crossing
+    // out has quietly vanished.
+    const result = await compileCarnapMarkdown("$\\cancelto{0}{x}$\n");
+
+    expect(result.ok).toBe(false);
+
+    if (result.ok) {
+      return;
+    }
+
+    expect(result.diagnostics[0]).toMatchObject({ code: "invalid_math" });
+    expect(result.diagnostics[0]?.params).toMatchObject({
+      detail:
+        "the enclosure it asks for (updiagonalarrow) is not one a browser can draw",
+    });
+  });
+
+  test("leaves column alignment to the attribute it cannot replace", async () => {
+    // No CSS reaches an `<mtd>`'s alignment, so `columnalign` stays: Firefox
+    // lines up an `aligned` environment, and Chromium centres it.
+    expect(
+      await html("$$\\begin{aligned} x &= 1 \\end{aligned}$$"),
+    ).toContain('columnalign="right left"');
+  });
+
+  test("keeps the classes through a compiled document's sanitizer", async () => {
+    const compiled = await compiledHtml(
+      "$$\\begin{array}{|c|c|} a & b \\end{array}$$\n",
+    );
+
+    expect(compiled).toContain("math-enclose-left");
+    expect(compiled).toContain("math-column-rule");
+  });
+});
+
 describe("the editor's idea of a formula", () => {
   // Two parsers read the same source: `micromark-extension-math` decides what
   // the compiler typesets, and `@lezer/markdown` plus `carnapMath` decides what

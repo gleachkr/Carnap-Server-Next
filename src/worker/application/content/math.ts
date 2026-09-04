@@ -11,6 +11,7 @@ import "@mathjax/src/js/input/tex/ams/AmsConfiguration.js";
 import "@mathjax/src/js/input/tex/base/BaseConfiguration.js";
 import "@mathjax/src/js/input/tex/boldsymbol/BoldsymbolConfiguration.js";
 import "@mathjax/src/js/input/tex/braket/BraketConfiguration.js";
+import "@mathjax/src/js/input/tex/cancel/CancelConfiguration.js";
 import "@mathjax/src/js/input/tex/mathtools/MathtoolsConfiguration.js";
 import "@mathjax/src/js/input/tex/newcommand/NewcommandConfiguration.js";
 import "@mathjax/src/js/input/tex/textmacros/TextMacrosConfiguration.js";
@@ -18,6 +19,7 @@ import "@mathjax/src/js/input/tex/unicode/UnicodeConfiguration.js";
 import "@mathjax/src/js/input/tex/verb/VerbConfiguration.js";
 import { mathjax } from "@mathjax/src/js/mathjax.js";
 import type { Element, ElementContent } from "hast";
+import { drawWithCss } from "./math-core";
 import { isMathTokenElement, styledMathText } from "./math-variants";
 
 /**
@@ -36,10 +38,13 @@ import { isMathTokenElement, styledMathText } from "./math-variants";
  * a student loading a lesson does no math work at all; only saving a revision
  * does. Within a save, the first formula costs ~31 ms and each one after ~0.2 ms.
  *
- * What MathML Core cannot do, and this therefore does not offer: `bussproofs`
- * (it measures boxes, which needs an output jax we deliberately do not build),
- * rules inside `\begin{array}` and `\hline`, `\cancel`, and automatic line
- * breaking for long displayed equations. `docs/carnap-markdown-v1.md` says so to
+ * What MathML Core cannot do on its own, `./math-core.ts` draws with classes
+ * and CSS afterwards: the rules inside `\begin{array}` and `\hline`, and the
+ * enclosures behind `\boxed` and `\cancel`. What is left unoffered is
+ * `bussproofs` (it measures boxes, which needs an output jax we deliberately do
+ * not build), automatic line breaking for long displayed equations, and the
+ * column alignment of `\begin{aligned}`, which is right in Firefox and centred
+ * in Chromium because no CSS reaches it. `docs/carnap-markdown-v1.md` says so to
  * authors.
  */
 
@@ -87,12 +92,20 @@ export interface MathCompiler {
  * `noundefined` is absent because its whole purpose is to render an unknown
  * macro as a red box and carry on, and this compiler would rather tell the
  * author.
+ *
+ * `cancel` is present, and `enclose` — which would define `\enclose{…}` over
+ * the same element — is not, for a reason that is the same shape: `cancel`
+ * spells four enclosures, three of which `./math-core.ts` draws, and the fourth
+ * (`\cancelto`, which wants an arrow) is refused by name at compile time.
+ * `\enclose` takes any notation MathML 3 ever defined, so enabling it would
+ * mostly produce formulas an author has to be told about one at a time.
  */
 const TEX_PACKAGES = [
   "base",
   "ams",
   "boldsymbol",
   "braket",
+  "cancel",
   "mathtools",
   "newcommand",
   "textmacros",
@@ -252,9 +265,15 @@ export function createMathCompiler(): MathCompiler {
     failures,
     render(tex, display, line, column) {
       try {
-        return visitor.visitNode(
+        const rendered = visitor.visitNode(
           engine().convert(tex, { display, end: STATE.CONVERT }) as MmlNode,
         ) as ElementContent;
+
+        // After the visitor rather than inside it: a table's rules are drawn on
+        // its cells, which one node knows nothing about.
+        drawWithCss(rendered);
+
+        return rendered;
       } catch (error) {
         failures.push({
           column,

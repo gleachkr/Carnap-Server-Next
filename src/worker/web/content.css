@@ -608,6 +608,85 @@ math[display="block"] {
   overflow-y: hidden;
 }
 
+/* The lines Core dropped, drawn back on. MathML 3 states these as attributes —
+   `columnlines`, `rowlines`, `menclose notation` — that Core does not define
+   and Chromium therefore ignores; the compiler's math-core pass strips them
+   and puts these classes on instead, so one set of rules draws the same figure
+   in every engine. `currentColor` matters: a formula inherits the prose colour,
+   including in dark mode, and a hard-coded rule would go on being black. */
+
+mtd.math-column-rule {
+  border-inline-end: 1px solid currentColor;
+}
+
+mtd.math-column-rule-dashed {
+  border-inline-end: 1px dashed currentColor;
+}
+
+mtd.math-row-rule {
+  border-block-end: 1px solid currentColor;
+}
+
+mtd.math-row-rule-dashed {
+  border-block-end: 1px dashed currentColor;
+}
+
+/* Core dropped `columnspacing` with the rest, so a ruled table's columns would
+   otherwise sit against their own rules. Every cell is padded, not just the
+   ones carrying a line, or the columns land unevenly. */
+mtable.math-ruled mtd {
+  padding: 0.15em 0.4em;
+}
+
+mrow.math-enclose-box {
+  border: 1px solid currentColor;
+  padding: 0.15em 0.3em;
+}
+
+mrow.math-enclose-left {
+  border-inline-start: 1px solid currentColor;
+  padding-inline-start: 0.3em;
+}
+
+mrow.math-enclose-right {
+  border-inline-end: 1px solid currentColor;
+  padding-inline-end: 0.3em;
+}
+
+mrow.math-enclose-top {
+  border-block-start: 1px solid currentColor;
+  padding-block-start: 0.15em;
+}
+
+mrow.math-enclose-bottom {
+  border-block-end: 1px solid currentColor;
+  padding-block-end: 0.15em;
+}
+
+/* `\cancel` and `\bcancel`, as a gradient rather than a border: the line runs
+   corner to corner, which no border does, and `\xcancel` is then the two
+   classes together on one row. */
+
+mrow.math-enclose-strike-up {
+  background-image: linear-gradient(
+    to left top,
+    transparent calc(50% - 0.55px),
+    currentColor calc(50% - 0.55px),
+    currentColor calc(50% + 0.55px),
+    transparent calc(50% + 0.55px)
+  );
+}
+
+mrow.math-enclose-strike-down {
+  background-image: linear-gradient(
+    to left bottom,
+    transparent calc(50% - 0.55px),
+    currentColor calc(50% - 0.55px),
+    currentColor calc(50% + 0.55px),
+    transparent calc(50% + 0.55px)
+  );
+}
+
 /* Exercise and submission review surfaces */
 
 .exercise {

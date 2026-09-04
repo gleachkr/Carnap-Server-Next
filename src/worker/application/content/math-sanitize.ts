@@ -27,6 +27,9 @@
  * The MathML Core element set, less the three above. `maction` and `menclose`
  * are here even though browsers no longer draw them: they are inert, and the
  * alternative is silently dropping a subtree's contents along with its wrapper.
+ * `menclose` no longer reaches a *new* artifact — `./math-core.ts` rewrites it
+ * into an `<mrow>` with the classes that draw it — but one compiled before that
+ * still carries it, and the same goes for the `mtable` rule attributes below.
  */
 export const MATHML_TAG_NAMES: readonly string[] = [
   "annotation",
