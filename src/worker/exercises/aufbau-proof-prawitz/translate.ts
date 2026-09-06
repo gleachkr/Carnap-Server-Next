@@ -58,8 +58,13 @@
 import type {
   NodeFormulaProblem,
   ProofFormulaReader,
+  ProofRuleReader,
 } from "../aufbau-proof/formulas";
-import { ENGINE_TEXT, readNodeFormulas } from "../aufbau-proof/formulas";
+import {
+  ENGINE_RULE,
+  ENGINE_TEXT,
+  readNodeFormulas,
+} from "../aufbau-proof/formulas";
 import type { PrawitzProofNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
@@ -146,8 +151,13 @@ export function prawitzToAuf(
   sequentSymbol: string,
   contextSymbol = ",",
   readFormula: ProofFormulaReader = ENGINE_TEXT,
+  readRule: ProofRuleReader = ENGINE_RULE,
 ): TranslatedPrawitzProof {
   const diagnostics: PrawitzDiagnostic[] = [];
+  // Rule names resolve the way formulas read: to what the engine declares.
+  // The configured assumption rule goes through the same reader, so a node
+  // citing it by alias is still a leaf.
+  const assumption = readRule(assumptionRule);
   // Read every formula before anything looks at one. Discharge resolution
   // below decides which leaves a mark answers to by comparing their formulas
   // as strings, so reading first is what makes `~P` under one mark and `¬P`
@@ -170,7 +180,7 @@ export function prawitzToAuf(
       parent,
     };
     all.push(walked);
-    if (node.rule === assumptionRule) {
+    if (readRule(node.rule) === assumption) {
       leaves.push(walked);
       if (node.premises.length > 0) {
         diagnostics.push({
@@ -284,7 +294,7 @@ export function prawitzToAuf(
     const refs = walked.children.map(emit);
 
     let entries: readonly number[];
-    if (walked.node.rule === assumptionRule) {
+    if (readRule(walked.node.rule) === assumption) {
       // A leaf depends only on itself; everything else is inherited upward.
       entries = [walked.index];
     } else {
@@ -313,7 +323,7 @@ export function prawitzToAuf(
     const label = `l${counter}`;
     owners.push(walked.node.id);
     lines.push(
-      `${label}: $ ${contextText} ${sequentSymbol} ${walked.node.formula} $ by ${walked.node.rule} [${refs.join(", ")}]`,
+      `${label}: $ ${contextText} ${sequentSymbol} ${walked.node.formula} $ by ${readRule(walked.node.rule)} [${refs.join(", ")}]`,
     );
     return label;
   }

@@ -29,6 +29,8 @@
  * label comments. Tests pin the round-trip.
  */
 
+import type { ProofRuleReader } from "../aufbau-proof/formulas";
+import { ENGINE_RULE } from "../aufbau-proof/formulas";
 import type { ProofTreeParseIssue } from "../aufbau-proof-tree/parse";
 import { parseProofTree } from "../aufbau-proof-tree/parse";
 import type { ProofTreeNode } from "../aufbau-proof-tree/types";
@@ -158,7 +160,12 @@ export function parsePrawitzStarter(
   body: string,
   assumptionRule: string,
   sequentSymbol: string,
+  readRule: ProofRuleReader = ENGINE_RULE,
 ): PrawitzStarterResult {
+  // A starter may cite the assumption rule by any alias the theory gives
+  // it; the leaf it becomes carries the configured name, which is what the
+  // widget compares against when it rebuilds the tree.
+  const assumption = readRule(assumptionRule);
   const stripped = stripTrailingComments(body);
   if ("ok" in stripped) {
     return stripped;
@@ -216,7 +223,7 @@ export function parsePrawitzStarter(
       premises.push(built);
     }
 
-    if (node.rule === assumptionRule) {
+    if (readRule(node.rule) === assumption) {
       if (comment !== undefined && /[\s,]/.test(comment.payload)) {
         return issue(
           "assumption_label_list",
@@ -230,7 +237,7 @@ export function parsePrawitzStarter(
         id: node.id,
         ...(comment === undefined ? {} : { label: comment.payload }),
         premises,
-        rule: node.rule,
+        rule: assumptionRule,
       };
     }
 
@@ -269,7 +276,9 @@ export function serializePrawitzStarter(
   assumptionRule: string,
   sequentSymbol: string,
   contextSymbol = ",",
+  readRule: ProofRuleReader = ENGINE_RULE,
 ): string {
+  const assumption = readRule(assumptionRule);
   const byId = new Map<string, PrawitzProofNode>();
   const index = (node: PrawitzProofNode): void => {
     byId.set(node.id, node);
@@ -285,6 +294,8 @@ export function serializePrawitzStarter(
     assumptionRule,
     sequentSymbol,
     contextSymbol,
+    undefined,
+    readRule,
   );
   return translated.lineSpans
     .map((span) => {
@@ -293,7 +304,7 @@ export function serializePrawitzStarter(
       const marks =
         node === undefined
           ? ""
-          : node.rule === assumptionRule
+          : readRule(node.rule) === assumption
             ? (node.label?.trim() ?? "")
             : (node.discharge ?? []).join(", ");
       return marks.length === 0 ? line : `${line} -- label:${marks}`;

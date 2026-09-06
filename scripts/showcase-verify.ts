@@ -22,6 +22,7 @@ import { loadCompiler } from "@aufbau/compiler";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import {
   proofFormulaReader,
+  proofRuleReader,
   proofTheoryText,
 } from "../src/worker/exercises/aufbau-proof/formulas";
 import { AUFBAU_PROOF_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof/types";
@@ -141,6 +142,7 @@ function lower(
         publicData.contextSymbol ?? ",",
         proofFormulaReader(source, "sentence", publicData.goalName),
         ruleCitationShapes(source),
+        proofRuleReader(source),
       ),
     );
   }
@@ -156,6 +158,7 @@ function lower(
         // A Prawitz node carries a bare formula; the translator builds the
         // sequent around it, as in Fitch.
         proofFormulaReader(source, "sentence", publicData.goalName),
+        proofRuleReader(source),
       ),
     );
   }
@@ -166,6 +169,7 @@ function lower(
         publicData.starterTree as never,
         publicData.goalName,
         proofFormulaReader(source, "sequent", publicData.goalName),
+        proofRuleReader(source),
       ),
     );
   }
@@ -246,6 +250,7 @@ for (const node of compiled.artifact.document.nodes) {
       publicData.contextSymbol ?? ",",
       proofFormulaReader(source, "sentence", publicData.goalName),
       ruleCitationShapes(source),
+      proofRuleReader(source),
     );
 
     if (

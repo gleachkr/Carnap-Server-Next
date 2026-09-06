@@ -119,7 +119,8 @@ goal the language refuses is an `invalid_goal_formula` diagnostic.
 
 ## Accepted limitations (v1)
 
-- Plain tree editing: free-text rule names, no rule-picker dropdown, no
-  drag-to-reparent, no full keyboard navigation.
+- Plain tree editing: free-text rule names (an axiom name, or an alias the
+  theory declares for one, resolved by `flattenProofTree`'s `readRule`), no
+  rule-picker dropdown, no drag-to-reparent, no full keyboard navigation.
 - `auto?`/`complete` flags are carried but inert, as in the linear type.
 - Single-cell, independent proofs; no cross-cell lemma citation.

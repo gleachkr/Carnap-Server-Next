@@ -26,6 +26,7 @@ import {
   readGoalDeclaration,
   requireSystem,
   starterFormulaReader,
+  starterRuleReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
 import { parsePrawitzStarter } from "./parse";
@@ -203,10 +204,12 @@ export async function compileAufbauProofPrawitz(
         ? starter.underlineIndex
         : starter.underlineIndex + 1 + bodyLine);
 
+    const readRule = starterRuleReader(theory, header);
     const parsed = parsePrawitzStarter(
       starter.starterBody,
       assumptionRule,
       sequentSymbol,
+      readRule,
     );
     if (!parsed.ok) {
       diagnostics.push(
@@ -226,6 +229,7 @@ export async function compileAufbauProofPrawitz(
       sequentSymbol,
       contextSymbol,
       starterFormulaReader(theory, header, "sentence"),
+      readRule,
     );
 
     // A node the theory's language refuses is a canvas the student is handed

@@ -29,7 +29,7 @@ const compiler = await loadCompiler({ wasmBytes });
 
 let passed = 0;
 for (const testCase of MAGNUS_CASES) {
-  const { citationShapes, mm0, readSentence } = magnusExercise(
+  const { citationShapes, mm0, readRule, readSentence } = magnusExercise(
     testCase.goalName,
     testCase.theoremDecl,
   );
@@ -41,6 +41,7 @@ for (const testCase of MAGNUS_CASES) {
     ";",
     readSentence,
     citationShapes,
+    readRule,
   );
 
   if (translation.formulaProblems.length > 0 && testCase.shouldFail !== true) {

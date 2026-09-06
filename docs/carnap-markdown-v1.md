@@ -991,6 +991,28 @@ textbook's notation is a file, not a code change — which is what has to be tru
 before an instructor can bring their own, and it is now true for every type that
 reads a formula.
 
+The same channel names the **rules** the way the book does. MM0 identifiers are
+ASCII, so an axiom is `and_intro` and can never be `∧I`; an alias line on the
+rule says what a proof may cite it as, and the proof types resolve the citation
+before the engine sees it:
+
+```mm0
+--| @syntax alias ∧I /\I &I
+axiom and_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
+```
+
+Several spellings on one line, or several lines, both read; an alias is one
+whitespace-free token, and it must mean exactly one rule — a name any rule
+already has, or one another rule already claimed, is a compile error in the
+theory. The shipped forallx systems carry the book's names for every rule that
+is one axiom (`→E`, `∧I`, `¬I`, `X`, `IP`, `∀E`, …, and `AS` for the assumption
+rule). The eliminations that are two axioms, one per side — `∧E`, `∨I`, `↔E` —
+have none, because which side a line wants is something only the engine finds
+out; cite those by axiom name. An alias works wherever a rule is cited: a Fitch
+justification, a tree or Prawitz node, a starter proof, and the `assumption=`
+attribute.
+
 **`system=` resolves in one order: your document, then the server.** A name
 matches an `aufbau-mm0` block declared earlier in the same document first, and
 one of the ids above second — so a course that extends forallx with its own
@@ -1304,8 +1326,10 @@ to `aufbau-proof`; only the input surface differs.
 
 Each proof line is `<formula> :<rule> <refs>`, where a ref is a proof-step number
 `n` or a subproof range `a-b`. Rules are the theory's own axiom names (e.g.
-`imp_elim`, `imp_intro`). A **premise or assumption** line just cites the
-theory's assumption axiom with no refs (`:ax`); indenting a line opens a subproof
+`imp_elim`, `imp_intro`), or any alias the theory gives them (`:→E 1 2`; see
+the `@syntax alias` note under *Languages* above). A **premise or assumption**
+line just cites the theory's assumption axiom with no refs (`:ax`, or its alias
+`:AS` in the forallx systems); indenting a line opens a subproof
 whose first assumption is discharged when a shallower line later cites its range.
 The body reads prose (the prompt), the `theorem <name>: $ Γ ⊢ φ $` goal line, a
 `----` underline, then a starter Fitch proof (which may be empty):

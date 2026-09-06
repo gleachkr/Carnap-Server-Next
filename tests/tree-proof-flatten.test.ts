@@ -93,3 +93,25 @@ describe("flattenProofTree", () => {
     }
   });
 });
+
+describe("flattenProofTree — rule aliases", () => {
+  test("a node's rule goes through the reader; unknown names stand", () => {
+    const aliases = new Map([["→E", "imp_elim"]]);
+    const readRule = (cited: string): string => aliases.get(cited) ?? cited;
+    const tree = node("r", "b", "→E", [
+      node("p1", "a -> b", "ax"),
+      node("p2", "a", "premise"),
+    ]);
+    const { proofText } = flattenProofTree(tree, "thm", undefined, readRule);
+
+    expect(proofText).toBe(
+      [
+        "thm",
+        "----",
+        "l1: $ a -> b $ by ax []",
+        "l2: $ a $ by premise []",
+        "l3: $ b $ by imp_elim [l1, l2]",
+      ].join("\n"),
+    );
+  });
+});

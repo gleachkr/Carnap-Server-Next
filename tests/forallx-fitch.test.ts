@@ -1,10 +1,17 @@
 import { describe, expect, test } from "bun:test";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import {
+  proofRuleReader,
+  proofRuleSpellings,
+} from "../src/worker/exercises/aufbau-proof/formulas";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { FORALLX_CASES } from "./helpers/forallx-cases";
 import { FORALLX_DEMO_SOURCE } from "./helpers/forallx-demo";
-import { forallxExercise } from "./helpers/forallx-theory";
+import {
+  FORALLX_THEORY_SOURCE,
+  forallxExercise,
+} from "./helpers/forallx-theory";
 
 /**
  * The forallx: Calgary theory (full first-order fragment) and its Fitch encoding.
@@ -270,5 +277,73 @@ describe("fitchToAuf — first-order rules", () => {
     expect(proofText).toContain(
       "l3: $ x = y , F x ⊢ F y $ by eq_replace [l1, l2]",
     );
+  });
+});
+
+describe("forallx: Calgary rule aliases", () => {
+  test("the theory names each one-rule textbook citation, and no paired one", () => {
+    const readRule = proofRuleReader(FORALLX_THEORY_SOURCE);
+
+    expect(readRule("∧I")).toBe("and_intro");
+    expect(readRule("/\\I")).toBe("and_intro");
+    expect(readRule("→E")).toBe("imp_elim");
+    expect(readRule("->E")).toBe("imp_elim");
+    expect(readRule("¬I")).toBe("neg_intro");
+    expect(readRule("X")).toBe("explosion");
+    expect(readRule("IP")).toBe("ip");
+    expect(readRule("=E")).toBe("eq_replace");
+    expect(readRule("∀I")).toBe("all_intro");
+    expect(readRule("∃E")).toBe("ex_elim");
+    expect(readRule("AS")).toBe("ax");
+    expect(readRule("R")).toBe("reit");
+    // A canonical name is not an alias; it stands, as does anything unknown.
+    expect(readRule("and_intro")).toBe("and_intro");
+    expect(readRule("∧E")).toBe("∧E");
+    expect(readRule("∨I")).toBe("∨I");
+  });
+
+  test("the aliased case lowers to the axiom names", () => {
+    const aliased = FORALLX_CASES.find((one) => one.goalName === "aliased");
+    if (aliased === undefined) {
+      throw new Error("the aliased case is gone");
+    }
+    const { citationShapes, readRule, readSentence } = forallxExercise(
+      aliased.goalName,
+      aliased.theoremDecl,
+    );
+    const { diagnostics, formulaProblems, proofText } = fitchToAuf(
+      aliased.fitch,
+      aliased.goalName,
+      "ax",
+      "⊢",
+      ";",
+      readSentence,
+      citationShapes,
+      readRule,
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(formulaProblems).toEqual([]);
+    expect(proofText).not.toMatch(/by [^a-z_]/u);
+    expect(proofText).toContain("by imp_elim [l1, l2]");
+    expect(proofText).toContain("by neg_elim [l4, l6]");
+    expect(proofText).toContain("by neg_intro [l7]");
+  });
+
+  test("the assumption rule's spellings are what the review page is handed", () => {
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "ax")).toEqual([
+      "ax",
+      "AS",
+    ]);
+    // Asked by alias, the same set, the asked spelling first.
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "AS")).toEqual([
+      "AS",
+      "ax",
+    ]);
+    // A rule with no alias, and a name the theory never mentions.
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "and_elim_l")).toEqual([
+      "and_elim_l",
+    ]);
+    expect(proofRuleSpellings(null, "ax")).toEqual(["ax"]);
   });
 });

@@ -219,6 +219,58 @@ export function proofFormulaReader(
 }
 
 /**
+ * Maps a cited rule name to the one the engine declares. An alias resolves to
+ * its rule; anything else stands, so a name the theory never mentions reaches
+ * the engine spelled as the student wrote it, to be refused there.
+ */
+export type ProofRuleReader = (cited: string) => string;
+
+/** Passes every rule name through — the reader where no theory says otherwise. */
+export const ENGINE_RULE: ProofRuleReader = (cited) => cited;
+
+/**
+ * The rule reader for a proof exercise's frozen theory text: what its
+ * `@syntax alias` lines say a proof may cite each rule as. MM0 identifiers are
+ * ASCII, so a textbook's `∧I` is never an axiom's own name; the alias is the
+ * surface name for the rule, and it is resolved here, once, at the seam where
+ * a translator writes `by <rule>` — nowhere else needs to know an alias
+ * exists. {@link ENGINE_RULE} where there is no source or it will not read.
+ */
+export function proofRuleReader(
+  source: string | null | undefined,
+): ProofRuleReader {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+
+  if (read === null) {
+    return ENGINE_RULE;
+  }
+
+  const aliases = read.language.spec.ruleAliases;
+
+  return (cited) => aliases.get(cited) ?? cited;
+}
+
+/**
+ * Every spelling the theory gives `rule`: the name it resolves to and each
+ * alias of that name, the given spelling among them. What a reader that has
+ * the theory's text no longer at hand — the review page's read-only widget —
+ * needs in order to recognize the assumption rule however a proof cited it.
+ */
+export function proofRuleSpellings(
+  source: string | null | undefined,
+  rule: string,
+): readonly string[] {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+  const spec = read?.language.spec;
+  const name = spec?.ruleAliases.get(rule) ?? rule;
+  const aliases = spec?.rules.get(name)?.aliases ?? [];
+
+  return [...new Set([rule, name, ...aliases])];
+}
+
+/**
  * The two texts a proof exercise's `publicData` can hold, resolved.
  *
  * `source` is the artifact as written and as `/theories/…` serves it; `mm0` is

@@ -258,3 +258,43 @@ describe("prawitzToAuf — structural diagnostics", () => {
     ]);
   });
 });
+
+describe("prawitzToAuf — rule aliases", () => {
+  test("cited aliases resolve at emission, the assumption rule among them", () => {
+    const aliases = new Map([
+      ["∧I", "and_intro"],
+      ["AS", "ax"],
+    ]);
+    const readRule = (cited: string): string => aliases.get(cited) ?? cited;
+    const tree = node({
+      formula: "a ∧ b",
+      premises: [
+        node({ formula: "a", rule: "AS" }),
+        node({ formula: "b", rule: "ax" }),
+      ],
+      rule: "∧I",
+    });
+
+    // Configured by alias, cited by alias and by name: one rule throughout.
+    const translated = prawitzToAuf(
+      tree,
+      "g",
+      "AS",
+      "⊢",
+      ";",
+      undefined,
+      readRule,
+    );
+
+    expect(translated.diagnostics).toEqual([]);
+    expect(translated.proofText).toBe(
+      [
+        "g",
+        "----",
+        "l1: $ a ⊢ a $ by ax []",
+        "l2: $ b ⊢ b $ by ax []",
+        "l3: $ a ; b ⊢ a ∧ b $ by and_intro [l1, l2]",
+      ].join("\n"),
+    );
+  });
+});

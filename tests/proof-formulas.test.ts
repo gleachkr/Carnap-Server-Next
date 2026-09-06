@@ -355,6 +355,7 @@ describe("goalBinderShadows", () => {
 
     expect(noisy).toEqual([
       "self",
+      "aliased",
       "mp",
       "reittest",
       "andcomm",

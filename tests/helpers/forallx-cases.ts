@@ -41,6 +41,26 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     fitch: ["    a       :ax", "a → a       :imp_intro 1-1"].join("\n"),
   },
   {
+    // Cited entirely by the textbook's names, which the theory's alias lines
+    // resolve. `∧E` and `∨I` stay out: each is two axioms, and an alias means
+    // one rule.
+    name: "aliased (AS, →E, ∧I, ¬E, ¬I by textbook name)",
+    theoremDecl:
+      "theorem aliased (a b: wff): $ (a → b) ; a ; ¬ b ⊢ (b ∧ a) ∧ ¬ ¬ b $;",
+    goalName: "aliased",
+    fitch: [
+      "a → b           :AS",
+      "a               :AS",
+      "¬ b             :AS",
+      "b               :→E 1 2",
+      "b ∧ a           :∧I 4 2",
+      "    ¬ b         :AS",
+      "    ⊥           :¬E 4 6",
+      "¬ ¬ b           :¬I 6-7",
+      "(b ∧ a) ∧ ¬ ¬ b :∧I 5 8",
+    ].join("\n"),
+  },
+  {
     name: "mp (→E)",
     theoremDecl: "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
     goalName: "mp",

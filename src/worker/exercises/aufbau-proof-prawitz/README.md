@@ -11,7 +11,8 @@ downstream is shared: the same `@aufbau/compiler`, the same MMB certificate as
 the trust boundary, the same worker-side
 [`verifyMmb`](../aufbau-proof/verifier.ts) against a frozen theory. It targets
 the same sequent/ND theories as the Fitch type (`⊢`, ACUI comma-context, an
-assumption axiom named by `assumption=`).
+assumption axiom named by `assumption=`), and a node's rule may be any alias the
+theory declares for an axiom, resolved by `prawitzToAuf`'s `readRule` at emission.
 
 ## The idea: labels induce boxes, boxes become contexts
 

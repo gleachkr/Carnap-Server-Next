@@ -55,6 +55,18 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     fitch: ["    p       :ax", "p -> p      :imp_intro 1-1"].join("\n"),
   },
   {
+    // Cited by the book's own names, which the theory's alias lines resolve.
+    name: "aliased (PR, →E, &I by textbook name)",
+    theoremDecl: "theorem aliased (p q: wff): $ (p → q) ; p ⊢ q & p $;",
+    goalName: "aliased",
+    fitch: [
+      "p -> q  :PR",
+      "p       :PR",
+      "q       :→E 1 2",
+      "q & p   :&I 3 2",
+    ].join("\n"),
+  },
+  {
     name: "mp (→E)",
     theoremDecl: "theorem mp (p q: wff): $ (p → q) ; p ⊢ q $;",
     goalName: "mp",

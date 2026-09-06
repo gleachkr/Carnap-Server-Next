@@ -44,11 +44,14 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type {
   NodeFormulaProblem,
   ProofFormulaReader,
+  ProofRuleReader,
 } from "../../worker/exercises/aufbau-proof/formulas";
 import {
+  ENGINE_RULE,
   ENGINE_TEXT,
   hasTheoryText,
   proofFormulaReader,
+  proofRuleReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
 import type { AufbauProofPrawitzStringId } from "../../worker/exercises/aufbau-proof-prawitz/strings";
@@ -969,6 +972,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   /** Reads a node's text in the theory's language; passes it through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
+  /** Cited rule name to the engine's, from the theory's `@syntax alias` lines. */
+  private readRule: ProofRuleReader = ENGINE_RULE;
   private goalName = "";
   private goalFormula = "";
   private assumptionRule = "ax";
@@ -1019,6 +1024,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       "sentence",
       data.goalName,
     );
+    this.readRule = proofRuleReader(theory.source);
     this.goalName = data.goalName;
     this.goalFormula = data.goalFormula;
     this.assumptionRule = data.assumptionRule;
@@ -1544,6 +1550,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       this.sequentSymbol,
       this.contextSymbol,
       this.readFormula,
+      this.readRule,
     );
     this.proofText = translated.proofText;
     this.lineSpans = translated.lineSpans;

@@ -57,6 +57,13 @@
  * what every proof did before the reader existed. See
  * `aufbau-proof/formulas.ts` for the condition and what it is not.
  *
+ * Rule names get the same treatment through `readRule`: a citation is
+ * resolved to the name the engine declares (`∧I` to `and_intro`, where the
+ * theory's `@syntax alias` says so) as the line is parsed, and everything
+ * downstream — the assumption test, the citation-shape lookup, the emitted
+ * `by` — sees the resolved name. The configured assumption rule is read the
+ * same way, so `assumption="AS"` and a line citing `ax` agree.
+ *
  * Structural problems (bad dedent, unknown/misordered/inaccessible references,
  * a subproof citation whose ends don't bracket one subproof, a line with no
  * justification) are returned as diagnostics keyed to the source line; a
@@ -66,8 +73,11 @@
  */
 
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
-import type { ProofFormulaReader } from "../aufbau-proof/formulas";
-import { ENGINE_TEXT } from "../aufbau-proof/formulas";
+import type {
+  ProofFormulaReader,
+  ProofRuleReader,
+} from "../aufbau-proof/formulas";
+import { ENGINE_RULE, ENGINE_TEXT } from "../aufbau-proof/formulas";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
 const HEADER_SEPARATOR = "\n----\n";
@@ -219,6 +229,7 @@ function parseJustification(
   assumptionRule: string,
   diagnostics: FitchDiagnostic[],
   currentStep: number,
+  readRule: ProofRuleReader,
 ): {
   formula: string;
   isAssumption: boolean;
@@ -246,7 +257,7 @@ function parseJustification(
     .trim()
     .split(/\s+/)
     .filter((token) => token.length > 0);
-  const rule = tokens[0] ?? "";
+  const rule = readRule(tokens[0] ?? "");
 
   if (rule.length === 0) {
     diagnostics.push({
@@ -310,6 +321,7 @@ function walkFitch(
   fitchText: string,
   assumptionRule: string,
   readFormula: ProofFormulaReader,
+  readRule: ProofRuleReader,
 ): {
   diagnostics: FitchDiagnostic[];
   formulaProblems: FitchFormulaProblem[];
@@ -320,6 +332,9 @@ function walkFitch(
   const rawLines = fitchText.split("\n");
   const diagnostics: FitchDiagnostic[] = [];
   const formulaProblems: FitchFormulaProblem[] = [];
+  // Resolved once, so a configured alias and a cited canonical name (or the
+  // other way about) meet as the same rule.
+  const assumption = readRule(assumptionRule);
 
   // Only non-blank lines are proof steps; blanks neither number nor emit.
   const proofLines = rawLines
@@ -382,9 +397,10 @@ function walkFitch(
     const justification = parseJustification(
       content,
       line.sourceLine,
-      assumptionRule,
+      assumption,
       diagnostics,
       index + 1,
+      readRule,
     );
 
     // Surface text in, engine text out — and from here down the *engine*
@@ -597,13 +613,14 @@ export function fitchToAuf(
   contextSymbol = ",",
   readFormula: ProofFormulaReader = ENGINE_TEXT,
   citationShapes?: ReadonlyMap<string, RuleCitationShape>,
+  readRule: ProofRuleReader = ENGINE_RULE,
 ): TranslatedFitchProof {
   const {
     diagnostics,
     formulaProblems,
     lines: parsed,
     scopeAssumptions,
-  } = walkFitch(fitchText, assumptionRule, readFormula);
+  } = walkFitch(fitchText, assumptionRule, readFormula, readRule);
 
   // A subproof citation `a-b` must name one genuine subproof: line `a` (the
   // assumption that opens it) and line `b` (its last line) at the same
@@ -790,13 +807,15 @@ export interface FitchScopeLine {
  * the two boxes read apart rather than as one continuous bar.
  *
  * Needs the `assumptionRule` to tell assumption lines from derived ones — only a
- * fresh assumption after a derived line splits a sibling box.
+ * fresh assumption after a derived line splits a sibling box — and `readRule`
+ * to recognize it under whatever alias a line cited it by.
  */
 export function fitchScopeGeometry(
   fitchText: string,
   assumptionRule: string,
+  readRule: ProofRuleReader = ENGINE_RULE,
 ): (FitchScopeLine | null)[] {
-  const walk = walkFitch(fitchText, assumptionRule, ENGINE_TEXT);
+  const walk = walkFitch(fitchText, assumptionRule, ENGINE_TEXT, readRule);
   const geometry: (FitchScopeLine | null)[] = Array.from(
     { length: walk.rawLineCount },
     () => null,

@@ -37,11 +37,14 @@ import { useLayoutEffect, useRef } from "preact/hooks";
 import type {
   NodeFormulaProblem,
   ProofFormulaReader,
+  ProofRuleReader,
 } from "../../worker/exercises/aufbau-proof/formulas";
 import {
+  ENGINE_RULE,
   ENGINE_TEXT,
   hasTheoryText,
   proofFormulaReader,
+  proofRuleReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
 import { flattenProofTree } from "../../worker/exercises/aufbau-proof-tree/flatten";
@@ -667,6 +670,8 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
   /** Reads a node's text in the theory's language; passes it through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
+  /** Cited rule name to the engine's, from the theory's `@syntax alias` lines. */
+  private readRule: ProofRuleReader = ENGINE_RULE;
   private goalName = "";
   private doc: Doc = {
     model: { formula: "", hyp: null, id: uid(), premises: [], rule: "" },
@@ -716,6 +721,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       "sequent",
       data.goalName,
     );
+    this.readRule = proofRuleReader(theory.source);
     this.goalName = data.goalName;
 
     const container = root.querySelector<HTMLElement>(".proof-tree");
@@ -1140,6 +1146,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       serialize(this.doc.model),
       this.goalName,
       this.readFormula,
+      this.readRule,
     );
     this.proofText = flattened.proofText;
     this.lineSpans = flattened.lineSpans;

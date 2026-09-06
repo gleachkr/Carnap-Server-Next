@@ -82,8 +82,10 @@ export function renderAufbauProofFitchElement(
  * JS. The appended module then upgrades the element in place, replacing that
  * `<pre>` with a read-only CodeMirror that draws the subproof scope-lines — the
  * same rendering the interactive editor uses; without JS it stays the `<pre>`.
- * The `data-assumption-rule` seeds the scope walk (which lines open a subproof);
- * the correctness verdict comes from the recorded evaluation, not re-verifying.
+ * The `data-assumption-rule` seeds the scope walk (which lines open a subproof),
+ * and `data-assumption-spellings` lists every name the theory lets a line cite
+ * it by, since the theory itself is not on this page; the correctness verdict
+ * comes from the recorded evaluation, not re-verifying.
  *
  * The embedded hydration payload is what tells the element to take that
  * read-only path — `data-review` is a marker for styling and tests, not the
@@ -93,6 +95,8 @@ export function renderAufbauProofFitchElement(
 export function renderAufbauProofFitchReview(
   review: {
     readonly assumptionRule: string;
+    /** The assumption rule's canonical name and aliases, whichever it is. */
+    readonly assumptionSpellings: readonly string[];
     readonly exerciseId: string;
     readonly fitchText: string;
   },
@@ -103,7 +107,7 @@ export function renderAufbauProofFitchReview(
     i18n,
   );
 
-  return `<carnap-aufbau-proof-fitch data-exercise-id="${escapeHtml(review.exerciseId)}" data-review data-assumption-rule="${escapeHtml(review.assumptionRule)}">
+  return `<carnap-aufbau-proof-fitch data-exercise-id="${escapeHtml(review.exerciseId)}" data-review data-assumption-rule="${escapeHtml(review.assumptionRule)}" data-assumption-spellings="${escapeHtml(review.assumptionSpellings.join(" "))}">
         <template shadowrootmode="open">
           <style>${AUFBAU_PROOF_FITCH_SHADOW_STYLES}</style>
           <pre class="proof-source">${escapeHtml(review.fitchText)}</pre>

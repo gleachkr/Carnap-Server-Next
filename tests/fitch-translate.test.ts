@@ -508,3 +508,85 @@ describe("fitchToAuf — structural diagnostics", () => {
     );
   });
 });
+
+describe("fitchToAuf — rule aliases", () => {
+  // What a theory's `@syntax alias` lines amount to once read: a cited name
+  // to the engine's, anything else standing.
+  const aliases = new Map([
+    ["∧I", "and_intro"],
+    ["→E", "imp_elim"],
+    ["AS", "ax"],
+  ]);
+  const readRule = (cited: string): string => aliases.get(cited) ?? cited;
+
+  test("a cited alias reaches the .auf as the rule it names", () => {
+    const { diagnostics, proofText } = fitchToAuf(
+      [
+        "a → b   :AS",
+        "a       :AS",
+        "b       :→E 1 2",
+        "b ∧ a   :∧I 3 2",
+      ].join("\n"),
+      "g",
+      "ax",
+      "⊢",
+      ",",
+      undefined,
+      undefined,
+      readRule,
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(proofText).toBe(
+      [
+        "g",
+        "----",
+        "l1: $ a → b , a ⊢ a → b $ by ax []",
+        "l2: $ a → b , a ⊢ a $ by ax []",
+        "l3: $ a → b , a ⊢ b $ by imp_elim [l1, l2]",
+        "l4: $ a → b , a ⊢ b ∧ a $ by and_intro [l3, l2]",
+      ].join("\n"),
+    );
+  });
+
+  test("a name the theory never mentions passes through as typed", () => {
+    const { proofText } = fitchToAuf(
+      ["a   :AS", "a   :reiterate 1"].join("\n"),
+      "g",
+      "ax",
+      "⊢",
+      ",",
+      undefined,
+      undefined,
+      readRule,
+    );
+
+    expect(proofText).toContain("by reiterate [l1]");
+  });
+
+  test("the assumption rule is recognized under any of its spellings", () => {
+    // The configured name may itself be an alias, and a line may cite the
+    // canonical name: both sides resolve, so the box seams agree with the
+    // contexts. Only a fresh assumption after a derived line splits a box.
+    const lines = [
+      "a ∨ b       :ax",
+      "    a       :AS",
+      "    a       :reit 2",
+      "    b       :ax",
+    ];
+    const geometry = fitchScopeGeometry(lines.join("\n"), "AS", readRule);
+    const seams = geometry.map((line) => line?.openFrom ?? null);
+
+    // Line 2 is derived, so it opens nothing; line 3 cites `ax`, which under
+    // the reader is the configured `AS`, so it re-opens the sibling box.
+    expect(seams).toEqual([0, 0, 1, 0]);
+    expect(geometry[3]?.columns).toEqual([4]);
+
+    // Without the reader, `ax` is not `AS`: line 3 reads as a derived step
+    // and the second box never opens.
+    const unread = fitchScopeGeometry(lines.join("\n"), "AS");
+    expect(unread.map((line) => line?.openFrom ?? null)).toEqual([
+      0, 0, 1, 1,
+    ]);
+  });
+});

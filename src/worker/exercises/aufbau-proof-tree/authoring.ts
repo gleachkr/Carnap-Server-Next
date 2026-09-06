@@ -26,6 +26,7 @@ import {
   readGoalDeclaration,
   requireSystem,
   starterFormulaReader,
+  starterRuleReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
 import { flattenProofTree } from "./flatten";
@@ -133,6 +134,7 @@ export async function compileAufbauProofTree(
         parsed.tree,
         header.goalName,
         starterFormulaReader(theory, header, "sequent"),
+        starterRuleReader(theory, header),
       );
 
       for (const problem of formulaProblems) {

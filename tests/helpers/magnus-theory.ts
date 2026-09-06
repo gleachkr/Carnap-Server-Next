@@ -11,10 +11,14 @@
  */
 
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
-import type { ProofFormulaReader } from "../../src/worker/exercises/aufbau-proof/formulas";
+import type {
+  ProofFormulaReader,
+  ProofRuleReader,
+} from "../../src/worker/exercises/aufbau-proof/formulas";
 import {
   goalEngineDeclaration,
   proofFormulaReader,
+  proofRuleReader,
   proofTheoryText,
 } from "../../src/worker/exercises/aufbau-proof/formulas";
 import { ruleCitationShapes } from "../../src/worker/exercises/aufbau-proof-fitch/citations";
@@ -51,6 +55,7 @@ export function magnusExercise(
 ): {
   readonly citationShapes: ReadonlyMap<string, RuleCitationShape>;
   readonly mm0: string;
+  readonly readRule: ProofRuleReader;
   readonly readSentence: ProofFormulaReader;
 } {
   // The goal is frozen twice over, as the compiler freezes it: as written,
@@ -83,6 +88,7 @@ export function magnusExercise(
   return {
     citationShapes: ruleCitationShapes(resolved.source),
     mm0: resolved.mm0,
+    readRule: proofRuleReader(resolved.source),
     readSentence: proofFormulaReader(resolved.source, "sentence", goalName),
   };
 }

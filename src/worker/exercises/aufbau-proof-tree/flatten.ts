@@ -21,14 +21,21 @@
  * are bare formulas the translator wraps in a sequent, a tree node carries the
  * *whole* judgement — so its text is read at the sort the turnstile yields.
  * A theory that names neither a turnstile role nor a sentence sort passes every
- * node through untouched.
+ * node through untouched. A node's rule goes through `readRule` the same way:
+ * an alias the theory declares becomes the engine's name, anything else
+ * stands.
  */
 
 import type {
   NodeFormulaProblem,
   ProofFormulaReader,
+  ProofRuleReader,
 } from "../aufbau-proof/formulas";
-import { ENGINE_TEXT, readNodeFormulas } from "../aufbau-proof/formulas";
+import {
+  ENGINE_RULE,
+  ENGINE_TEXT,
+  readNodeFormulas,
+} from "../aufbau-proof/formulas";
 import type { ProofTreeNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
@@ -62,6 +69,7 @@ export function flattenProofTree(
   root: ProofTreeNode,
   goalName: string,
   readFormula: ProofFormulaReader = ENGINE_TEXT,
+  readRule: ProofRuleReader = ENGINE_RULE,
 ): FlattenedProofTree {
   const lines: string[] = [];
   const owners: string[] = [];
@@ -84,7 +92,7 @@ export function flattenProofTree(
     const label = `l${counter}`;
     owners.push(node.id);
     lines.push(
-      `${label}: $ ${node.formula} $ by ${node.rule} [${refs.join(", ")}]`,
+      `${label}: $ ${node.formula} $ by ${readRule(node.rule)} [${refs.join(", ")}]`,
     );
     return label;
   }

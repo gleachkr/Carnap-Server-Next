@@ -168,7 +168,12 @@ permutation-tolerant lowering is a separate feature, deliberately not built.
 
 Each proof line is `<formula> :<rule> <refs>`; the justification
 is taken after the line's *last* colon, so formulas whose notation uses `:` (e.g.
-a modal `w : a`) still parse.
+a modal `w : a`) still parse. The rule is either an axiom name or an alias the
+theory declares for one (`--| @syntax alias ∧I` on `and_intro`); the walk
+resolves it through a `readRule` ([`proofRuleReader`](../aufbau-proof/formulas.ts))
+as the line is parsed, so the assumption test, the citation-shape lookup and the
+emitted `by` all see the axiom name, and a name the theory never mentions
+reaches the engine as typed, to be refused there.
 
 ### The assumption rule is configured, not hardcoded
 
@@ -190,9 +195,13 @@ place the type needs to know "which lines introduce a context formula":
 
 So a theory whose assumption axiom is, say, `assume` or `hyp` works unchanged —
 author with `assumption="hyp"` and the sibling-box seams follow the same rule the
-compiler does. What is *not* configurable is that there is exactly **one**
-assumption axiom per exercise; a theory with several distinct assumption-introducing
-rules would need the translator to accept a set.
+compiler does. The configured name goes through the same `readRule` as a cited
+one, so `assumption="AS"` over forallx and a line citing `ax` (or the other way
+about) agree. The review page's read-only widget has no theory text at hand, so
+the server lists the rule's spellings on the element (`data-assumption-spellings`)
+and the geometry there resolves against that list. What is *not* configurable is
+that there is exactly **one** assumption axiom per exercise; a theory with several
+distinct assumption-introducing rules would need the translator to accept a set.
 
 ## Formulas are read in the theory's language
 

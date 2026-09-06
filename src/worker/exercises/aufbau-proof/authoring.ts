@@ -32,11 +32,16 @@ import {
   theoryByPath,
   theorySourceByFileName,
 } from "../../logic/theories";
-import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
+import type {
+  ProofFormulaReader,
+  ProofFormulaShape,
+  ProofRuleReader,
+} from "./formulas";
 import {
   goalBinderShadows,
   goalEngineDeclaration,
   proofFormulaReader,
+  proofRuleReader,
   theoryLanguageSource,
 } from "./formulas";
 import type {
@@ -128,6 +133,17 @@ export function starterFormulaReader(
     shape,
     header.goalName,
   );
+}
+
+/**
+ * The rule reader for a starter proof, over the same text the formula reader
+ * reads, so the two share one parse of the theory.
+ */
+export function starterRuleReader(
+  theory: AufbauTheory,
+  header: { readonly theoremDecl: string },
+): ProofRuleReader {
+  return proofRuleReader(theoryLanguageSource(theory, header.theoremDecl));
 }
 
 /**

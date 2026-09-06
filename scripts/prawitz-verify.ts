@@ -30,7 +30,10 @@ const compiler = await loadCompiler({ wasmBytes });
 
 let passed = 0;
 for (const testCase of PRAWITZ_CASES) {
-  const { mm0, readSentence } = forallxExercise(testCase.goalName, testCase.theoremDecl);
+  const { mm0, readRule, readSentence } = forallxExercise(
+    testCase.goalName,
+    testCase.theoremDecl,
+  );
   const translation = prawitzToAuf(
     testCase.root,
     testCase.goalName,
@@ -38,6 +41,7 @@ for (const testCase of PRAWITZ_CASES) {
     "⊢",
     ";",
     readSentence,
+    readRule,
   );
 
   if (translation.formulaProblems.length > 0) {

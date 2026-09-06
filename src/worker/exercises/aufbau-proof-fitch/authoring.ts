@@ -24,6 +24,7 @@ import {
   readGoalDeclaration,
   requireSystem,
   starterFormulaReader,
+  starterRuleReader,
   unreadableStarterFormula,
 } from "../aufbau-proof/authoring";
 import { theoryLanguageSource } from "../aufbau-proof/formulas";
@@ -186,6 +187,7 @@ export async function compileAufbauProofFitch(
       contextSymbol,
       starterFormulaReader(theory, header, "sentence"),
       ruleCitationShapes(theoryLanguageSource(theory, header.theoremDecl)),
+      starterRuleReader(theory, header),
     );
 
     for (const problem of translated.formulaProblems) {

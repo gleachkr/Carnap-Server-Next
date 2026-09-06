@@ -71,6 +71,16 @@
 -- proof system itself, not the derived rules (DS, MT, LEM, DeMorgan, …), which
 -- are provable from these.
 --
+-- A proof may cite a rule by the textbook's own name: each rule below carries
+-- an alias annotation in the `--|` channel naming its spellings (`∧I`, and the
+-- ASCII forms the delimiter lists give the connective, `/\I` `&I` `^I`), which
+-- the proof widgets resolve to the axiom name before the engine sees the
+-- citation. MM0 identifiers are ASCII, so the alias is the only way `∧I` can
+-- be said. The rules that come in a left/right pair — ∧E, ∨I, ↔E — carry none:
+-- an alias means exactly one rule, and which of `and_elim_l`/`and_elim_r` a
+-- line wants is something only the engine finds out. Cite those by axiom name
+-- for now.
+--
 -- ## Eigenvariables, and why a rule's binder list is the whole proviso
 --
 -- In `all_intro {x: var} {a: name} (ga de: ctx x) (ph: wff x)` the raw `ga`,
@@ -615,29 +625,36 @@ axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 -- line may state its conclusion in a larger ambient scope than its premises
 -- inhabit. The Fitch translator's ambient contexts depend on it; the
 -- dependency-context emitters (Prawitz, tree) simply bind it empty.
+--| @syntax alias AS
 axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
+--| @syntax alias R
 axiom reit (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph $;
 
 -- Conditional (→)
+--| @syntax alias →I ->I =>I ⊃I
 axiom imp_intro (ga de: ctx) (ph ps: wff):
   $ ga ; ph ⊢ ps $ > $ ga ; de ⊢ ph → ps $;
+--| @syntax alias →E ->E =>E ⊃E
 axiom imp_elim (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph → ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
 
--- Conjunction (∧)
+-- Conjunction (∧). ∧E has no alias: it is two rules here, one per side.
+--| @syntax alias ∧I /\I &I ^I
 axiom and_intro (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
 axiom and_elim_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ph $;
 axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps $;
 
--- Disjunction (∨)
+-- Disjunction (∨). ∨I has no alias, being two rules, one per side.
 axiom or_intro_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph ∨ ps $;
 axiom or_intro_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ph ∨ ps $;
+--| @syntax alias ∨E \/E |E
 axiom or_elim (ga de si ta: ctx) (ph ps ch: wff):
   $ ga ⊢ ph ∨ ps $ > $ de ; ph ⊢ ch $ > $ si ; ps ⊢ ch $ >
   $ ga ; de ; si ; ta ⊢ ch $;
 
--- Biconditional (↔)
+-- Biconditional (↔). ↔E has no alias, being two rules, one per side.
+--| @syntax alias ↔I <->I <=>I <>I ≡I
 axiom iff_intro (ga de si: ctx) (ph ps: wff):
   $ ga ; ph ⊢ ps $ > $ de ; ps ⊢ ph $ > $ ga ; de ; si ⊢ ph ↔ ps $;
 axiom iff_elim_l (ga de si: ctx) (ph ps: wff):
@@ -646,18 +663,24 @@ axiom iff_elim_r (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph ↔ ps $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph $;
 
 -- Negation, contradiction, explosion, indirect proof
+--| @syntax alias ¬I ~I -I
 axiom neg_intro (ga de: ctx) (ph: wff): $ ga ; ph ⊢ ⊥ $ > $ ga ; de ⊢ ¬ ph $;
+--| @syntax alias ¬E ~E -E
 axiom neg_elim (ga de si: ctx) (ph: wff):
   $ ga ⊢ ph $ > $ de ⊢ ¬ ph $ > $ ga ; de ; si ⊢ ⊥ $;
+--| @syntax alias X
 axiom explosion (ga de: ctx) (ph: wff): $ ga ⊢ ⊥ $ > $ ga ; de ⊢ ph $;
+--| @syntax alias IP
 axiom ip (ga de: ctx) (ph: wff): $ ga ; ¬ ph ⊢ ⊥ $ > $ ga ; de ⊢ ph $;
 
 -- Identity (=I is reflexivity under ⊢; =E is Leibniz replacement)
+--| @syntax alias =I
 axiom eq_intro_nd (ga: ctx) (te: tm): $ ga ⊢ te = te $;
 
 --| @view (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z) (ps ch: wff): $ ga ⊢ te = ue $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ch $
 --| @abstract ph ps ch z te ue
 --| @fresh z
+--| @syntax alias =E
 axiom eq_replace (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z):
   $ ga ⊢ te = ue $ > $ de ⊢ {z / te} ph $ > $ ga ; de ; si ⊢ {z / ue} ph $;
 
@@ -669,20 +692,24 @@ axiom eq_replace (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z):
 -- sort, so no @freshen or @fallback rule is needed.
 --| @view {x: var} {a: name} (ga de: ctx x) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∀ x ph $
 --| @recover a ps ph x
+--| @syntax alias ∀I @I AI
 axiom all_intro {x: var} {a: name} (ga de: ctx x) (ph: wff x):
   $ ga ⊢ {x / a} ph $ > $ ga ; de ⊢ ∀ x ph $;
 
 --| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ ps $
 --| @recover te ps ph x
+--| @syntax alias ∀E @E AE
 axiom all_elim {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
   $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ {x / te} ph $;
 
 --| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∃ x ph $
 --| @recover te ps ph x
+--| @syntax alias ∃I 3I EI
 axiom ex_intro {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
   $ ga ⊢ {x / te} ph $ > $ ga ; de ⊢ ∃ x ph $;
 
 --| @view {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ps: wff) (ch: wff x): $ ga ⊢ ∃ x ph $ > $ de ; ps ⊢ ch $ > $ ga ; de ; si ⊢ ch $
 --| @recover a ps ph x
+--| @syntax alias ∃E 3E EE
 axiom ex_elim {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ch: wff x):
   $ ga ⊢ ∃ x ph $ > $ de ; {x / a} ph ⊢ ch $ > $ ga ; de ; si ⊢ ch $;

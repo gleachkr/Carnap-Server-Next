@@ -40,12 +40,17 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from "@codemirror/view";
-import type { ProofFormulaReader } from "../../worker/exercises/aufbau-proof/formulas";
+import type {
+  ProofFormulaReader,
+  ProofRuleReader,
+} from "../../worker/exercises/aufbau-proof/formulas";
 import {
+  ENGINE_RULE,
   ENGINE_TEXT,
   goalStatementText,
   hasTheoryText,
   proofFormulaReader,
+  proofRuleReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
 import { ruleCitationShapes } from "../../worker/exercises/aufbau-proof-fitch/citations";
@@ -260,7 +265,12 @@ function lineScopeStyle(
 function buildScopeDecorations(view: EditorView): DecorationSet {
   const doc = view.state.doc;
   const assumptionRule = view.state.facet(assumptionRuleFacet);
-  const geometryByLine = fitchScopeGeometry(doc.toString(), assumptionRule);
+  const readRule = view.state.facet(ruleReaderFacet);
+  const geometryByLine = fitchScopeGeometry(
+    doc.toString(),
+    assumptionRule,
+    readRule,
+  );
   const charWidth = view.defaultCharacterWidth || 8;
 
   // The shared right edge of the assumption rules: a few characters past the
@@ -309,6 +319,12 @@ const assumptionRuleFacet = Facet.define<string, string>({
   combine: (values) => values[0] ?? "ax",
 });
 
+/** The theory's rule reader, alongside: what each cited name resolves to, so a
+ * line citing the assumption rule by alias still opens a box. */
+const ruleReaderFacet = Facet.define<ProofRuleReader, ProofRuleReader>({
+  combine: (values) => values[0] ?? ENGINE_RULE,
+});
+
 const scopeGuides = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;
@@ -337,6 +353,8 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   /** Reads a typed line in the theory's language; passes text through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
+  /** Cited rule name to the engine's, from the theory's `@syntax alias` lines. */
+  private readRule: ProofRuleReader = ENGINE_RULE;
   /** How each rule's citation names its premises, derived from the theory's
    *  own rule signatures. See `aufbau-proof-fitch/citations.ts`. */
   private citationShapes: ReadonlyMap<string, RuleCitationShape> = new Map();
@@ -385,6 +403,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       data.goalName,
     );
     this.citationShapes = ruleCitationShapes(theory.source);
+    this.readRule = proofRuleReader(theory.source);
     this.goalName = data.goalName;
     this.assumptionRule = data.assumptionRule;
     if (typeof data.sequentSymbol === "string" && data.sequentSymbol !== "") {
@@ -465,6 +484,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
             "aria-label": this.t("Fitch proof editor"),
           }),
           assumptionRuleFacet.of(this.assumptionRule),
+          ruleReaderFacet.of(this.readRule),
           scopeGuides,
           EditorView.updateListener.of((update) => {
             if (update.docChanged) {
@@ -500,6 +520,15 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     }
     const fitchText = source.textContent ?? "";
     const assumptionRule = this.getAttribute("data-assumption-rule") || "ax";
+    // The theory is not on this page; what the boxes need from it is which
+    // spellings mean the assumption rule, and the server lists those.
+    const spellings = new Set(
+      (this.getAttribute("data-assumption-spellings") ?? "")
+        .split(/\s+/)
+        .filter((one) => one.length > 0),
+    );
+    const readRule: ProofRuleReader = (cited) =>
+      spellings.has(cited) ? assumptionRule : cited;
 
     const style = document.createElement("style");
     style.textContent = SHADOW_STYLES;
@@ -523,6 +552,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
             "aria-label": this.t("Submitted proof"),
           }),
           assumptionRuleFacet.of(assumptionRule),
+          ruleReaderFacet.of(readRule),
           scopeGuides,
         ],
       }),
@@ -557,6 +587,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       this.contextSymbol,
       this.readFormula,
       this.citationShapes,
+      this.readRule,
     );
   }
 

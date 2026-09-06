@@ -87,6 +87,7 @@ const CASES = [
       renderAufbauProofFitchReview(
         {
           assumptionRule: "ax",
+          assumptionSpellings: ["ax"],
           exerciseId: "f1",
           fitchText: "  P :ax\n  P :r 1\n",
         },

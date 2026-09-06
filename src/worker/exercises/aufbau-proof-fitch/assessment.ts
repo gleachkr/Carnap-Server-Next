@@ -17,7 +17,11 @@ import type { JsonValue } from "../../domain/json";
 // The certificate is the trust boundary, so the Fitch type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's Fitch text or the translated proof).
-import { goalStatementText, proofTheoryText } from "../aufbau-proof/formulas";
+import {
+  goalStatementText,
+  proofRuleSpellings,
+  proofTheoryText,
+} from "../aufbau-proof/formulas";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofFitchReview } from "./read-only-view";
 import type {
@@ -258,6 +262,13 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
         {
           assumptionRule:
             publicData?.assumptionRule ?? DEFAULT_ASSUMPTION_RULE,
+          assumptionSpellings:
+            publicData === null
+              ? []
+              : proofRuleSpellings(
+                  proofTheoryText(publicData).source,
+                  publicData.assumptionRule,
+                ),
           exerciseId: declaration.id,
           fitchText: data.fitchText,
         },

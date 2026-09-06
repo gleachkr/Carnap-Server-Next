@@ -195,3 +195,36 @@ describe("serializePrawitzStarter", () => {
     expect(shape(result.tree)).toEqual(shape(tree));
   });
 });
+
+describe("parsePrawitzStarter — rule aliases", () => {
+  test("an assumption cited by alias becomes a leaf carrying the configured name", () => {
+    const readRule = (cited: string): string =>
+      cited === "AS" ? "ax" : cited;
+    const result = parsePrawitzStarter(
+      [
+        "a1: $ a ⊢ a $ by AS [] -- label:1",
+        "a2: $ b ⊢ b $ by ax []",
+        "c: $ a ; b ⊢ a ∧ b $ by ∧I [a1, a2]",
+      ].join("\n"),
+      "ax",
+      "⊢",
+      readRule,
+    );
+
+    if (!result.ok) {
+      throw new Error(`unexpected issue: ${result.issue.code}`);
+    }
+
+    // The widget tells leaves from derived nodes by the configured name, so
+    // that is what the leaf carries; the derived node keeps what was typed,
+    // for the translator to resolve when the proof is compiled.
+    expect(shape(result.tree)).toEqual({
+      formula: "a ∧ b",
+      premises: [
+        { formula: "a", label: "1", premises: [], rule: "ax" },
+        { formula: "b", premises: [], rule: "ax" },
+      ],
+      rule: "∧I",
+    });
+  });
+});
