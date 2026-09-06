@@ -1005,13 +1005,25 @@ axiom and_intro (ga de si: ctx) (ph ps: wff):
 Several spellings on one line, or several lines, both read; an alias is one
 whitespace-free token, and it must mean exactly one rule — a name any rule
 already has, or one another rule already claimed, is a compile error in the
-theory. The shipped forallx systems carry the book's names for every rule that
-is one axiom (`→E`, `∧I`, `¬I`, `X`, `IP`, `∀E`, …, and `AS` for the assumption
-rule). The eliminations that are two axioms, one per side — `∧E`, `∨I`, `↔E` —
-have none, because which side a line wants is something only the engine finds
-out; cite those by axiom name. An alias works wherever a rule is cited: a Fitch
-justification, a tree or Prawitz node, a starter proof, and the `assumption=`
-attribute.
+theory. The shipped forallx systems carry the book's name for every rule
+(`→E`, `∧I`, `¬I`, `X`, `IP`, `∀E`, …, and `AS` for the assumption rule). A
+name the book gives to *two* axioms, one per side — `∧E`, `∨I`, `↔E` — sits on
+the second of them, which carries the engine's `@fallback` onto the first: a
+line citing `∧E` lowers to `and_elim_r`, and when that side does not fit the
+engine retries with `and_elim_l`, so the student never says which. A theory of
+your own does the same with two annotation lines on the later axiom:
+
+```mm0
+axiom and_elim_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ph $;
+--| @fallback and_elim_l
+--| @syntax alias ∧E /\E &E
+axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps $;
+```
+
+An alias works wherever a rule is cited: a Fitch justification, a tree or
+Prawitz node, a starter proof, and the `assumption=` attribute. The linear
+`aufbau-proof` type is the exception: its lines are engine text and go to the
+compiler as written, so there a rule is its identifier.
 
 **`system=` resolves in one order: your document, then the server.** A name
 matches an `aufbau-mm0` block declared earlier in the same document first, and

@@ -27,25 +27,36 @@ quantifiers, predicates with parentheses.
 
 ## The proof system
 
-Rules are named by the theory's own identifiers, so a justification is written
-in ascii. Here is the correspondence with the textbook's names:
+A proof cites a rule by the textbook's own name — \`∧I\`, \`→E\`, \`AS\` for an
+assumption — or by an ascii spelling of it (\`/\\I\`, \`->E\`), or by the
+identifier the theory declares it under. The names are \`@syntax alias\` lines on
+the rules; MM0 identifiers are ascii, so an alias is the only way \`∧I\` can be
+said. Here is the correspondence:
 
 \`\`\`
-forallx                identifier(s)                  form
-─────────────────────  ─────────────────────────────  ──────────────────────
-premise / assumption   ax                             Γ ; A ⊢ A
-R (reiteration)        reit                           Γ ⊢ A  ⟹  Γ ; Δ ⊢ A
-∧I  /  ∧E              and_intro / and_elim_l, and_elim_r
-∨I  /  ∨E              or_intro_l, or_intro_r / or_elim
-→I  /  →E              imp_intro / imp_elim
-↔I  /  ↔E              iff_intro / iff_elim_l, iff_elim_r
-¬I  /  ¬E              neg_intro / neg_elim           A ; ¬A ⊢ ⊥
-X (explosion)          explosion
-IP (indirect proof)    ip
-=I  /  =E              eq_intro_nd / eq_replace
-∀I  /  ∀E              all_intro / all_elim
-∃I  /  ∃E              ex_intro / ex_elim
+forallx                cite as               identifier(s)                        form
+─────────────────────  ────────────────────  ───────────────────────────────────  ──────────────────────
+premise / assumption   AS                    ax                                   Γ ; A ⊢ A
+R (reiteration)        R                     reit                                 Γ ⊢ A  ⟹  Γ ; Δ ⊢ A
+∧I  /  ∧E              ∧I /\\I  /  ∧E /\\E     and_intro / and_elim_l, and_elim_r
+∨I  /  ∨E              ∨I \\/I  /  ∨E \\/E     or_intro_l, or_intro_r / or_elim
+→I  /  →E              →I ->I  /  →E ->E     imp_intro / imp_elim
+↔I  /  ↔E              ↔I <->I  /  ↔E <->E   iff_intro / iff_elim_l, iff_elim_r
+¬I  /  ¬E              ¬I ~I  /  ¬E ~E       neg_intro / neg_elim                 A ; ¬A ⊢ ⊥
+X (explosion)          X                     explosion
+IP (indirect proof)    IP                    ip
+=I  /  =E              =I  /  =E             eq_intro_nd / eq_replace
+∀I  /  ∀E              ∀I  /  ∀E             all_intro / all_elim
+∃I  /  ∃E              ∃I  /  ∃E             ex_intro / ex_elim
 \`\`\`
+
+Where the book's name covers two rules, one per side — ∧E, ∨I, ↔E — the alias
+sits on the second axiom, which carries the engine's \`@fallback\` onto the
+first: the engine tries the cited side and then the other, so the student never
+says which. An alias works in the Fitch, tree and Prawitz editors, in their
+starters, and in the \`assumption=\` attribute. The linear \`aufbau-proof\` type
+is the exception: its lines are engine text and go to the compiler as written,
+so there a rule is its identifier.
 
 The rules themselves come from an \`aufbau-mm0\` block, which is what makes them
 available to the proof exercises further down. This one names a system the site
@@ -357,8 +368,9 @@ it goes through — and the server re-checks that certificate on submit, against
 the goal frozen into the exercise.
 
 This first one is the raw form. Each line is a sequent with its own context,
-justified by a rule and the labels of the lines it uses. This proof is filled in
-already, so it should show its ✓ at once.
+justified by a rule — by identifier, since this is engine text — and the labels
+of the lines it uses. This proof is filled in already, so it should show its ✓
+at once.
 
 \`\`\`md
 :::aufbau-proof{system="forallx" id="pf_lines" title="Distributing ∀" points="2"}
@@ -398,10 +410,10 @@ premise, adds a hypothesis, or deletes a subtree.
 
 theorem treeunimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
 ----
-l1: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ ∀ x (F(x) → G(x)) $ by ax []
-l2: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) $ by ax []
-l3: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) → G(a) $ by all_elim [l1]
-l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by imp_elim [l3, l2]
+l1: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ ∀ x (F(x) → G(x)) $ by AS []
+l2: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) $ by AS []
+l3: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) → G(a) $ by ∀E [l1]
+l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by →E [l3, l2]
 :::
 \`\`\`
 
@@ -411,10 +423,10 @@ premise, adds a hypothesis, or deletes a subtree.
 
 theorem treeunimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
 ----
-l1: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ ∀ x (F(x) → G(x)) $ by ax []
-l2: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) $ by ax []
-l3: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) → G(a) $ by all_elim [l1]
-l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by imp_elim [l3, l2]
+l1: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ ∀ x (F(x) → G(x)) $ by AS []
+l2: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) $ by AS []
+l3: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ F(a) → G(a) $ by ∀E [l1]
+l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by →E [l3, l2]
 :::
 
 ## 14. The same proof, Fitch style
@@ -422,8 +434,9 @@ l4: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $ by imp_elim [l3, l2]
 \`aufbau-proof-fitch\` is the shape from the book: one formula per line, a
 justification after a colon, and **indentation for subproofs** — the scope lines
 are drawn for you. Contexts are worked out from the indentation, so an
-assumption just cites \`ax\`, and a rule that discharges one cites the subproof's
-range.
+assumption just cites \`AS\`, and a rule that discharges one cites the subproof's
+range. Rules go by their textbook names, or the ascii spellings in the table
+above.
 
 This proof uses ∃E, whose subproof assumes an instance for a fresh name. The
 name may not escape into the conclusion; that side condition is checked by the
@@ -435,13 +448,13 @@ A worked ∃E. Re-indent line 3 and watch the scope line — and the ✓ — rea
 
 theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-∃ x F(x)              :ax
-∀ x (F(x) → G(x))     :ax
-    F(b)              :ax
-    F(b) → G(b)       :all_elim 2
-    G(b)              :imp_elim 4 3
-    ∃ x G(x)          :ex_intro 5
-∃ x G(x)              :ex_elim 1 3-6
+∃ x F(x)              :AS
+∀ x (F(x) → G(x))     :AS
+    F(b)              :AS
+    F(b) → G(b)       :∀E 2
+    G(b)              :→E 4 3
+    ∃ x G(x)          :∃I 5
+∃ x G(x)              :∃E 1 3-6
 :::
 \`\`\`
 
@@ -450,13 +463,13 @@ A worked ∃E. Re-indent line 3 and watch the scope line — and the ✓ — rea
 
 theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-∃ x F(x)              :ax
-∀ x (F(x) → G(x))     :ax
-    F(b)              :ax
-    F(b) → G(b)       :all_elim 2
-    G(b)              :imp_elim 4 3
-    ∃ x G(x)          :ex_intro 5
-∃ x G(x)              :ex_elim 1 3-6
+∃ x F(x)              :AS
+∀ x (F(x) → G(x))     :AS
+    F(b)              :AS
+    F(b) → G(b)       :∀E 2
+    G(b)              :→E 4 3
+    ∃ x G(x)          :∃I 5
+∃ x G(x)              :∃E 1 3-6
 :::
 
 ## 15. The same proof, as a Prawitz tree
@@ -482,13 +495,13 @@ that discharges it.
 
 theorem exelimdrawn {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by ax []
-l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by ax []
-l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by all_elim [l2]
-l4: $ F(b) ⊢ F(b) $ by ax [] -- label:1
-l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by imp_elim [l3, l4]
-l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ex_intro [l5]
-l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ex_elim [l1, l6] -- label:1
+l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by AS []
+l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by AS []
+l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by ∀E [l2]
+l4: $ F(b) ⊢ F(b) $ by AS [] -- label:1
+l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by →E [l3, l4]
+l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ∃I [l5]
+l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ∃E [l1, l6] -- label:1
 :::
 \`\`\`
 
@@ -499,19 +512,19 @@ that discharges it.
 
 theorem exelimdrawn {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by ax []
-l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by ax []
-l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by all_elim [l2]
-l4: $ F(b) ⊢ F(b) $ by ax [] -- label:1
-l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by imp_elim [l3, l4]
-l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ex_intro [l5]
-l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ex_elim [l1, l6] -- label:1
+l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by AS []
+l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by AS []
+l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by ∀E [l2]
+l4: $ F(b) ⊢ F(b) $ by AS [] -- label:1
+l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by →E [l3, l4]
+l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ∃I [l5]
+l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ∃E [l1, l6] -- label:1
 :::
 
 ## 16. Your turn
 
 The last one is not done for you. Assume \`¬ P\` for contradiction, derive \`⊥\`
-with \`neg_elim\`, and close the subproof with \`ip\`, citing its range.
+with \`¬E\`, and close the subproof with \`IP\`, citing its range.
 
 \`\`\`md
 :::aufbau-proof-fitch{system="forallx" id="pf_yours" title="Double negation" points="3"}
@@ -519,7 +532,7 @@ Show that \`¬ ¬ P\` entails \`P\`.
 
 theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
 ----
-¬ ¬ P    :ax
+¬ ¬ P    :AS
 :::
 \`\`\`
 
@@ -528,7 +541,7 @@ Show that \`¬ ¬ P\` entails \`P\`.
 
 theorem dnetask (P: wff): $ ¬ ¬ P ⊢ P $
 ----
-¬ ¬ P    :ax
+¬ ¬ P    :AS
 :::
 
 ## 17. The same exercise, told nothing
@@ -552,7 +565,7 @@ Show that \`¬ ¬ P\` entails \`P\`. You will not be told whether you have.
 
 theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $
 ----
-¬ ¬ P    :ax
+¬ ¬ P    :AS
 :::
 \`\`\`
 
@@ -561,7 +574,7 @@ Show that \`¬ ¬ P\` entails \`P\`. You will not be told whether you have.
 
 theorem dnesealed (P: wff): $ ¬ ¬ P ⊢ P $
 ----
-¬ ¬ P    :ax
+¬ ¬ P    :AS
 :::
 
 ## 18. Submit as the only feedback

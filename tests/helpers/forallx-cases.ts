@@ -61,6 +61,25 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     ].join("\n"),
   },
   {
+    name: "paired (∧E, ∨I, ↔E by textbook name, both sides of each)",
+    theoremDecl:
+      "theorem paired (a b: wff): $ a ∧ b ; a ↔ b ⊢ (a ∨ b) ∧ (b ∨ a) $;",
+    goalName: "paired",
+    // Each pair's alias is one axiom with a @fallback onto its sibling, so
+    // the same citation must land on either side as the line demands.
+    fitch: [
+      "a ∧ b             :AS",
+      "a ↔ b             :AS",
+      "a                 :∧E 1",
+      "b                 :∧E 1",
+      "b                 :↔E 2 3",
+      "a                 :↔E 2 4",
+      "a ∨ b             :∨I 6",
+      "b ∨ a             :∨I 6",
+      "(a ∨ b) ∧ (b ∨ a) :∧I 7 8",
+    ].join("\n"),
+  },
+  {
     name: "mp (→E)",
     theoremDecl: "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
     goalName: "mp",

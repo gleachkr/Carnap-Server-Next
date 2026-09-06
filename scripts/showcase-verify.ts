@@ -65,10 +65,10 @@ const PROOF_ASSET_IDS: ReadonlySet<string> = new Set([
  */
 const UNFINISHED_IDS = new Set(["pf_yours", "pf_sealed"]);
 const INTENDED_SOLUTION = [
-  "¬ ¬ P    :ax",
-  "    ¬ P  :ax",
-  "    ⊥    :neg_elim 2 1",
-  "P        :ip 2-3",
+  "¬ ¬ P    :AS",
+  "    ¬ P  :AS",
+  "    ⊥    :¬E 2 1",
+  "P        :IP 2-3",
 ].join("\n");
 
 const compiled = await compileCarnapMarkdown(SHOWCASE_DEMO_SOURCE);

@@ -281,7 +281,7 @@ describe("fitchToAuf — first-order rules", () => {
 });
 
 describe("forallx: Calgary rule aliases", () => {
-  test("the theory names each one-rule textbook citation, and no paired one", () => {
+  test("the theory names each textbook citation, a paired one on its fallback axiom", () => {
     const readRule = proofRuleReader(FORALLX_THEORY_SOURCE);
 
     expect(readRule("∧I")).toBe("and_intro");
@@ -296,10 +296,15 @@ describe("forallx: Calgary rule aliases", () => {
     expect(readRule("∃E")).toBe("ex_elim");
     expect(readRule("AS")).toBe("ax");
     expect(readRule("R")).toBe("reit");
+    // A pair's name lands on the axiom that carries the @fallback onto its
+    // sibling; the engine, not the reader, decides which side a line wants.
+    expect(readRule("∧E")).toBe("and_elim_r");
+    expect(readRule("∨I")).toBe("or_intro_r");
+    expect(readRule("↔E")).toBe("iff_elim_r");
     // A canonical name is not an alias; it stands, as does anything unknown.
     expect(readRule("and_intro")).toBe("and_intro");
-    expect(readRule("∧E")).toBe("∧E");
-    expect(readRule("∨I")).toBe("∨I");
+    expect(readRule("and_elim_l")).toBe("and_elim_l");
+    expect(readRule("∧X")).toBe("∧X");
   });
 
   test("the aliased case lowers to the axiom names", () => {
@@ -340,9 +345,17 @@ describe("forallx: Calgary rule aliases", () => {
       "AS",
       "ax",
     ]);
-    // A rule with no alias, and a name the theory never mentions.
+    // The unaliased side of a pair, its aliased sibling, and a name the
+    // theory never mentions.
     expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "and_elim_l")).toEqual([
       "and_elim_l",
+    ]);
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "and_elim_r")).toEqual([
+      "and_elim_r",
+      "∧E",
+      "/\\E",
+      "&E",
+      "^E",
     ]);
     expect(proofRuleSpellings(null, "ax")).toEqual(["ax"]);
   });

@@ -67,6 +67,30 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     ].join("\n"),
   },
   {
+    name: "paired (&E, ↔E, ∨E, ∨I by textbook name, both sides of each)",
+    theoremDecl:
+      "theorem paired (p q r s t: wff): $ p & q ; p ↔ q ; ¬ r ; r ∨ s ; t ∨ r ⊢ (p ∨ s) & (t ∨ p) $;",
+    goalName: "paired",
+    // Each pair's alias is one axiom with a @fallback onto its sibling, so
+    // the same citation must land on either side as the line demands.
+    fitch: [
+      "p & q             :PR",
+      "p <-> q           :PR",
+      "~r                :PR",
+      "r \\/ s            :PR",
+      "t \\/ r            :PR",
+      "p                 :&E 1",
+      "q                 :&E 1",
+      "q                 :<->E 2 6",
+      "p                 :<->E 2 7",
+      "s                 :\\/E 4 3",
+      "t                 :\\/E 5 3",
+      "p \\/ s            :\\/I 9",
+      "t \\/ p            :\\/I 9",
+      "(p \\/ s) & (t \\/ p) :&I 12 13",
+    ].join("\n"),
+  },
+  {
     name: "mp (→E)",
     theoremDecl: "theorem mp (p q: wff): $ (p → q) ; p ⊢ q $;",
     goalName: "mp",

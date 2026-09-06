@@ -76,10 +76,10 @@
 -- ASCII forms the delimiter lists give the connective, `/\I` `&I` `^I`), which
 -- the proof widgets resolve to the axiom name before the engine sees the
 -- citation. MM0 identifiers are ASCII, so the alias is the only way `∧I` can
--- be said. The rules that come in a left/right pair — ∧E, ∨I, ↔E — carry none:
--- an alias means exactly one rule, and which of `and_elim_l`/`and_elim_r` a
--- line wants is something only the engine finds out. Cite those by axiom name
--- for now.
+-- be said. The rules that come in a left/right pair — ∧E, ∨I, ↔E — are two
+-- axioms each, and an alias means exactly one rule; there the name sits on the
+-- second axiom, which carries a `@fallback` onto the first, so the engine tries
+-- both sides and a line citing `∧E` gets whichever fits.
 --
 -- ## Eigenvariables, and why a rule's binder list is the whole proviso
 --
@@ -638,27 +638,38 @@ axiom imp_intro (ga de: ctx) (ph ps: wff):
 axiom imp_elim (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph → ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
 
--- Conjunction (∧). ∧E has no alias: it is two rules here, one per side.
+-- Conjunction (∧). ∧E is two axioms here, one per side. The textbook name
+-- sits on the second, whose @fallback retries the first when the cited side
+-- does not fit, so a proof citing ∧E gets whichever side its line wants; the
+-- engine tries both and the certificate names the one that held. (A fallback
+-- may only point backwards, which is why the alias lives on the later axiom.)
+-- ∨I and ↔E below are paired the same way.
 --| @syntax alias ∧I /\I &I ^I
 axiom and_intro (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
 axiom and_elim_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ph $;
+--| @fallback and_elim_l
+--| @syntax alias ∧E /\E &E ^E
 axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps $;
 
--- Disjunction (∨). ∨I has no alias, being two rules, one per side.
+-- Disjunction (∨)
 axiom or_intro_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph ∨ ps $;
+--| @fallback or_intro_l
+--| @syntax alias ∨I \/I |I
 axiom or_intro_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ph ∨ ps $;
 --| @syntax alias ∨E \/E |E
 axiom or_elim (ga de si ta: ctx) (ph ps ch: wff):
   $ ga ⊢ ph ∨ ps $ > $ de ; ph ⊢ ch $ > $ si ; ps ⊢ ch $ >
   $ ga ; de ; si ; ta ⊢ ch $;
 
--- Biconditional (↔). ↔E has no alias, being two rules, one per side.
+-- Biconditional (↔)
 --| @syntax alias ↔I <->I <=>I <>I ≡I
 axiom iff_intro (ga de si: ctx) (ph ps: wff):
   $ ga ; ph ⊢ ps $ > $ de ; ps ⊢ ph $ > $ ga ; de ; si ⊢ ph ↔ ps $;
 axiom iff_elim_l (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph ↔ ps $ > $ de ⊢ ph $ > $ ga ; de ; si ⊢ ps $;
+--| @fallback iff_elim_l
+--| @syntax alias ↔E <->E <=>E <>E ≡E
 axiom iff_elim_r (ga de si: ctx) (ph ps: wff):
   $ ga ⊢ ph ↔ ps $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph $;
 

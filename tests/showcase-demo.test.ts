@@ -126,7 +126,7 @@ describe("showcase demo lesson", () => {
     }
 
     const publicData = node.publicData as { readonly starterBody?: unknown };
-    expect(publicData.starterBody).toBe("¬ ¬ P    :ax");
+    expect(publicData.starterBody).toBe("¬ ¬ P    :AS");
   });
 
   test("the demo shows a sealed exercise, and it really is sealed", async () => {
