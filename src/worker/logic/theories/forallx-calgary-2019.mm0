@@ -116,7 +116,12 @@
 --| @syntax lint parenthesize-binary-only
 --| @syntax lint closed-sentences
 --| @syntax display drop-outer-parens
-delimiter $ ( ) [ ] , ; / { } $;
+-- The engine's own delimiters, a separate matter: these split MM0 tokens in the
+-- math strings above and in a proof's goal declaration. `/` is deliberately
+-- not one of them, so `\/` and `/\` survive as the tokens `or` and `and`
+-- declare; the price is that the substitution notations below are spelled with
+-- spaces, `{x / te}`, since nothing splits `{x/te}` for us.
+delimiter $ ( ) [ ] , ; { } $;
 
 -- `sentence` is uninterpreted metadata to @aufbau/syntax — it records which sort
 -- *this application* reads student input at, so the reader can name it instead
@@ -477,95 +482,95 @@ axiom r_congr (sq tq: seq): $ sq ≗ tq $ > $ r sq ≐ r tq $;
 -- Alpha-renaming, for @freshen when a context already binds the variable a
 -- quantifier rule wants.
 --| @alpha x y
-axiom all_alpha {x y: var} (ph: wff x y): $ ∀ x ph ⟺ ∀ y ({x/y} ph) $;
+axiom all_alpha {x y: var} (ph: wff x y): $ ∀ x ph ⟺ ∀ y ({x / y} ph) $;
 --| @alpha x y
-axiom ex_alpha {x y: var} (ph: wff x y): $ ∃ x ph ⟺ ∃ y ({x/y} ph) $;
+axiom ex_alpha {x y: var} (ph: wff x y): $ ∃ x ph ⟺ ∃ y ({x / y} ph) $;
 
--- Push {x/te} through the syntax. At a predicate or function the substitution
+-- Push {x / te} through the syntax. At a predicate or function the substitution
 -- moves onto the argument sequence, then distributes over `,` one at a time.
 --| @rewrite
-axiom sb_f_not {x: var} (te: tm x) (ph: wff x): $ {x/te} (¬ ph) ⟺ ¬ ({x/te} ph) $;
+axiom sb_f_not {x: var} (te: tm x) (ph: wff x): $ {x / te} (¬ ph) ⟺ ¬ ({x / te} ph) $;
 --| @rewrite
 axiom sb_f_and {x: var} (te: tm x) (ph ps: wff x):
-  $ {x/te} (ph ∧ ps) ⟺ ({x/te} ph ∧ {x/te} ps) $;
+  $ {x / te} (ph ∧ ps) ⟺ ({x / te} ph ∧ {x / te} ps) $;
 --| @rewrite
 axiom sb_f_or {x: var} (te: tm x) (ph ps: wff x):
-  $ {x/te} (ph ∨ ps) ⟺ ({x/te} ph ∨ {x/te} ps) $;
+  $ {x / te} (ph ∨ ps) ⟺ ({x / te} ph ∨ {x / te} ps) $;
 --| @rewrite
 axiom sb_f_imp {x: var} (te: tm x) (ph ps: wff x):
-  $ {x/te} (ph → ps) ⟺ ({x/te} ph → {x/te} ps) $;
+  $ {x / te} (ph → ps) ⟺ ({x / te} ph → {x / te} ps) $;
 --| @rewrite
 axiom sb_f_iff {x: var} (te: tm x) (ph ps: wff x):
-  $ {x/te} (ph ↔ ps) ⟺ ({x/te} ph ↔ {x/te} ps) $;
+  $ {x / te} (ph ↔ ps) ⟺ ({x / te} ph ↔ {x / te} ps) $;
 --| @rewrite
-axiom sb_f_bot {x: var} (te: tm x): $ {x/te} ⊥ ⟺ ⊥ $;
+axiom sb_f_bot {x: var} (te: tm x): $ {x / te} ⊥ ⟺ ⊥ $;
 --| @rewrite
-axiom sb_f_top {x: var} (te: tm x): $ {x/te} ⊤ ⟺ ⊤ $;
+axiom sb_f_top {x: var} (te: tm x): $ {x / te} ⊤ ⟺ ⊤ $;
 --| @rewrite
 axiom sb_f_ideq {x: var} (te: tm x) (ue ve: tm x):
-  $ {x/te} (ue = ve) ⟺ ((tsub x / te ue) = (tsub x / te ve)) $;
+  $ {x / te} (ue = ve) ⟺ ((tsub x / te ue) = (tsub x / te ve)) $;
 --| @rewrite
 axiom sb_f_all {x y: var} (te: tm x) (ph: wff x y):
-  $ {x/te} (∀ y ph) ⟺ ∀ y ({x/te} ph) $;
+  $ {x / te} (∀ y ph) ⟺ ∀ y ({x / te} ph) $;
 --| @rewrite
 axiom sb_f_ex {x y: var} (te: tm x) (ph: wff x y):
-  $ {x/te} (∃ y ph) ⟺ ∃ y ({x/te} ph) $;
+  $ {x / te} (∃ y ph) ⟺ ∃ y ({x / te} ph) $;
 --| @rewrite
-axiom sb_f_id {x: var} (ph: wff x): $ {x/x} ph ⟺ ph $;
+axiom sb_f_id {x: var} (ph: wff x): $ {x / x} ph ⟺ ph $;
 --| @rewrite
-axiom sb_f_irrel {x: var} (te: tm x) (ph: wff): $ {x/te} ph ⟺ ph $;
+axiom sb_f_irrel {x: var} (te: tm x) (ph: wff): $ {x / te} ph ⟺ ph $;
 --| @rewrite
-axiom sb_f_A {x: var} (te: tm x) (sq: seq x): $ {x/te} (A sq) ⟺ A (subst x / te sq) $;
+axiom sb_f_A {x: var} (te: tm x) (sq: seq x): $ {x / te} (A sq) ⟺ A (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_B {x: var} (te: tm x) (sq: seq x): $ {x/te} (B sq) ⟺ B (subst x / te sq) $;
+axiom sb_f_B {x: var} (te: tm x) (sq: seq x): $ {x / te} (B sq) ⟺ B (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_C {x: var} (te: tm x) (sq: seq x): $ {x/te} (C sq) ⟺ C (subst x / te sq) $;
+axiom sb_f_C {x: var} (te: tm x) (sq: seq x): $ {x / te} (C sq) ⟺ C (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_D {x: var} (te: tm x) (sq: seq x): $ {x/te} (D sq) ⟺ D (subst x / te sq) $;
+axiom sb_f_D {x: var} (te: tm x) (sq: seq x): $ {x / te} (D sq) ⟺ D (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_E {x: var} (te: tm x) (sq: seq x): $ {x/te} (E sq) ⟺ E (subst x / te sq) $;
+axiom sb_f_E {x: var} (te: tm x) (sq: seq x): $ {x / te} (E sq) ⟺ E (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_F {x: var} (te: tm x) (sq: seq x): $ {x/te} (F sq) ⟺ F (subst x / te sq) $;
+axiom sb_f_F {x: var} (te: tm x) (sq: seq x): $ {x / te} (F sq) ⟺ F (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_G {x: var} (te: tm x) (sq: seq x): $ {x/te} (G sq) ⟺ G (subst x / te sq) $;
+axiom sb_f_G {x: var} (te: tm x) (sq: seq x): $ {x / te} (G sq) ⟺ G (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_H {x: var} (te: tm x) (sq: seq x): $ {x/te} (H sq) ⟺ H (subst x / te sq) $;
+axiom sb_f_H {x: var} (te: tm x) (sq: seq x): $ {x / te} (H sq) ⟺ H (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_I {x: var} (te: tm x) (sq: seq x): $ {x/te} (I sq) ⟺ I (subst x / te sq) $;
+axiom sb_f_I {x: var} (te: tm x) (sq: seq x): $ {x / te} (I sq) ⟺ I (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_J {x: var} (te: tm x) (sq: seq x): $ {x/te} (J sq) ⟺ J (subst x / te sq) $;
+axiom sb_f_J {x: var} (te: tm x) (sq: seq x): $ {x / te} (J sq) ⟺ J (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_K {x: var} (te: tm x) (sq: seq x): $ {x/te} (K sq) ⟺ K (subst x / te sq) $;
+axiom sb_f_K {x: var} (te: tm x) (sq: seq x): $ {x / te} (K sq) ⟺ K (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_L {x: var} (te: tm x) (sq: seq x): $ {x/te} (L sq) ⟺ L (subst x / te sq) $;
+axiom sb_f_L {x: var} (te: tm x) (sq: seq x): $ {x / te} (L sq) ⟺ L (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_M {x: var} (te: tm x) (sq: seq x): $ {x/te} (M sq) ⟺ M (subst x / te sq) $;
+axiom sb_f_M {x: var} (te: tm x) (sq: seq x): $ {x / te} (M sq) ⟺ M (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_N {x: var} (te: tm x) (sq: seq x): $ {x/te} (N sq) ⟺ N (subst x / te sq) $;
+axiom sb_f_N {x: var} (te: tm x) (sq: seq x): $ {x / te} (N sq) ⟺ N (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_O {x: var} (te: tm x) (sq: seq x): $ {x/te} (O sq) ⟺ O (subst x / te sq) $;
+axiom sb_f_O {x: var} (te: tm x) (sq: seq x): $ {x / te} (O sq) ⟺ O (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_P {x: var} (te: tm x) (sq: seq x): $ {x/te} (P sq) ⟺ P (subst x / te sq) $;
+axiom sb_f_P {x: var} (te: tm x) (sq: seq x): $ {x / te} (P sq) ⟺ P (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_Q {x: var} (te: tm x) (sq: seq x): $ {x/te} (Q sq) ⟺ Q (subst x / te sq) $;
+axiom sb_f_Q {x: var} (te: tm x) (sq: seq x): $ {x / te} (Q sq) ⟺ Q (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_R {x: var} (te: tm x) (sq: seq x): $ {x/te} (R sq) ⟺ R (subst x / te sq) $;
+axiom sb_f_R {x: var} (te: tm x) (sq: seq x): $ {x / te} (R sq) ⟺ R (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_S {x: var} (te: tm x) (sq: seq x): $ {x/te} (S sq) ⟺ S (subst x / te sq) $;
+axiom sb_f_S {x: var} (te: tm x) (sq: seq x): $ {x / te} (S sq) ⟺ S (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_T {x: var} (te: tm x) (sq: seq x): $ {x/te} (T sq) ⟺ T (subst x / te sq) $;
+axiom sb_f_T {x: var} (te: tm x) (sq: seq x): $ {x / te} (T sq) ⟺ T (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_U {x: var} (te: tm x) (sq: seq x): $ {x/te} (U sq) ⟺ U (subst x / te sq) $;
+axiom sb_f_U {x: var} (te: tm x) (sq: seq x): $ {x / te} (U sq) ⟺ U (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_V {x: var} (te: tm x) (sq: seq x): $ {x/te} (V sq) ⟺ V (subst x / te sq) $;
+axiom sb_f_V {x: var} (te: tm x) (sq: seq x): $ {x / te} (V sq) ⟺ V (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_W {x: var} (te: tm x) (sq: seq x): $ {x/te} (W sq) ⟺ W (subst x / te sq) $;
+axiom sb_f_W {x: var} (te: tm x) (sq: seq x): $ {x / te} (W sq) ⟺ W (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_X {x: var} (te: tm x) (sq: seq x): $ {x/te} (X sq) ⟺ X (subst x / te sq) $;
+axiom sb_f_X {x: var} (te: tm x) (sq: seq x): $ {x / te} (X sq) ⟺ X (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_Y {x: var} (te: tm x) (sq: seq x): $ {x/te} (Y sq) ⟺ Y (subst x / te sq) $;
+axiom sb_f_Y {x: var} (te: tm x) (sq: seq x): $ {x / te} (Y sq) ⟺ Y (subst x / te sq) $;
 --| @rewrite
-axiom sb_f_Z {x: var} (te: tm x) (sq: seq x): $ {x/te} (Z sq) ⟺ Z (subst x / te sq) $;
+axiom sb_f_Z {x: var} (te: tm x) (sq: seq x): $ {x / te} (Z sq) ⟺ Z (subst x / te sq) $;
 --| @rewrite
 axiom sb_t_f {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (f sq)) ≐ f (subst x / te sq) $;
 --| @rewrite
@@ -654,7 +659,7 @@ axiom eq_intro_nd (ga: ctx) (te: tm): $ ga ⊢ te = te $;
 --| @abstract ph ps ch z te ue
 --| @fresh z
 axiom eq_replace (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z):
-  $ ga ⊢ te = ue $ > $ de ⊢ {z/te} ph $ > $ ga ; de ; si ⊢ {z/ue} ph $;
+  $ ga ⊢ te = ue $ > $ de ⊢ {z / te} ph $ > $ ga ; de ; si ⊢ {z / ue} ph $;
 
 -- Quantifiers. ∀I in textbook form: from Γ ⊢ P(a) conclude Γ ⊢ ∀x P(x),
 -- provided the name a occurs in neither Γ nor P. That proviso is dependency
@@ -665,19 +670,19 @@ axiom eq_replace (ga de si: ctx) {z: var} (te ue: tm) (ph: wff z):
 --| @view {x: var} {a: name} (ga de: ctx x) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∀ x ph $
 --| @recover a ps ph x
 axiom all_intro {x: var} {a: name} (ga de: ctx x) (ph: wff x):
-  $ ga ⊢ {x/a} ph $ > $ ga ; de ⊢ ∀ x ph $;
+  $ ga ⊢ {x / a} ph $ > $ ga ; de ⊢ ∀ x ph $;
 
 --| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ ps $
 --| @recover te ps ph x
 axiom all_elim {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
-  $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ {x/te} ph $;
+  $ ga ⊢ ∀ x ph $ > $ ga ; de ⊢ {x / te} ph $;
 
 --| @view {x: var} (ga de: ctx x) (te: tm) (ph: wff x) (ps: wff): $ ga ⊢ ps $ > $ ga ; de ⊢ ∃ x ph $
 --| @recover te ps ph x
 axiom ex_intro {x: var} (ga de: ctx x) (te: tm) (ph: wff x):
-  $ ga ⊢ {x/te} ph $ > $ ga ; de ⊢ ∃ x ph $;
+  $ ga ⊢ {x / te} ph $ > $ ga ; de ⊢ ∃ x ph $;
 
 --| @view {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ps: wff) (ch: wff x): $ ga ⊢ ∃ x ph $ > $ de ; ps ⊢ ch $ > $ ga ; de ; si ⊢ ch $
 --| @recover a ps ph x
 axiom ex_elim {x: var} {a: name} (ga de si: ctx x) (ph: wff x) (ch: wff x):
-  $ ga ⊢ ∃ x ph $ > $ de ; {x/a} ph ⊢ ch $ > $ ga ; de ; si ⊢ ch $;
+  $ ga ⊢ ∃ x ph $ > $ de ; {x / a} ph ⊢ ch $ > $ ga ; de ; si ⊢ ch $;

@@ -101,6 +101,7 @@ describe("language specs", () => {
       "carnap-prop": [],
       "forallx-calgary-2019": [
         "tsub",
+        "/", // the substitution slash: an engine notation, and no delimiter
         "subst",
         "_",
         "⊢",

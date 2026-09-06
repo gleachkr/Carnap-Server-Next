@@ -1207,10 +1207,10 @@ line the language refuses is told while saving the revision rather than by a
 student who cannot get the editor to accept what it opened with.
 
 So is the **goal**. The `theorem` line is an MM0 declaration, and MM0's own
-math strings are engine text — `∃x` is one token to the engine, `\/` is a
-declared notation it still cannot tokenize (forallx makes `/` a delimiter for
-its `{x/y}` substitution, so the token splits in two), and a forallx sentence
-letter on its own is a term the engine wants an argument for — so writing the goal the way the lines
+math strings are engine text — `∃x` is one token to the engine, and a forallx
+sentence letter on its own is a term the engine wants an argument for (the
+operator spellings themselves, `\/`, `->` and the rest, are ordinary MM0
+notations the engine reads) — so writing the goal the way the lines
 are written, which is the only way a student ever sees it, used to hand the
 engine a declaration it refused, and the refusal surfaced in the widget as an
 "extra proof block with no matching theorem". Now every `$ … $` in the goal

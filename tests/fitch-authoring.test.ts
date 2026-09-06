@@ -249,9 +249,9 @@ describe("a goal written the way the lines are", () => {
   }
 
   test("is frozen in engine text beside itself, and joined into mm0 alone", async () => {
-    // `\/` is a declared notation the engine cannot tokenize (forallx makes
-    // `/` a delimiter for `{x/y}`), and a Calgary sentence letter on its own
-    // is a term wanting its elided argument — so this declaration, which is
+    // A Calgary sentence letter on its own is a term wanting its elided
+    // argument (`\/` and `->` are fine: ordinary MM0 notations), so this
+    // declaration, which is
     // how an author writes the lines below it, was refused by the engine
     // outright until the goal was read.
     const compiled = await compileGoal(

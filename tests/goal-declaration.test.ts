@@ -109,4 +109,32 @@ theorem exelim {x y: var} : $ ∃x F(x) ; ∀x (F(x) → G(x)) ⊢ ∃x G(x) $
       diagnostics.map((one) => String(one.message).split("\n")[0]),
     ).toEqual(["proof block is empty"]);
   });
+
+  test("the ASCII operators reach the engine as tokens, unread", async () => {
+    // `aufbau-proof@1` hands its goal to the engine verbatim, so this is the
+    // case that needs `/` kept out of the theory's engine delimiters: `\/`
+    // and `/\` are declared notations, and they only tokenize if nothing
+    // splits them. The sentence letters take their elided argument by hand,
+    // which is the one thing engine text still asks for.
+    const data =
+      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="raw" points="1"}
+Prove it.
+
+theorem raw : $ P ⊢ P $
+----
+:::
+`);
+    const source = proofTheoryText(data).mm0.replace(
+      /theorem raw[^\n]*$/,
+      "theorem raw : $ P snil \\/ Q snil ; P snil /\\ R snil ⊢ P snil $;",
+    );
+    const result = compiler.compile(source, "raw\n----\n");
+    const diagnostics = result.diagnostics as readonly {
+      readonly message?: unknown;
+    }[];
+
+    expect(
+      diagnostics.map((one) => String(one.message).split("\n")[0]),
+    ).toEqual(["proof block is empty"]);
+  });
 });
