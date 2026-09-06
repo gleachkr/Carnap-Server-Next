@@ -124,6 +124,14 @@ The starter is read the same way at compile time, so an author hears about an
 unreadable line while saving rather than a student meeting an editor that will
 not accept what it opened with.
 
+So is the goal: every `$ … $` in the `theorem` line is read through the
+language and re-printed in engine text (`goalEngineDeclaration` in
+`../aufbau-proof/formulas.ts`), frozen as `goalEngineDecl` beside the
+declaration as written. The join puts the engine form in `mm0` and the written
+one in `source`, so the engine parses `∃x F(x)` and a bare `P` (which it
+otherwise wants as `P snil`) while the student sees what the author typed. A
+goal the language refuses is an `invalid_goal_formula` diagnostic.
+
 It also makes discharge matching notation-insensitive: the translator decides
 which assumption leaves a mark answers to by comparing their formulas as
 strings, and it now compares the *read* ones, so `~P` under a mark and `¬P`

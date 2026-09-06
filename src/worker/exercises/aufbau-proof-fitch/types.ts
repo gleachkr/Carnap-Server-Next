@@ -69,6 +69,10 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *                      the join appends to the system's text. Stored beside the
  *                      key rather than inside the frozen text, because the key
  *                      is per document and the declaration is per exercise
+ *   - `goalEngineDecl` the same declaration with its formulas re-printed in
+ *                      engine text (`goalEngineDeclaration`), which is what the
+ *                      join puts in `mm0` while `source` keeps `goalDecl` as
+ *                      written. Absent where the theory reads nothing
  *   - `system`         which of the document's systems this exercise is set in;
  *                      `source`/`mm0` above are what the join fills in from it.
  *                      Absent in an artifact compiled before the table existed,
@@ -78,6 +82,7 @@ export interface AufbauProofFitchPublicData {
   readonly assumptionRule: string;
   readonly contextSymbol?: string;
   readonly goalDecl?: string;
+  readonly goalEngineDecl?: string;
   readonly goalName: string;
   readonly mm0?: string;
   readonly options: AufbauProofOptions;

@@ -51,6 +51,12 @@ interface SystemText {
  * lets the declaration be appended before or after and give the same answer —
  * so a system costs one copy in the table, not two.
  *
+ * The declaration is the one place the two texts part company: `source` gets
+ * it as the author wrote it, which is what the readers and the student see,
+ * and `mm0` gets the engine form the compiler froze beside it
+ * (`goalEngineDecl`, see `goalEngineDeclaration`) where the theory reads —
+ * the same declaration otherwise.
+ *
  * Both fields always arrive, and that is deliberate: the three shaped proof
  * types read `source` through `proofTheoryText` and get surface formulas, while
  * the plain `aufbau-proof` type reads `mm0` and goes on being written in engine
@@ -60,18 +66,24 @@ interface SystemText {
  * the two are the same bytes, and every reader that could care re-asks the spec
  * rather than trusting a field's absence.
  */
-function systemText(source: string, declaration: string): SystemText {
-  const suffix = declaration.length === 0 ? "" : `\n${declaration}`;
+function systemText(
+  source: string,
+  declaration: string,
+  engineDeclaration: string,
+): SystemText {
+  const suffix = (text: string): string =>
+    text.length === 0 ? "" : `\n${text}`;
 
   return {
-    mm0: `${stripSyntaxAnnotations(source)}${suffix}`,
-    source: `${source}${suffix}`,
+    mm0: `${stripSyntaxAnnotations(source)}${suffix(engineDeclaration)}`,
+    source: `${source}${suffix(declaration)}`,
   };
 }
 
 /** What an exercise's `publicData` says about the system it is set in. */
 interface KeyedData {
   readonly goalDecl?: unknown;
+  readonly goalEngineDecl?: unknown;
   readonly system?: unknown;
 }
 
@@ -105,11 +117,16 @@ export function withSystemText(
     return publicData;
   }
 
-  const declaration = (publicData as KeyedData).goalDecl;
+  const { goalDecl, goalEngineDecl } = publicData as KeyedData;
+  const declaration = typeof goalDecl === "string" ? goalDecl : "";
 
   return {
     ...(publicData as Record<string, JsonValue>),
-    ...systemText(source, typeof declaration === "string" ? declaration : ""),
+    ...systemText(
+      source,
+      declaration,
+      typeof goalEngineDecl === "string" ? goalEngineDecl : declaration,
+    ),
   };
 }
 

@@ -23,6 +23,7 @@ import {
   goalBinderWarnings,
   parseProofOptions,
   parseTheoremHeader,
+  readGoalDeclaration,
   requireSystem,
   starterFormulaReader,
   unreadableStarterFormula,
@@ -181,6 +182,15 @@ export async function compileAufbauProofPrawitz(
   // author decides.
   diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
+  // The goal is read the way the lines are (`goalEngineDeclaration`): the
+  // engine is handed what it can parse, and what it cannot is the author's
+  // to hear about here rather than the widget's to refuse.
+  const goal = readGoalDeclaration(theory, header, goalLine, diagnostics);
+
+  if (goal === null) {
+    return null;
+  }
+
   // An optional `----` + starter body pre-populates the editor. A starter that
   // fails to parse — or whose discharge structure the translator rejects —
   // fails the compile with author feedback, not the student's error banner.
@@ -253,6 +263,7 @@ export async function compileAufbauProofPrawitz(
   const publicData: AufbauProofPrawitzPublicData = {
     assumptionRule,
     contextSymbol,
+    ...goal,
     goalDecl: header.theoremDecl,
     goalFormula: header.goalFormula,
     goalName: header.goalName,

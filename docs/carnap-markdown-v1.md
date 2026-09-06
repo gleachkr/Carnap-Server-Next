@@ -1206,6 +1206,28 @@ A **starter** is read the same way at compile time, so an author who writes a
 line the language refuses is told while saving the revision rather than by a
 student who cannot get the editor to accept what it opened with.
 
+So is the **goal**. The `theorem` line is an MM0 declaration, and MM0's own
+math strings are engine text — `∃x` is one token to the engine, `\/` is a
+declared notation it still cannot tokenize (forallx makes `/` a delimiter for
+its `{x/y}` substitution, so the token splits in two), and a forallx sentence
+letter on its own is a term the engine wants an argument for — so writing the goal the way the lines
+are written, which is the only way a student ever sees it, used to hand the
+engine a declaration it refused, and the refusal surfaced in the widget as an
+"extra proof block with no matching theorem". Now every `$ … $` in the goal
+is read through the system's language and re-printed for the engine: `theorem
+cd: $ P \/ Q ; P -> S ; Q -> S ⊢ S $` and `theorem exelim {x: var}: $ ∃x F(x) ;
+∀x (F(x) → G(x)) ⊢ ∃x G(x) $` both declare cleanly, and the student sees the
+statement as you wrote it. A goal formula the language refuses is an
+`invalid_goal_formula` diagnostic on the goal's line, carrying the parser's own
+complaint. The reading is at the sort a tree node reads at — the turnstile's,
+where the system declares one — falling back to the sentence sort, so a bare
+`theorem t: $ P → P $` over forallx reads too. The lints a student's line is
+held to — bracket discipline, chain refusal, closed sentences — are not applied
+to a goal, so `(∀ x F(x)) ∧ G(a)` reads there where a line must say `∀ x F(x)
+∧ G(a)`; what is refused is what is not the language at all — an explicit
+`snil`, or `F a` juxtaposed where the language spells `F(a)`. `aufbau-proof` is exempt on the same terms as its
+lines.
+
 ## Aufbau-proof-tree directive
 
 Use `aufbau-proof-tree` for the **same engine-checked proof, built as a tree**

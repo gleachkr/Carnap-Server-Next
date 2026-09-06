@@ -11,7 +11,10 @@ import {
   EXERCISE_HYDRATION_VERSION,
   exerciseHydrationScript,
 } from "../src/worker/exercises/hydration";
-import { keyedArtifact } from "../src/worker/exercises/systems";
+import {
+  keyedArtifact,
+  withSystemText,
+} from "../src/worker/exercises/systems";
 import { truthTableLanguage } from "../src/worker/exercises/truth-table/logic";
 import { resolveMessage } from "../src/worker/i18n/translator";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
@@ -116,6 +119,29 @@ describe("the document's systems table", () => {
     const data = publicDataOf(read, "ex1");
 
     expect(data.source).toBe(`${FORALLX_SOURCE}\n${data.goalDecl as string}`);
+  });
+
+  test("the join hands the engine the goal it froze in engine text, and everyone else the written one", () => {
+    const written = "theorem t : $ P -> P $;";
+    const engine = "theorem t : $ ((P (snil)) → (P (snil))) $;";
+    const joined = withSystemText(
+      { goalDecl: written, goalEngineDecl: engine, system: "s" },
+      { s: "--| @syntax role sentence\nsort wff;" },
+    ) as { readonly mm0: string; readonly source: string };
+
+    expect(joined.mm0).toBe(`sort wff;\n${engine}`);
+    expect(joined.source).toBe(
+      `--| @syntax role sentence\nsort wff;\n${written}`,
+    );
+
+    // With nothing frozen beside it — a theory that reads nothing — the
+    // written declaration is what the engine gets.
+    const plain = withSystemText(
+      { goalDecl: written, system: "s" },
+      { s: "sort wff;" },
+    ) as { readonly mm0: string };
+
+    expect(plain.mm0).toBe(`sort wff;\n${written}`);
   });
 
   test("a lesson set in no system carries no table and is unchanged", async () => {

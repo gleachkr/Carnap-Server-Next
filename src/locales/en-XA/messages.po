@@ -1128,6 +1128,10 @@ msgstr ""
 msgid "Could not parse formula “{formula}”: {detail}"
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Could not parse the goal's formula “{formula}”: {detail}"
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "Could not read the value of {field}."
 msgstr ""

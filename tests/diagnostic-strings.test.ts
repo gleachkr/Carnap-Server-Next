@@ -58,6 +58,10 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
     "::::aufbau-proof{#p points=1}\nno header here\n::::",
   ],
   [
+    "unreadable goal formula",
+    ':::aufbau-proof-fitch{system="forallx-calgary-2019" id="g" points="1"}\ntheorem g : $ P ∧ ⊢ Q $\n----\n:::',
+  ],
+  [
     // The block alone: a spec-read failure is now the block's own diagnostic,
     // so this needs no exercise to be set in it.
     "a name the delimiters split",

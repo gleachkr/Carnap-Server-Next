@@ -1128,6 +1128,10 @@ msgstr "„{line}“ konnte nicht gelesen werden. Jede Vorlagenzeile muss die Fo
 msgid "Could not parse formula “{formula}”: {detail}"
 msgstr "Die Formel „{formula}“ konnte nicht gelesen werden: {detail}"
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Could not parse the goal's formula “{formula}”: {detail}"
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "Could not read the value of {field}."
 msgstr "Der Wert von {field} konnte nicht gelesen werden."

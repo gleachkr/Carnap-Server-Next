@@ -48,7 +48,13 @@
  * string map to word.
  */
 
-import type { AssertStatement, Scope, Statement } from "@aufbau/syntax";
+import type {
+  AssertStatement,
+  Diagnostic,
+  MathString,
+  Scope,
+  Statement,
+} from "@aufbau/syntax";
 import {
   parseSpec,
   printTerm,
@@ -224,6 +230,13 @@ export function proofFormulaReader(
  * both would put a second copy of a 30 KB artifact in the page for every
  * exercise set from it.
  *
+ * Where both arrive, `mm0` wins, and that is the join's doing rather than a
+ * frozen duplicate: `withSystemText` builds it with the goal declaration in
+ * engine text (`goalEngineDecl`) while `source` keeps the declaration as
+ * written, and stripping the one would not give the other. A `source` alone
+ * is an artifact frozen before the table, whose declaration was engine text
+ * to begin with.
+ *
  * A `source` of `null` is the honest state of an artifact compiled before
  * `source` existed, which froze the stripped text and nothing else; there is
  * no language to read it in and it goes on as engine text. Every artifact
@@ -234,7 +247,10 @@ export function proofTheoryText(data: {
   readonly source?: string;
 }): { readonly mm0: string; readonly source: string | null } {
   if (data.source !== undefined) {
-    return { mm0: stripSyntaxAnnotations(data.source), source: data.source };
+    return {
+      mm0: data.mm0 ?? stripSyntaxAnnotations(data.source),
+      source: data.source,
+    };
   }
 
   return { mm0: data.mm0 ?? "", source: null };
@@ -464,15 +480,19 @@ export function goalBinderScope(
   source: string | null | undefined,
   goalName: string,
 ): Scope {
-  const scope = new Map<string, string>();
-
   const read =
     source === null || source === undefined ? null : proofLanguage(source);
+  const goal =
+    read === null ? null : findGoal(read.language.spec.statements, goalName);
 
-  for (const binder of findGoal(
-    read?.language.spec.statements ?? [],
-    goalName,
-  )?.binders ?? []) {
+  return goal === null ? new Map() : binderScope(goal);
+}
+
+/** A goal's own binders, name to sort; a hypothesis binder binds no name. */
+function binderScope(goal: AssertStatement): Scope {
+  const scope = new Map<string, string>();
+
+  for (const binder of goal.binders) {
     if ("sort" in binder.type) {
       scope.set(binder.name, binder.type.sort);
     }
@@ -540,4 +560,165 @@ export function goalStatementText(
   return [...goal.hypotheses, goal.conclusion]
     .map((part) => ("text" in part ? part.text.trim() : part.sort))
     .join(" > ");
+}
+
+/** One `$ … $` of a goal declaration that the theory's language refused. */
+export interface GoalFormulaProblem {
+  readonly error: SpecFormulaError;
+  /** The text that would not read, as the author wrote it. */
+  readonly formula: string;
+}
+
+export type GoalDeclarationReading =
+  | { readonly ok: true; readonly declaration: string }
+  | { readonly ok: false; readonly problems: readonly GoalFormulaProblem[] };
+
+/**
+ * The goal's declaration with every `$ … $` in it read through the theory's
+ * language and re-printed in engine text, or `null` where the theory names no
+ * sort to read at — the same condition that leaves a proof's *lines* alone.
+ *
+ * A declaration is MM0, and MM0's own math strings are engine text: `∃x` is
+ * one token to the engine, and a Calgary sentence letter `P` is a term
+ * wanting its elided argument. (The operator spellings are not the problem:
+ * `\/`, `->` and the rest are ordinary MM0 notations, and the engine reads
+ * them once no delimiter splits them — which is why the forallx theories keep
+ * `/` out of their engine delimiters.) So
+ * an author writing the goal the way they write the lines — which is the
+ * only way a student ever sees it — got a declaration the engine refused,
+ * and the refusal surfaced as the widget's "extra proof block with no
+ * matching theorem". Reading the goal the way the lines are read closes both
+ * halves of that: the engine is handed what it can parse, and what it cannot
+ * is an authoring diagnostic with the parser's own complaint.
+ *
+ * What is rewritten is the math strings alone — hypothesis binders,
+ * `>`-chain hypotheses, the conclusion — spliced back into the declaration's
+ * own text, so the name, the binders and the shape of the statement stay the
+ * author's. Each reads at the sort a tree node reads at (the turnstile's, or
+ * the sentence's where there is none); a goal stated as a bare sentence over
+ * a theory that also has a turnstile falls back to the sentence sort, since
+ * `⊢ P → P` and `P → P` are both things such a theory can be asked to prove.
+ *
+ * Read without the lints. Bracket discipline, chain refusal and closed
+ * sentences are the conventions a student's *line* is held to, and a goal is
+ * not a student's line: `(∀ x F(x)) ∧ G(a)` is not the book's spelling, but it
+ * is grammatical, it means what the engine will take it to mean, and it is
+ * the author's to show. What is refused is what is not the language at all —
+ * an explicit `snil`, or `F a` juxtaposed where the language spells `F(a)` —
+ * since a goal the student could not type in any spelling is not a goal to
+ * hand them. Fully parenthesized text, engine output included, reads. `aufbau-proof` never calls this, its
+ * students typing engine text by definition.
+ */
+export function goalEngineDeclaration(
+  source: string | null | undefined,
+  goalName: string,
+): GoalDeclarationReading | null {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+  const goal =
+    read === null ? null : findGoal(read.language.spec.statements, goalName);
+  const judgement = read === null ? undefined : sortFor(read, "sequent");
+
+  if (
+    source === null ||
+    source === undefined ||
+    read === null ||
+    goal === null ||
+    judgement === undefined
+  ) {
+    return null;
+  }
+
+  const { language } = read;
+  const scope = binderScope(goal);
+  const sorts =
+    read.sentence === undefined || read.sentence === judgement
+      ? [judgement]
+      : [judgement, read.sentence];
+  const problems: GoalFormulaProblem[] = [];
+  let declaration = "";
+  let cursor = goal.span.start;
+
+  for (const formula of goalFormulas(goal)) {
+    const reading = readAtSorts(language, formula.text, scope, sorts);
+
+    declaration += source.slice(cursor, formula.span.start);
+
+    if (reading.ok) {
+      declaration += `$ ${reading.text} $`;
+    } else {
+      for (const error of reading.errors) {
+        problems.push({ error, formula: formula.text.trim() });
+      }
+      declaration += source.slice(formula.span.start, formula.span.end);
+    }
+
+    cursor = formula.span.end;
+  }
+
+  declaration += source.slice(cursor, goal.span.end);
+
+  return problems.length > 0
+    ? { ok: false, problems }
+    : { declaration, ok: true };
+}
+
+/** Every math string a goal declaration carries, in source order. */
+function goalFormulas(goal: AssertStatement): readonly MathString[] {
+  const formulas: MathString[] = [];
+
+  for (const binder of goal.binders) {
+    if ("text" in binder.type) {
+      formulas.push(binder.type);
+    }
+  }
+
+  for (const hypothesis of goal.hypotheses) {
+    if ("text" in hypothesis) {
+      formulas.push(hypothesis);
+    }
+  }
+
+  formulas.push(goal.conclusion);
+
+  return formulas.sort(
+    (first, second) => first.span.start - second.span.start,
+  );
+}
+
+/**
+ * Read `text` at the first of `sorts` it reads at.
+ *
+ * A refusal that is *only* a sort mismatch means the text read as a term of
+ * some other sort, which the next sort may be; anything else is the parser's
+ * real complaint. When nothing reads, the complaint reported is the first
+ * that was more than a mismatch, and the first attempt's otherwise.
+ */
+function readAtSorts(
+  language: SurfaceLanguage,
+  text: string,
+  scope: Scope,
+  sorts: readonly string[],
+): ProofFormulaReading {
+  const refusals: (readonly Diagnostic[])[] = [];
+
+  for (const sort of sorts) {
+    const result = language.parse(text, { lints: false, scope, sort });
+
+    if (result.ok) {
+      return { ok: true, text: printTerm(language, result.term, "engine") };
+    }
+
+    refusals.push(result.diagnostics);
+  }
+
+  const refusal =
+    refusals.find(
+      (diagnostics) =>
+        !diagnostics.every((one) => one.id === "term_not_sentence"),
+    ) ??
+    refusals[0] ??
+    [];
+
+  return { errors: formulaParseErrors(refusal), ok: false };
 }

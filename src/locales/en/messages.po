@@ -1128,6 +1128,10 @@ msgstr "Could not parse “{line}”. Each starter line must read '<label>: $ <f
 msgid "Could not parse formula “{formula}”: {detail}"
 msgstr "Could not parse formula “{formula}”: {detail}"
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Could not parse the goal's formula “{formula}”: {detail}"
+msgstr "Could not parse the goal's formula “{formula}”: {detail}"
+
 #: src/worker/exercises/model/strings.ts
 msgid "Could not read the value of {field}."
 msgstr "Could not read the value of {field}."

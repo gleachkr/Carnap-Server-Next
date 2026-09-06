@@ -47,7 +47,7 @@ first), and apply \`imp_elim\` below them.
 :::aufbau-proof-prawitz{system="forallx" id="pz_mp" title="Modus ponens" points="1"}
 Derive \`b\` from \`a → b\` and \`a\`.
 
-theorem mp (a b: wff): $ (a → b) , a ⊢ b $
+theorem mp (a b: wff): $ (a → b) ; a ⊢ b $
 :::
 
 ## 2. Conditional introduction
@@ -104,17 +104,17 @@ theorem kcomb (a b: wff): $ a ⊢ b → a $
 
 ## 6. Existential elimination
 
-First-order rules ride through unchanged. From \`∃ x (F x)\`, assume a fresh
-witness \`F y\` under label \`1\`; get \`F y → G y\` by \`all_elim\`, then
-\`G y\` by \`imp_elim\`, then \`∃ x (G x)\` by \`ex_intro\`. Finish with
+First-order rules ride through unchanged. From \`∃ x F(x)\`, assume a fresh
+witness \`F(b)\` under label \`1\`; get \`F(b) → G(b)\` by \`all_elim\`, then
+\`G(b)\` by \`imp_elim\`, then \`∃ x G(x)\` by \`ex_intro\`. Finish with
 \`ex_elim\` below the existential premise and that derivation (in that
 order), discharging the witness — the eigenvariable condition is checked by
 the engine.
 
 :::aufbau-proof-prawitz{system="forallx" id="pz_exelim" title="Existential elimination" points="1"}
-Derive \`∃ x (G x)\` from \`∃ x (F x)\` and \`∀ x (F x → G x)\`.
+Derive \`∃ x G(x)\` from \`∃ x F(x)\` and \`∀ x (F(x) → G(x))\`.
 
-theorem exelim {x y: tm}: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (G x) $
+theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 :::
 
 ## 7. Finish a started tree

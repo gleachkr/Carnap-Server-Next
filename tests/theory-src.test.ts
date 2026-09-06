@@ -95,8 +95,10 @@ describe("aufbau-mm0 src", () => {
     expect(FORALLX_SOURCE.length).toBeGreaterThan(1000);
     expect(FORALLX_SOURCE).toContain("--| @syntax");
     expect(FORALLX_FROZEN).not.toContain("--| @syntax");
+    // The goal arrives in engine text — read through the language and
+    // re-printed (#279) — after the frozen theory.
     expect(mm0).toBe(
-      `${FORALLX_FROZEN}\ntheorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $;`,
+      `${FORALLX_FROZEN}\ntheorem andcomm (P Q: wff): $ ((P ∧ Q) ⊢ (Q ∧ P)) $;`,
     );
   });
 
@@ -117,7 +119,7 @@ term Cube (x: tm): wff;
 
 --| @congr
 axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
-theorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $;`,
+theorem andcomm (P Q: wff): $ ((P ∧ Q) ⊢ (Q ∧ P)) $;`,
     );
   });
 

@@ -71,6 +71,7 @@ export interface ProofTreeNode {
  */
 export interface AufbauProofTreePublicData {
   readonly goalDecl?: string;
+  readonly goalEngineDecl?: string;
   readonly goalFormula: string;
   readonly goalName: string;
   readonly mm0?: string;

@@ -23,6 +23,7 @@ import {
   goalBinderWarnings,
   parseProofOptions,
   parseTheoremHeader,
+  readGoalDeclaration,
   requireSystem,
   starterFormulaReader,
   unreadableStarterFormula,
@@ -108,6 +109,15 @@ export async function compileAufbauProofTree(
   // author decides.
   diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
+  // The goal is read the way the lines are (`goalEngineDeclaration`): the
+  // engine is handed what it can parse, and what it cannot is the author's
+  // to hear about here rather than the widget's to refuse.
+  const goal = readGoalDeclaration(theory, header, goalLine, diagnostics);
+
+  if (goal === null) {
+    return null;
+  }
+
   // An optional `----` + `.auf` body pre-populates the tree. A body that parses
   // to a graph (or is otherwise malformed) fails the compile with author feedback.
   let starterTree: ProofTreeNode | undefined;
@@ -161,6 +171,7 @@ export async function compileAufbauProofTree(
   }
 
   const publicData: AufbauProofTreePublicData = {
+    ...goal,
     goalDecl: header.theoremDecl,
     goalFormula: header.goalFormula,
     goalName: header.goalName,

@@ -183,6 +183,10 @@ export function buildDiagnosticStrings(i18n: Translator) {
       "Could not parse formula “{formula}”: {detail}",
       placeholders("detail", "formula"),
     ),
+    "Could not parse the goal's formula “{formula}”: {detail}": i18n.t(
+      "Could not parse the goal's formula “{formula}”: {detail}",
+      placeholders("detail", "formula"),
+    ),
     "Expected ')'.": i18n.t("Expected ')'."),
     "Expected '->' (conditional).": i18n.t("Expected '->' (conditional)."),
     "Expected '/\\' (conjunction).": i18n.t("Expected '/\\' (conjunction)."),

@@ -101,6 +101,7 @@ export interface AufbauProofPrawitzPublicData {
   readonly assumptionRule: string;
   readonly contextSymbol?: string;
   readonly goalDecl?: string;
+  readonly goalEngineDecl?: string;
   readonly goalFormula: string;
   readonly goalName: string;
   readonly mm0?: string;

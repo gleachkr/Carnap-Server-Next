@@ -35,6 +35,7 @@ import {
 import type { ProofFormulaReader, ProofFormulaShape } from "./formulas";
 import {
   goalBinderShadows,
+  goalEngineDeclaration,
   proofFormulaReader,
   theoryLanguageSource,
 } from "./formulas";
@@ -127,6 +128,48 @@ export function starterFormulaReader(
     shape,
     header.goalName,
   );
+}
+
+/**
+ * The goal declaration as the engine will be handed it, or `null` after
+ * reporting every formula in it the theory's language refused.
+ *
+ * `{}` where the theory names no sort to read at: the declaration then goes
+ * to the engine as written, and nothing is frozen beside it. Spread the
+ * result into `publicData`, so that `goalEngineDecl` exists exactly when a
+ * reading happened — which is what the join keys on.
+ */
+export function readGoalDeclaration(
+  theory: AufbauTheory,
+  header: TheoremHeader,
+  line: number,
+  diagnostics: CompilerDiagnostic[],
+): { readonly goalEngineDecl?: string } | null {
+  const reading = goalEngineDeclaration(
+    theoryLanguageSource(theory, header.theoremDecl),
+    header.goalName,
+  );
+
+  if (reading === null) {
+    return {};
+  }
+
+  if (reading.ok) {
+    return { goalEngineDecl: reading.declaration };
+  }
+
+  for (const problem of reading.problems) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "invalid_goal_formula",
+        "Could not parse the goal's formula “{formula}”: {detail}",
+        { params: { detail: problem.error, formula: problem.formula } },
+      ),
+    );
+  }
+
+  return null;
 }
 
 /**

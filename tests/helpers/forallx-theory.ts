@@ -12,6 +12,7 @@
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import type { ProofFormulaReader } from "../../src/worker/exercises/aufbau-proof/formulas";
 import {
+  goalEngineDeclaration,
   proofFormulaReader,
   proofTheoryText,
 } from "../../src/worker/exercises/aufbau-proof/formulas";
@@ -61,8 +62,29 @@ export function forallxExercise(
   readonly mm0: string;
   readonly readSentence: ProofFormulaReader;
 } {
+  // The goal is frozen twice over, as the compiler freezes it: as written,
+  // for the readers and the student, and in engine text for the engine. A
+  // goal the language refuses is thrown here, since the compiler would have
+  // refused the exercise.
+  const goal = goalEngineDeclaration(
+    `${FORALLX_THEORY_SOURCE}\n${theoremDecl}`,
+    goalName,
+  );
+
+  if (goal !== null && !goal.ok) {
+    throw new Error(
+      `the goal of ${goalName} does not read: ${goal.problems
+        .map((problem) => problem.error.message)
+        .join("; ")}`,
+    );
+  }
+
   const frozen = withSystemText(
-    { goalDecl: theoremDecl, system: "forallx" },
+    {
+      goalDecl: theoremDecl,
+      ...(goal === null ? {} : { goalEngineDecl: goal.declaration }),
+      system: "forallx",
+    },
     { forallx: FORALLX_THEORY_SOURCE },
   );
   const resolved = proofTheoryText(frozen as { readonly source?: string });
