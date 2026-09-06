@@ -26,14 +26,26 @@ export interface PageAction {
 }
 
 /**
- * One link in the breadcrumb trail rendered under the navbar. The trail holds
+ * One step in the breadcrumb trail rendered under the navbar. The trail holds
  * only ancestors; the current page is the shell `title`, rendered as the final
  * non-linked crumb.
+ *
+ * `href` is optional because a reader can be somewhere whose ancestor is not
+ * theirs to open — a shared content revision, whose item page belongs to its
+ * author. Such a crumb still orients (it names the lesson this revision is a
+ * revision of); it simply does not offer a link that would answer 404.
  */
 export interface Crumb {
-  readonly href: string;
+  readonly href?: string;
   readonly label: string;
 }
+
+/**
+ * A crumb that definitely links somewhere — what every builder in
+ * `./breadcrumbs` returns. Callers reuse a crumb's `href` for the page's own
+ * "cancel" link, and that has to stay a string.
+ */
+export type LinkedCrumb = Crumb & { readonly href: string };
 
 export interface ShellOptions {
   readonly actions?: readonly PageAction[];
@@ -199,9 +211,13 @@ const Layout: FC<LayoutProps> = ({
             <nav aria-label={i18n.t("Breadcrumb")} class="breadcrumb">
               {breadcrumb.map((crumb) => (
                 <>
-                  <a class="breadcrumb-link" href={crumb.href}>
-                    {crumb.label}
-                  </a>
+                  {crumb.href === undefined ? (
+                    <span class="breadcrumb-current">{crumb.label}</span>
+                  ) : (
+                    <a class="breadcrumb-link" href={crumb.href}>
+                      {crumb.label}
+                    </a>
+                  )}
                   <span aria-hidden="true" class="breadcrumb-sep">
                     ›
                   </span>

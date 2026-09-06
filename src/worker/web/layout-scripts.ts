@@ -475,6 +475,50 @@ export const GATED_FIELD_SCRIPT = `
   }
 })();`;
 
+/**
+ * A note that follows a choice: one line per option, and the one belonging to
+ * the selected option is the one on screen.
+ *
+ * The select names the group (`data-choice-notes`, the field's own name) and
+ * each note says which option it belongs to (`data-choice-note` for the group,
+ * `data-choice-value` for the option); they are matched inside the select's
+ * own form, so a page carrying one of these dialogs per table row needs no ids
+ * to keep them apart.
+ *
+ * Every line is server-rendered, with the stored answer's line visible and the
+ * rest `hidden`. Whoever has no script reads the true state of the thing they
+ * are looking at and simply does not see the others move — which is why the
+ * notes are prose in the markup rather than strings in here, where no
+ * translation reaches.
+ */
+const CHOICE_NOTE_SCRIPT = `
+(() => {
+  for (const select of document.querySelectorAll("select[data-choice-notes]")) {
+    const group = select.dataset.choiceNotes;
+
+    if (!group || !select.form) {
+      continue;
+    }
+
+    const notes = select.form.querySelectorAll(
+      '[data-choice-note="' + group + '"]',
+    );
+
+    if (notes.length === 0) {
+      continue;
+    }
+
+    const apply = () => {
+      for (const note of notes) {
+        note.hidden = note.dataset.choiceValue !== select.value;
+      }
+    };
+
+    select.addEventListener("change", apply);
+    apply();
+  }
+})();`;
+
 const TIMEZONE_INPUT_SCRIPT = `
 (() => {
   // A course's timezone, read off the clock the reader is looking at instead of
@@ -698,6 +742,7 @@ export const SHELL_SCRIPT = [
   REVISION_OPTION_SCRIPT,
   TIMESTAMP_INPUT_SCRIPT,
   GATED_FIELD_SCRIPT,
+  CHOICE_NOTE_SCRIPT,
   TIMEZONE_INPUT_SCRIPT,
   CLIPBOARD_SCRIPT,
   TABLE_SORT_SCRIPT,

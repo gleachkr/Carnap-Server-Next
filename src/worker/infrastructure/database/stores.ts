@@ -66,6 +66,7 @@ import type {
   SetGradesVisibleAtInput,
   UnpublishAssignmentInput,
   UpdateAssignmentInput,
+  UpdateContentRevisionSharingInput,
   UpdateCourseInfoInput,
   UpdateCourseMembershipRoleInput,
   UpdateCourseMembershipStatusInput,
@@ -176,6 +177,8 @@ function mapContentRevision(row: typeof contentRevisions.$inferSelect) {
     itemId: row.itemId,
     revisionNumber: row.revisionNumber,
     details: row.details,
+    sharing: row.sharing,
+    shareSource: row.shareSource,
     sourceFormat: row.sourceFormat,
     sourceText: row.sourceText,
     contentHash: row.contentHash,
@@ -1249,6 +1252,20 @@ class SqliteContentStore implements ContentStore {
     );
 
     return row === null ? null : mapContentRevision(row);
+  }
+
+  async updateRevisionSharing(
+    input: UpdateContentRevisionSharingInput,
+  ): Promise<ContentRevision> {
+    return mapContentRevision(
+      single(
+        await this.db
+          .update(contentRevisions)
+          .set({ sharing: input.sharing, shareSource: input.shareSource })
+          .where(eq(contentRevisions.id, input.id))
+          .returning(),
+      ),
+    );
   }
 
   async listRevisionsForItem(itemId: AppId): Promise<ContentRevision[]> {

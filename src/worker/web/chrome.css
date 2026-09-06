@@ -879,8 +879,13 @@ a.score-uncounted {
   min-width: 0;
 }
 
+/* Hold its width, and drop the `form button` top margin from the content
+   layer: inside a form that margin pushes the button down out of line with
+   the input it copies, and the stretch that would otherwise match their
+   heights cannot see past it. */
 .copy-field button {
   flex: none;
+  margin: 0;
 }
 
 /* Dialogs */
@@ -926,12 +931,17 @@ a.score-uncounted {
   margin: 0;
 }
 
+/* The close button is inside the dialog's form, so it inherits the content
+   layer's `form button` top margin and hangs below the heading it is meant
+   to sit level with. Every modal header has it; the margin is for a submit
+   ending a stack of fields, which this is not. */
 .modal-dialog-header button {
   background: transparent;
   border: 0;
   color: var(--ink-muted);
   font-size: 1.4rem;
   line-height: 1;
+  margin: 0;
   min-height: 0;
   padding: 0.1rem 0.4rem;
 }
@@ -953,7 +963,12 @@ a.score-uncounted {
   bottom: 0.3rem;
 }
 
+/* An icon button is the bare glyph, whichever element carries it: the content
+   layer's `button:hover` would paint a blue pill behind three of these and
+   nothing behind the download, which is an anchor. The hover is said by the
+   duotone foreground below, and that reaches both. */
 .icon-button:hover {
+  background: transparent;
   filter: none;
 }
 

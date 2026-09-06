@@ -833,9 +833,20 @@ lesson is saved, so the address is resolved once, by you, at authoring time.
 A student's browser never asks for it, and nothing in an assignment depends on
 it still being there.
 
-**It is yours alone.** A hosted theory is readable by its owner: you can name
-your own from your own lessons, and nobody else can name yours. Sharing one
-with a colleague means sending them the source to host themselves.
+**It is yours until you share it, one revision at a time.** A saved revision
+starts readable by its owner alone. Each row of the item's revision list
+carries a sharing control — keep it to yourself, open it to anyone on this site
+who writes content, or make it public — and whoever the scope admits can name
+*that* address from their own lessons. Sharing revision 7 shares revision 7:
+the drafts behind it stay yours, and so does the next one you save.
+
+Two things follow from the freeze, and the control says both. Sharing is
+checked when a colleague *saves* something that names your revision, so
+narrowing the scope afterwards leaves their saved lessons exactly as they are:
+nothing breaks, and nothing comes back. And what they saved carries the text —
+their students read your MM0 out of their lesson, because that is where it was
+frozen. There is no scope that lets a colleague name a theory without passing
+its text on.
 
 **A theory can be a language too.** If the file gives its sentence sort
 `@syntax role sentence`, the revision page says so, and formulas written

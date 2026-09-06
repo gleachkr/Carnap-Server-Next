@@ -73,6 +73,20 @@ export const DownloadIcon: FC = () => (
   </Icon>
 );
 
+/**
+ * solar:users-group-rounded-bold-duotone — a near figure in front of a further
+ * one, which is the split the two duotone layers are for. It marks the sharing
+ * control, where the question is who else is in the room.
+ */
+export const PeopleIcon: FC = () => (
+  <Icon>
+    <circle class="icon-duo-back" cx="15" cy="6" r="3" />
+    <ellipse class="icon-duo-back" cx="16" cy="17" rx="5" ry="3" />
+    <circle class="icon-duo-fore" cx="9.001" cy="6" r="4" />
+    <ellipse class="icon-duo-fore" cx="9.001" cy="17.001" rx="7" ry="4" />
+  </Icon>
+);
+
 /** solar:crown-bold-duotone */
 export const CrownIcon: FC = () => (
   <Icon>

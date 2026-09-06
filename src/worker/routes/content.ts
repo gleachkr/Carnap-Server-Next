@@ -1,12 +1,13 @@
 import { type Context, Hono } from "hono";
 import { raw } from "hono/html";
 
+import type { AuthenticatedActor } from "../application/auth";
 import {
   canAuthorContent,
   requireAuthenticated,
   requireContentAuthor,
 } from "../application/authorization";
-import { ContentService } from "../application/content";
+import { ContentService, canReadSource } from "../application/content";
 import {
   contentArtifactFromRevision,
   theoryArtifactFromRevision,
@@ -59,12 +60,26 @@ import { resolveUsers } from "../web/users";
  * A day, then revalidate. Longer than the built-in theories' hour because a
  * revision's bytes cannot change at all — only a deploy can change theirs —
  * and the ETag makes the asking cheap either way.
+ *
+ * Whether a shared cache may keep a copy is the revision's scope, decided per
+ * response rather than once for the route: a public theory is the same bytes
+ * for everyone who can ask, and anything narrower is answered per reader. That
+ * is a deliberate decision about CDNs, not a side effect of one — get it wrong
+ * in the generous direction and a cache hands an author's private theory to
+ * the next person who asks for the URL.
  */
-const THEORY_SOURCE_CACHE_CONTROL = "private, max-age=86400, must-revalidate";
+function theorySourceCacheControl(revision: ContentRevision): string {
+  return `${revision.sharing === "public" ? "public" : "private"}, max-age=86400, must-revalidate`;
+}
 
 interface CreateContentBody {
   readonly sourceFormat?: unknown;
   readonly title?: unknown;
+}
+
+interface SetSharingBody {
+  readonly shareSource?: unknown;
+  readonly sharing?: unknown;
 }
 
 interface CreateRevisionBody {
@@ -109,6 +124,17 @@ function requiredParam(context: Context<AppBindings>, name: string): string {
   return value;
 }
 
+/**
+ * The login redirect an anonymous request gets, or `null` for a signed-in one.
+ *
+ * Called on the *miss* path now rather than before anything is read: a public
+ * item is readable from the open web, so a read has to happen before it is
+ * known whether signing in is the answer. What has not changed is that a
+ * stranger gets one answer for "no such item" and "not shared with you" —
+ * both are this redirect — because a 404 for one and a redirect for the other
+ * would be the existence oracle every 404 in `ContentService` was written to
+ * close, rebuilt out of status codes.
+ */
 function webActorOrLogin(context: Context<AppBindings>): Response | null {
   if (context.get("actor") !== null) {
     return null;
@@ -117,6 +143,46 @@ function webActorOrLogin(context: Context<AppBindings>): Response | null {
   const next = new URL(context.req.url).pathname;
 
   return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
+}
+
+/**
+ * Who is asking, allowing for nobody. `requireAuthenticated` is still what the
+ * authoring routes call: they have nothing to offer an anonymous request, and
+ * a 401 that does not depend on which id was named tells a stranger nothing.
+ */
+function readingActor(
+  context: Context<AppBindings>,
+): AuthenticatedActor | null {
+  return context.get("actor");
+}
+
+/**
+ * How a content *page* answers a read that found nothing: the service's own
+ * words to somebody signed in, and the login redirect to somebody who is not.
+ * Anything that is not an `AppHttpError` is a fault rather than an answer, and
+ * is rethrown.
+ */
+function contentReadFailure(
+  context: Context<AppBindings>,
+  error: unknown,
+): Response {
+  if (!(error instanceof AppHttpError)) {
+    throw error;
+  }
+
+  const loginRedirect = webActorOrLogin(context);
+
+  if (loginRedirect !== null) {
+    return loginRedirect;
+  }
+
+  const i18n = context.get("i18n");
+
+  return renderContentError(context, {
+    message: error.localize(i18n),
+    status: error.status,
+    title: i18n.t("Content unavailable"),
+  });
 }
 
 function publicContentItem(item: ContentItem) {
@@ -139,6 +205,8 @@ function publicRevision(revision: ContentRevision) {
     id: revision.id,
     itemId: revision.itemId,
     revisionNumber: revision.revisionNumber,
+    shareSource: revision.shareSource,
+    sharing: revision.sharing,
     sourceFormat: revision.sourceFormat,
     sourceText: revision.sourceText,
   };
@@ -176,6 +244,7 @@ function itemNotices(
   return [
     { message: i18n.t("Content item created."), param: "created" },
     { message: i18n.t("Revision created."), param: "revisionCreated" },
+    { message: i18n.t("Sharing updated."), param: "sharingUpdated" },
   ];
 }
 
@@ -232,6 +301,12 @@ async function createContentFromForm(
   }
 }
 
+/**
+ * The item page, which is the owner's: its history, its editor, and the share
+ * control for each revision in it. A scope opens a *revision*, at the address
+ * that names it — so a colleague who was sent one reads it there and has no
+ * business on this page, and `getItem` still answers them with a miss.
+ */
 async function itemPage(context: Context<AppBindings>): Promise<Response> {
   const loginRedirect = webActorOrLogin(context);
 
@@ -257,17 +332,7 @@ async function itemPage(context: Context<AppBindings>): Promise<Response> {
       revisions,
     });
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
-
-      return renderContentError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Content unavailable"),
-      });
-    }
-
-    throw error;
+    return contentReadFailure(context, error);
   }
 }
 
@@ -296,6 +361,42 @@ async function createRevisionFromForm(
     }
 
     throw error;
+  }
+}
+
+/**
+ * Who may read this revision, set from the dialog on its row of the item page.
+ *
+ * A form of its own rather than a field on the revision editor: a revision is
+ * finished when it is saved, and sharing it is a decision about a finished
+ * thing — one an author makes about last term's lesson without opening an
+ * editor or writing anything new.
+ *
+ * It redirects back to the item page, which is where the row is.
+ */
+async function setSharingFromForm(
+  context: Context<AppBindings>,
+): Promise<Response> {
+  const actor = requireAuthenticated(context);
+  const revisionId = requiredParam(context, "revisionId");
+  const form = await context.req.raw.formData();
+
+  try {
+    const revision = await contentService(context).setRevisionSharing(
+      actor,
+      revisionId,
+      {
+        // A checkbox that is off sends nothing at all, which is the same shape
+        // as a form that has no checkbox — an MM0 revision's, where the
+        // setting is meaningless and the service normalizes it away anyway.
+        shareSource: fieldValue(form.get("shareSource")) === "1",
+        sharing: fieldValue(form.get("sharing")),
+      },
+    );
+
+    return redirect(`/content/${revision.itemId}?sharingUpdated=1`);
+  } catch (error) {
+    return contentReadFailure(context, error);
   }
 }
 
@@ -474,19 +575,17 @@ async function revisionEditorSubmit(
 async function revisionPage(
   context: Context<AppBindings>,
 ): Promise<Response> {
-  const loginRedirect = webActorOrLogin(context);
+  let item: ContentItem;
+  let revision: ContentRevision;
 
-  if (loginRedirect !== null) {
-    return loginRedirect;
+  try {
+    ({ item, revision } = await contentService(context).readRevision(
+      readingActor(context),
+      requiredParam(context, "revisionId"),
+    ));
+  } catch (error) {
+    return contentReadFailure(context, error);
   }
-
-  const actor = requireAuthenticated(context);
-  const service = contentService(context);
-  const revision = await service.getRevision(
-    actor,
-    requiredParam(context, "revisionId"),
-  );
-  const item = await service.getItem(actor, revision.itemId);
 
   return renderRevision(context, {
     createdAt: revision.createdAt,
@@ -494,7 +593,15 @@ async function revisionPage(
     itemId: item.id,
     itemTitle: item.title,
     revisionId: revision.id,
-    sourceText: revision.sourceText,
+    // Whether the item page the crumb would lead to is theirs to open. A
+    // colleague reading a shared revision has no page there, so the crumb
+    // names the lesson without linking it rather than offering a 404.
+    owned: item.ownerUserId === readingActor(context)?.user.id,
+    // The page reads; the source is a second permission, and the panel is
+    // simply absent for a reader who does not have it.
+    sourceText: canReadSource(revision, item, readingActor(context))
+      ? revision.sourceText
+      : null,
     // A lesson's compiled form is a document the page frames; a theory's is a
     // summary, and it is read here rather than rendered anywhere else.
     ...(revision.sourceFormat === "mm0"
@@ -518,19 +625,29 @@ async function revisionPage(
 async function revisionSourceDownload(
   context: Context<AppBindings>,
 ): Promise<Response> {
-  const loginRedirect = webActorOrLogin(context);
+  let item: ContentItem;
+  let revision: ContentRevision;
 
-  if (loginRedirect !== null) {
-    return loginRedirect;
+  try {
+    // The source, which is a narrower permission than the reading of it: a
+    // lesson's Markdown carries the accepted answers and the rubric that the
+    // compiled document deliberately withholds.
+    ({ item, revision } = await contentService(context).readRevisionSource(
+      readingActor(context),
+      requiredParam(context, "revisionId"),
+    ));
+  } catch (error) {
+    // A stranger is sent to sign in, as everywhere else; a signed-in reader
+    // gets the error itself rather than a rendered page, because this address
+    // is a file and its caller is a download.
+    const loginRedirect = webActorOrLogin(context);
+
+    if (loginRedirect !== null) {
+      return loginRedirect;
+    }
+
+    throw error;
   }
-
-  const actor = requireAuthenticated(context);
-  const service = contentService(context);
-  const revision = await service.getRevision(
-    actor,
-    requiredParam(context, "revisionId"),
-  );
-  const item = await service.getItem(actor, revision.itemId);
 
   return new Response(revision.sourceText, {
     headers: sourceDownloadHeaders(revision.sourceFormat, {
@@ -576,23 +693,22 @@ async function revisionSourceDownload(
 async function revisionTheorySource(
   context: Context<AppBindings>,
 ): Promise<Response> {
-  const loginRedirect = webActorOrLogin(context);
+  const found = await contentService(context).hostedTheory(
+    readingActor(context),
+    hostedTheoryPath(requiredParam(context, "revisionId")),
+  );
 
-  if (loginRedirect !== null) {
-    return loginRedirect;
+  if (found === null) {
+    // The same answer to "there is nothing there" and "not shared with you",
+    // and to a stranger the same answer as either: sign in, and we will see.
+    return webActorOrLogin(context) ?? context.notFound();
   }
 
-  const source = await contentService(context).theoryResolver(
-    requireAuthenticated(context),
-  )(hostedTheoryPath(requiredParam(context, "revisionId")));
-
-  if (source === null) {
-    return context.notFound();
-  }
+  const { revision, source } = found;
 
   return new Response(source, {
     headers: {
-      "Cache-Control": THEORY_SOURCE_CACHE_CONTROL,
+      "Cache-Control": theorySourceCacheControl(revision),
       // Plain text, not a download, and not a media type invented for MM0:
       // the point is to be readable in a tab, and a type no browser knows
       // only invites it to guess.
@@ -628,21 +744,19 @@ function requireFormat(
 async function revisionDocumentPage(
   context: Context<AppBindings>,
 ): Promise<Response> {
-  const loginRedirect = webActorOrLogin(context);
+  let item: ContentItem;
+  let revision: ContentRevision;
 
-  if (loginRedirect !== null) {
-    return loginRedirect;
+  try {
+    ({ item, revision } = await contentService(context).readRevision(
+      readingActor(context),
+      requiredParam(context, "revisionId"),
+    ));
+    requireFormat(revision, "markdown");
+  } catch (error) {
+    return contentReadFailure(context, error);
   }
 
-  const actor = requireAuthenticated(context);
-  const service = contentService(context);
-  const revision = await service.getRevision(
-    actor,
-    requiredParam(context, "revisionId"),
-  );
-  requireFormat(revision, "markdown");
-
-  const item = await service.getItem(actor, revision.itemId);
   const artifact = contentArtifactFromRevision(revision);
   const i18n = context.get("i18n");
 
@@ -713,10 +827,44 @@ contentRoutes.post("/", async (context) => {
 
 // The library-side landing for `item:` links: compiled content carries the
 // relative `../../go/<id>`, which resolves here from revision documents and
-// editor previews. The item page enforces ownership itself.
+// editor previews. The item page decides who may read what it lands on.
 contentRoutes.get("/go/:itemId", (context) =>
   redirect(`/content/${requiredParam(context, "itemId")}`, 302),
 );
+
+contentRoutes.post("/revisions/:revisionId/sharing", async (context) => {
+  if (isFormSubmission(context)) {
+    return setSharingFromForm(context);
+  }
+
+  const actor = requireAuthenticated(context);
+  const body = (await readJsonObject(context)) as SetSharingBody;
+
+  if (typeof body.sharing !== "string") {
+    throw badRequest(
+      "invalid_content_sharing",
+      "Content sharing must be a string.",
+    );
+  }
+
+  if (
+    body.shareSource !== undefined &&
+    typeof body.shareSource !== "boolean"
+  ) {
+    throw badRequest(
+      "invalid_content_share_source",
+      "Content source sharing must be a boolean.",
+    );
+  }
+
+  const revision = await contentService(context).setRevisionSharing(
+    actor,
+    requiredParam(context, "revisionId"),
+    { shareSource: body.shareSource === true, sharing: body.sharing },
+  );
+
+  return context.json({ revision: publicRevision(revision) });
+});
 
 contentRoutes.get("/revisions/:revisionId/document", (context) =>
   revisionDocumentPage(context),
@@ -736,9 +884,11 @@ contentRoutes.get("/revisions/:revisionId", async (context) => {
     return revisionPage(context);
   }
 
-  const actor = requireAuthenticated(context);
-  const revision = await contentService(context).getRevision(
-    actor,
+  // The same scope the page reads by, minus the redirect: a JSON caller is
+  // asking a question, not navigating, and the 404 is the answer to every
+  // form of no.
+  const { revision } = await contentService(context).readRevision(
+    readingActor(context),
     requiredParam(context, "revisionId"),
   );
 

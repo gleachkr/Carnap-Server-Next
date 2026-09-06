@@ -379,12 +379,31 @@ export interface CreateContentRevisionInput {
   readonly createdAt: Timestamp;
 }
 
+export interface UpdateContentRevisionSharingInput {
+  readonly id: AppId;
+  readonly sharing: ContentRevision["sharing"];
+  readonly shareSource: boolean;
+}
+
 export interface ContentStore {
   createItem(input: CreateContentItemInput): Promise<ContentItem>;
   getItem(id: AppId): Promise<ContentItem | null>;
+
   listItemsForOwner(ownerUserId: AppId): Promise<ContentItem[]>;
   createRevision(input: CreateContentRevisionInput): Promise<ContentRevision>;
   getRevision(id: AppId): Promise<ContentRevision | null>;
+  /**
+   * Set who may read a revision. Both fields together, because they are one
+   * decision made on one form and a partial update would let the pair drift.
+   *
+   * A revision is otherwise immutable, and this does not touch what it says:
+   * the source, the artifact and the hash are exactly what they were. Nor does
+   * it touch the item's `updatedAt`, which says when the content last changed
+   * and orders the library — sharing a revision is not writing one.
+   */
+  updateRevisionSharing(
+    input: UpdateContentRevisionSharingInput,
+  ): Promise<ContentRevision>;
   /**
    * Newest first. A revision list is a history, and the revision anyone is
    * looking for is nearly always the last one saved — so it reads the way a

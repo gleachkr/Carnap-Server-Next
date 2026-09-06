@@ -44,6 +44,35 @@ export type {
  * expected — which is why an assignment cannot be set on an `mm0` revision.
  */
 export type ContentSourceFormat = "markdown" | "mm0";
+
+/**
+ * Who may read a saved revision besides the author who owns it.
+ *
+ * `private` is what every revision was before there was a choice, and what
+ * every revision still is until its author says otherwise. `authors` is the
+ * signed-in people who may write content — the colleague being handed a theory
+ * to name from their own lesson, and nobody's students. `public` is the open
+ * web, and the only scope an anonymous request can satisfy.
+ *
+ * Three values rather than a flag because `authors` is what a sharing layer
+ * will want and because it is the setting that says "not the open web" out
+ * loud. With no discovery anywhere, it differs from `public` today by exactly
+ * the login wall — which is the difference an author is asking for.
+ */
+export type ContentSharing = "authors" | "private" | "public";
+
+export const CONTENT_SHARING_VALUES: readonly ContentSharing[] = [
+  "private",
+  "authors",
+  "public",
+];
+
+export function isContentSharing(value: unknown): value is ContentSharing {
+  return (
+    typeof value === "string" &&
+    (CONTENT_SHARING_VALUES as readonly string[]).includes(value)
+  );
+}
 export type ContentSourceProfile = "carnap-markdown-v1";
 export type MultipleChoiceMode = "single" | "multiple";
 
@@ -78,6 +107,32 @@ export interface ContentRevision {
    * and it is what the library and the assignment pickers show.
    */
   readonly details: string;
+  /**
+   * Who may read this revision, besides the owner. See `ContentSharing`;
+   * `private` until the author shares it, which is what every revision saved
+   * before there was a column reads as, and what every new one starts as.
+   *
+   * On the revision rather than the item because the revision is the thing
+   * with an address: sharing means handing somebody a URL, and every URL under
+   * `/content/revisions/<id>` names one immutable revision. A scope on the
+   * item would hand over every draft behind the one that was sent.
+   */
+  readonly sharing: ContentSharing;
+  /**
+   * Whether `sharing` reaches the source text as well as the reading of it.
+   *
+   * Two settings rather than one because a lesson and its Markdown are not the
+   * same disclosure. A `short-answer` directive's accepted answers and a
+   * `free-response` directive's rubric are kept out of the compiled artifact
+   * precisely so they never reach a student's browser — and both are written
+   * as attributes in the source, which `/source` hands over verbatim. So
+   * "read my lesson" is safe in a way "read what I wrote" is not, and an
+   * author has to ask for the second.
+   *
+   * Meaningless for an MM0 revision, whose source *is* the thing the theory
+   * route already serves: there is no rendering of a theory to share instead.
+   */
+  readonly shareSource: boolean;
   readonly sourceFormat: ContentSourceFormat;
   readonly sourceText: string;
   readonly contentHash: string;

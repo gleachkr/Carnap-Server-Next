@@ -6,13 +6,16 @@ import type { CompiledTheoryArtifact } from "../application/content/mm0";
 import type {
   ContentItem,
   ContentRevision,
+  ContentSharing,
   ContentSourceFormat,
 } from "../domain/content";
+import { CONTENT_SHARING_VALUES } from "../domain/content";
 import type { User } from "../domain/users";
 import type { AppBindings } from "../http";
 import {
   splitAtValue,
   type TranslatableMessage,
+  type Translator,
   translateMessage,
   VALUE,
 } from "../i18n/translator";
@@ -21,18 +24,20 @@ import { contentCrumb, contentItemCrumb } from "./breadcrumbs";
 import {
   ContentFrame,
   ContentSplit,
+  CopyField,
   CreateBar,
   CsrfInput,
   ErrorSummary,
   Notice,
   Sheet,
+  StatusBadge,
   SummaryStrip,
   TableScroll,
   Time,
 } from "./components";
 import type { ContentDocumentModel } from "./content-document";
 import { renderContentDocument } from "./content-document";
-import { DownloadIcon } from "./icons";
+import { DownloadIcon, PeopleIcon } from "./icons";
 import { renderShell, useI18n } from "./layout";
 import { revisionDetailsText } from "./revisions";
 import { SortHeader } from "./table-sort";
@@ -458,9 +463,214 @@ const RevisionFooterActions: FC<{
   );
 };
 
+/**
+ * What each scope is called to the author choosing it. Named by who it lets
+ * in rather than by the word stored, because "authors" is a word about this
+ * site's permissions and the question being asked is about people.
+ *
+ * Kept to two or three words because the same phrase labels the row's badge.
+ * What the choice actually permits is said in full underneath it, by
+ * {@link sharingHint}, rather than crammed into the option.
+ */
+function sharingLabel(i18n: Translator, sharing: ContentSharing): string {
+  switch (sharing) {
+    case "public":
+      return i18n.t("Anyone with the link");
+    case "authors":
+      return i18n.t("Content authors");
+    default:
+      return i18n.t("Only you");
+  }
+}
+
+/**
+ * The same choice as a sentence: who, exactly, may open this revision.
+ *
+ * One line per scope, all three rendered, and the script in the shell shows
+ * the one the select is on. Each says "with the link", because none of the
+ * three lists a revision anywhere a stranger could browse — sharing widens who
+ * an address answers to, and nothing else.
+ */
+function sharingHint(i18n: Translator, sharing: ContentSharing): string {
+  switch (sharing) {
+    case "public":
+      return i18n.t("Anyone with the link can view this revision");
+    case "authors":
+      return i18n.t(
+        "Anyone on the site who can author content and has the link can view this revision",
+      );
+    default:
+      return i18n.t("Only you may view this revision");
+  }
+}
+
+/**
+ * Who may read one revision, as a dialog on that revision's row.
+ *
+ * A revision is what has an address — sharing means handing somebody the URL
+ * of one — so this is per row rather than a panel on the item, and the
+ * badge beside the row's name is what says which ones are out.
+ *
+ * The only prose left is the line under the select, which says the chosen
+ * scope back as a sentence, and — for a theory alone — the one consequence an
+ * author cannot see from here: what a colleague names from a lesson is frozen
+ * into it and read by their own students, so there is no scope that permits
+ * the naming and withholds the text.
+ */
+const RevisionSharingDialog: FC<{
+  readonly context: Context<AppBindings>;
+  readonly dialogId: string;
+  readonly revision: ContentRevision;
+}> = ({ context, dialogId, revision }) => {
+  const i18n = useI18n();
+  const theory = revision.sourceFormat === "mm0";
+  const { origin } = new URL(context.req.url);
+
+  return (
+    <dialog class="modal-dialog" id={dialogId}>
+      <form
+        action={`/content/revisions/${revision.id}/sharing`}
+        method="post"
+      >
+        <CsrfInput context={context} />
+        <header class="modal-dialog-header">
+          <h3>
+            {i18n.t("Sharing for {name}", {
+              name: revisionDetailsText(i18n, revision.details),
+            })}
+          </h3>
+          <button
+            aria-label={i18n.t("Close")}
+            formmethod="dialog"
+            formnovalidate
+            type="submit"
+          >
+            ×
+          </button>
+        </header>
+        <label>
+          {i18n.t("Shared with:")}
+          <br />
+          <select data-choice-notes="sharing" name="sharing">
+            {CONTENT_SHARING_VALUES.map((sharing) => (
+              <option selected={sharing === revision.sharing} value={sharing}>
+                {sharingLabel(i18n, sharing)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {CONTENT_SHARING_VALUES.map((sharing) => (
+          <p
+            class="small"
+            data-choice-note="sharing"
+            data-choice-value={sharing}
+            hidden={sharing !== revision.sharing}
+          >
+            {sharingHint(i18n, sharing)}
+          </p>
+        ))}
+        {/* A theory has no reading apart from its source, so there is nothing
+            for this to withhold; for a lesson it is the difference between the
+            compiled document and the Markdown behind it, answers and all. */}
+        {theory ? null : (
+          <label>
+            <input
+              checked={revision.shareSource}
+              name="shareSource"
+              type="checkbox"
+              value="1"
+            />
+            {i18n.t("Share Markdown source")}
+          </label>
+        )}
+        {theory ? (
+          <p class="small">
+            {i18n.t(
+              "Whoever names this from a lesson freezes its text into that lesson, and their students read it there. Sharing a theory to be named is sharing what it says.",
+            )}
+          </p>
+        ) : null}
+        {/* What to hand somebody, once the scope is set. A revision's
+            address is the whole of sharing here — it is immutable, and there
+            is no other spelling of "this one" — so the dialog that opens the
+            door gives out the key as well, rather than leaving a reader to
+            assemble the URL from an address bar. Absolute, because the point
+            is to paste it somewhere that is not this site. */}
+        <div class="field-grid wide-fields">
+          <label for={`${dialogId}-reading`}>
+            {i18n.t("Link to this revision")}
+            <CopyField
+              id={`${dialogId}-reading`}
+              value={`${origin}/content/revisions/${revision.id}`}
+            />
+          </label>
+          <label for={`${dialogId}-source`}>
+            {theory
+              ? i18n.t("Address to name in an aufbau-mm0 src")
+              : i18n.t("Link to the source")}
+            <CopyField
+              id={`${dialogId}-source`}
+              value={
+                theory
+                  ? `${origin}${hostedTheoryPath(revision.id)}`
+                  : `${origin}/content/revisions/${revision.id}/source`
+              }
+            />
+          </label>
+        </div>
+        <button class="secondary" type="submit">
+          {i18n.t("Save sharing")}
+        </button>
+      </form>
+    </dialog>
+  );
+};
+
+/**
+ * The sharing control for one revision: the icon that opens the dialog, and a
+ * badge saying who it is out to. The badge appears only on a shared revision,
+ * the way the accommodations badge flags a member off the default — a column
+ * of "Only me" would be noise on the ordinary case, which is every row until
+ * an author does something.
+ */
+const RevisionSharing: FC<{
+  readonly context: Context<AppBindings>;
+  readonly revision: ContentRevision;
+}> = ({ context, revision }) => {
+  const i18n = useI18n();
+  const dialogId = `sharing-${revision.id}`;
+  const label = i18n.t("Set who may read {name}", {
+    name: revisionDetailsText(i18n, revision.details),
+  });
+
+  return (
+    <>
+      <button
+        aria-label={label}
+        class="icon-button"
+        data-dialog-target={dialogId}
+        title={label}
+        type="button"
+      >
+        <PeopleIcon />
+      </button>
+      <RevisionSharingDialog
+        context={context}
+        dialogId={dialogId}
+        revision={revision}
+      />
+    </>
+  );
+};
+
 const RevisionsTable: FC<{
+  /** Whether to draw the per-row sharing control: this is the owner's page,
+   * but saving a scope needs the content-author permission the item was made
+   * under, and an author who has lost it should not be offered the dialog. */
+  readonly canAuthor: boolean;
+  readonly context: Context<AppBindings>;
   readonly revisions: readonly ContentRevision[];
-}> = ({ revisions }) => {
+}> = ({ canAuthor, context, revisions }) => {
   const i18n = useI18n();
 
   if (revisions.length === 0) {
@@ -495,7 +705,13 @@ const RevisionsTable: FC<{
                 ) : (
                   revision.details
                 )}
-              </a>
+              </a>{" "}
+              {revision.sharing === "private" ? null : (
+                <StatusBadge
+                  label={sharingLabel(i18n, revision.sharing)}
+                  tone="ok"
+                />
+              )}
             </td>
             <td>
               <Time value={revision.createdAt} />
@@ -504,6 +720,9 @@ const RevisionsTable: FC<{
                 cannot see which row a link is in still hears which revision
                 they are about to save. */}
             <td>
+              {canAuthor ? (
+                <RevisionSharing context={context} revision={revision} />
+              ) : null}
               <SourceDownload
                 href={`/content/revisions/${revision.id}/source`}
                 label={i18n.t("Download the source of {name}", {
@@ -622,7 +841,7 @@ export function renderContentItem(
       />
       <Sheet
         description={i18n.t(
-          "Immutable snapshots that published assignments point to.",
+          "Immutable snapshots that published assignments point to. Each is shared, or not, on its own.",
         )}
         footer={
           model.canAuthor ? (
@@ -635,7 +854,11 @@ export function renderContentItem(
         }
         title={i18n.t("Revisions")}
       >
-        <RevisionsTable revisions={model.revisions} />
+        <RevisionsTable
+          canAuthor={model.canAuthor}
+          context={context}
+          revisions={model.revisions}
+        />
       </Sheet>
     </>,
   );
@@ -844,8 +1067,24 @@ export function renderRevision(
     readonly details: string;
     readonly itemId: string;
     readonly itemTitle: string;
+    /**
+     * Whether the item behind this revision is the reader's. A colleague
+     * reading a shared revision has no page there, so the trail names the
+     * lesson without linking it — a crumb that answers 404 is worse than a
+     * crumb that only orients.
+     */
+    readonly owned: boolean;
     readonly revisionId: string;
-    readonly sourceText: string;
+    /**
+     * The source, when this reader may have it — which is not the same as
+     * being able to read the revision. A lesson's Markdown carries the
+     * accepted answers and the rubrics that the compiled document holds back,
+     * so a shared item whose author did not also share the source shows the
+     * compiled thing and nothing else. `null` drops the sheet rather than
+     * drawing an empty one: there is nothing to say about a source somebody
+     * cannot see.
+     */
+    readonly sourceText: string | null;
     /** Present exactly when this is a revision of an MM0 item. */
     readonly theory?: CompiledTheoryArtifact;
   },
@@ -859,7 +1098,9 @@ export function renderRevision(
     {
       breadcrumb: [
         contentCrumb(i18n),
-        contentItemCrumb(model.itemId, model.itemTitle),
+        model.owned
+          ? contentItemCrumb(model.itemId, model.itemTitle)
+          : { label: model.itemTitle },
       ],
       title: i18n.t("Content revision"),
     },
@@ -904,24 +1145,29 @@ export function renderRevision(
               {revisionDetailsText(i18n, model.details)}
             </p>
           </Sheet>
-          <Sheet className="source-sheet" title={i18n.t("Source")}>
-            {/* The `<pre>` is the whole rendering without JS; the source-view
-                bundle swaps it for the read-only CodeMirror the editor uses, so
-                a directive reads as a directive here too. The names travel as
-                attributes because that bundle has no catalog of its own. */}
-            <div
-              class="markdown-source"
-              data-fold-label={foldStrings.fold}
-              data-source-label={i18n.t("Revision source")}
-              data-source-view
-              data-unfold-label={foldStrings.unfold}
-            >
-              <pre>
-                <code>{model.sourceText}</code>
-              </pre>
-            </div>
-          </Sheet>
-          <script src="/assets/source-view.js" type="module" />
+          {model.sourceText === null ? null : (
+            <>
+              <Sheet className="source-sheet" title={i18n.t("Source")}>
+                {/* The `<pre>` is the whole rendering without JS; the
+                    source-view bundle swaps it for the read-only CodeMirror the
+                    editor uses, so a directive reads as a directive here too.
+                    The names travel as attributes because that bundle has no
+                    catalog of its own. */}
+                <div
+                  class="markdown-source"
+                  data-fold-label={foldStrings.fold}
+                  data-source-label={i18n.t("Revision source")}
+                  data-source-view
+                  data-unfold-label={foldStrings.unfold}
+                >
+                  <pre>
+                    <code>{model.sourceText}</code>
+                  </pre>
+                </div>
+              </Sheet>
+              <script src="/assets/source-view.js" type="module" />
+            </>
+          )}
         </>
       }
     />,

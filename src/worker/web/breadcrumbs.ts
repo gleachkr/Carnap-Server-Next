@@ -1,5 +1,5 @@
 import type { Translator } from "../i18n/translator";
-import type { Crumb } from "./layout";
+import type { LinkedCrumb } from "./layout";
 
 /**
  * Shared breadcrumb-trail builders. Each page passes the ancestor trail to
@@ -14,19 +14,19 @@ import type { Crumb } from "./layout";
  * layout's nav where the two could drift.
  */
 
-export function coursesCrumb(i18n: Translator): Crumb {
+export function coursesCrumb(i18n: Translator): LinkedCrumb {
   return { href: "/courses", label: i18n.t("Courses") };
 }
 
-export function contentCrumb(i18n: Translator): Crumb {
+export function contentCrumb(i18n: Translator): LinkedCrumb {
   return { href: "/content", label: i18n.t("Content") };
 }
 
-export function adminCrumb(i18n: Translator): Crumb {
+export function adminCrumb(i18n: Translator): LinkedCrumb {
   return { href: "/admin", label: i18n.t("Admin") };
 }
 
-export function courseCrumb(courseId: string, title: string): Crumb {
+export function courseCrumb(courseId: string, title: string): LinkedCrumb {
   return { href: `/courses/${courseId}`, label: title };
 }
 
@@ -34,7 +34,7 @@ export function instructorAssignmentCrumb(
   courseId: string,
   assignmentId: string,
   title: string,
-): Crumb {
+): LinkedCrumb {
   return {
     href: `/courses/${courseId}/instructor/assignments/${assignmentId}`,
     label: title,
@@ -45,13 +45,13 @@ export function studentAssignmentCrumb(
   courseId: string,
   assignmentId: string,
   title: string,
-): Crumb {
+): LinkedCrumb {
   return {
     href: `/courses/${courseId}/assignments/${assignmentId}`,
     label: title,
   };
 }
 
-export function contentItemCrumb(itemId: string, title: string): Crumb {
+export function contentItemCrumb(itemId: string, title: string): LinkedCrumb {
   return { href: `/content/${itemId}`, label: title };
 }

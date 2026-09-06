@@ -1,0 +1,28 @@
+-- Who may read a saved revision besides the author who owns it.
+--
+-- Everything under `/content` was owner-only until now, which is what made an
+-- instructor-hosted theory unnameable from anybody else's lesson. `sharing` is
+-- the scope: `private` is what every revision has been, `authors` is the
+-- signed-in people who may write content, and `public` is the open web.
+--
+-- On the revision rather than the item, because the revision is what has an
+-- address. Sharing means handing somebody a URL, and every URL under
+-- `/content/revisions/<id>` names one immutable revision; a scope on the item
+-- would share every draft behind it along with the one that was sent. This
+-- also matches what the borrowing author's lesson names: a frozen revision,
+-- not "whatever that item says now".
+--
+-- `share_source` is separate because the rendered document and the Markdown
+-- behind it are not the same disclosure: a short-answer directive's accepted
+-- answers and a free-response directive's rubric are held out of the compiled
+-- artifact on purpose, and both are written in the source. Sharing a lesson to
+-- read is safe in a way sharing its source is not, so the second is asked for
+-- separately and defaults to no.
+--
+-- Defaulted rather than backfilled, because the default is the truth: every
+-- revision that exists when this runs is its owner's alone, which is the only
+-- thing it could have been. A new revision is private too — sharing is a thing
+-- an author does to a finished revision, not a setting that leaks forward onto
+-- the next draft.
+ALTER TABLE `content_revisions` ADD `sharing` text DEFAULT 'private' NOT NULL;--> statement-breakpoint
+ALTER TABLE `content_revisions` ADD `share_source` integer DEFAULT false NOT NULL;

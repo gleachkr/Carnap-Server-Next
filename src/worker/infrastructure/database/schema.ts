@@ -244,6 +244,15 @@ export const contentRevisions = sqliteTable(
     sourceText: text("source_text").notNull(),
     /** Why this revision was made, as the author described it; empty when unsaid. */
     details: text("details").notNull().default(""),
+    /** Who may read this revision besides its owner; see `ContentRevision`. */
+    sharing: text("sharing", { enum: ["private", "authors", "public"] })
+      .notNull()
+      .default("private"),
+    /** Whether the scope above reaches the source as well as the reading of
+     * it; see `ContentRevision`. */
+    shareSource: integer("share_source", { mode: "boolean" })
+      .notNull()
+      .default(false),
     contentHash: text("content_hash").notNull(),
     compiledJson: text("compiled_json", { mode: "json" }).notNull(),
     createdById: text("created_by_id")

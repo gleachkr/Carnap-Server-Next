@@ -461,6 +461,10 @@ msgstr "Add staff"
 msgid "Added"
 msgstr "Added"
 
+#: src/worker/web/content.tsx
+msgid "Address to name in an aufbau-mm0 src"
+msgstr "Address to name in an aufbau-mm0 src"
+
 #: src/worker/web/breadcrumbs.ts
 #: src/worker/web/layout.tsx
 msgid "Admin"
@@ -540,6 +544,18 @@ msgstr "Answer submitted."
 #: src/worker/exercises/actions.ts
 msgid "Answers are not recorded here."
 msgstr "Answers are not recorded here."
+
+#: src/worker/web/content.tsx
+msgid "Anyone on the site who can author content and has the link can view this revision"
+msgstr "Anyone on the site who can author content and has the link can view this revision"
+
+#: src/worker/web/content.tsx
+msgid "Anyone with the link"
+msgstr "Anyone with the link"
+
+#: src/worker/web/content.tsx
+msgid "Anyone with the link can view this revision"
+msgstr "Anyone with the link can view this revision"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 msgid "Apply rule below"
@@ -925,6 +941,7 @@ msgid "Clone course"
 msgstr "Clone course"
 
 #: src/worker/web/assignment-detail.tsx
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Close"
 msgstr "Close"
@@ -982,6 +999,10 @@ msgstr "Content"
 #: src/worker/web/labels.ts
 msgid "Content author"
 msgstr "Content author"
+
+#: src/worker/web/content.tsx
+msgid "Content authors"
+msgstr "Content authors"
 
 #: src/worker/routes/content.ts
 msgid "Content item created."
@@ -1929,8 +1950,8 @@ msgid "If you did not expect this, ignore this email and nothing will be linked.
 msgstr "If you did not expect this, ignore this email and nothing will be linked."
 
 #: src/worker/web/content.tsx
-msgid "Immutable snapshots that published assignments point to."
-msgstr "Immutable snapshots that published assignments point to."
+msgid "Immutable snapshots that published assignments point to. Each is shared, or not, on its own."
+msgstr "Immutable snapshots that published assignments point to. Each is shared, or not, on its own."
 
 #: src/worker/web/content.tsx
 msgid "Immutable source and compiled output for this revision."
@@ -2086,6 +2107,14 @@ msgstr "Link"
 #: src/worker/web/lti.tsx
 msgid "Link accounts"
 msgstr "Link accounts"
+
+#: src/worker/web/content.tsx
+msgid "Link to the source"
+msgstr "Link to the source"
+
+#: src/worker/web/content.tsx
+msgid "Link to this revision"
+msgstr "Link to this revision"
 
 #: src/worker/web/profile.tsx
 msgid "Linked"
@@ -2592,6 +2621,14 @@ msgstr "Only published assignments can release grades."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Only solution list items may appear after the first solution."
 msgstr "Only solution list items may appear after the first solution."
+
+#: src/worker/web/content.tsx
+msgid "Only you"
+msgstr "Only you"
+
+#: src/worker/web/content.tsx
+msgid "Only you may view this revision"
+msgstr "Only you may view this revision"
 
 #. Disambiguating id; only the word Open is shown. An assignment available now, with no closing date.
 #: src/worker/web/assignments.tsx
@@ -3131,6 +3168,10 @@ msgstr "Save override"
 msgid "Save settings"
 msgstr "Save settings"
 
+#: src/worker/web/content.tsx
+msgid "Save sharing"
+msgstr "Save sharing"
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Schedule"
 msgstr "Schedule"
@@ -3211,9 +3252,29 @@ msgstr "Set an override for {name}"
 msgid "Set override"
 msgstr "Set override"
 
+#: src/worker/web/content.tsx
+msgid "Set who may read {name}"
+msgstr "Set who may read {name}"
+
 #: src/worker/routes/assignments.ts
 msgid "Settings not updated"
 msgstr "Settings not updated"
+
+#: src/worker/web/content.tsx
+msgid "Share Markdown source"
+msgstr "Share Markdown source"
+
+#: src/worker/web/content.tsx
+msgid "Shared with:"
+msgstr "Shared with:"
+
+#: src/worker/web/content.tsx
+msgid "Sharing for {name}"
+msgstr "Sharing for {name}"
+
+#: src/worker/routes/content.ts
+msgid "Sharing updated."
+msgstr "Sharing updated."
 
 #: src/worker/exercises/group.ts
 msgid "Short-answer question"
@@ -3405,6 +3466,10 @@ msgstr "That content item is a theory, not a lesson. An assignment can only be s
 #: src/worker/application/content.ts
 msgid "That is not a kind of content this site stores."
 msgstr "That is not a kind of content this site stores."
+
+#: src/worker/application/content.ts
+msgid "That is not a sharing setting this site has."
+msgstr "That is not a sharing setting this site has."
 
 #: src/worker/application/auth.ts
 msgid "That language is not available."
@@ -4334,6 +4399,10 @@ msgstr "When"
 #: src/worker/web/labels.ts
 msgid "When I release them"
 msgstr "When I release them"
+
+#: src/worker/web/content.tsx
+msgid "Whoever names this from a lesson freezes its text into that lesson, and their students read it there. Sharing a theory to be named is sharing what it says."
+msgstr "Whoever names this from a lesson freezes its text into that lesson, and their students read it there. Sharing a theory to be named is sharing what it says."
 
 #: src/worker/web/content.tsx
 msgid "Write"
