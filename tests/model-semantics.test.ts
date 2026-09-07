@@ -28,6 +28,7 @@ import {
   tuplesOver,
 } from "../src/worker/exercises/model/logic";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
+import { fixedArityLanguage } from "./helpers/fixed-arity-language";
 
 /** The forallx spec, resolved once — a language is tables, not data. */
 function calgary(): SurfaceLanguage {
@@ -698,5 +699,72 @@ infixl nand: $↑$ prec 30;
     expect(formulaToString(parseExtended("F(a) ↑ G(b)"), extended)).toBe(
       "F(a) ↑ G(b)",
     );
+  });
+});
+
+describe("symbols of fixed arity", () => {
+  /**
+   * A model is keyed by constructor name and arity, whatever the notation:
+   * `a + b` asks for a value table under `plus(_,_)`, and `Red(a)` for an
+   * extension under `Red(_)`, exactly as a textbook letter would.
+   */
+  const FIXED = fixedArityLanguage();
+
+  function parseFixed(source: string): Formula {
+    const result = parseFormula(source, FIXED);
+
+    if (!result.ok) {
+      throw new Error(
+        `Expected '${source}' to parse: ${result.errors[0]?.message}`,
+      );
+    }
+
+    return result.formula;
+  }
+
+  test("the fields a mixed atom implies, in the usual order", () => {
+    const signature = modelSignature(
+      ["a + b < succ(c) ∧ Red(a)", "R(f(a), b)"].map(parseFixed),
+    );
+
+    expect(signature.map((field) => field.label)).toEqual([
+      DOMAIN_FIELD_LABEL,
+      "R(_,_)",
+      "Red(_)",
+      "lt(_,_)",
+      "a",
+      "b",
+      "c",
+      "f(_)",
+      "plus(_,_)",
+      "succ(_)",
+    ]);
+  });
+
+  test("an infix function is evaluated through its two-argument table", () => {
+    const sources = ["a + b = succ(c)", "Red(a + b)", "a < b"];
+    const read = readModel(modelSignature(sources.map(parseFixed)), {
+      domain: "0,1",
+      fields: {
+        a: "0",
+        b: "1",
+        c: "0",
+        "Red(_)": "1",
+        "lt(_,_)": "[0,1]",
+        "plus(_,_)": "[0,0;0],[0,1;1],[1,0;1],[1,1;0]",
+        "succ(_)": "[0;1],[1;0]",
+      },
+    });
+
+    if (!read.ok) {
+      throw new Error(`Expected the model to read: ${read.problem.kind}`);
+    }
+
+    // 0 + 1 = 1 = succ(0); Red holds of 1; 0 < 1.
+    for (const source of sources) {
+      expect(satisfies(parseFixed(source), read.model)).toBe(true);
+    }
+    // 1 + 1 = 0 ≠ succ(0).
+    expect(satisfies(parseFixed("b + b = succ(c)"), read.model)).toBe(false);
   });
 });

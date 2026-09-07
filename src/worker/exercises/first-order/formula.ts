@@ -2,6 +2,13 @@
  * First-order syntax for the exercise types that read formulas — the model and
  * the translation.
  *
+ * The reading is of the parsed *tree*, never of the notation: a symbol is its
+ * constructor's name applied to the arguments its binders hold, so `plus (x y:
+ * tm): tm` written `x + y`, a fixed-arity `Red(a)`, and a textbook's variadic
+ * `R(a,b)` or `Rab` all become the same shape. The one thing the spec has to
+ * say is which sort, if any, a variadic letter's argument list lives in
+ * (`@syntax role argument-list`); see {@link readArguments}.
+ *
  * The language is not written here. It is a spec `logic/specs` registers — for
  * forallx that is `logic/theories/forallx-calgary-2019.mm0`, the same file the
  * proof exercises name as their theory — an ordinary MM0 signature with
@@ -47,14 +54,20 @@ import {
 } from "../../logic/specs/connectives";
 import type { FormulaParseError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
-import { roleIndex, sentenceSort } from "../../logic/specs/roles";
+import {
+  argumentListSort,
+  roleIndex,
+  sentenceSort,
+} from "../../logic/specs/roles";
 
 export type { BinaryConnective };
 
 /**
  * A term: a variable, an individual constant, or a function symbol applied to
- * terms. `name` is the surface spelling, which is both how it is shown back to
- * the student and how a model keys it.
+ * terms. `name` is the constructor's name in the spec — for a lexicon letter
+ * its spelling, for a notated symbol (`plus`, written `+`) the name behind the
+ * notation — which is how a model keys it and, until the printer reads
+ * notations, how it is shown back.
  */
 export type Term =
   | { readonly type: "variable"; readonly name: string }
@@ -180,38 +193,59 @@ function bare(node: SurfaceTerm, lang: SurfaceLanguage): SurfaceTerm {
 }
 
 /**
- * The arguments a letter was applied to.
- *
- * A spec makes one letter variadic by giving it a single sequence argument
- * built from an infix comma, with the empty sequence elided — so `P`, `F(a)`
- * and `R(a,b)` are all one declaration, and unpicking that sequence is what
- * turns them back into an argument list. The comma tree leans left, and
- * flattening it is a walk rather than a special case for each arity.
+ * Whether a constructor binds a variable — a quantifier, a description
+ * operator, a set abstract. One with a role the reader has a case for is
+ * handled by that case; any other has no reading under ordinary first-order
+ * semantics and is refused where it stands rather than read as a symbol with
+ * a variable for an argument.
  */
-function sequence(node: SurfaceTerm, lang: SurfaceLanguage): SurfaceTerm[] {
-  const inner = bare(node, lang);
+function bindsVariable(node: AppTerm, lang: SurfaceLanguage): boolean {
+  return (
+    lang.spec.terms.get(node.term)?.binders.some((binder) => binder.binds) ??
+    false
+  );
+}
 
-  if (inner.kind !== "app" || inner.sort !== node.sort) {
-    return [inner];
+/**
+ * The argument list of a symbol, from every one of its binders.
+ *
+ * A symbol of fixed arity — `plus (x y: tm)`, `Red (x: tm)` — contributes one
+ * argument per binder, however its notation is written: `x + y`, `Red(a)` and
+ * a general notation all arrive here as the same tree. A textbook's variadic
+ * letters take a single binder at the spec's `@syntax role argument-list`
+ * sort, and a node of that sort is flattened *by structure*: each of its own
+ * binders at the list sort recurses, each at any other sort is one argument.
+ * That reads an elided nil as nothing, a comma or juxtaposition as
+ * concatenation, and a cons-style list just as well, so the reader knows no
+ * constructor's name. A spec without the role has no lists, and every binder
+ * is one argument.
+ */
+function readArguments(
+  args: readonly SurfaceTerm[],
+  lang: SurfaceLanguage,
+): Term[] {
+  const list = argumentListSort(lang);
+  const terms: Term[] = [];
+
+  const visit = (node: SurfaceTerm): void => {
+    const inner = bare(node, lang);
+
+    if (list !== undefined && inner.kind === "app" && inner.sort === list) {
+      for (const argument of inner.args) {
+        visit(argument);
+      }
+
+      return;
+    }
+
+    terms.push(readTerm(inner, lang));
+  };
+
+  for (const argument of args) {
+    visit(argument);
   }
 
-  if (lang.elidedOf.get(inner.sort)?.name === inner.term) {
-    return [];
-  }
-
-  const [left, right] = inner.args;
-
-  if (
-    inner.args.length === 2 &&
-    left !== undefined &&
-    right !== undefined &&
-    left.sort === inner.sort &&
-    right.sort === inner.sort
-  ) {
-    return [...sequence(left, lang), ...sequence(right, lang)];
-  }
-
-  return [inner];
+  return terms;
 }
 
 function readTerm(node: SurfaceTerm, lang: SurfaceLanguage): Term {
@@ -228,9 +262,11 @@ function readTerm(node: SurfaceTerm, lang: SurfaceLanguage): Term {
       : { name: inner.name, type: "constant" };
   }
 
-  const args = (
-    inner.args[0] === undefined ? [] : sequence(inner.args[0], lang)
-  ).map((argument) => readTerm(argument, lang));
+  if (bindsVariable(inner, lang)) {
+    throw uninterpretable(inner, lang, roleIndex(lang).roleOf(inner.term));
+  }
+
+  const args = readArguments(inner.args, lang);
 
   return args.length === 0
     ? { name: inner.term, type: "constant" }
@@ -270,10 +306,11 @@ function operandTerm(
 /**
  * One parsed node as a formula, dispatched on its `@syntax role`.
  *
- * A constructor with no role at all is a lexicon letter — `F`, `P` — and a
- * letter of the provable sort is a predicate. That is the whole of the
- * open-ended half of the language: everything else is a fixed handful of
- * connectives the spec names.
+ * A constructor with no role at all is a predicate symbol — a lexicon letter
+ * `F`, `P`, or a declared `Red (x: tm): wff` under whatever notation it has —
+ * and its arguments are read from every binder ({@link readArguments}). That
+ * is the whole of the open-ended half of the language: everything else is a
+ * fixed handful of connectives the spec names.
  */
 function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
   const inner = bare(node, lang);
@@ -286,15 +323,12 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
 
   switch (role) {
     case null:
-      if (swallowsSentence(inner)) {
+      if (swallowsSentence(inner) || bindsVariable(inner, lang)) {
         throw uninterpretable(inner, lang, role);
       }
 
       return {
-        args: (inner.args[0] === undefined
-          ? []
-          : sequence(inner.args[0], lang)
-        ).map((argument) => readTerm(argument, lang)),
+        args: readArguments(inner.args, lang),
         name: inner.term,
         type: "predicate",
       };

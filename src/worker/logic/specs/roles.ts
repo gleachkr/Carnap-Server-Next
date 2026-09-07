@@ -86,6 +86,29 @@ export function sentenceSort(lang: SurfaceLanguage): string | undefined {
   return undefined;
 }
 
+/**
+ * The sort a symbol's argument list is built in: the one carrying
+ * `@syntax role argument-list`, or `undefined` where the spec has none.
+ *
+ * A textbook's predicate letters are variadic — `F`, `F(a)` and `R(a,b)` are
+ * one letter — and a spec makes them so by giving each letter a single
+ * argument of a list sort, with the empty list elided and the rest joined by
+ * a comma or by nothing. Which sort that is, the spec says here; *how* its
+ * lists are built it need not say, because a reader flattens any node of the
+ * sort by structure (`readArguments` in `exercises/first-order/formula.ts`).
+ * A spec whose symbols all have fixed arity has no such sort, and `undefined`
+ * is the right answer: nothing is a list, every binder is one argument.
+ */
+export function argumentListSort(lang: SurfaceLanguage): string | undefined {
+  for (const info of lang.spec.sorts.values()) {
+    if (info.roles.includes("argument-list")) {
+      return info.name;
+    }
+  }
+
+  return undefined;
+}
+
 /** Built once per language, like the language's own tables. */
 const indexes = new WeakMap<SurfaceLanguage, RoleIndex>();
 

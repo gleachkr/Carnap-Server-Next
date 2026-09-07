@@ -7,7 +7,10 @@ import {
   languageById,
   languageFromSource,
 } from "../src/worker/logic/specs";
-import { sentenceSort } from "../src/worker/logic/specs/roles";
+import {
+  argumentListSort,
+  sentenceSort,
+} from "../src/worker/logic/specs/roles";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
 
 /**
@@ -215,6 +218,9 @@ describe("language specs", () => {
     test("connectives are ASCII only", () => {
       expect(refusal(id, "P ∧ Q")).toContain("unrecognized_chunk");
     });
+    test("has no argument-list sort: a sentence letter takes nothing", () => {
+      expect(argumentListSort(language(id))).toBeUndefined();
+    });
   });
 
   describe("forallx-calgary-2019", () => {
@@ -254,6 +260,8 @@ describe("language specs", () => {
       const lang = language(id);
 
       expect(sentenceSort(lang)).toBe("wff");
+      // Its letters are variadic over `seq`, and the spec says so.
+      expect(argumentListSort(lang)).toBe("seq");
       expect(
         lang.parse("P ⊢ Q", { sort: "wff" }).ok ? "parsed" : "refused",
       ).toBe("refused");
@@ -332,6 +340,8 @@ describe("language specs", () => {
       const lang = language(id);
 
       expect(sentenceSort(lang)).toBe("wff");
+      // Its letters are variadic over `seq`, and the spec says so.
+      expect(argumentListSort(lang)).toBe("seq");
       expect(
         lang.parse("P ⊢ Q", { sort: "wff" }).ok ? "parsed" : "refused",
       ).toBe("refused");

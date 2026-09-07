@@ -11,6 +11,10 @@ import {
   LANGUAGE_SPEC_SOURCES,
   languageFromSource,
 } from "../src/worker/logic/specs";
+import {
+  FIXED_ARITY_SPEC_SOURCE,
+  fixedArityLanguage,
+} from "./helpers/fixed-arity-language";
 
 /**
  * What the model and translation types accept as a formula, and what they show
@@ -614,5 +618,144 @@ prefix box: $[]$ prec 50;
 
   test("the same language's ordinary formulas still read", () => {
     expect(show("Ax(F(x) -> G(x))", MODAL)).toBe("∀x(F(x) → G(x))");
+  });
+});
+
+describe("symbols of fixed arity, and every notation", () => {
+  /**
+   * The reading is of the tree, so a symbol's notation is not its shape: a
+   * two-binder `plus` written `a + b`, a one-binder `Red` written by name,
+   * and a textbook's variadic `R(a,b)` over the argument-list sort all come
+   * out as the constructor applied to its arguments. See the fixture for the
+   * language.
+   */
+  const FIXED = fixedArityLanguage();
+
+  test("an infix function symbol keeps both arguments", () => {
+    expect(parse("a + b = c", FIXED)).toEqual({
+      left: {
+        args: [
+          { name: "a", type: "constant" },
+          { name: "b", type: "constant" },
+        ],
+        name: "plus",
+        type: "function",
+      },
+      right: { name: "c", type: "constant" },
+      type: "identity",
+    });
+  });
+
+  test("a fixed-arity symbol applied by name reads like a letter", () => {
+    expect(parse("Red(succ(a))", FIXED)).toEqual({
+      args: [
+        {
+          args: [{ name: "a", type: "constant" }],
+          name: "succ",
+          type: "function",
+        },
+      ],
+      name: "Red",
+      type: "predicate",
+    });
+  });
+
+  test("an infix predicate is a two-place relation", () => {
+    expect(parse("a < b", FIXED)).toEqual({
+      args: [
+        { name: "a", type: "constant" },
+        { name: "b", type: "constant" },
+      ],
+      name: "lt",
+      type: "predicate",
+    });
+  });
+
+  test("a compound term inside a variadic letter's list is one argument", () => {
+    // Only the argument-list sort flattens. `a + b` is a term, so `f` here is
+    // unary, applied to `plus` — not the ternary `f(a, b, …)` a shape-based
+    // reading of "binary node, same sort both sides" would have made of it.
+    expect(parse("f(a + b) = c", FIXED)).toEqual({
+      left: {
+        args: [
+          {
+            args: [
+              { name: "a", type: "constant" },
+              { name: "b", type: "constant" },
+            ],
+            name: "plus",
+            type: "function",
+          },
+        ],
+        name: "f",
+        type: "function",
+      },
+      right: { name: "c", type: "constant" },
+      type: "identity",
+    });
+  });
+
+  test("the two shapes mix in one atom, under a quantifier", () => {
+    expect(parse("∀x R(x + a, succ(b))", FIXED)).toEqual({
+      body: {
+        args: [
+          {
+            args: [
+              { name: "x", type: "variable" },
+              { name: "a", type: "constant" },
+            ],
+            name: "plus",
+            type: "function",
+          },
+          {
+            args: [{ name: "b", type: "constant" }],
+            name: "succ",
+            type: "function",
+          },
+        ],
+        name: "R",
+        type: "predicate",
+      },
+      type: "forall",
+      variable: "x",
+    });
+    expect(parse("F", FIXED)).toEqual({
+      args: [],
+      name: "F",
+      type: "predicate",
+    });
+  });
+
+  test("a binding term with no role is refused where it stands", () => {
+    // A description operator has no value in a finite model as these types
+    // compute one; reading it as a function of a variable would be worse
+    // than an error.
+    const error = failure("Red(ιx Blue(x))", FIXED);
+
+    expect(error.params?.construct).toBe("ι");
+  });
+
+  test("without the role, a list sort is just another sort", () => {
+    // The role is what makes a letter variadic. Take it off and `R(a,b)` is
+    // `R` applied to one argument — the comma itself, as a function — which
+    // is the honest reading of a declaration that said nothing.
+    const UNMARKED = fixedArityLanguage(
+      FIXED_ARITY_SPEC_SOURCE.replace("--| @syntax role argument-list\n", ""),
+    );
+
+    expect(parse("R(a,b)", UNMARKED)).toEqual({
+      args: [
+        {
+          args: [
+            { name: "a", type: "constant" },
+            { name: "b", type: "constant" },
+          ],
+          name: "scomma",
+          type: "function",
+        },
+      ],
+      name: "R",
+      type: "predicate",
+    });
   });
 });

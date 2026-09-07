@@ -169,7 +169,12 @@ is a file in that directory.
 - **Predicates** any of the 26 uppercase letters, with parentheses: `F(x)`,
   `R(x,y)`. A bare uppercase letter is a **sentence letter**. A symbol's
   **arity is part of its identity**, so `F(a)` and `F(a,b)` are two different
-  predicates with two separate fields.
+  predicates with two separate fields. The letters are variadic because each
+  takes one argument at the `seq` sort, which the spec marks `@syntax role
+  argument-list`; the reader flattens a node of that sort into the argument
+  list. A course's own fixed-arity symbols — `term Red (x: tm): wff;`, or an
+  infix `plus` written `+` — read as the constructor applied to its binders,
+  and get fields keyed by the constructor's name (`Red(_)`, `plus(_,_)`).
 - **Variables** `s`–`z`; **names** `a`–`e`; **function symbols** `f`–`r`, a
   function when parentheses follow and a constant when they do not. Names and
   variables are separate *sorts*, which is what lets the proof system state

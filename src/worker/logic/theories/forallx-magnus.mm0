@@ -140,6 +140,10 @@ sort var;
 --| @vars a b c d e f g h i j k l m n o p q r s t u v w
 sort name;
 sort tm;
+-- `argument-list` tells the model and translation readers that a symbol's
+-- single `seq` binder is a variadic argument list to flatten, not one
+-- argument; how the list is built is read off its constructors below.
+--| @syntax role argument-list
 sort seq;
 
 term v2t (x: var): tm;

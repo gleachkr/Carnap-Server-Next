@@ -1060,6 +1060,28 @@ given a free truth value. A constructor with *no* role is the open half — a
 sentence letter, or a predicate letter applied to terms — and a truth table
 gives each distinct one (`F`, `F(a)`, `R(a,b)`) its own column.
 
+**A symbol is read from the tree, not from its notation.** The model and
+translation types take a role-less constructor as a predicate when it returns
+the sentence sort and a function otherwise, named by the constructor and applied
+to whatever its binders hold — so `term plus (x y: tm): tm;` with `infixl plus:
+$+$` reads `a + b` as `plus` of two arguments, and `term Red (x: tm): wff;`
+reads `Red(a)` with no notation at all. A textbook's *variadic* letters, where
+`F`, `F(a)` and `R(a,b)` are one declaration, take a single binder at a list
+sort, and the spec marks that sort:
+
+```
+--| @syntax role argument-list
+sort seq;
+```
+
+A node of that sort is flattened by structure — its own binders at the list
+sort recurse, any other is one argument — so an elided empty list, a comma, a
+juxtaposition, or a cons all read the same way and the reader is never told a
+constructor's name. Leave the role off and every binder is one argument, which
+is right for a language whose symbols all have fixed arity. A binding
+constructor with no role the type has a case for — a description operator, say
+— is refused where it stands, since a finite model has no value for it.
+
 **Every truth function has a role, not just the five a textbook opens with.**
 Which connectives a course takes as primitive is the textbook's business:
 Quine's stroke, exclusive disjunction, NAND and NOR before anything else in a
@@ -1092,7 +1114,8 @@ The last six are degenerate and nobody teaches them, but they are named for the
 same reason the other ten are: the list is a closed whitelist, and a hole in it
 is a construct refused for a reason no author can act on. Roles that are not
 truth functions — `forall`, `exists`, `identity`, `inequality`, `sentence`,
-`turnstile`, `context-join` — are read by the types that have a use for them,
+`argument-list`, `turnstile`, `context-join` — are read by the types that have
+a use for them,
 and refused by the ones that do not: a truth table has no column for `∀`.
 
 Here is a course whose textbook uses the stroke, over `carnap-prop`:
