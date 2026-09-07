@@ -3451,6 +3451,10 @@ msgstr "Suspended"
 msgid "syntax error"
 msgstr "syntax error"
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part."
+msgstr "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part."
+
 #: src/worker/web/admin.tsx
 msgid "Targets"
 msgstr "Targets"

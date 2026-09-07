@@ -62,6 +62,10 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
     ':::aufbau-proof-fitch{system="forallx-calgary-2019" id="g" points="1"}\ntheorem g : $ P ∧ ⊢ Q $\n----\n:::',
   ],
   [
+    "a theory with no role for the proof type to read",
+    ':::aufbau-mm0{name="bare"}\nprovable sort wff;\n:::\n\n:::aufbau-proof-fitch{system="bare" id="g" points="1"}\ntheorem g : $ P $\n----\n:::',
+  ],
+  [
     // The block alone: a spec-read failure is now the block's own diagnostic,
     // so this needs no exercise to be set in it.
     "a name the delimiters split",

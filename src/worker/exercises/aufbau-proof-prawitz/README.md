@@ -11,7 +11,7 @@ downstream is shared: the same `@aufbau/compiler`, the same MMB certificate as
 the trust boundary, the same worker-side
 [`verifyMmb`](../aufbau-proof/verifier.ts) against a frozen theory. It targets
 the same sequent/ND theories as the Fitch type (`⊢`, ACUI comma-context, an
-assumption axiom named by `assumption=`), and a node's rule may be any alias the
+assumption axiom named by `@syntax role assumption`), and a node's rule may be any alias the
 theory declares for an axiom, resolved by `prawitzToAuf`'s `readRule` at emission.
 
 ## The idea: labels induce boxes, boxes become contexts
@@ -82,14 +82,12 @@ the translator at compile time; it need not prove anything.
 
 Attributes match the siblings: `system` (required, a declared `aufbau-mm0` name
 earlier in the document), `id`, `title`, `points`, `exam`, `feedback`,
-`options`,
-`assumption=` naming the theory's assumption axiom (`ax` by default),
-`sequent=` naming its turnstile notation (`⊢` by default; emitted in every
-translated sequent and stripped from pasted starter lines), and `context=`
-naming the separator between a context's formulas (`,` by default). The last
-two are read off the theory itself where it declares them (`@syntax role
-turnstile`, `@syntax role context-join`), so they are an override rather than
-something to write on every exercise.
+`options`. Nothing notational: the theory's `@syntax role assumption` names
+the axiom every assumption leaf is emitted through, `role turnstile` its
+turnstile (emitted in every translated sequent and stripped from pasted
+starter lines), and `role context-join` the separator between a context's
+formulas. A theory missing any of the three does not compile a Prawitz
+exercise.
 
 ## Formulas are read in the theory's language
 

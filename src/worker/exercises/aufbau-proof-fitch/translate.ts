@@ -61,8 +61,8 @@
  * resolved to the name the engine declares (`∧I` to `and_intro`, where the
  * theory's `@syntax alias` says so) as the line is parsed, and everything
  * downstream — the assumption test, the citation-shape lookup, the emitted
- * `by` — sees the resolved name. The configured assumption rule is read the
- * same way, so `assumption="AS"` and a line citing `ax` agree.
+ * `by` — sees the resolved name. The theory's assumption rule is read the
+ * same way, so a line citing `AS` and one citing `ax` agree.
  *
  * Structural problems (bad dedent, unknown/misordered/inaccessible references,
  * a subproof citation whose ends don't bracket one subproof, a line with no

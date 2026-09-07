@@ -22,6 +22,7 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireProofNotations,
   requireSystem,
   starterFormulaReader,
   starterRuleReader,
@@ -36,9 +37,6 @@ import {
   AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
   AUFBAU_PROOF_FITCH_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
-  DEFAULT_ASSUMPTION_RULE,
-  DEFAULT_CONTEXT_SYMBOL,
-  DEFAULT_SEQUENT_SYMBOL,
 } from "./types";
 
 /** The underline separating the goal header from the starter Fitch body. */
@@ -47,10 +45,7 @@ const UNDERLINE = /^\s*-{3,}\s*$/;
 /** What `::::aufbau-proof-fitch{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
-  "assumption",
-  "context",
   "options",
-  "sequent",
   "system",
 ] as const;
 
@@ -59,16 +54,14 @@ const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
  * a named theory and freezes `theory + goal declaration` into `publicData.mm0`
  * (the sole verification input); its body reads prose (the prompt), a `theorem
  * <name>: $ Γ ⊢ φ $` goal line, a `----` underline, then a starter *Fitch* proof
- * the editor opens with. The `assumption=` attribute names the theory's
- * assumption axiom (`ax` by default) so the translator can tell which lines
- * introduce a context formula; `sequent=` names its turnstile notation (`⊢` by
- * default) and `context=` the separator between a context's formulas (`,` by
- * default, `;` in a theory that is also a language and has spent the comma on
- * `R(a,b)`), both of which the translator writes into every emitted sequent —
- * the student's Fitch source never spells either. In practice neither is
- * written: a theory that declares its own notations is read for them. Grading
- * is identical to the linear type: the translated Fitch text compiles to
- * `.auf`, and the worker verifies the MMB against this frozen mm0.
+ * the editor opens with. Which axiom opens a hypothesis, and how a sequent
+ * is spelled — the turnstile, and the separator between a context's formulas
+ * (`;` in a theory that is also a language and has spent the comma on
+ * `R(a,b)`) — are read off the theory's `@syntax role` annotations
+ * ({@link requireProofNotations}); the translator writes both symbols into
+ * every emitted sequent, and the student's Fitch source never spells either.
+ * Grading is identical to the linear type: the translated Fitch text compiles
+ * to `.auf`, and the worker verifies the MMB against this frozen mm0.
  */
 export async function compileAufbauProofFitch(
   block: DirectiveBlock,
@@ -90,25 +83,12 @@ export async function compileAufbauProofFitch(
     diagnostics,
   );
   const title = block.attrs.title?.trim();
-  const assumptionRule =
-    block.attrs.assumption?.trim() || DEFAULT_ASSUMPTION_RULE;
+  const notations = requireProofNotations(block, theory, diagnostics);
   const header = parseTheoremHeader(block, diagnostics);
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
   }
-
-  // A sequent's two notations, in order of who knows best: the author, then
-  // the theory's own `@syntax role turnstile` / `role context-join`, then the
-  // house convention. See {@link AufbauTheory}.
-  const sequentSymbol =
-    block.attrs.sequent?.trim() ||
-    theory?.sequentSymbol ||
-    DEFAULT_SEQUENT_SYMBOL;
-  const contextSymbol =
-    block.attrs.context?.trim() ||
-    theory?.contextSymbol ||
-    DEFAULT_CONTEXT_SYMBOL;
 
   // The goal header must be followed by a '----' underline; the starter Fitch
   // proof (which may be empty) is everything after it.
@@ -152,10 +132,16 @@ export async function compileAufbauProofFitch(
       .trim();
   }
 
-  if (id === null || theory === undefined || header === null) {
+  if (
+    id === null ||
+    theory === undefined ||
+    notations === null ||
+    header === null
+  ) {
     return null;
   }
 
+  const { assumptionRule, contextSymbol, sequentSymbol } = notations;
   const goalLine = block.bodyStartLine + header.headerIndex;
 
   // The goal's binders shadow the theory's own lexicon for the length of the

@@ -15,6 +15,9 @@
  * empty. An additive rule (one shared `g` across premises) would force
  * sibling premises' contexts to be ACUI-equal — unsupported by design. `ax`
  * (`g , a ⊢ a`) and `reit` are the slack shape in miniature.
+ *
+ * The three `@syntax role`s are what a Fitch or Prawitz exercise reads off a
+ * theory to write its lines; a theory without them does not compile one.
  */
 export const FITCH_THEORY_MM0 = `delimiter $ ( ) $;
 provable sort wff;
@@ -31,11 +34,13 @@ term ctx_eq (g h: ctx): wff;
 term emp: ctx;
 notation emp: ctx = ($_$:max);
 
+--| @syntax role context-join
 --| @acui ctx_assoc ctx_comm emp ctx_idem
 term join (g h: ctx): ctx;
 infixl join: $,$ prec 5;
 term hyp (a: wff): ctx;
 coercion hyp: wff > ctx;
+--| @syntax role turnstile
 term nd (g: ctx) (a: wff): wff;
 infixl nd: $⊢$ prec 0;
 
@@ -66,6 +71,7 @@ axiom imp_congr (a b c d: wff): $ a ↔ b $ > $ c ↔ d $ > $ (a → c) ↔ (b �
 axiom and_congr (a b c d: wff): $ a ↔ b $ > $ c ↔ d $ > $ (a ∧ c) ↔ (b ∧ d) $;
 
 -- Structural
+--| @syntax role assumption
 axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
 axiom reit (g h: ctx) (a: wff): $ g ⊢ a $ > $ g , h ⊢ a $;
 

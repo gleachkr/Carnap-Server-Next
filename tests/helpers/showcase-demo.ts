@@ -53,10 +53,12 @@ IP (indirect proof)    IP                    ip
 Where the book's name covers two rules, one per side — ∧E, ∨I, ↔E — the alias
 sits on the second axiom, which carries the engine's \`@fallback\` onto the
 first: the engine tries the cited side and then the other, so the student never
-says which. An alias works in the Fitch, tree and Prawitz editors, in their
-starters, and in the \`assumption=\` attribute. The linear \`aufbau-proof\` type
-is the exception: its lines are engine text and go to the compiler as written,
-so there a rule is its identifier.
+says which. An alias works in the Fitch, tree and Prawitz editors and in their
+starters. The linear \`aufbau-proof\` type is the exception: its lines are
+engine text and go to the compiler as written, so there a rule is its
+identifier. An alias says how a rule is written; which rule opens a hypothesis
+is a \`@syntax role assumption\` on the axiom, and the Fitch and Prawitz
+exercises read it from there.
 
 The rules themselves come from an \`aufbau-mm0\` block, which is what makes them
 available to the proof exercises further down. This one names a system the site

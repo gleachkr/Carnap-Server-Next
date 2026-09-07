@@ -24,6 +24,7 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireProofNotations,
   requireSystem,
   starterFormulaReader,
   starterRuleReader,
@@ -38,9 +39,6 @@ import {
   AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
   AUFBAU_PROOF_PRAWITZ_KIND,
   AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
-  DEFAULT_ASSUMPTION_RULE,
-  DEFAULT_CONTEXT_SYMBOL,
-  DEFAULT_SEQUENT_SYMBOL,
 } from "./types";
 
 /**
@@ -86,10 +84,7 @@ function starterStructuralDiagnostic(
 /** What `::::aufbau-proof-prawitz{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
-  "assumption",
   "options",
-  "context",
-  "sequent",
   "system",
 ] as const;
 
@@ -107,14 +102,13 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
  * binds to nothing fails the compile rather than greeting the student as an
  * error.
  *
- * The `assumption=` attribute names the theory's assumption axiom (`ax` by
- * default) so the translator can tell assumption leaves from rule nodes and
- * emit every leaf through it; `context=` names the separator between a
- * context's formulas (`,` by default, `;` in a theory that is also a language);
- * `sequent=` names the theory's turnstile notation
- * (`⊢` by default). Grading is identical to the sibling proof types: the
- * translated tree compiles to `.auf` in the browser, and the resulting MMB
- * certificate is verified against this frozen mm0.
+ * Which axiom an assumption leaf is emitted through, and how a sequent is
+ * spelled — the turnstile (also stripped from pasted starter lines) and the
+ * separator between a context's formulas — are read off the theory's
+ * `@syntax role` annotations ({@link requireProofNotations}). Grading is
+ * identical to the sibling proof types: the translated tree compiles to
+ * `.auf` in the browser, and the resulting MMB certificate is verified
+ * against this frozen mm0.
  */
 export async function compileAufbauProofPrawitz(
   block: DirectiveBlock,
@@ -135,26 +129,13 @@ export async function compileAufbauProofPrawitz(
     block.line,
     diagnostics,
   );
-  const assumptionRule =
-    block.attrs.assumption?.trim() || DEFAULT_ASSUMPTION_RULE;
+  const notations = requireProofNotations(block, theory, diagnostics);
   const title = block.attrs.title?.trim();
   const header = parseTheoremHeader(block, diagnostics);
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
   }
-
-  // A sequent's two notations, in order of who knows best: the author, then
-  // the theory's own `@syntax role turnstile` / `role context-join`, then the
-  // house convention. See {@link AufbauTheory}.
-  const sequentSymbol =
-    block.attrs.sequent?.trim() ||
-    theory?.sequentSymbol ||
-    DEFAULT_SEQUENT_SYMBOL;
-  const contextSymbol =
-    block.attrs.context?.trim() ||
-    theory?.contextSymbol ||
-    DEFAULT_CONTEXT_SYMBOL;
 
   if (header !== null && header.goalFormula.length === 0) {
     diagnostics.push(
@@ -169,12 +150,14 @@ export async function compileAufbauProofPrawitz(
   if (
     id === null ||
     theory === undefined ||
+    notations === null ||
     header === null ||
     header.goalFormula.length === 0
   ) {
     return null;
   }
 
+  const { assumptionRule, contextSymbol, sequentSymbol } = notations;
   const goalLine = block.bodyStartLine + header.headerIndex;
 
   // The goal's binders shadow the theory's own lexicon for the length of the

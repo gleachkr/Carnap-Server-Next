@@ -625,6 +625,10 @@ axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 -- line may state its conclusion in a larger ambient scope than its premises
 -- inhabit. The Fitch translator's ambient contexts depend on it; the
 -- dependency-context emitters (Prawitz, tree) simply bind it empty.
+-- `role assumption` is how the Fitch and Prawitz editors know which lines
+-- open a hypothesis rather than cite a rule — a fact about the calculus, so
+-- the calculus says it. The alias beside it is only how a proof spells it.
+--| @syntax role assumption
 --| @syntax alias AS
 axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
 --| @syntax alias R

@@ -82,7 +82,18 @@ Is this a tautology?
 
 :::aufbau-mm0{name="prop" show}
 provable sort wff;
+sort ctx;
 term top: wff;
+--| @syntax role context-join
+term join (g h: ctx): ctx;
+infixl join: $,$ prec 5;
+term hyp (a: wff): ctx;
+coercion hyp: wff > ctx;
+--| @syntax role turnstile
+term nd (g: ctx) (a: wff): wff;
+infixl nd: $⊢$ prec 0;
+--| @syntax role assumption
+axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
 axiom top_i: $ top $;
 :::
 

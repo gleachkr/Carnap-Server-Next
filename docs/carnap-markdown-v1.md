@@ -1021,9 +1021,21 @@ axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢
 ```
 
 An alias works wherever a rule is cited: a Fitch justification, a tree or
-Prawitz node, a starter proof, and the `assumption=` attribute. The linear
-`aufbau-proof` type is the exception: its lines are engine text and go to the
-compiler as written, so there a rule is its identifier.
+Prawitz node, and a starter proof. The linear `aufbau-proof` type is the
+exception: its lines are engine text and go to the compiler as written, so
+there a rule is its identifier.
+
+An alias says how a rule is *written*; a role says what it *is*. The Fitch and
+Prawitz types have to know which axiom opens a hypothesis, and they read that
+off the theory too — `@syntax role assumption` on the axiom, beside its alias.
+Nothing on the exercise says it, since it is a fact about the calculus, not
+about any one proof:
+
+```mm0
+--| @syntax role assumption
+--| @syntax alias AS
+axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
+```
 
 **`system=` resolves in one order: your document, then the server.** A name
 matches an `aufbau-mm0` block declared earlier in the same document first, and
@@ -1375,16 +1387,15 @@ a → a       :imp_intro 1-1
 ```
 
 Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
-`options` attributes it takes the required `system` and an optional `assumption` naming the theory's
-assumption axiom (default `ax`) — the rule the translator treats as introducing a
-context formula — plus two attributes naming how this theory spells a sequent:
-`sequent` its turnstile (default `⊢`) and `context` the separator between a
-context's formulas (default `,`), both written into every sequent the translator
-emits. The student's Fitch source never spells either, so an ASCII theory only
-needs `sequent="|-"` on the directive. **You will rarely write them.** A theory
-that carries `@syntax role turnstile` / `role context-join` says so itself and
-the exercise picks it up — which is why forallx's `;` needs no attribute
-anywhere; these are the override for one that does not.
+`options` attributes it takes only the required `system`. Three things the
+translator needs come from the theory, by `@syntax role`: which axiom opens a
+hypothesis (`role assumption` — the rule the translator treats as introducing a
+context formula), and how this theory spells a sequent — `role turnstile` on
+its turnstile and `role context-join` on the separator between a context's
+formulas — both written into every sequent the translator emits. The student's
+Fitch source never spells either. A theory that declares none of the three
+does not compile a Fitch exercise; the diagnostic names the missing role. This
+is why forallx's `;` appears on no exercise anywhere: the theory says it once.
 The submitted answer carries `{ mmb, proofText, fitchText }`;
 review pages show the submitted Fitch source. Because the `:<rule>` justification
 uses a colon, the Fitch body is treated as raw text (not Markdown), and formulas
@@ -1454,15 +1465,12 @@ prove anything — but a discharge mark that binds to no assumption fails the
 compile, since the student could never fix it.
 
 Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
-`options` attributes
-it takes the required `system` and three optional notational attributes:
-`assumption` names the theory's assumption axiom (default `ax`), exactly as
-`aufbau-proof-fitch` does; `sequent` names the theory's turnstile notation
-(default `⊢`) — used in every sequent the translator emits and stripped from
-pasted starter lines, so a theory with ASCII notation can say `sequent="|-"`;
-and `context` names the separator between a context's formulas (default `,`).
-As with the Fitch type, a theory that declares its own notations under
-`@syntax role turnstile` / `role context-join` needs neither written out.
+`options` attributes it takes only the required `system`. As with the Fitch
+type, the theory's `@syntax role` annotations say the rest: `role assumption`
+names the axiom every assumption leaf is emitted through, `role turnstile` the
+notation used in every sequent the translator emits and stripped from pasted
+starter lines, and `role context-join` the separator between a context's
+formulas. A theory missing any of them does not compile a Prawitz exercise.
 
 One caveat when setting goals: a tree cannot discharge **vacuously**. Every
 assumption stands somewhere in the tree, so a goal like `a ⊢ b → a` — where

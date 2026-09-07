@@ -14,11 +14,35 @@ import {
 import { i18nFor } from "../src/worker/i18n";
 import { PRAWITZ_DEMO_SOURCE } from "./helpers/prawitz-demo";
 
+/**
+ * The smallest theory a Prawitz exercise compiles over: `top` to prove, and
+ * the three roles the type reads a sequent's spelling and the assumption
+ * axiom from.
+ */
 const THEORY = `:::aufbau-mm0{name="prop" show}
 provable sort wff;
+sort ctx;
 term top: wff;
+term imp (a b: wff): wff;
+infixr imp: $→$ prec 25;
+--| @syntax role context-join
+term join (g h: ctx): ctx;
+infixl join: $,$ prec 5;
+term hyp (a: wff): ctx;
+coercion hyp: wff > ctx;
+--| @syntax role turnstile
+term nd (g: ctx) (a: wff): wff;
+infixl nd: $⊢$ prec 0;
+--| @syntax role assumption
+axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
 axiom top_i: $ top $;
 :::`;
+
+/** {@link THEORY} with an ASCII turnstile, so the spelling visibly comes from it. */
+const ASCII_THEORY = THEORY.replace('name="prop"', 'name="ascii"').replace(
+  "infixl nd: $⊢$ prec 0;",
+  "infixl nd: $|-$ prec 0;",
+);
 
 function prawitzSource(directive: string): string {
   return `${THEORY}\n\n${directive}`;
@@ -74,7 +98,13 @@ theorem thm_top: $ top $
     expect(publicData.assumptionRule).toBe("ax");
     // The theory text plus the appended goal declaration — the sole grading input.
     expect(publicData.mm0).toBe(
-      "provable sort wff;\nterm top: wff;\naxiom top_i: $ top $;\ntheorem thm_top: $ top $;",
+      `${THEORY.split("\n")
+        .slice(1, -1)
+        .join("\n")
+        .replaceAll(
+          /--\| @syntax [^\n]*\n/g,
+          "",
+        )}\ntheorem thm_top: $ top $;`,
     );
     expect(publicData.promptHtml).toContain(
       "Build a natural-deduction tree for top.",
@@ -85,9 +115,9 @@ theorem thm_top: $ top $
     });
   });
 
-  test("assumption= overrides the assumption axiom the translator keys on", async () => {
+  test("the assumption axiom the translator keys on is the theory's `role assumption`", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" assumption="hyp_intro"}
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 theorem thm_top: $ top $
 :::`),
     );
@@ -97,19 +127,23 @@ theorem thm_top: $ top $
       return;
     }
     expect(prawitzPublicData(compiled.artifact, "p1").assumptionRule).toBe(
-      "hyp_intro",
+      "ax",
     );
   });
 
-  test("sequent= overrides the turnstile; ⊢ is the default", async () => {
+  test("the turnstile is the theory's `role turnstile`, canonically spelled", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" sequent="|-"}
+      `${ASCII_THEORY}
+
+:::aufbau-proof-prawitz{system="ascii" id="p1"}
 theorem thm_top: $ top $
 :::
 
+${THEORY}
+
 :::aufbau-proof-prawitz{system="prop" id="p2"}
 theorem thm_top2: $ top $
-:::`),
+:::`,
     );
 
     expect(compiled.ok).toBe(true);
@@ -122,6 +156,30 @@ theorem thm_top2: $ top $
     expect(prawitzPublicData(compiled.artifact, "p2").sequentSymbol).toBe(
       "⊢",
     );
+  });
+
+  test("a theory missing a role is refused, naming the role", async () => {
+    const compiled = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="prop"}
+provable sort wff;
+term top: wff;
+axiom top_i: $ top $;
+:::
+
+:::aufbau-proof-prawitz{system="prop" id="p1"}
+theorem thm_top: $ top $
+:::`,
+    );
+
+    expect(compiled.ok).toBe(false);
+    if (compiled.ok) {
+      return;
+    }
+    expect(
+      compiled.diagnostics
+        .filter((entry) => entry.code === "missing_system_role")
+        .map((entry) => entry.params?.role),
+    ).toEqual(["assumption", "turnstile", "context-join"]);
   });
 
   test("an optional ---- + starter body freezes a labeled tree into publicData", async () => {
@@ -149,13 +207,15 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
     });
   });
 
-  test("a pasted context left of the exercise's sequent symbol is discarded", async () => {
+  test("a pasted context left of the theory's sequent symbol is discarded", async () => {
     const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" sequent="|-"}
+      `${ASCII_THEORY}
+
+:::aufbau-proof-prawitz{system="ascii" id="p1"}
 theorem thm_top: $ top $
 ----
 l1: $ G |- top $ by top_i []
-:::`),
+:::`,
     );
 
     expect(compiled.ok).toBe(true);

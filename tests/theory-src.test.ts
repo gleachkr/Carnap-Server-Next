@@ -127,12 +127,24 @@ theorem andcomm (P Q: wff): $ ((P ∧ Q) ⊢ (Q ∧ P)) $;`,
     const mm0 = await frozenMm0(
       lesson(`:::aufbau-mm0{name="forallx"}
 provable sort wff;
+sort ctx;
 term and (a b: wff): wff;
+infixl and: $∧$ prec 30;
+--| @syntax role context-join
+term join (g h: ctx): ctx;
+infixl join: $,$ prec 5;
+term hyp (a: wff): ctx;
+coercion hyp: wff > ctx;
+--| @syntax role turnstile
+term nd (g: ctx) (a: wff): wff;
+infixl nd: $⊢$ prec 0;
+--| @syntax role assumption
+axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
 :::`),
     );
 
     expect(mm0).toBe(
-      "provable sort wff;\nterm and (a b: wff): wff;\ntheorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $;",
+      "provable sort wff;\nsort ctx;\nterm and (a b: wff): wff;\ninfixl and: $∧$ prec 30;\nterm join (g h: ctx): ctx;\ninfixl join: $,$ prec 5;\nterm hyp (a: wff): ctx;\ncoercion hyp: wff > ctx;\nterm nd (g: ctx) (a: wff): wff;\ninfixl nd: $⊢$ prec 0;\naxiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;\ntheorem andcomm (P Q: wff): $ ((P ∧ Q) ⊢ (Q ∧ P)) $;",
     );
   });
 
@@ -155,38 +167,17 @@ term and (a b: wff): wff;
     }).toEqual({ context: ";", sequent: "⊢" });
   });
 
-  test("an attribute overrides what the theory says", async () => {
-    const data = await publicDataOf(
-      `:::aufbau-mm0{name="forallx" src="${FORALLX}"}
-:::
-
-:::aufbau-proof-fitch{system="forallx" id="ex1" context="," sequent="|-"}
-Take it apart and put it back.
-
-theorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
-----
-P ∧ Q   :ax
-:::`,
-    );
-
-    expect({
-      context: data.contextSymbol,
-      sequent: data.sequentSymbol,
-    }).toEqual({ context: ",", sequent: "|-" });
-  });
-
-  test("a theory that says nothing leaves the house defaults", async () => {
-    const data = await publicDataOf(
+  test("a theory that says nothing is refused, one diagnostic per role", async () => {
+    const codes = await codesFor(
       lesson(`:::aufbau-mm0{name="forallx"}
 provable sort wff;
 term and (a b: wff): wff;
 :::`),
     );
 
-    expect({
-      context: data.contextSymbol,
-      sequent: data.sequentSymbol,
-    }).toEqual({ context: ",", sequent: "⊢" });
+    expect(
+      codes.filter((code) => code === "missing_system_role"),
+    ).toHaveLength(3);
   });
 
   test("a path no theory answers to says so, and lists what does", async () => {

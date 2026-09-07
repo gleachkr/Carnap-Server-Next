@@ -28,13 +28,18 @@ export const AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA = {
   componentVersion: "1",
 } as const;
 
-/** The theory's assumption axiom, absent an author override. See `assumption=`. */
+/**
+ * What an artifact compiled before the theory said so is read with. A theory
+ * now declares all three by `@syntax role` (`assumption`, `turnstile`,
+ * `context-join`) and an exercise cannot compile without them; these stand
+ * in only for `publicData` frozen when they were the house convention.
+ */
 export const DEFAULT_ASSUMPTION_RULE = "ax";
 
-/** The theory's sequent (turnstile) symbol, absent an author override. See `sequent=`. */
+/** See {@link DEFAULT_ASSUMPTION_RULE}. */
 export const DEFAULT_SEQUENT_SYMBOL = "⊢";
 
-/** The theory's context separator, absent an author override. See `context=`. */
+/** See {@link DEFAULT_ASSUMPTION_RULE}. */
 export const DEFAULT_CONTEXT_SYMBOL = ",";
 
 /**

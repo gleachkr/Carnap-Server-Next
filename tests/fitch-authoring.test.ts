@@ -133,9 +133,10 @@ b       :imp_elim 1 2
     // The frozen theory text is the theory plus the appended goal declaration.
     const mm0 = proofTheoryText(publicData).mm0;
     expect(mm0).toContain("axiom imp_elim");
-    expect(mm0.endsWith("theorem mp (a b: wff): $ (a → b) , a ⊢ b $;")).toBe(
-      true,
-    );
+    // Read in the theory's language and re-printed (#279), hence the parens.
+    expect(
+      mm0.endsWith("theorem mp (a b: wff): $ (((a → b) , a) ⊢ b) $;"),
+    ).toBe(true);
     expect(publicData.starterBody).toBe(
       ["a → b   :ax", "a       :ax", "b       :imp_elim 1 2"].join("\n"),
     );
@@ -146,9 +147,9 @@ b       :imp_elim 1 2
     });
   });
 
-  test("the assumption= attribute overrides the default assumption axiom", async () => {
+  test("the assumption axiom and the sequent's spelling come from the theory's roles", async () => {
     const compiled = await compileCarnapMarkdown(
-      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1" assumption="hyp"}
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
@@ -157,23 +158,52 @@ theorem mp (a b: wff): $ (a → b) , a ⊢ b $
     if (!compiled.ok) {
       return;
     }
-    expect(fitchPublicData(compiled.artifact, "f1").assumptionRule).toBe(
-      "hyp",
-    );
+    const data = fitchPublicData(compiled.artifact, "f1");
+    expect({
+      assumption: data.assumptionRule,
+      context: data.contextSymbol,
+      sequent: data.sequentSymbol,
+    }).toEqual({ assumption: "ax", context: ",", sequent: "⊢" });
   });
 
-  test("the sequent= attribute overrides the default turnstile", async () => {
+  test("a theory that names none of the three roles is refused, one diagnostic each", async () => {
     const compiled = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="bare"}
+provable sort wff;
+sort ctx;
+term join (g h: ctx): ctx;
+infixl join: $,$ prec 5;
+term hyp (a: wff): ctx;
+coercion hyp: wff > ctx;
+term nd (g: ctx) (a: wff): wff;
+infixl nd: $⊢$ prec 0;
+axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
+:::
+
+:::aufbau-proof-fitch{system="bare" id="f1"}
+theorem t (a: wff): $ a ⊢ a $
+----
+:::`,
+    );
+    expect(compiled.ok).toBe(false);
+    if (compiled.ok) {
+      return;
+    }
+    expect(
+      compiled.diagnostics
+        .filter((entry) => entry.code === "missing_system_role")
+        .map((entry) => entry.params?.role),
+    ).toEqual(["assumption", "turnstile", "context-join"]);
+  });
+
+  test("the notational attributes are gone: the theory says it once", async () => {
+    const codes = await diagnosticsFor(
       fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1" sequent="|-"}
 theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 ----
 :::`),
     );
-    expect(compiled.ok).toBe(true);
-    if (!compiled.ok) {
-      return;
-    }
-    expect(fitchPublicData(compiled.artifact, "f1").sequentSymbol).toBe("|-");
+    expect(codes).toContain("unknown_attribute");
   });
 
   test("an empty starter body is allowed", async () => {
@@ -373,7 +403,10 @@ describe("a goal written the way the lines are", () => {
     ]);
   });
 
-  test("a theory that names no sort leaves the goal to the engine as written", async () => {
+  test("a theory that names no sentence sort still reads the goal, at the turnstile's", async () => {
+    // A Fitch theory always has a turnstile (it cannot compile without the
+    // role), so there is always a sort to read a sequent at; `role sentence`
+    // is only ever a refinement.
     const compiled = await compileCarnapMarkdown(
       fitchSource(
         ':::aufbau-proof-fitch{system="prop" id="mp"}\nProve it.\n\ntheorem mp (a b: wff): $ (a → b) , a ⊢ b $\n----\n:::',
@@ -386,10 +419,12 @@ describe("a goal written the way the lines are", () => {
     }
 
     const data = fitchPublicData(compiled.artifact, "mp");
-    expect(data.goalEngineDecl).toBeUndefined();
+    expect(data.goalEngineDecl).toBe(
+      "theorem mp (a b: wff): $ (((a → b) , a) ⊢ b) $;",
+    );
     expect(
       proofTheoryText(data).mm0.endsWith(
-        "\ntheorem mp (a b: wff): $ (a → b) , a ⊢ b $;",
+        "\ntheorem mp (a b: wff): $ (((a → b) , a) ⊢ b) $;",
       ),
     ).toBe(true);
   });

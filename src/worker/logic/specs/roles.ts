@@ -46,6 +46,14 @@ export interface RoleIndex {
   spellingFor(role: string): string | null;
   /** The constructor playing a role, or `null` if the spec omits it. */
   termFor(role: string): string | null;
+  /**
+   * The axiom or theorem playing a role, or `null` if the spec omits it.
+   *
+   * Rules and terms are separate namespaces to the engine and separate maps
+   * here: `assumption` names a rule, `turnstile` a term, and a consumer asks
+   * for the one it means.
+   */
+  ruleFor(role: string): string | null;
 }
 
 /**
@@ -104,6 +112,15 @@ export function roleIndex(lang: SurfaceLanguage): RoleIndex {
 
   const roleOfTerm = new Map<string, string>();
   const termOfRole = new Map<string, string>();
+  const ruleOfRole = new Map<string, string>();
+
+  for (const [name, info] of lang.spec.rules) {
+    for (const role of info.roles) {
+      if (!ruleOfRole.has(role)) {
+        ruleOfRole.set(role, name);
+      }
+    }
+  }
 
   for (const [name, info] of lang.spec.terms) {
     const role = info.roles[0];
@@ -136,6 +153,7 @@ export function roleIndex(lang: SurfaceLanguage): RoleIndex {
       return notation === undefined ? null : leadingToken(notation);
     },
     termFor: (role) => termOfRole.get(role) ?? null,
+    ruleFor: (role) => ruleOfRole.get(role) ?? null,
   };
 
   indexes.set(lang, index);

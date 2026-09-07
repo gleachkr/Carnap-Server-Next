@@ -130,21 +130,16 @@ splitting a declaration off its statement is MM0's own grammar and needs no
 lexicon. The declaration is shown only if no such goal is declared at all.
 Attributes match `aufbau-proof` (`system`, `id`, `title`, `points`, `exam`,
 `feedback`,
-`options`) plus an optional **`assumption`** naming the theory's assumption axiom
-(default `ax`), an optional **`sequent`** naming its turnstile notation
-(default `⊢`), and an optional **`context`** naming the separator between a
-context's formulas (default `,`) — the symbols the translator writes into every
-emitted sequent, so an ASCII theory authors with `sequent="|-"`. The student's
-Fitch source never spells either, so nothing about the input surface changes
-with them.
-
-Both are usually unnecessary. A theory that says how it spells them — `@syntax
-role turnstile` and `@syntax role context-join` on the constructors — is read
-for them at authoring time, and the attributes exist to override that or to
-serve a theory that says nothing. `logic/theories/forallx-calgary-2019.mm0`
-needs the context separator `;` (its comma is the student's argument separator,
-since that file is also the course's language) and no exercise set from it
-writes `context=` anywhere.
+`options`), and nothing notational: the theory says which axiom opens a
+hypothesis (`@syntax role assumption`), how it spells a turnstile (`role
+turnstile`) and the separator between a context's formulas (`role
+context-join`). The translator writes the two symbols into every emitted
+sequent; the student's Fitch source never spells either. All three are read
+at authoring time (`requireProofNotations` in `../aufbau-proof/authoring.ts`)
+and a theory missing one does not compile a Fitch exercise, with a diagnostic
+per missing role. `logic/theories/forallx-calgary-2019.mm0` needs the context
+separator `;` (its comma is the student's argument separator, since that file
+is also the course's language) and says so once, in the file.
 
 `logic/theories/forallx-magnus.mm0` — the original *forallx*, the other Fitch
 textbook shipped here — is the same in that respect and differs in one that
@@ -175,13 +170,14 @@ as the line is parsed, so the assumption test, the citation-shape lookup and the
 emitted `by` all see the axiom name, and a name the theory never mentions
 reaches the engine as typed, to be refused there.
 
-### The assumption rule is configured, not hardcoded
+### The assumption rule is the theory's, not hardcoded
 
-`ax` is only the **default**. The assumption-axiom name is read from the
-`assumption=` attribute at authoring time ([`authoring.ts`](./authoring.ts),
-falling back to `DEFAULT_ASSUMPTION_RULE = "ax"` in [`types.ts`](./types.ts)) and
-frozen into `publicData.assumptionRule`. That one configured name drives every
-place the type needs to know "which lines introduce a context formula":
+The assumption-axiom name is the rule carrying `@syntax role assumption` in the
+theory, read at authoring time ([`authoring.ts`](./authoring.ts)) and frozen
+into `publicData.assumptionRule`; `DEFAULT_ASSUMPTION_RULE = "ax"` in
+[`types.ts`](./types.ts) only serves artifacts frozen before the theory said so.
+That one name drives every place the type needs to know "which lines introduce
+a context formula":
 
 - the translator ([`fitchToAuf`](./translate.ts)) — an assumption line carries the
   ambient context and can begin a sibling box;
@@ -194,10 +190,10 @@ place the type needs to know "which lines introduce a context formula":
   plugin without providing the facet.
 
 So a theory whose assumption axiom is, say, `assume` or `hyp` works unchanged —
-author with `assumption="hyp"` and the sibling-box seams follow the same rule the
-compiler does. The configured name goes through the same `readRule` as a cited
-one, so `assumption="AS"` over forallx and a line citing `ax` (or the other way
-about) agree. The review page's read-only widget has no theory text at hand, so
+put the role on it and the sibling-box seams follow the same rule the compiler
+does. The role names the axiom itself, and a cited name goes through `readRule`
+to the same identifier, so a line citing `AS` over forallx and one citing `ax`
+agree. The review page's read-only widget has no theory text at hand, so
 the server lists the rule's spellings on the element (`data-assumption-spellings`)
 and the geometry there resolves against that list. What is *not* configurable is
 that there is exactly **one** assumption axiom per exercise; a theory with several
@@ -253,8 +249,8 @@ goal the language refuses is an `invalid_goal_formula` diagnostic.
   / `fitchScopeGeometry` (scope-line geometry, sharing one walk with `fitchToAuf`),
   all pure.
 - [`authoring.ts`](./authoring.ts) — `compileAufbauProofFitch` (reuses the linear
-  type's theory resolution + goal-header parsing; parses `assumption=` and
-  `sequent=`).
+  type's theory resolution + goal-header parsing, and its role check for the
+  assumption axiom and sequent notation).
 - [`assessment.ts`](./assessment.ts) — normalize/evaluate/review; reuses
   `verifyMmb`.
 - [`read-only-view.ts`](./read-only-view.ts) — SSR element chrome + the read-only

@@ -465,6 +465,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "No theory is served at “{path}”. This site ships: {available}. A theory of your own is at the address on its revision page.",
         placeholders("available", "path"),
       ),
+    "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part.":
+      i18n.t(
+        "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part.",
+        placeholders("role", "system"),
+      ),
     // Warnings, not errors: shadowing is usually deliberate — a rule schema
     // has to name its metavariables something — and only the author knows.
     // Each says what the name meant before, since that is the part the

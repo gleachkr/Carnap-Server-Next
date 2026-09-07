@@ -67,51 +67,128 @@ import {
  * those annotations, and hiding them would show a reader half of it.
  */
 export interface AufbauTheory {
-  /**
-   * How this theory spells a context separator and a turnstile, where it says
-   * so — `@syntax role context-join` and `@syntax role turnstile` on the
-   * constructors. `null` for a theory that says nothing, which leaves the
-   * house defaults (`,` and `⊢`) standing.
-   *
-   * The proof types write sequents; a theory that is also a course's language
-   * cannot always spell one the house way, because the notation a student
-   * needs may already own the token. Reading it off the artifact is the point
-   * of the artifact: `sequent=` and `context=` remain as per-exercise
-   * overrides, but nobody should have to repeat a theory's own notation on
-   * every exercise set from it.
-   */
-  readonly contextSymbol: string | null;
   readonly mm0: string;
   readonly name: string;
-  readonly sequentSymbol: string | null;
+  /**
+   * What the theory says about itself that a Fitch or Prawitz proof needs in
+   * order to write its lines — see {@link DeclaredNotations} — or `null` when
+   * the theory could not be read as a spec at all, which the `:::aufbau-mm0`
+   * block reports for itself.
+   */
+  readonly notations: DeclaredNotations | null;
   /** Whether the author asked (`show`) for the source to appear in the lesson. */
   readonly show: boolean;
   readonly source: string;
 }
 
 /**
- * The notations a theory names for itself, or nulls.
+ * The parts of a calculus a proof editor has to know by role, each `null`
+ * where the theory does not say: `@syntax role assumption` on the axiom
+ * that opens a hypothesis, `role turnstile` and `role context-join` on the
+ * constructors of a sequent.
+ *
+ * These are facts about the calculus, not about any exercise set in it. The
+ * proof types write sequents in the theory's own notation and tell an
+ * assumption line from a rule line by its axiom; there is exactly one right
+ * answer to each per theory, so the theory gives it and no exercise repeats
+ * it. A theory that is also a course's language cannot spell a sequent the
+ * house way in any case — forallx's comma is the student's argument
+ * separator, so its context join is `;` — which is why these were never
+ * safe to assume.
+ */
+export interface DeclaredNotations {
+  readonly assumptionRule: string | null;
+  readonly contextSymbol: string | null;
+  readonly sequentSymbol: string | null;
+}
+
+/** What a proof type asks a theory for, once every role has answered. */
+export interface ProofNotations {
+  readonly assumptionRule: string;
+  readonly contextSymbol: string;
+  readonly sequentSymbol: string;
+}
+
+/**
+ * The notations a theory names for itself, or `null` when it cannot be read
+ * as a spec.
  *
  * Reading the theory as a *spec* is what makes the roles visible, and an
  * author's extension can make that reading fail in ways that have nothing to
  * do with the question being asked — a name the delimiters split, an
- * annotation we do not know. None of that should stop an exercise compiling,
- * so anything unexpected simply leaves the defaults in place.
+ * annotation we do not know. That failure is the block's own diagnostic
+ * ({@link reportUnreadableTheory}), so here it is only `null`, and the proof
+ * types stay quiet rather than add three "declares no role" complaints to a
+ * theory that declares nothing legible.
  */
-function declaredNotations(source: string): {
-  readonly contextSymbol: string | null;
-  readonly sequentSymbol: string | null;
-} {
+function declaredNotations(source: string): DeclaredNotations | null {
   try {
     const index = roleIndex(new SurfaceLanguage(parseSpec(source).spec));
 
     return {
+      assumptionRule: index.ruleFor("assumption"),
       contextSymbol: index.spellingFor("context-join"),
       sequentSymbol: index.spellingFor("turnstile"),
     };
   } catch {
-    return { contextSymbol: null, sequentSymbol: null };
+    return null;
   }
+}
+
+/** The roles a Fitch or Prawitz proof needs, in the order they are reported. */
+const PROOF_NOTATION_ROLES: readonly (readonly [
+  keyof DeclaredNotations,
+  string,
+])[] = [
+  ["assumptionRule", "assumption"],
+  ["sequentSymbol", "turnstile"],
+  ["contextSymbol", "context-join"],
+];
+
+/**
+ * The notations a Fitch or Prawitz exercise writes its lines with, read off
+ * the theory, or `null` with a diagnostic for each role the theory omits.
+ *
+ * Quiet when there is no theory (the `system=` check has spoken) or when the
+ * theory could not be read as a spec (its block has). Otherwise every missing
+ * role is reported, not just the first: an author adding the annotations to
+ * a theory of their own should learn all three at once.
+ */
+export function requireProofNotations(
+  block: DirectiveBlock,
+  theory: AufbauTheory | undefined,
+  diagnostics: CompilerDiagnostic[],
+): ProofNotations | null {
+  if (theory === undefined || theory.notations === null) {
+    return null;
+  }
+
+  const found: Partial<Record<keyof DeclaredNotations, string>> = {};
+
+  for (const [key, role] of PROOF_NOTATION_ROLES) {
+    const value = theory.notations[key];
+
+    if (value === null) {
+      diagnostics.push(
+        diagnostic(
+          block.line,
+          "missing_system_role",
+          "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part.",
+          { params: { role, system: theory.name } },
+        ),
+      );
+    } else {
+      found[key] = value;
+    }
+  }
+
+  const { assumptionRule, contextSymbol, sequentSymbol } = found;
+
+  return assumptionRule === undefined ||
+    contextSymbol === undefined ||
+    sequentSymbol === undefined
+    ? null
+    : { assumptionRule, contextSymbol, sequentSymbol };
 }
 
 /**
@@ -629,9 +706,9 @@ export async function compileAufbauMm0(
   reportUnreadableTheory(block, base, source, diagnostics);
 
   return {
-    ...declaredNotations(source),
     mm0: stripSyntaxAnnotations(source),
     name,
+    notations: declaredNotations(source),
     show,
     source,
   };
@@ -721,9 +798,9 @@ export function builtInSystem(id: string): AufbauTheory | null {
   }
 
   return {
-    ...declaredNotations(source),
     mm0: stripSyntaxAnnotations(source),
     name: id,
+    notations: declaredNotations(source),
     show: false,
     source,
   };

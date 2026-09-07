@@ -3451,6 +3451,10 @@ msgstr "Gesperrt"
 msgid "syntax error"
 msgstr "Syntaxfehler"
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part."
+msgstr ""
+
 #: src/worker/web/admin.tsx
 msgid "Targets"
 msgstr "Ziele"
