@@ -36,7 +36,7 @@ said. Here is the correspondence:
 \`\`\`
 forallx                cite as               identifier(s)                        form
 ─────────────────────  ────────────────────  ───────────────────────────────────  ──────────────────────
-premise / assumption   AS                    AS                                   Γ ; A ⊢ A
+premise / assumption   AS PR                 AS                                   Γ ; A ⊢ A
 R (reiteration)        R                     reit                                 Γ ⊢ A  ⟹  Γ ; Δ ⊢ A
 ∧I  /  ∧E              ∧I /\\I  /  ∧E /\\E     and_intro / and_elim_l, and_elim_r
 ∨I  /  ∨E              ∨I \\/I  /  ∨E \\/E     or_intro_l, or_intro_r / or_elim

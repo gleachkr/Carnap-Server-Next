@@ -66,10 +66,10 @@
 --   ¬E (A,¬A ⊢ ⊥) ........... neg_elim     X (explosion) .. explosion  IP ... ip
 --   =I ....................... eq_intro_nd  =E ............. eq_replace
 --   ∀I / ∀E .................. all_intro / all_elim        ∃I / ∃E .. ex_intro / ex_elim
--- The assumption/premise rule (the Fitch `assumption` axiom) is `AS`. These are
--- forallx's primitive basic rules — the ones the textbook introduces as the
--- proof system itself, not the derived rules (DS, MT, LEM, DeMorgan, …), which
--- are provable from these.
+-- The assumption/premise rule (the Fitch `assumption` axiom) is `AS`, also
+-- spelled `PR`. These are forallx's primitive basic rules — the ones the
+-- textbook introduces as the proof system itself, not the derived rules (DS,
+-- MT, LEM, DeMorgan, …), which are provable from these.
 --
 -- A proof may cite a rule by the textbook's own name: each rule below carries
 -- an alias annotation in the `--|` channel naming its spellings (`∧I`, and the
@@ -628,8 +628,11 @@ axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 -- `role assumption` is how the Fitch and Prawitz editors know which lines
 -- open a hypothesis rather than cite a rule — a fact about the calculus, so
 -- the calculus says it. The axiom takes the textbook's own name, so a proof
--- cites it the way the book writes it and no alias is needed.
+-- cites it the way the book writes it. `PR` beside it is the other name the
+-- forallx tradition gives the rule — a premise rather than an assumption —
+-- and means exactly the same thing here.
 --| @syntax role assumption
+--| @syntax alias PR
 axiom AS (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
 --| @syntax alias R
 axiom reit (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph $;

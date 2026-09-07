@@ -295,6 +295,7 @@ describe("forallx: Calgary rule aliases", () => {
     expect(readRule("∀I")).toBe("all_intro");
     expect(readRule("∃E")).toBe("ex_elim");
     expect(readRule("AS")).toBe("AS");
+    expect(readRule("PR")).toBe("AS");
     expect(readRule("R")).toBe("reit");
     // A pair's name lands on the axiom that carries the @fallback onto its
     // sibling; the engine, not the reader, decides which side a line wants.
@@ -336,18 +337,16 @@ describe("forallx: Calgary rule aliases", () => {
   });
 
   test("the assumption rule's spellings are what the review page is handed", () => {
-    // Calgary's assumption axiom carries the book's own name, so it has no
-    // alias and one spelling.
-    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "AS")).toEqual(["AS"]);
-    // A rule that does have an alias lists both, and asked by the alias the
-    // same set comes back with the asked spelling first.
-    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "reit")).toEqual([
-      "reit",
-      "R",
+    // The assumption axiom carries the book's own name and one alias, the
+    // tradition's other name for the same rule.
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "AS")).toEqual([
+      "AS",
+      "PR",
     ]);
-    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "R")).toEqual([
-      "R",
-      "reit",
+    // Asked by alias, the same set, the asked spelling first.
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "PR")).toEqual([
+      "PR",
+      "AS",
     ]);
     // The unaliased side of a pair, its aliased sibling, and a name the
     // theory never mentions.
