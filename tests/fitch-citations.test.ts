@@ -99,12 +99,12 @@ describe("fitchToAuf — grouped range lowering", () => {
   const shapes = ruleCitationShapes(MAGNUS_THEORY_SOURCE);
 
   const translate = (lines: readonly string[]) =>
-    fitchToAuf(lines.join("\n"), "g", "ax", "⊢", ";", undefined, shapes);
+    fitchToAuf(lines.join("\n"), "g", "AS", "⊢", ";", undefined, shapes);
 
   test("one range supplies a reductio's last two lines, in premise order", () => {
     const { proofText, diagnostics } = translate([
-      "p           :ax",
-      "    ~p      :ax",
+      "p           :AS",
+      "    ~p      :AS",
       "    p       :reit 1",
       "    ~p      :reit 2",
       "~~p         :neg_intro 2-4",
@@ -116,8 +116,8 @@ describe("fitchToAuf — grouped range lowering", () => {
 
   test("a subproof too short for the pair says so", () => {
     const { diagnostics } = translate([
-      "p           :ax",
-      "    ~p      :ax",
+      "p           :AS",
+      "    ~p      :AS",
       "    p       :reit 1",
       "~~p         :neg_intro 2-3",
     ]);
@@ -130,8 +130,8 @@ describe("fitchToAuf — grouped range lowering", () => {
 
   test("a line ref where the rule wants a subproof says so", () => {
     const { diagnostics } = translate([
-      "p           :ax",
-      "    ~p      :ax",
+      "p           :AS",
+      "    ~p      :AS",
       "    p       :reit 1",
       "    ~p      :reit 2",
       "~~p         :neg_intro 4",
@@ -144,9 +144,9 @@ describe("fitchToAuf — grouped range lowering", () => {
     // The second-to-last line of the cited range sits in a nested box, so the
     // subproof does not end with two lines of its own — only its last one.
     const { diagnostics } = translate([
-      "p            :ax",
-      "    ~p       :ax",
-      "        q    :ax",
+      "p            :AS",
+      "    ~p       :AS",
+      "        q    :AS",
       "        q    :reit 3",
       "    ~p       :reit 2",
       "~~p          :neg_intro 2-5",
@@ -159,8 +159,8 @@ describe("fitchToAuf — grouped range lowering", () => {
 
   test("a ref count matching neither spelling stays the compiler's complaint", () => {
     const { proofText, diagnostics } = translate([
-      "p           :ax",
-      "    ~p      :ax",
+      "p           :AS",
+      "    ~p      :AS",
       "    p       :reit 1",
       "    ~p      :reit 2",
       "~~p         :neg_intro 2-3 2-4 2-4",
@@ -176,13 +176,13 @@ describe("fitchToAuf — grouped range lowering", () => {
     // ↔I with two ranges and →E with two lines lower exactly as they would
     // with no table at all.
     const lines = [
-      "    p            :ax",
+      "    p            :AS",
       "    p            :reit 1",
       "p -> p           :imp_intro 1-2",
-      "p                :ax",
+      "p                :AS",
       "p                :imp_elim 3 4",
     ];
-    const bare = fitchToAuf(lines.join("\n"), "g", "ax", "⊢", ";");
+    const bare = fitchToAuf(lines.join("\n"), "g", "AS", "⊢", ";");
     const shaped = translate(lines);
 
     expect(shaped.proofText).toBe(bare.proofText);

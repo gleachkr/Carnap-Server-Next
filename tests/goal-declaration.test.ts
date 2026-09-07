@@ -57,12 +57,12 @@ Constructive dilemma
 
 theorem cd : $ P \\/ Q ; P -> S ; Q -> S ⊢ S $
 ----
-P \\/ Q :ax
-P -> S :ax
-Q -> S :ax
- P    :ax
+P \\/ Q :AS
+P -> S :AS
+Q -> S :AS
+ P    :AS
  S    :imp_elim 2 4
- Q    :ax
+ Q    :AS
  S    :imp_elim 3 6
 S     :or_elim 1 4-5 6-7
 :::

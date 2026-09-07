@@ -15,9 +15,9 @@ These exercises use the proof system from *forallx: Calgary*, in the Fitch shape
 you know from the book: one formula per line, **indentation opens a subproof**,
 and each line is justified by a rule and the earlier lines it cites. Write the
 justification after a colon — the rule name, then the line numbers or a subproof
-range \`a-b\`. Assumptions cite \`ax\`.
+range \`a-b\`. Assumptions cite \`AS\`.
 
-The connective rules are: \`ax\` (assumption/premise), \`reit\` (reiteration),
+The connective rules are: \`AS\` (assumption/premise), \`reit\` (reiteration),
 \`and_intro\` / \`and_elim_l\` / \`and_elim_r\`, \`or_intro_l\` / \`or_intro_r\` /
 \`or_elim\`, \`imp_intro\` / \`imp_elim\`, \`iff_intro\` / \`iff_elim_l\` /
 \`iff_elim_r\`, \`neg_intro\` / \`neg_elim\`, \`explosion\`, and \`ip\` (indirect
@@ -44,8 +44,8 @@ Derive \`Q\` from \`P → Q\` and \`P\`.
 
 theorem mp (P Q: wff): $ (P → Q) ; P ⊢ Q $
 ----
-P → Q   :ax
-P       :ax
+P → Q   :AS
+P       :AS
 Q       :imp_elim 1 2
 :::
 
@@ -59,21 +59,21 @@ Show that \`P ∧ Q\` entails \`Q ∧ P\`.
 
 theorem andcomm (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
 ----
-P ∧ Q   :ax
+P ∧ Q   :AS
 :::
 
 ## 3. Commutativity of disjunction
 
 This one needs \`or_elim\`: assume each disjunct in its own subproof, derive the
 goal in both, then discharge. Indent a subproof, and start the second subproof
-with a fresh \`ax\` assumption at the same indentation.
+with a fresh \`AS\` assumption at the same indentation.
 
 :::aufbau-proof-fitch{system="forallx" id="orcomm" points="3"}
 Show that \`P ∨ Q\` entails \`Q ∨ P\`.
 
 theorem orcomm (P Q: wff): $ P ∨ Q ⊢ Q ∨ P $
 ----
-P ∨ Q   :ax
+P ∨ Q   :AS
 :::
 
 ## 4. Double negation elimination (indirect proof)
@@ -86,7 +86,7 @@ Show that \`¬ ¬ P\` entails \`P\`.
 
 theorem dne (P: wff): $ ¬ ¬ P ⊢ P $
 ----
-¬ ¬ P   :ax
+¬ ¬ P   :AS
 :::
 
 ## 5. Universal instantiation
@@ -100,14 +100,14 @@ From \`∀ x (F(x) → G(x))\` and \`F(a)\`, derive \`G(a)\`.
 
 theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $
 ----
-∀ x (F(x) → G(x))   :ax
-F(a)                :ax
+∀ x (F(x) → G(x))   :AS
+F(a)                :AS
 :::
 
 ## 6. Existential elimination
 
 The ∃E rule works like ∨E: open a subproof, assume an instance for a **fresh
-name** (\`F(b) :ax\`), derive the goal inside, then discharge with \`ex_elim\`
+name** (\`F(b) :AS\`), derive the goal inside, then discharge with \`ex_elim\`
 citing the existential line and the subproof range. The name \`b\` may not appear
 in the conclusion or in any premise still standing — that is the eigenvariable
 side condition, and the engine enforces it.
@@ -117,8 +117,8 @@ From \`∃ x F(x)\` and \`∀ x (F(x) → G(x))\`, derive \`∃ x G(x)\`.
 
 theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $
 ----
-∃ x F(x)              :ax
-∀ x (F(x) → G(x))     :ax
+∃ x F(x)              :AS
+∀ x (F(x) → G(x))     :AS
 :::
 
 ## 7. Typing it the way the book writes it
@@ -136,7 +136,7 @@ ASCII; finish it with \`all_elim\`, \`and_elim_l\` and \`all_intro\`.
 
 theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
 ----
-Ax(F(x) /\\ G(x))   :ax
+Ax(F(x) /\\ G(x))   :AS
 :::
 
 One convention of the book now applies to proofs as well as to translations:

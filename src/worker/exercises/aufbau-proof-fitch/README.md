@@ -192,8 +192,8 @@ a context formula":
 So a theory whose assumption axiom is, say, `assume` or `hyp` works unchanged —
 put the role on it and the sibling-box seams follow the same rule the compiler
 does. The role names the axiom itself, and a cited name goes through `readRule`
-to the same identifier, so a line citing `AS` over forallx and one citing `ax`
-agree. The review page's read-only widget has no theory text at hand, so
+to the same identifier, so a line citing an alias and one citing the axiom's own
+name agree. The review page's read-only widget has no theory text at hand, so
 the server lists the rule's spellings on the element (`data-assumption-spellings`)
 and the geometry there resolves against that list. What is *not* configurable is
 that there is exactly **one** assumption axiom per exercise; a theory with several

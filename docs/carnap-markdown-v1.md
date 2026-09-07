@@ -1352,8 +1352,8 @@ Each proof line is `<formula> :<rule> <refs>`, where a ref is a proof-step numbe
 `n` or a subproof range `a-b`. Rules are the theory's own axiom names (e.g.
 `imp_elim`, `imp_intro`), or any alias the theory gives them (`:→E 1 2`; see
 the `@syntax alias` note under *Languages* above). A **premise or assumption**
-line just cites the theory's assumption axiom with no refs (`:ax`, or its alias
-`:AS` in the forallx systems); indenting a line opens a subproof
+line just cites the theory's assumption axiom with no refs (`:ax` here, `:AS`
+in the forallx systems, whose axiom carries the book's own name); indenting a line opens a subproof
 whose first assumption is discharged when a shallower line later cites its range.
 The body reads prose (the prompt), the `theorem <name>: $ Γ ⊢ φ $` goal line, a
 `----` underline, then a starter Fitch proof (which may be empty):

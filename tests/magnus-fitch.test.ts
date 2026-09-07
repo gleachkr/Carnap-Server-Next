@@ -32,7 +32,7 @@ describe("forallx (Magnus) theory", () => {
       const { diagnostics } = fitchToAuf(
         testCase.fitch,
         testCase.goalName,
-        "ax",
+        "AS",
         "⊢",
         ";",
         undefined,
@@ -51,7 +51,7 @@ describe("forallx (Magnus) theory", () => {
       const { formulaProblems } = fitchToAuf(
         testCase.fitch,
         testCase.goalName,
-        "ax",
+        "AS",
         "⊢",
         ";",
         readSentence,
@@ -70,9 +70,9 @@ describe("forallx (Magnus) theory", () => {
       "theorem t {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $;",
     );
     const { proofText, formulaProblems } = fitchToAuf(
-      "@x(Fx -> Gx)   :ax",
+      "@x(Fx -> Gx)   :AS",
       "t",
-      "ax",
+      "AS",
       "⊢",
       ";",
       readSentence,
@@ -93,8 +93,8 @@ describe("forallx (Magnus) theory", () => {
     // script because this is the shape students actually type.
     const fitch = (citation: string): string =>
       [
-        "p           :ax",
-        "    ~p      :ax",
+        "p           :AS",
+        "    ~p      :AS",
         "    p       :reit 1",
         "    ~p      :reit 2",
         `~~p         :neg_intro ${citation}`,
@@ -103,8 +103,8 @@ describe("forallx (Magnus) theory", () => {
     const lowered = [
       "dni",
       "----",
-      "l1: $ p ⊢ p $ by ax []",
-      "l2: $ p ; ~p ⊢ ~p $ by ax []",
+      "l1: $ p ⊢ p $ by AS []",
+      "l2: $ p ; ~p ⊢ ~p $ by AS []",
       "l3: $ p ; ~p ⊢ p $ by reit [l1]",
       "l4: $ p ; ~p ⊢ ~p $ by reit [l2]",
       "l5: $ p ⊢ ~~p $ by neg_intro [l3, l4]",
@@ -114,7 +114,7 @@ describe("forallx (Magnus) theory", () => {
       const { proofText, diagnostics } = fitchToAuf(
         fitch(citation),
         "dni",
-        "ax",
+        "AS",
         "⊢",
         ";",
         undefined,
@@ -137,8 +137,8 @@ Take the conditional apart.
 
 theorem mp (p q: wff): $ (p → q) ; p ⊢ q $
 ----
-p -> q  :ax
-p       :ax
+p -> q  :AS
+p       :AS
 q       :imp_elim 1 2
 :::
 `,

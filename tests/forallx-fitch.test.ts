@@ -32,7 +32,7 @@ describe("forallx: Calgary theory", () => {
       const { diagnostics } = fitchToAuf(
         testCase.fitch,
         testCase.goalName,
-        "ax",
+        "AS",
         "⊢",
       );
       expect(diagnostics, testCase.name).toEqual([]);
@@ -53,7 +53,7 @@ describe("forallx: Calgary theory", () => {
       const { formulaProblems } = fitchToAuf(
         testCase.fitch,
         testCase.goalName,
-        "ax",
+        "AS",
         "⊢",
         ";",
         readSentence,
@@ -71,9 +71,9 @@ describe("forallx: Calgary theory", () => {
       "theorem t {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $;",
     );
     const { proofText, formulaProblems } = fitchToAuf(
-      "Ax(F(x)->G(x))   :ax",
+      "Ax(F(x)->G(x))   :AS",
       "t",
-      "ax",
+      "AS",
       "⊢",
       ";",
       readSentence,
@@ -89,9 +89,9 @@ describe("forallx: Calgary theory", () => {
       "theorem t {a: name}: $ F(a) ⊢ F(a) $;",
     );
     const { formulaProblems } = fitchToAuf(
-      "F(a) /\\   :ax",
+      "F(a) /\\   :AS",
       "t",
-      "ax",
+      "AS",
       "⊢",
       ";",
       readSentence,
@@ -113,9 +113,9 @@ describe("forallx: Calgary theory", () => {
       "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
     );
     const { formulaProblems, proofText } = fitchToAuf(
-      "a -> b   :ax",
+      "a -> b   :AS",
       "mp",
-      "ax",
+      "AS",
       "⊢",
       ";",
       readSentence,
@@ -167,15 +167,15 @@ describe("fitchToAuf — sibling subproofs", () => {
   test("two subproofs at one level each discharge only their own assumption", () => {
     const { proofText, diagnostics } = fitchToAuf(
       [
-        "a ∨ b       :ax",
-        "    a       :ax",
+        "a ∨ b       :AS",
+        "    a       :AS",
         "    b ∨ a   :or_intro_r 2",
-        "    b       :ax",
+        "    b       :AS",
         "    b ∨ a   :or_intro_l 4",
         "b ∨ a       :or_elim 1 2-3 4-5",
       ].join("\n"),
       "orcomm",
-      "ax",
+      "AS",
       "⊢",
     );
 
@@ -184,10 +184,10 @@ describe("fitchToAuf — sibling subproofs", () => {
       [
         "orcomm",
         "----",
-        "l1: $ a ∨ b ⊢ a ∨ b $ by ax []",
-        "l2: $ a ∨ b , a ⊢ a $ by ax []",
+        "l1: $ a ∨ b ⊢ a ∨ b $ by AS []",
+        "l2: $ a ∨ b , a ⊢ a $ by AS []",
         "l3: $ a ∨ b , a ⊢ b ∨ a $ by or_intro_r [l2]",
-        "l4: $ a ∨ b , b ⊢ b $ by ax []",
+        "l4: $ a ∨ b , b ⊢ b $ by AS []",
         "l5: $ a ∨ b , b ⊢ b ∨ a $ by or_intro_l [l4]",
         "l6: $ a ∨ b ⊢ b ∨ a $ by or_elim [l1, l3, l5]",
       ].join("\n"),
@@ -196,32 +196,32 @@ describe("fitchToAuf — sibling subproofs", () => {
 
   test("top-level premises still share one context (not split into boxes)", () => {
     const { proofText } = fitchToAuf(
-      ["a → b   :ax", "a       :ax", "b       :imp_elim 1 2"].join("\n"),
+      ["a → b   :AS", "a       :AS", "b       :imp_elim 1 2"].join("\n"),
       "mp",
-      "ax",
+      "AS",
       "⊢",
     );
 
-    expect(proofText).toContain("l1: $ a → b , a ⊢ a → b $ by ax []");
+    expect(proofText).toContain("l1: $ a → b , a ⊢ a → b $ by AS []");
     expect(proofText).toContain("l3: $ a → b , a ⊢ b $ by imp_elim [l1, l2]");
   });
 
   test("assumptions before any derivation stay in one box (reiteration)", () => {
     const { proofText } = fitchToAuf(
       [
-        "    a           :ax",
-        "        b       :ax",
-        "        a       :ax",
+        "    a           :AS",
+        "        b       :AS",
+        "        a       :AS",
         "    b → a       :imp_intro 2-3",
         "a → (b → a)     :imp_intro 1-4",
       ].join("\n"),
       "kcomb",
-      "ax",
+      "AS",
       "⊢",
     );
 
-    expect(proofText).toContain("l2: $ a , b ⊢ b $ by ax []");
-    expect(proofText).toContain("l3: $ a , b ⊢ a $ by ax []");
+    expect(proofText).toContain("l2: $ a , b ⊢ b $ by AS []");
+    expect(proofText).toContain("l3: $ a , b ⊢ a $ by AS []");
   });
 });
 
@@ -233,16 +233,16 @@ describe("fitchToAuf — first-order rules", () => {
     // job (via the raw binder types); the translator only emits the shape.
     const { proofText, diagnostics } = fitchToAuf(
       [
-        "∃ x (F x)          :ax",
-        "∀ x (F x → G x)    :ax",
-        "    F y            :ax",
+        "∃ x (F x)          :AS",
+        "∀ x (F x → G x)    :AS",
+        "    F y            :AS",
         "    F y → G y      :all_elim 2",
         "    G y            :imp_elim 4 3",
         "    ∃ x (G x)      :ex_intro 5",
         "∃ x (G x)          :ex_elim 1 3-6",
       ].join("\n"),
       "exelim",
-      "ax",
+      "AS",
       "⊢",
     );
 
@@ -251,9 +251,9 @@ describe("fitchToAuf — first-order rules", () => {
       [
         "exelim",
         "----",
-        "l1: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (F x) $ by ax []",
-        "l2: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∀ x (F x → G x) $ by ax []",
-        "l3: $ ∃ x (F x) , ∀ x (F x → G x) , F y ⊢ F y $ by ax []",
+        "l1: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∃ x (F x) $ by AS []",
+        "l2: $ ∃ x (F x) , ∀ x (F x → G x) ⊢ ∀ x (F x → G x) $ by AS []",
+        "l3: $ ∃ x (F x) , ∀ x (F x → G x) , F y ⊢ F y $ by AS []",
         "l4: $ ∃ x (F x) , ∀ x (F x → G x) , F y ⊢ F y → G y $ by all_elim [l2]",
         "l5: $ ∃ x (F x) , ∀ x (F x → G x) , F y ⊢ G y $ by imp_elim [l4, l3]",
         "l6: $ ∃ x (F x) , ∀ x (F x → G x) , F y ⊢ ∃ x (G x) $ by ex_intro [l5]",
@@ -265,12 +265,12 @@ describe("fitchToAuf — first-order rules", () => {
   test("=-elimination cites the identity and the source formula (Leibniz)", () => {
     const { proofText } = fitchToAuf(
       [
-        "x = y       :ax",
-        "F x         :ax",
+        "x = y       :AS",
+        "F x         :AS",
         "F y         :eq_replace 1 2",
       ].join("\n"),
       "eqreplace",
-      "ax",
+      "AS",
       "⊢",
     );
 
@@ -294,7 +294,7 @@ describe("forallx: Calgary rule aliases", () => {
     expect(readRule("=E")).toBe("eq_replace");
     expect(readRule("∀I")).toBe("all_intro");
     expect(readRule("∃E")).toBe("ex_elim");
-    expect(readRule("AS")).toBe("ax");
+    expect(readRule("AS")).toBe("AS");
     expect(readRule("R")).toBe("reit");
     // A pair's name lands on the axiom that carries the @fallback onto its
     // sibling; the engine, not the reader, decides which side a line wants.
@@ -319,7 +319,7 @@ describe("forallx: Calgary rule aliases", () => {
     const { diagnostics, formulaProblems, proofText } = fitchToAuf(
       aliased.fitch,
       aliased.goalName,
-      "ax",
+      "AS",
       "⊢",
       ";",
       readSentence,
@@ -329,21 +329,25 @@ describe("forallx: Calgary rule aliases", () => {
 
     expect(diagnostics).toEqual([]);
     expect(formulaProblems).toEqual([]);
-    expect(proofText).not.toMatch(/by [^a-z_]/u);
+    expect(proofText).not.toMatch(/by [^A-Za-z_]/u);
     expect(proofText).toContain("by imp_elim [l1, l2]");
     expect(proofText).toContain("by neg_elim [l4, l6]");
     expect(proofText).toContain("by neg_intro [l7]");
   });
 
   test("the assumption rule's spellings are what the review page is handed", () => {
-    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "ax")).toEqual([
-      "ax",
-      "AS",
+    // Calgary's assumption axiom carries the book's own name, so it has no
+    // alias and one spelling.
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "AS")).toEqual(["AS"]);
+    // A rule that does have an alias lists both, and asked by the alias the
+    // same set comes back with the asked spelling first.
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "reit")).toEqual([
+      "reit",
+      "R",
     ]);
-    // Asked by alias, the same set, the asked spelling first.
-    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "AS")).toEqual([
-      "AS",
-      "ax",
+    expect(proofRuleSpellings(FORALLX_THEORY_SOURCE, "R")).toEqual([
+      "R",
+      "reit",
     ]);
     // The unaliased side of a pair, its aliased sibling, and a name the
     // theory never mentions.
@@ -357,6 +361,6 @@ describe("forallx: Calgary rule aliases", () => {
       "&E",
       "^E",
     ]);
-    expect(proofRuleSpellings(null, "ax")).toEqual(["ax"]);
+    expect(proofRuleSpellings(null, "AS")).toEqual(["AS"]);
   });
 });

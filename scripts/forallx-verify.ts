@@ -36,7 +36,7 @@ for (const testCase of FORALLX_CASES) {
   const translation = fitchToAuf(
     testCase.fitch,
     testCase.goalName,
-    "ax",
+    "AS",
     "⊢",
     ";",
     readSentence,

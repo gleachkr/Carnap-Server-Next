@@ -40,7 +40,7 @@ Take it apart and put it back.
 
 theorem ${goal} (P Q: wff): $ P ∧ Q ⊢ Q ∧ P $
 ----
-P ∧ Q   :ax
+P ∧ Q   :AS
 :::`;
 }
 

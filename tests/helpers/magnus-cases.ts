@@ -52,7 +52,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     name: "self (→I)",
     theoremDecl: "theorem self (p: wff): $ _ ⊢ p → p $;",
     goalName: "self",
-    fitch: ["    p       :ax", "p -> p      :imp_intro 1-1"].join("\n"),
+    fitch: ["    p       :AS", "p -> p      :imp_intro 1-1"].join("\n"),
   },
   {
     // Cited by the book's own names, which the theory's alias lines resolve.
@@ -94,20 +94,20 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     name: "mp (→E)",
     theoremDecl: "theorem mp (p q: wff): $ (p → q) ; p ⊢ q $;",
     goalName: "mp",
-    fitch: ["p -> q  :ax", "p       :ax", "q       :imp_elim 1 2"].join("\n"),
+    fitch: ["p -> q  :AS", "p       :AS", "q       :imp_elim 1 2"].join("\n"),
   },
   {
     name: "reittest (R)",
     theoremDecl: "theorem reittest (p q: wff): $ p ; q ⊢ p $;",
     goalName: "reittest",
-    fitch: ["p   :ax", "q   :ax", "p   :reit 1"].join("\n"),
+    fitch: ["p   :AS", "q   :AS", "p   :reit 1"].join("\n"),
   },
   {
     name: "andcomm (&I, &E)",
     theoremDecl: "theorem andcomm (p q: wff): $ p & q ⊢ q & p $;",
     goalName: "andcomm",
     fitch: [
-      "p & q   :ax",
+      "p & q   :AS",
       "q       :and_elim_r 1",
       "p       :and_elim_l 1",
       "q & p   :and_intro 2 3",
@@ -118,7 +118,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem orintro (p q: wff): $ p ⊢ (p ∨ q) & (q ∨ p) $;",
     goalName: "orintro",
     fitch: [
-      "p                   :ax",
+      "p                   :AS",
       "p \\/ q              :or_intro_l 1",
       "q \\/ p              :or_intro_r 1",
       "(p \\/ q) & (q \\/ p) :and_intro 2 3",
@@ -130,7 +130,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     name: "dsright (∨E, right disjunct)",
     theoremDecl: "theorem dsright (p q: wff): $ (p ∨ q) ; ¬ p ⊢ q $;",
     goalName: "dsright",
-    fitch: ["p \\/ q  :ax", "~p      :ax", "q       :or_elim_r 1 2"].join(
+    fitch: ["p \\/ q  :AS", "~p      :AS", "q       :or_elim_r 1 2"].join(
       "\n",
     ),
   },
@@ -138,7 +138,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     name: "dsleft (∨E, left disjunct)",
     theoremDecl: "theorem dsleft (p q: wff): $ (p ∨ q) ; ¬ q ⊢ p $;",
     goalName: "dsleft",
-    fitch: ["p \\/ q  :ax", "~q      :ax", "p       :or_elim_l 1 2"].join(
+    fitch: ["p \\/ q  :AS", "~q      :AS", "p       :or_elim_l 1 2"].join(
       "\n",
     ),
   },
@@ -147,11 +147,11 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem bicon (p q: wff): $ (p → q) ; (q → p) ⊢ p ↔ q $;",
     goalName: "bicon",
     fitch: [
-      "p -> q      :ax",
-      "q -> p      :ax",
-      "    p       :ax",
+      "p -> q      :AS",
+      "q -> p      :AS",
+      "    p       :AS",
       "    q       :imp_elim 1 3",
-      "    q       :ax",
+      "    q       :AS",
       "    p       :imp_elim 2 5",
       "p <-> q     :iff_intro 3-4 5-6",
     ].join("\n"),
@@ -161,9 +161,9 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem biconelim (p q: wff): $ (p ↔ q) ; p ; q ⊢ q & p $;",
     goalName: "biconelim",
     fitch: [
-      "p <-> q :ax",
-      "p       :ax",
-      "q       :ax",
+      "p <-> q :AS",
+      "p       :AS",
+      "q       :AS",
       "q       :iff_elim_l 1 2",
       "p       :iff_elim_r 1 3",
       "q & p   :and_intro 4 5",
@@ -181,8 +181,8 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem dni (p: wff): $ p ⊢ ¬ ¬ p $;",
     goalName: "dni",
     fitch: [
-      "p           :ax",
-      "    ~p      :ax",
+      "p           :AS",
+      "    ~p      :AS",
       "    p       :reit 1",
       "    ~p      :reit 2",
       "~~p         :neg_intro 2-4",
@@ -197,8 +197,8 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem dne (p: wff): $ ¬ ¬ p ⊢ p $;",
     goalName: "dne",
     fitch: [
-      "~~p         :ax",
-      "    ~p      :ax",
+      "~~p         :AS",
+      "    ~p      :AS",
       "    ~p      :reit 2",
       "    ~~p     :reit 1",
       "p           :neg_elim 2-3 2-4",
@@ -213,8 +213,8 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem demorgan (p q: wff): $ ¬ p & ¬ q ⊢ ¬ (p ∨ q) $;",
     goalName: "demorgan",
     fitch: [
-      "~p & ~q         :ax",
-      "    p \\/ q      :ax",
+      "~p & ~q         :AS",
+      "    p \\/ q      :AS",
       "    ~p          :and_elim_l 1",
       "    q           :or_elim_r 2 3",
       "    ~q          :and_elim_r 1",
@@ -229,9 +229,9 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     theoremDecl: "theorem nested (p q r: wff): $ p ; q ⊢ r → (p & q) $;",
     goalName: "nested",
     fitch: [
-      "p               :ax",
-      "q               :ax",
-      "    r           :ax",
+      "p               :AS",
+      "q               :AS",
+      "    r           :AS",
       "    p & q       :and_intro 1 2",
       "r -> (p & q)    :imp_intro 3-4",
     ].join("\n"),
@@ -251,8 +251,8 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $;",
     goalName: "unimp",
     fitch: [
-      "@x(Fx -> Gx)    :ax",
-      "Fa              :ax",
+      "@x(Fx -> Gx)    :AS",
+      "Fa              :AS",
       "Fa -> Ga        :all_elim 1",
       "Ga              :imp_elim 3 2",
     ].join("\n"),
@@ -263,7 +263,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "theorem unidist {x: var} {a: name}: $ ∀ x (F(x) & G(x)) ⊢ ∀ x F(x) $;",
     goalName: "unidist",
     fitch: [
-      "@x(Fx & Gx)     :ax",
+      "@x(Fx & Gx)     :AS",
       "Fa & Ga         :all_elim 1",
       "Fa              :and_elim_l 2",
       "@xFx            :all_intro 3",
@@ -273,7 +273,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     name: "exintro (∃I)",
     theoremDecl: "theorem exintro {x: var} {a: name}: $ F(a) ⊢ ∃ x F(x) $;",
     goalName: "exintro",
-    fitch: ["Fa      :ax", "3xFx    :ex_intro 1"].join("\n"),
+    fitch: ["Fa      :AS", "3xFx    :ex_intro 1"].join("\n"),
   },
   {
     name: "exelim (∃E, ∃I, ∀E, →E)",
@@ -281,9 +281,9 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $;",
     goalName: "exelim",
     fitch: [
-      "3xFx                :ax",
-      "@x(Fx -> Gx)        :ax",
-      "    Fb              :ax",
+      "3xFx                :AS",
+      "@x(Fx -> Gx)        :AS",
+      "    Fb              :AS",
       "    Fb -> Gb        :all_elim 2",
       "    Gb              :imp_elim 4 3",
       "    3xGx            :ex_intro 5",
@@ -298,7 +298,7 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "theorem relwitness {x y: var} {a b: name}: $ R(a,b) ⊢ ∃ x ∃ y R(x,y) $;",
     goalName: "relwitness",
     fitch: [
-      "Rab         :ax",
+      "Rab         :AS",
       "3yRay       :ex_intro 1",
       "3x3yRxy     :ex_intro 2",
     ].join("\n"),
@@ -315,15 +315,15 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     name: "eqreplace (=E)",
     theoremDecl: "theorem eqreplace {a b: name}: $ a = b ; F(a) ⊢ F(b) $;",
     goalName: "eqreplace",
-    fitch: ["a=b     :ax", "Fa      :ax", "Fb      :eq_replace 1 2"].join(
+    fitch: ["a=b     :AS", "Fa      :AS", "Fb      :eq_replace 1 2"].join(
       "\n",
     ),
   },
   {
     fitch: [
-      "3xGx                :ax",
-      "Fa                  :ax",
-      "    Ga              :ax",
+      "3xGx                :AS",
+      "Fa                  :AS",
+      "    Ga              :AS",
       "    Ga & Fa         :and_intro 3 2",
       "    3x(Gx & Fx)     :ex_intro 4",
       "3x(Gx & Fx)         :ex_elim 1 3-5",

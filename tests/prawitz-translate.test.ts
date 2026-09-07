@@ -26,7 +26,7 @@ function node(
 }
 
 const leaf = (formula: string, label?: string): PrawitzProofNode =>
-  node({ formula, rule: "ax", ...(label === undefined ? {} : { label }) });
+  node({ formula, rule: "AS", ...(label === undefined ? {} : { label }) });
 
 function caseByName(name: string) {
   const found = PRAWITZ_CASES.find((entry) => entry.name.startsWith(name));
@@ -42,7 +42,7 @@ function caseByName(name: string) {
 // theory's `@syntax role context-join` rather than being told.
 function translate(name: string): string {
   const c = caseByName(name);
-  const result = prawitzToAuf(c.root, c.goalName, "ax", "⊢", ";");
+  const result = prawitzToAuf(c.root, c.goalName, "AS", "⊢", ";");
   expect(result.diagnostics).toEqual([]);
   return result.proofText;
 }
@@ -53,7 +53,7 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "self",
         "----",
-        "l1: $ a ⊢ a $ by ax []",
+        "l1: $ a ⊢ a $ by AS []",
         "l2: $ _ ⊢ a → a $ by imp_intro [l1]",
       ].join("\n"),
     );
@@ -64,8 +64,8 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "mp",
         "----",
-        "l1: $ a → b ⊢ a → b $ by ax []",
-        "l2: $ a ⊢ a $ by ax []",
+        "l1: $ a → b ⊢ a → b $ by AS []",
+        "l2: $ a ⊢ a $ by AS []",
         "l3: $ a → b ; a ⊢ b $ by imp_elim [l1, l2]",
       ].join("\n"),
     );
@@ -76,10 +76,10 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "orcomm",
         "----",
-        "l1: $ a ∨ b ⊢ a ∨ b $ by ax []",
-        "l2: $ a ⊢ a $ by ax []",
+        "l1: $ a ∨ b ⊢ a ∨ b $ by AS []",
+        "l2: $ a ⊢ a $ by AS []",
         "l3: $ a ⊢ b ∨ a $ by or_intro_r [l2]",
-        "l4: $ b ⊢ b $ by ax []",
+        "l4: $ b ⊢ b $ by AS []",
         "l5: $ b ⊢ b ∨ a $ by or_intro_l [l4]",
         "l6: $ a ∨ b ⊢ b ∨ a $ by or_elim [l1, l3, l5]",
       ].join("\n"),
@@ -91,8 +91,8 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "dni",
         "----",
-        "l1: $ a ⊢ a $ by ax []",
-        "l2: $ ¬ a ⊢ ¬ a $ by ax []",
+        "l1: $ a ⊢ a $ by AS []",
+        "l2: $ ¬ a ⊢ ¬ a $ by AS []",
         "l3: $ a ; ¬ a ⊢ ⊥ $ by neg_elim [l1, l2]",
         "l4: $ a ⊢ ¬ ¬ a $ by neg_intro [l3]",
       ].join("\n"),
@@ -104,8 +104,8 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "kcomb",
         "----",
-        "l1: $ b ⊢ b $ by ax []",
-        "l2: $ a ⊢ a $ by ax []",
+        "l1: $ b ⊢ b $ by AS []",
+        "l2: $ a ⊢ a $ by AS []",
         "l3: $ b ; a ⊢ b ∧ a $ by and_intro [l1, l2]",
         "l4: $ b ; a ⊢ a $ by and_elim_r [l3]",
         "l5: $ a ⊢ b → a $ by imp_intro [l4]",
@@ -118,10 +118,10 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "exelim",
         "----",
-        "l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by ax []",
-        "l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by ax []",
+        "l1: $ ∃ x F(x) ⊢ ∃ x F(x) $ by AS []",
+        "l2: $ ∀ x (F(x) → G(x)) ⊢ ∀ x (F(x) → G(x)) $ by AS []",
         "l3: $ ∀ x (F(x) → G(x)) ⊢ F(b) → G(b) $ by all_elim [l2]",
-        "l4: $ F(b) ⊢ F(b) $ by ax []",
+        "l4: $ F(b) ⊢ F(b) $ by AS []",
         "l5: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ G(b) $ by imp_elim [l3, l4]",
         "l6: $ ∀ x (F(x) → G(x)) ; F(b) ⊢ ∃ x G(x) $ by ex_intro [l5]",
         "l7: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $ by ex_elim [l1, l6]",
@@ -134,10 +134,10 @@ describe("prawitzToAuf — engine-verified shapes", () => {
       [
         "eigenpollute",
         "----",
-        "l1: $ ∀ x F(x) ⊢ ∀ x F(x) $ by ax []",
+        "l1: $ ∀ x F(x) ⊢ ∀ x F(x) $ by AS []",
         "l2: $ ∀ x F(x) ⊢ F(a) $ by all_elim [l1]",
         "l3: $ ∀ x F(x) ⊢ ∀ x F(x) $ by all_intro [l2]",
-        "l4: $ G(a) ⊢ G(a) $ by ax []",
+        "l4: $ G(a) ⊢ G(a) $ by AS []",
         "l5: $ ∀ x F(x) ; G(a) ⊢ ∀ x F(x) ∧ G(a) $ by and_intro [l3, l4]",
       ].join("\n"),
     );
@@ -145,7 +145,7 @@ describe("prawitzToAuf — engine-verified shapes", () => {
 
   test("every worked case translates without structural diagnostics", () => {
     for (const c of PRAWITZ_CASES) {
-      const result = prawitzToAuf(c.root, c.goalName, "ax", "⊢");
+      const result = prawitzToAuf(c.root, c.goalName, "AS", "⊢");
       expect(result.diagnostics).toEqual([]);
     }
   });
@@ -154,7 +154,7 @@ describe("prawitzToAuf — engine-verified shapes", () => {
 describe("prawitzToAuf — per-leaf context tracking", () => {
   test("discharging one label keeps a same-formula assumption under another label", () => {
     const c = caseByName("twolabels");
-    const result = prawitzToAuf(c.root, c.goalName, "ax", "⊢");
+    const result = prawitzToAuf(c.root, c.goalName, "AS", "⊢");
 
     // The inner imp_intro discharged label 2, but label 1's `a` must survive:
     // ACUI idempotence collapses the printed duplicates, and only the outer
@@ -167,7 +167,7 @@ describe("prawitzToAuf — per-leaf context tracking", () => {
 
   test("lineSpans slice proofText to exactly each node's line", () => {
     const c = caseByName("orcomm");
-    const result = prawitzToAuf(c.root, c.goalName, "ax", "⊢");
+    const result = prawitzToAuf(c.root, c.goalName, "AS", "⊢");
 
     expect(result.lineSpans).toHaveLength(6);
     for (const span of result.lineSpans) {
@@ -190,7 +190,7 @@ describe("prawitzToAuf — structural diagnostics", () => {
       discharge: ["1"],
       premises: [leaf("a")],
     });
-    const result = prawitzToAuf(root, "kcombv", "ax", "⊢");
+    const result = prawitzToAuf(root, "kcombv", "AS", "⊢");
 
     expect(result.diagnostics).toEqual([
       {
@@ -216,7 +216,7 @@ describe("prawitzToAuf — structural diagnostics", () => {
       discharge: ["1"],
       premises: [inner, node({ formula: "a → a", rule: "reit" })],
     });
-    const result = prawitzToAuf(outer, "shadowed", "ax", "⊢");
+    const result = prawitzToAuf(outer, "shadowed", "AS", "⊢");
 
     expect(result.diagnostics).toEqual([
       {
@@ -234,7 +234,7 @@ describe("prawitzToAuf — structural diagnostics", () => {
       discharge: ["1"],
       premises: [leaf("a", "1"), leaf("¬ a", "1")],
     });
-    const result = prawitzToAuf(root, "mixed", "ax", "⊢");
+    const result = prawitzToAuf(root, "mixed", "AS", "⊢");
 
     expect(result.diagnostics).toEqual([
       {
@@ -248,10 +248,10 @@ describe("prawitzToAuf — structural diagnostics", () => {
   test("an assumption with premises is reported", () => {
     const bad = node({
       formula: "a",
-      rule: "ax",
+      rule: "AS",
       premises: [leaf("a")],
     });
-    const result = prawitzToAuf(bad, "badleaf", "ax", "⊢");
+    const result = prawitzToAuf(bad, "badleaf", "AS", "⊢");
 
     expect(result.diagnostics).toEqual([
       { code: "assumption_with_premises", nodeId: bad.id },
@@ -270,7 +270,7 @@ describe("prawitzToAuf — rule aliases", () => {
       formula: "a ∧ b",
       premises: [
         node({ formula: "a", rule: "AS" }),
-        node({ formula: "b", rule: "ax" }),
+        node({ formula: "b", rule: "AS" }),
       ],
       rule: "∧I",
     });
@@ -279,7 +279,7 @@ describe("prawitzToAuf — rule aliases", () => {
     const translated = prawitzToAuf(
       tree,
       "g",
-      "AS",
+      "ax",
       "⊢",
       ";",
       undefined,

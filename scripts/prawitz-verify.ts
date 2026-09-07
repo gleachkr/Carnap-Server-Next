@@ -37,7 +37,7 @@ for (const testCase of PRAWITZ_CASES) {
   const translation = prawitzToAuf(
     testCase.root,
     testCase.goalName,
-    "ax",
+    "AS",
     "⊢",
     ";",
     readSentence,

@@ -38,7 +38,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     name: "self (→I)",
     theoremDecl: "theorem self (a: wff): $ _ ⊢ a → a $;",
     goalName: "self",
-    fitch: ["    a       :ax", "a → a       :imp_intro 1-1"].join("\n"),
+    fitch: ["    a       :AS", "a → a       :imp_intro 1-1"].join("\n"),
   },
   {
     // Cited entirely by the textbook's names, which the theory's alias lines
@@ -83,20 +83,20 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     name: "mp (→E)",
     theoremDecl: "theorem mp (a b: wff): $ (a → b) ; a ⊢ b $;",
     goalName: "mp",
-    fitch: ["a → b   :ax", "a       :ax", "b       :imp_elim 1 2"].join("\n"),
+    fitch: ["a → b   :AS", "a       :AS", "b       :imp_elim 1 2"].join("\n"),
   },
   {
     name: "reit (reiteration / weakening)",
     theoremDecl: "theorem reittest (a b: wff): $ a ; b ⊢ a $;",
     goalName: "reittest",
-    fitch: ["a   :ax", "b   :ax", "a   :reit 1"].join("\n"),
+    fitch: ["a   :AS", "b   :AS", "a   :reit 1"].join("\n"),
   },
   {
     name: "andcomm (∧E, ∧I)",
     theoremDecl: "theorem andcomm (a b: wff): $ a ∧ b ⊢ b ∧ a $;",
     goalName: "andcomm",
     fitch: [
-      "a ∧ b   :ax",
+      "a ∧ b   :AS",
       "b       :and_elim_r 1",
       "a       :and_elim_l 1",
       "b ∧ a   :and_intro 2 3",
@@ -107,10 +107,10 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem orcomm (a b: wff): $ a ∨ b ⊢ b ∨ a $;",
     goalName: "orcomm",
     fitch: [
-      "a ∨ b       :ax",
-      "    a       :ax",
+      "a ∨ b       :AS",
+      "    a       :AS",
       "    b ∨ a   :or_intro_r 2",
-      "    b       :ax",
+      "    b       :AS",
       "    b ∨ a   :or_intro_l 4",
       "b ∨ a       :or_elim 1 2-3 4-5",
     ].join("\n"),
@@ -120,8 +120,8 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem exfalso (a b: wff): $ a ; ¬ a ⊢ b $;",
     goalName: "exfalso",
     fitch: [
-      "a       :ax",
-      "¬ a     :ax",
+      "a       :AS",
+      "¬ a     :AS",
       "⊥       :neg_elim 1 2",
       "b       :explosion 3",
     ].join("\n"),
@@ -130,7 +130,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     name: "biconelim (↔E)",
     theoremDecl: "theorem biconelim (a b: wff): $ (a ↔ b) ; a ⊢ b $;",
     goalName: "biconelim",
-    fitch: ["a ↔ b   :ax", "a       :ax", "b       :iff_elim_l 1 2"].join(
+    fitch: ["a ↔ b   :AS", "a       :AS", "b       :iff_elim_l 1 2"].join(
       "\n",
     ),
   },
@@ -140,11 +140,11 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
       "theorem andcommbicon (a b: wff): $ _ ⊢ (a ∧ b) ↔ (b ∧ a) $;",
     goalName: "andcommbicon",
     fitch: [
-      "    a ∧ b   :ax",
+      "    a ∧ b   :AS",
       "    b       :and_elim_r 1",
       "    a       :and_elim_l 1",
       "    b ∧ a   :and_intro 2 3",
-      "    b ∧ a   :ax",
+      "    b ∧ a   :AS",
       "    a       :and_elim_r 5",
       "    b       :and_elim_l 5",
       "    a ∧ b   :and_intro 6 7",
@@ -156,8 +156,8 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem dni (a: wff): $ a ⊢ ¬ ¬ a $;",
     goalName: "dni",
     fitch: [
-      "a           :ax",
-      "    ¬ a     :ax",
+      "a           :AS",
+      "    ¬ a     :AS",
       "    ⊥       :neg_elim 1 2",
       "¬ ¬ a       :neg_intro 2-3",
     ].join("\n"),
@@ -167,8 +167,8 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem dne (a: wff): $ ¬ ¬ a ⊢ a $;",
     goalName: "dne",
     fitch: [
-      "¬ ¬ a       :ax",
-      "    ¬ a     :ax",
+      "¬ ¬ a       :AS",
+      "    ¬ a     :AS",
       "    ⊥       :neg_elim 2 1",
       "a           :ip 2-3",
     ].join("\n"),
@@ -181,8 +181,8 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem vacuous (a b: wff): $ a ⊢ b → a $;",
     goalName: "vacuous",
     fitch: [
-      "a           :ax",
-      "    b       :ax",
+      "a           :AS",
+      "    b       :AS",
       "    a       :reit 1",
       "b → a       :imp_intro 2-3",
     ].join("\n"),
@@ -195,9 +195,9 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem nested (a b c: wff): $ a ; b ⊢ c → (a ∧ b) $;",
     goalName: "nested",
     fitch: [
-      "a               :ax",
-      "b               :ax",
-      "    c           :ax",
+      "a               :AS",
+      "b               :AS",
+      "    c           :AS",
       "    a ∧ b       :and_intro 1 2",
       "c → (a ∧ b)     :imp_intro 3-4",
     ].join("\n"),
@@ -235,8 +235,8 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
       "theorem unimp {x: var} {a: name}: $ ∀ x (F(x) → G(x)) ; F(a) ⊢ G(a) $;",
     goalName: "unimp",
     fitch: [
-      "∀ x (F(x) → G(x))   :ax",
-      "F(a)                :ax",
+      "∀ x (F(x) → G(x))   :AS",
+      "F(a)                :AS",
       "F(a) → G(a)         :all_elim 1",
       "G(a)                :imp_elim 3 2",
     ].join("\n"),
@@ -247,7 +247,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
       "theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $;",
     goalName: "unidist",
     fitch: [
-      "∀ x (F(x) ∧ G(x))   :ax",
+      "∀ x (F(x) ∧ G(x))   :AS",
       "F(a) ∧ G(a)         :all_elim 1",
       "F(a)                :and_elim_l 2",
       "∀ x F(x)            :all_intro 3",
@@ -257,7 +257,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     name: "exintro (∃I)",
     theoremDecl: "theorem exintro {x: var} {a: name}: $ F(a) ⊢ ∃ x F(x) $;",
     goalName: "exintro",
-    fitch: ["F(a)        :ax", "∃ x F(x)    :ex_intro 1"].join("\n"),
+    fitch: ["F(a)        :AS", "∃ x F(x)    :ex_intro 1"].join("\n"),
   },
   {
     name: "exelim (∃E, ∃I, ∀E, →E)",
@@ -265,9 +265,9 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
       "theorem exelim {x: var} {b: name}: $ ∃ x F(x) ; ∀ x (F(x) → G(x)) ⊢ ∃ x G(x) $;",
     goalName: "exelim",
     fitch: [
-      "∃ x F(x)              :ax",
-      "∀ x (F(x) → G(x))     :ax",
-      "    F(b)              :ax",
+      "∃ x F(x)              :AS",
+      "∀ x (F(x) → G(x))     :AS",
+      "    F(b)              :AS",
       "    F(b) → G(b)       :all_elim 2",
       "    G(b)              :imp_elim 4 3",
       "    ∃ x G(x)          :ex_intro 5",
@@ -308,12 +308,12 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     // reading off wholesale. `a` and `b` are names in this theory's lexicon
     // and metavariables here; `~`, `\\/` and `/\\` are the book's tokens.
     fitch: [
-      "~(a \\/ b)        :ax",
-      "    a            :ax",
+      "~(a \\/ b)        :AS",
+      "    a            :AS",
       "    a \\/ b       :or_intro_l 2",
       "    ⊥            :neg_elim 3 1",
       "~a               :neg_intro 2-4",
-      "    b            :ax",
+      "    b            :AS",
       "    a \\/ b       :or_intro_r 6",
       "    ⊥            :neg_elim 7 1",
       "~b               :neg_intro 6-8",
@@ -330,8 +330,8 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     // would demand one. Nothing here compiles unless the line is read in the
     // theory's language first, so this case is what pins that it is.
     fitch: [
-      "Ax(F(x)->G(x))   :ax",
-      "F(a)             :ax",
+      "Ax(F(x)->G(x))   :AS",
+      "F(a)             :AS",
       "F(a)->G(a)       :all_elim 1",
       "G(a)             :imp_elim 3 2",
     ].join("\n"),
@@ -344,7 +344,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     // `/\` and `~` rather than `∧` and `¬` — the aliases the artifact declares,
     // which reach the compiler as its own canonical glyphs.
     fitch: [
-      "F(a) /\\ ~G(a)   :ax",
+      "F(a) /\\ ~G(a)   :AS",
       "~G(a)           :and_elim_r 1",
       "F(a)            :and_elim_l 1",
       "~G(a) /\\ F(a)   :and_intro 2 3",
@@ -355,16 +355,16 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl: "theorem eqreplace {a b: name}: $ a = b ; F(a) ⊢ F(b) $;",
     goalName: "eqreplace",
     fitch: [
-      "a = b       :ax",
-      "F(a)        :ax",
+      "a = b       :AS",
+      "F(a)        :AS",
       "F(b)        :eq_replace 1 2",
     ].join("\n"),
   },
   {
     fitch: [
-      "∃ x G(x)                 :ax",
-      "F(a)                     :ax",
-      "    G(a)                 :ax",
+      "∃ x G(x)                 :AS",
+      "F(a)                     :AS",
+      "    G(a)                 :AS",
       "    G(a) ∧ F(a)          :and_intro 3 2",
       "    ∃ x (G(x) ∧ F(x))    :ex_intro 4",
       "∃ x (G(x) ∧ F(x))        :ex_elim 1 3-5",

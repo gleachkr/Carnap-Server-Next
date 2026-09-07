@@ -36,7 +36,7 @@ said. Here is the correspondence:
 \`\`\`
 forallx                cite as               identifier(s)                        form
 ─────────────────────  ────────────────────  ───────────────────────────────────  ──────────────────────
-premise / assumption   AS                    ax                                   Γ ; A ⊢ A
+premise / assumption   AS                    AS                                   Γ ; A ⊢ A
 R (reiteration)        R                     reit                                 Γ ⊢ A  ⟹  Γ ; Δ ⊢ A
 ∧I  /  ∧E              ∧I /\\I  /  ∧E /\\E     and_intro / and_elim_l, and_elim_r
 ∨I  /  ∨E              ∨I \\/I  /  ∨E \\/E     or_intro_l, or_intro_r / or_elim
@@ -380,7 +380,7 @@ Read the proof, then submit it. Try breaking a line to see the engine complain.
 
 theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
 ----
-l1: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x (F(x) ∧ G(x)) $ by ax []
+l1: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x (F(x) ∧ G(x)) $ by AS []
 l2: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) ∧ G(a) $ by all_elim [l1]
 l3: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) $ by and_elim_l [l2]
 l4: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $ by all_intro [l3]
@@ -392,7 +392,7 @@ Read the proof, then submit it. Try breaking a line to see the engine complain.
 
 theorem unidist {x: var} {a: name}: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $
 ----
-l1: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x (F(x) ∧ G(x)) $ by ax []
+l1: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x (F(x) ∧ G(x)) $ by AS []
 l2: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) ∧ G(a) $ by all_elim [l1]
 l3: $ ∀ x (F(x) ∧ G(x)) ⊢ F(a) $ by and_elim_l [l2]
 l4: $ ∀ x (F(x) ∧ G(x)) ⊢ ∀ x F(x) $ by all_intro [l3]

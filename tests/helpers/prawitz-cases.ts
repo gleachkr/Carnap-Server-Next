@@ -31,7 +31,7 @@ function node(
 }
 
 const leaf = (formula: string, label?: string): PrawitzProofNode =>
-  node({ formula, rule: "ax", ...(label === undefined ? {} : { label }) });
+  node({ formula, rule: "AS", ...(label === undefined ? {} : { label }) });
 
 export const PRAWITZ_CASES: readonly PrawitzCase[] = [
   {

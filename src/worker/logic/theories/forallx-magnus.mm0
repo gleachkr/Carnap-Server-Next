@@ -36,8 +36,8 @@
 -- out of one subproof, cited the book's way — one range, whose subproof *ends*
 -- with the pair, `ψ` then `¬ψ`:
 --
---     |  P ∧ ¬ P        :ax
---     |  |  ¬ Q         :ax
+--     |  P ∧ ¬ P        :AS
+--     |  |  ¬ Q         :AS
 --     |  |  P           :and_elim_l 1
 --     |  |  ¬ P         :and_elim_r 1
 --     |  Q              :neg_elim 2-4
@@ -80,7 +80,7 @@
 --
 -- ## forallx (Magnus) rule → axiom name
 --
---   AS / PR (assumption, premise) ... ax          R (reiteration) ..... reit
+--   AS / PR (assumption, premise) ... AS          R (reiteration) ..... reit
 --   &I / &E ......... and_intro / and_elim_l / and_elim_r
 --   ∨I .............. or_intro_l / or_intro_r
 --   ∨E .............. or_elim_l / or_elim_r
@@ -532,10 +532,11 @@ axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 -- dependency-context emitters (Prawitz, tree) simply bind it empty.
 -- `role assumption` is how the Fitch and Prawitz editors know which lines
 -- open a hypothesis rather than cite a rule; the book has two names for the
--- one rule (premises and assumptions), and both are aliases of it.
+-- one rule (premises and assumptions), so the axiom takes the first and the
+-- second is an alias of it.
 --| @syntax role assumption
---| @syntax alias AS PR
-axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
+--| @syntax alias PR
+axiom AS (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
 --| @syntax alias R
 axiom reit (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ph $;
 

@@ -36,7 +36,7 @@ for (const testCase of MAGNUS_CASES) {
   const translation = fitchToAuf(
     testCase.fitch,
     testCase.goalName,
-    "ax",
+    "AS",
     "⊢",
     ";",
     readSentence,
