@@ -1443,6 +1443,12 @@ a.score-uncounted {
   border-left-color: var(--red);
 }
 
+/* The compiler separates a diagnostic's context lines (theorem, line, rule,
+   inference path) with newlines; without this they collapse into one run-on. */
+.editor-source .cm-diagnostic {
+  white-space: pre-line;
+}
+
 /* The read-only viewer takes the lighter surface the editor uses, not the
    muted one a <pre> defaults to: the syntax colours are chosen against that
    surface, and two of them (the attribute gold, the gutter's ink) fall under

@@ -77,3 +77,8 @@
 .proof-editor .cm-editor .cm-diagnostic-error {
   border-left-color: var(--red, #b42318);
 }
+/* The compiler separates a diagnostic's context lines (theorem, line, rule,
+   inference path) with newlines; without this they collapse into one run-on. */
+.proof-editor .cm-editor .cm-diagnostic {
+  white-space: pre-line;
+}
