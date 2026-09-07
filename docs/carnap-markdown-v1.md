@@ -1065,22 +1065,29 @@ translation types take a role-less constructor as a predicate when it returns
 the sentence sort and a function otherwise, named by the constructor and applied
 to whatever its binders hold — so `term plus (x y: tm): tm;` with `infixl plus:
 $+$` reads `a + b` as `plus` of two arguments, and `term Red (x: tm): wff;`
-reads `Red(a)` with no notation at all. A textbook's *variadic* letters, where
-`F`, `F(a)` and `R(a,b)` are one declaration, take a single binder at a list
-sort, and the spec marks that sort:
+reads `Red(a)` with no notation at all. Two sort roles say what those
+arguments may be:
 
 ```
+--| @syntax role individual
+sort tm;
 --| @syntax role argument-list
 sort seq;
 ```
 
-A node of that sort is flattened by structure — its own binders at the list
-sort recurse, any other is one argument — so an elided empty list, a comma, a
-juxtaposition, or a cons all read the same way and the reader is never told a
-constructor's name. Leave the role off and every binder is one argument, which
-is right for a language whose symbols all have fixed arity. A binding
-constructor with no role the type has a case for — a description operator, say
-— is refused where it stands, since a finite model has no value for it.
+`individual` names the sort a model's domain interprets; a sort that coerces
+into it (`var`, `name`) counts too. A symbol is interpreted only when every
+binder is a plain argument at such a sort — so a constructor that binds a
+variable (a description operator) or takes a sentence (`ite (p: wff) (x y:
+tm): tm`) is refused where it stands, since a finite model assigns it no value,
+and a spec that names no individual sort interprets no applied symbol at all.
+`argument-list` is how a textbook's *variadic* letters work, where `F`, `F(a)`
+and `R(a,b)` are one declaration with a single binder at a list sort: a node of
+that sort is flattened by structure — its own binders at the list sort recurse,
+any other is one argument — so an elided empty list, a comma, a juxtaposition,
+or a cons all read the same way and the reader is never told a constructor's
+name. Leave it off and every binder is one argument, which is right for a
+language whose symbols all have fixed arity.
 
 **Every truth function has a role, not just the five a textbook opens with.**
 Which connectives a course takes as primitive is the textbook's business:
@@ -1114,8 +1121,8 @@ The last six are degenerate and nobody teaches them, but they are named for the
 same reason the other ten are: the list is a closed whitelist, and a hole in it
 is a construct refused for a reason no author can act on. Roles that are not
 truth functions — `forall`, `exists`, `identity`, `inequality`, `sentence`,
-`argument-list`, `turnstile`, `context-join` — are read by the types that have
-a use for them,
+`individual`, `argument-list`, `turnstile`, `context-join` — are read by the
+types that have a use for them,
 and refused by the ones that do not: a truth table has no column for `∀`.
 
 Here is a course whose textbook uses the stroke, over `carnap-prop`:

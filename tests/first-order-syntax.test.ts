@@ -726,35 +726,47 @@ describe("symbols of fixed arity, and every notation", () => {
     });
   });
 
-  test("a binding term with no role is refused where it stands", () => {
-    // A description operator has no value in a finite model as these types
-    // compute one; reading it as a function of a variable would be worse
-    // than an error.
-    const error = failure("Red(ιx Blue(x))", FIXED);
+  test("a symbol without a first-order signature is refused where it stands", () => {
+    // A description operator binds a variable; a conditional term takes a
+    // sentence. Neither has a value a finite model assigns, and reading
+    // either as a symbol over its arguments — `ite` of `lt` as a *function*
+    // of `a` and `b` — would turn a sentence into a term without a word.
+    expect(failure("Red(ιx Blue(x))", FIXED).params?.construct).toBe("ι");
+    expect(failure("Red(? a < b : a : b)", FIXED).params?.construct).toBe(
+      "?",
+    );
+  });
 
-    expect(error.params?.construct).toBe("ι");
+  test("without an individual sort, nothing takes arguments", () => {
+    // The positive half of the reading. A spec that names no sort of
+    // individuals has said nothing a symbol's arguments could range over,
+    // so a sentence letter still reads and an applied one does not.
+    const NOTHING = fixedArityLanguage(
+      FIXED_ARITY_SPEC_SOURCE.replace("--| @syntax role individual\n", ""),
+    );
+
+    expect(parse("F", NOTHING)).toEqual({
+      args: [],
+      name: "F",
+      type: "predicate",
+    });
+    expect(failure("Red(a)", NOTHING).params?.construct).toBe("Red");
   });
 
   test("without the role, a list sort is just another sort", () => {
-    // The role is what makes a letter variadic. Take it off and `R(a,b)` is
-    // `R` applied to one argument — the comma itself, as a function — which
-    // is the honest reading of a declaration that said nothing.
+    // The role is what makes a letter variadic. Take it off and `seq` is
+    // neither an individual sort nor a list, so `R` has no first-order
+    // signature and is refused — not read as `R` of one comma-shaped
+    // function, which the reading used to make of a declaration that said
+    // nothing.
     const UNMARKED = fixedArityLanguage(
       FIXED_ARITY_SPEC_SOURCE.replace("--| @syntax role argument-list\n", ""),
     );
 
-    expect(parse("R(a,b)", UNMARKED)).toEqual({
-      args: [
-        {
-          args: [
-            { name: "a", type: "constant" },
-            { name: "b", type: "constant" },
-          ],
-          name: "scomma",
-          type: "function",
-        },
-      ],
-      name: "R",
+    expect(failure("R(a,b)", UNMARKED).params?.construct).toBe("R");
+    expect(parse("Red(a)", UNMARKED)).toEqual({
+      args: [{ name: "a", type: "constant" }],
+      name: "Red",
       type: "predicate",
     });
   });

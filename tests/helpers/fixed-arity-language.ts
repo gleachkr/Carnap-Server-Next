@@ -9,13 +9,14 @@ import { languageFromSource } from "../../src/worker/logic/specs";
  * function (`a + b`) and an infix predicate (`a < b`) declared as ordinary
  * two-binder terms with a notation, and a textbook's variadic letters (`F`,
  * `R(a,b)`, `f(a,b)`) over a `@syntax role argument-list` sort beside them.
- * `ι` is a description operator with no role: a binding term the readers
- * refuse rather than misread.
+ * `ι` is a description operator with no role, and `ite` a term taking a
+ * sentence: neither has a first-order signature, and the readers refuse both
+ * rather than misread them.
  *
  * Standalone rather than an extension of forallx because that spec makes
  * every letter a delimiter, so a multi-letter name could not be a chunk.
  */
-export const FIXED_ARITY_SPEC_SOURCE = `--| @syntax delimiter $ ( ) , + < = ¬ ∧ → ∀ ∃ ι $
+export const FIXED_ARITY_SPEC_SOURCE = `--| @syntax delimiter $ ( ) , + < = ¬ ∧ → ∀ ∃ ι ? : $
 --| @syntax brackets ( )
 --| @syntax lint closed-sentences
 --| @syntax role sentence
@@ -24,6 +25,7 @@ provable sort wff;
 sort var;
 --| @vars a b c
 sort name;
+--| @syntax role individual
 sort tm;
 --| @syntax role argument-list
 sort seq;
@@ -67,6 +69,8 @@ term ex {x: var} (p: wff x): wff;
 prefix ex: $∃$ prec 40;
 term the {x: var} (p: wff x): tm;
 prefix the: $ι$ prec max;
+term ite (p: wff) (x y: tm): tm;
+notation ite (p: wff) (x y: tm): tm = ($?$:40) p ($:$:41) x ($:$:41) y;
 `;
 
 /** The fixture read as a language, or a thrown error naming the fixture. */

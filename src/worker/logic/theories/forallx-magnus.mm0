@@ -139,6 +139,9 @@ provable sort judgement;
 sort var;
 --| @vars a b c d e f g h i j k l m n o p q r s t u v w
 sort name;
+-- `individual` names the sort a model's domain interprets; `var` and `name`
+-- reach it by coercion, so a symbol over any of the three is first-order.
+--| @syntax role individual
 sort tm;
 -- `argument-list` tells the model and translation readers that a symbol's
 -- single `seq` binder is a variadic argument list to flatten, not one

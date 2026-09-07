@@ -77,13 +77,37 @@ export interface RoleIndex {
  * reads the role no further than this — it interprets none of them.
  */
 export function sentenceSort(lang: SurfaceLanguage): string | undefined {
+  return sortsWithRole(lang, "sentence")[0];
+}
+
+/**
+ * The sorts whose values are the *individuals* a model's domain holds: those
+ * carrying `@syntax role individual`, in declaration order.
+ *
+ * This is the positive half of what the first-order readers interpret. A
+ * symbol's argument is an individual when its sort is one of these or coerces
+ * into one — forallx: Calgary marks `tm`, and `var` and `name` reach it by
+ * coercion — and a symbol whose every argument is an individual (or an
+ * argument list of them) is a function or predicate in the ordinary sense.
+ * Anything else, a sentence-sorted argument say, has no value in a finite
+ * model and is refused where it stands. Several sorts here would be a
+ * many-sorted language; the model tool reads one domain today, so the
+ * shipped specs name exactly one.
+ */
+export function individualSorts(lang: SurfaceLanguage): readonly string[] {
+  return sortsWithRole(lang, "individual");
+}
+
+function sortsWithRole(lang: SurfaceLanguage, role: string): string[] {
+  const sorts: string[] = [];
+
   for (const info of lang.spec.sorts.values()) {
-    if (info.roles.includes("sentence")) {
-      return info.name;
+    if (info.roles.includes(role)) {
+      sorts.push(info.name);
     }
   }
 
-  return undefined;
+  return sorts;
 }
 
 /**
@@ -100,13 +124,7 @@ export function sentenceSort(lang: SurfaceLanguage): string | undefined {
  * is the right answer: nothing is a list, every binder is one argument.
  */
 export function argumentListSort(lang: SurfaceLanguage): string | undefined {
-  for (const info of lang.spec.sorts.values()) {
-    if (info.roles.includes("argument-list")) {
-      return info.name;
-    }
-  }
-
-  return undefined;
+  return sortsWithRole(lang, "argument-list")[0];
 }
 
 /** Built once per language, like the language's own tables. */

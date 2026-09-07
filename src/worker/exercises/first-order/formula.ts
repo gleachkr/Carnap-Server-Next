@@ -5,9 +5,11 @@
  * The reading is of the parsed *tree*, never of the notation: a symbol is its
  * constructor's name applied to the arguments its binders hold, so `plus (x y:
  * tm): tm` written `x + y`, a fixed-arity `Red(a)`, and a textbook's variadic
- * `R(a,b)` or `Rab` all become the same shape. The one thing the spec has to
- * say is which sort, if any, a variadic letter's argument list lives in
- * (`@syntax role argument-list`); see {@link readArguments}.
+ * `R(a,b)` or `Rab` all become the same shape. What the spec has to say is
+ * which sorts hold *individuals* (`@syntax role individual`; a symbol is
+ * interpreted only over those, see {@link firstOrderSignature}) and which,
+ * if any, a variadic letter's argument list lives in (`@syntax role
+ * argument-list`, see {@link readArguments}).
  *
  * The language is not written here. It is a spec `logic/specs` registers — for
  * forallx that is `logic/theories/forallx-calgary-2019.mm0`, the same file the
@@ -56,6 +58,7 @@ import type { FormulaParseError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
 import {
   argumentListSort,
+  individualSorts,
   roleIndex,
   sentenceSort,
 } from "../../logic/specs/roles";
@@ -158,17 +161,40 @@ function uninterpretable(
 }
 
 /**
- * Whether this node would swallow a sentence.
+ * Whether a role-less constructor has an ordinary first-order reading: a
+ * function or predicate symbol applied to individuals.
  *
- * The test that lets an unrolled constructor be a predicate without letting an
- * unannotated connective become one. A letter takes its arguments at the
- * *sequence* sort, so `F`, `F(a)` and `R(a,b)` are predications. A
- * `term box (p: wff): wff;` with no `@syntax role` takes an argument at the
- * sentence sort; reading it as a predicate would push a formula through
- * {@link readTerm}, which fails further down with nothing useful to say.
+ * Read off the declaration, not the notation. Every binder must be a plain
+ * argument — a bound-variable slot `{x: var}` is not one, whatever its sort —
+ * at a sort that is, or coerces into, an `@syntax role individual` sort, or
+ * at the argument-list sort, whose nodes flatten into such arguments. A
+ * sentence-sorted binder fails: `term box (p: wff): wff` with no role, or a
+ * conditional term `ite (p: wff) (x y: tm): tm`, has no value a finite model
+ * assigns, and reading either as a symbol over its arguments would turn a
+ * sentence into a term without a word. A spec that names no individual sort
+ * interprets no symbol with arguments at all, which is the honest reading of
+ * a declaration that said nothing.
  */
-function swallowsSentence(node: AppTerm): boolean {
-  return node.args.some((argument) => argument.sort === node.sort);
+function firstOrderSignature(node: AppTerm, lang: SurfaceLanguage): boolean {
+  const info = lang.spec.terms.get(node.term);
+
+  if (info === undefined) {
+    return false;
+  }
+
+  const list = argumentListSort(lang);
+  const individuals = individualSorts(lang);
+  const individual = (sort: string): boolean =>
+    individuals.some(
+      (target) => sort === target || lang.coerce(sort, target) !== null,
+    );
+
+  return info.binders.every(
+    (binder) =>
+      !binder.binds &&
+      "sort" in binder.type &&
+      (binder.type.sort === list || individual(binder.type.sort)),
+  );
 }
 
 /** Strip the coercion wrappers the parser inserts between sorts. */
@@ -190,20 +216,6 @@ function bare(node: SurfaceTerm, lang: SurfaceLanguage): SurfaceTerm {
   }
 
   return current;
-}
-
-/**
- * Whether a constructor binds a variable — a quantifier, a description
- * operator, a set abstract. One with a role the reader has a case for is
- * handled by that case; any other has no reading under ordinary first-order
- * semantics and is refused where it stands rather than read as a symbol with
- * a variable for an argument.
- */
-function bindsVariable(node: AppTerm, lang: SurfaceLanguage): boolean {
-  return (
-    lang.spec.terms.get(node.term)?.binders.some((binder) => binder.binds) ??
-    false
-  );
 }
 
 /**
@@ -262,7 +274,7 @@ function readTerm(node: SurfaceTerm, lang: SurfaceLanguage): Term {
       : { name: inner.name, type: "constant" };
   }
 
-  if (bindsVariable(inner, lang)) {
+  if (!firstOrderSignature(inner, lang)) {
     throw uninterpretable(inner, lang, roleIndex(lang).roleOf(inner.term));
   }
 
@@ -323,7 +335,7 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
 
   switch (role) {
     case null:
-      if (swallowsSentence(inner) || bindsVariable(inner, lang)) {
+      if (!firstOrderSignature(inner, lang)) {
         throw uninterpretable(inner, lang, role);
       }
 

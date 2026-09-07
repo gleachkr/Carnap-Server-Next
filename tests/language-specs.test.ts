@@ -9,6 +9,7 @@ import {
 } from "../src/worker/logic/specs";
 import {
   argumentListSort,
+  individualSorts,
   sentenceSort,
 } from "../src/worker/logic/specs/roles";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";
@@ -218,7 +219,8 @@ describe("language specs", () => {
     test("connectives are ASCII only", () => {
       expect(refusal(id, "P ∧ Q")).toContain("unrecognized_chunk");
     });
-    test("has no argument-list sort: a sentence letter takes nothing", () => {
+    test("has no individuals and no argument lists: a letter takes nothing", () => {
+      expect(individualSorts(language(id))).toEqual([]);
       expect(argumentListSort(language(id))).toBeUndefined();
     });
   });
@@ -262,6 +264,8 @@ describe("language specs", () => {
       expect(sentenceSort(lang)).toBe("wff");
       // Its letters are variadic over `seq`, and the spec says so.
       expect(argumentListSort(lang)).toBe("seq");
+      // One domain: `tm`, which names and variables coerce into.
+      expect(individualSorts(lang)).toEqual(["tm"]);
       expect(
         lang.parse("P ⊢ Q", { sort: "wff" }).ok ? "parsed" : "refused",
       ).toBe("refused");
@@ -342,6 +346,8 @@ describe("language specs", () => {
       expect(sentenceSort(lang)).toBe("wff");
       // Its letters are variadic over `seq`, and the spec says so.
       expect(argumentListSort(lang)).toBe("seq");
+      // One domain: `tm`, which names and variables coerce into.
+      expect(individualSorts(lang)).toEqual(["tm"]);
       expect(
         lang.parse("P ⊢ Q", { sort: "wff" }).ok ? "parsed" : "refused",
       ).toBe("refused");
