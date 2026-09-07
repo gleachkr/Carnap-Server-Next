@@ -17,16 +17,19 @@ function shape(node: PrawitzProofNode): unknown {
   };
 }
 
-function parsed(body: string, sequentSymbol = "⊢") {
-  const result = parsePrawitzStarter(body, "ax", sequentSymbol);
+function parsed(body: string, sequentSpellings: readonly string[] = ["⊢"]) {
+  const result = parsePrawitzStarter(body, "ax", sequentSpellings);
   if (!result.ok) {
     throw new Error(`unexpected issue: ${result.issue.code}`);
   }
   return result;
 }
 
-function issueCode(body: string, sequentSymbol = "⊢"): string {
-  const result = parsePrawitzStarter(body, "ax", sequentSymbol);
+function issueCode(
+  body: string,
+  sequentSpellings: readonly string[] = ["⊢"],
+): string {
+  const result = parsePrawitzStarter(body, "ax", sequentSpellings);
   if (result.ok) {
     throw new Error("expected an issue");
   }
@@ -72,7 +75,7 @@ describe("parsePrawitzStarter", () => {
   });
 
   test("the sequent symbol is the exercise's, not hardcoded", () => {
-    const result = parsed("l1: $ G |- top $ by top_i []", "|-");
+    const result = parsed("l1: $ G |- top $ by top_i []", ["|-"]);
     expect(shape(result.tree)).toEqual({
       formula: "top",
       premises: [],
@@ -126,7 +129,7 @@ describe("parsePrawitzStarter", () => {
   test("a line without the sequent symbol is refused — starters are full sequents", () => {
     expect(issueCode("a1: $ a $ by ax []")).toBe("starter_line_not_sequent");
     // The symbol checked is the exercise's, not a hardcoded turnstile.
-    expect(issueCode("a1: $ a ⊢ a $ by ax []", "|-")).toBe(
+    expect(issueCode("a1: $ a ⊢ a $ by ax []", ["|-"])).toBe(
       "starter_line_not_sequent",
     );
   });
@@ -196,6 +199,44 @@ describe("serializePrawitzStarter", () => {
   });
 });
 
+describe("parsePrawitzStarter — turnstile spellings", () => {
+  test("any declared spelling of the turnstile is recognized, line by line", () => {
+    const result = parsed(
+      [
+        "a1: $ a ⊢ a $ by ax [] -- label:1",
+        "a2: $ b |- b $ by ax []",
+        "c: $ a , b |- a ∧ b $ by and_intro [a1, a2]",
+      ].join("\n"),
+      ["⊢", "|-"],
+    );
+
+    expect(shape(result.tree)).toEqual({
+      formula: "a ∧ b",
+      premises: [
+        { formula: "a", label: "1", premises: [], rule: "ax" },
+        { formula: "b", premises: [], rule: "ax" },
+      ],
+      rule: "and_intro",
+    });
+  });
+
+  test("the diagnostic lists every spelling it looked for", () => {
+    const result = parsePrawitzStarter("a1: $ a $ by ax []", "ax", [
+      "⊢",
+      "|-",
+    ]);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) {
+      return;
+    }
+    expect(result.issue.params).toEqual({
+      line: "a1",
+      symbols: "“⊢” or “|-”",
+    });
+  });
+});
+
 describe("parsePrawitzStarter — rule aliases", () => {
   test("an assumption cited by alias becomes a leaf carrying the configured name", () => {
     const readRule = (cited: string): string =>
@@ -207,7 +248,7 @@ describe("parsePrawitzStarter — rule aliases", () => {
         "c: $ a ; b ⊢ a ∧ b $ by ∧I [a1, a2]",
       ].join("\n"),
       "ax",
-      "⊢",
+      ["⊢"],
       readRule,
     );
 

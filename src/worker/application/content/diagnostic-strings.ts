@@ -559,10 +559,10 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "This “-- label:” comment names no label.": i18n.t(
       "This “-- label:” comment names no label.",
     ),
-    "Starter line “{line}” must be a full sequent — its formula has no “{symbol}”.":
+    "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols}).":
       i18n.t(
-        "Starter line “{line}” must be a full sequent — its formula has no “{symbol}”.",
-        placeholders("line", "symbol"),
+        "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols}).",
+        placeholders("line", "symbols"),
       ),
     "A Prawitz proof has no “#n” hypothesis leaves — write each premise as its own assumption line.":
       i18n.t(

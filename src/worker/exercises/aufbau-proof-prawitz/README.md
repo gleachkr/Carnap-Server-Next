@@ -84,8 +84,9 @@ Attributes match the siblings: `system` (required, a declared `aufbau-mm0` name
 earlier in the document), `id`, `title`, `points`, `exam`, `feedback`,
 `options`. Nothing notational: the theory's `@syntax role assumption` names
 the axiom every assumption leaf is emitted through, `role turnstile` its
-turnstile (emitted in every translated sequent and stripped from pasted
-starter lines), and `role context-join` the separator between a context's
+turnstile (emitted in every translated sequent in its canonical spelling, and
+recognized in any spelling the theory declares when a pasted starter line is
+cut at it), and `role context-join` the separator between a context's
 formulas. A theory missing any of the three does not compile a Prawitz
 exercise.
 

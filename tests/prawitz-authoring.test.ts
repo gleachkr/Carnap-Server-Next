@@ -207,6 +207,31 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
     });
   });
 
+  test("a starter may spell the turnstile any way the theory does", async () => {
+    // `|-` declared first, so `⊢` stays canonical — and the starter uses both.
+    const compiled = await compileCarnapMarkdown(
+      `${THEORY.replace(
+        "infixl nd: $⊢$ prec 0;",
+        "infixl nd: $|-$ prec 0;\ninfixl nd: $⊢$ prec 0;",
+      )}
+
+:::aufbau-proof-prawitz{system="prop" id="p1"}
+theorem thm_top: $ top → top $
+----
+a1: $ top |- top $ by ax [] -- label:1
+c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
+:::`,
+    );
+
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) {
+      return;
+    }
+    const data = prawitzPublicData(compiled.artifact, "p1");
+    expect(data.sequentSymbol).toBe("⊢");
+    expect(data.starterTree?.premises[0]?.formula).toBe("top");
+  });
+
   test("a pasted context left of the theory's sequent symbol is discarded", async () => {
     const compiled = await compileCarnapMarkdown(
       `${ASCII_THEORY}

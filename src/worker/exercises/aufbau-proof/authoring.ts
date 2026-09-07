@@ -99,6 +99,11 @@ export interface AufbauTheory {
 export interface DeclaredNotations {
   readonly assumptionRule: string | null;
   readonly contextSymbol: string | null;
+  /**
+   * Every spelling of the turnstile, `sequentSymbol` first: a starter is
+   * recognized in any of them and written back in the canonical one.
+   */
+  readonly sequentSpellings: readonly string[];
   readonly sequentSymbol: string | null;
 }
 
@@ -106,6 +111,7 @@ export interface DeclaredNotations {
 export interface ProofNotations {
   readonly assumptionRule: string;
   readonly contextSymbol: string;
+  readonly sequentSpellings: readonly string[];
   readonly sequentSymbol: string;
 }
 
@@ -128,6 +134,7 @@ function declaredNotations(source: string): DeclaredNotations | null {
     return {
       assumptionRule: index.ruleFor("assumption"),
       contextSymbol: index.spellingFor("context-join"),
+      sequentSpellings: index.spellingsFor("turnstile"),
       sequentSymbol: index.spellingFor("turnstile"),
     };
   } catch {
@@ -137,7 +144,7 @@ function declaredNotations(source: string): DeclaredNotations | null {
 
 /** The roles a Fitch or Prawitz proof needs, in the order they are reported. */
 const PROOF_NOTATION_ROLES: readonly (readonly [
-  keyof DeclaredNotations,
+  "assumptionRule" | "contextSymbol" | "sequentSymbol",
   string,
 ])[] = [
   ["assumptionRule", "assumption"],
@@ -163,7 +170,9 @@ export function requireProofNotations(
     return null;
   }
 
-  const found: Partial<Record<keyof DeclaredNotations, string>> = {};
+  const found: Partial<
+    Record<"assumptionRule" | "contextSymbol" | "sequentSymbol", string>
+  > = {};
 
   for (const [key, role] of PROOF_NOTATION_ROLES) {
     const value = theory.notations[key];
@@ -188,7 +197,12 @@ export function requireProofNotations(
     contextSymbol === undefined ||
     sequentSymbol === undefined
     ? null
-    : { assumptionRule, contextSymbol, sequentSymbol };
+    : {
+        assumptionRule,
+        contextSymbol,
+        sequentSpellings: theory.notations.sequentSpellings,
+        sequentSymbol,
+      };
 }
 
 /**

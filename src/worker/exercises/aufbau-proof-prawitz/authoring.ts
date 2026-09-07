@@ -157,7 +157,8 @@ export async function compileAufbauProofPrawitz(
     return null;
   }
 
-  const { assumptionRule, contextSymbol, sequentSymbol } = notations;
+  const { assumptionRule, contextSymbol, sequentSpellings, sequentSymbol } =
+    notations;
   const goalLine = block.bodyStartLine + header.headerIndex;
 
   // The goal's binders shadow the theory's own lexicon for the length of the
@@ -191,7 +192,7 @@ export async function compileAufbauProofPrawitz(
     const parsed = parsePrawitzStarter(
       starter.starterBody,
       assumptionRule,
-      sequentSymbol,
+      sequentSpellings,
       readRule,
     );
     if (!parsed.ok) {

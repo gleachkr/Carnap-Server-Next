@@ -3350,8 +3350,8 @@ msgid "Start attempt"
 msgstr "Versuch starten"
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "Starter line “{line}” must be a full sequent — its formula has no “{symbol}”."
-msgstr "Die Vorgabenzeile „{line}“ muss eine vollständige Sequenz sein — ihrer Formel fehlt „{symbol}“."
+msgid "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols})."
+msgstr ""
 
 #: src/worker/web/ui-strings.ts
 msgid "starter verifies ✓"

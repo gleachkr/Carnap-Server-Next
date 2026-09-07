@@ -44,6 +44,14 @@ export interface RoleIndex {
    * none to report.
    */
   spellingFor(role: string): string | null;
+  /**
+   * Every spelling the spec gives the role's constructor, canonical first,
+   * then the rest in declaration order — what to *recognize* where
+   * `spellingFor` is what to *write*. A student types the ASCII `|-` more
+   * readily than `⊢`, and a starter pasted in either should read. Empty when
+   * the spec has no such role or gives it no notation.
+   */
+  spellingsFor(role: string): readonly string[];
   /** The constructor playing a role, or `null` if the spec omits it. */
   termFor(role: string): string | null;
   /**
@@ -151,6 +159,30 @@ export function roleIndex(lang: SurfaceLanguage): RoleIndex {
       const notation = lang.canonical.get(term);
 
       return notation === undefined ? null : leadingToken(notation);
+    },
+    spellingsFor: (role) => {
+      const term = termOfRole.get(role);
+
+      if (term === undefined) {
+        return [];
+      }
+
+      const spellings: string[] = [];
+      const canonical = index.spellingFor(role);
+
+      if (canonical !== null) {
+        spellings.push(canonical);
+      }
+
+      for (const notation of lang.spec.notations) {
+        const token = notation.term === term ? leadingToken(notation) : null;
+
+        if (token !== null && !spellings.includes(token)) {
+          spellings.push(token);
+        }
+      }
+
+      return spellings;
     },
     termFor: (role) => termOfRole.get(role) ?? null,
     ruleFor: (role) => ruleOfRole.get(role) ?? null,

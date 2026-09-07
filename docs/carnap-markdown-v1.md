@@ -1468,8 +1468,9 @@ Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
 `options` attributes it takes only the required `system`. As with the Fitch
 type, the theory's `@syntax role` annotations say the rest: `role assumption`
 names the axiom every assumption leaf is emitted through, `role turnstile` the
-notation used in every sequent the translator emits and stripped from pasted
-starter lines, and `role context-join` the separator between a context's
+notation used in every sequent the translator emits — a pasted starter line is
+cut at it in any spelling the theory declares, so `|-` reads where `⊢` is
+canonical — and `role context-join` the separator between a context's
 formulas. A theory missing any of them does not compile a Prawitz exercise.
 
 One caveat when setting goals: a tree cannot discharge **vacuously**. Every

@@ -150,16 +150,45 @@ function stripTrailingComments(
 }
 
 /**
+ * The earliest turnstile in a line, in whichever spelling appears; between two
+ * spellings starting at the same place the longer wins, so a spelling that is
+ * a prefix of another (`|-` and `|-*`) cannot mis-cut it.
+ */
+function findTurnstile(
+  formula: string,
+  spellings: readonly string[],
+): { readonly at: number; readonly spelling: string } | null {
+  let best: { at: number; spelling: string } | null = null;
+
+  for (const spelling of spellings) {
+    const at = formula.indexOf(spelling);
+
+    if (
+      at !== -1 &&
+      (best === null ||
+        at < best.at ||
+        (at === best.at && spelling.length > best.spelling.length))
+    ) {
+      best = { at, spelling };
+    }
+  }
+
+  return best;
+}
+
+/**
  * Parse a starter body into a Prawitz tree, or report the first structural
  * problem. `body` is the proof lines only (no `theorem` header). A node whose
- * rule is `assumptionRule` becomes an assumption leaf; `sequentSymbol` is the
- * exercise's turnstile notation — required in every line, with the context
- * left of it discarded.
+ * rule is `assumptionRule` becomes an assumption leaf; `sequentSpellings`
+ * are the theory's spellings of its turnstile — one of them is required in
+ * every line, with the context left of it discarded. Any spelling will do
+ * (an author types `|-` more readily than `⊢`); the tree is written back in
+ * the canonical one.
  */
 export function parsePrawitzStarter(
   body: string,
   assumptionRule: string,
-  sequentSymbol: string,
+  sequentSpellings: readonly string[],
   readRule: ProofRuleReader = ENGINE_RULE,
 ): PrawitzStarterResult {
   // A starter may cite the assumption rule by any alias the theory gives
@@ -202,16 +231,21 @@ export function parsePrawitzStarter(
   ):
     | PrawitzProofNode
     | { readonly ok: false; readonly issue: ProofTreeParseIssue } => {
-    const at = node.formula.indexOf(sequentSymbol);
-    if (at === -1) {
+    const turnstile = findTurnstile(node.formula, sequentSpellings);
+    if (turnstile === null) {
       return issue(
         "starter_line_not_sequent",
-        "Starter line “{line}” must be a full sequent — its formula has no “{symbol}”.",
+        "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols}).",
         bodyLineByLabel.get(node.id) ?? null,
-        { line: node.id, symbol: sequentSymbol },
+        {
+          line: node.id,
+          symbols: sequentSpellings.map((one) => `“${one}”`).join(" or "),
+        },
       );
     }
-    const formula = node.formula.slice(at + sequentSymbol.length).trim();
+    const formula = node.formula
+      .slice(turnstile.at + turnstile.spelling.length)
+      .trim();
 
     const comment = stripped.labelComments.get(node.id);
     const premises: PrawitzProofNode[] = [];
