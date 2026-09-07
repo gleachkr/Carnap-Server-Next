@@ -71,7 +71,7 @@ function readFor(
   sources: readonly string[],
   input: ModelInput,
 ): ReturnType<typeof readModel> {
-  return readModel(modelSignature(sources.map(parse)), input);
+  return readModel(modelSignature(sources.map(parse), CALGARY), input);
 }
 
 function holds(source: string, input: ModelInput): boolean {
@@ -249,6 +249,7 @@ describe("the signature a formula implies", () => {
     // Carnap's own order (`prepareModelUI`), each group sorted by its label.
     const signature = modelSignature(
       ["Ex(R(x,a) /\\ P)", "F(b)", "AxG(f(x)) \\/ Q"].map(parse),
+      CALGARY,
     );
 
     expect(signature.map((field) => field.label)).toEqual([
@@ -266,7 +267,7 @@ describe("the signature a formula implies", () => {
 
   test("a symbol's arity is part of its identity", () => {
     // Carnap keys relations by (index, arity), so these are two predicates.
-    const signature = modelSignature(["F(a) /\\ F(a,b)"].map(parse));
+    const signature = modelSignature(["F(a) /\\ F(a,b)"].map(parse), CALGARY);
 
     expect(signature.map((field) => field.label)).toEqual([
       DOMAIN_FIELD_LABEL,
@@ -278,7 +279,7 @@ describe("the signature a formula implies", () => {
   });
 
   test("a bare predicate letter asks for a truth value, not an extension", () => {
-    const signature = modelSignature(["P"].map(parse));
+    const signature = modelSignature(["P"].map(parse), CALGARY);
 
     expect(signature[1]).toEqual({
       arity: 0,
@@ -289,7 +290,7 @@ describe("the signature a formula implies", () => {
   });
 
   test("terms nested in functions and identities are collected", () => {
-    const signature = modelSignature(["f(g(a),b) = c"].map(parse));
+    const signature = modelSignature(["f(g(a),b) = c"].map(parse), CALGARY);
 
     expect(signature.map((field) => field.label)).toEqual([
       DOMAIN_FIELD_LABEL,
@@ -303,7 +304,7 @@ describe("the signature a formula implies", () => {
 
   test("bound variables ask for nothing", () => {
     expect(
-      modelSignature(["AxEyR(x,y)"].map(parse)).map((f) => f.label),
+      modelSignature(["AxEyR(x,y)"].map(parse), CALGARY).map((f) => f.label),
     ).toEqual([DOMAIN_FIELD_LABEL, "R(_,_)"]);
   });
 });
@@ -507,7 +508,7 @@ describe("judging a task", () => {
   test("a simple exercise wants every formula true", () => {
     const input = { domain: "0,1", fields: { "F(_)": "0,1", "G(_)": "0" } };
     const verdict = checkModel(
-      modelSignature(["AxF(x)", "ExG(x)"].map(parse)),
+      modelSignature(["AxF(x)", "ExG(x)"].map(parse), CALGARY),
       task(["AxF(x)", "ExG(x)"], "all-true"),
       input,
     );
@@ -518,7 +519,7 @@ describe("judging a task", () => {
   test("the formulas that came out wrong are named by index", () => {
     const sources = ["AxF(x)", "ExG(x)"];
     const verdict = checkModel(
-      modelSignature(sources.map(parse)),
+      modelSignature(sources.map(parse), CALGARY),
       task(sources, "all-true"),
       { domain: "0,1", fields: { "F(_)": "0", "G(_)": "0" } },
     );
@@ -530,7 +531,7 @@ describe("judging a task", () => {
 
   test("a validity exercise needs the premises true and the conclusions false", () => {
     const sources = ["AxEyR(x,y)", "ExAyR(y,x)"];
-    const signature = modelSignature(sources.map(parse));
+    const signature = modelSignature(sources.map(parse), CALGARY);
     const invalidity = task([sources[1] ?? ""], "all-false", [
       sources[0] ?? "",
     ]);
@@ -558,7 +559,7 @@ describe("judging a task", () => {
   test("a false premise and a missed target are reported together", () => {
     // Carnap says both at once — "not all conclusions are false in this model,
     // and not all premises are true" — so the verdict carries both.
-    const signature = modelSignature(["P", "Q"].map(parse));
+    const signature = modelSignature(["P", "Q"].map(parse), CALGARY);
     const verdict = checkModel(signature, task(["Q"], "all-false", ["P"]), {
       domain: "0",
       fields: { P: "False", Q: "True" },
@@ -570,7 +571,10 @@ describe("judging a task", () => {
   });
 
   test("a constraint exercise needs the constraints true as well", () => {
-    const signature = modelSignature(["ExEy~x = y", "AxAyF(x,y)"].map(parse));
+    const signature = modelSignature(
+      ["ExEy~x = y", "AxAyF(x,y)"].map(parse),
+      CALGARY,
+    );
     const constrained = task(["AxAyF(x,y)"], "all-true", ["ExEy~x = y"]);
 
     // A one-element domain would make the universal claim true for free, which
@@ -589,7 +593,7 @@ describe("judging a task", () => {
 
   test("a counterexample to equivalence needs the formulas to disagree", () => {
     const sources = ["AxF(x)", "ExF(x)"];
-    const signature = modelSignature(sources.map(parse));
+    const signature = modelSignature(sources.map(parse), CALGARY);
     const equivalence = task(sources, "not-all-equal");
 
     const disagree = { domain: "0,1", fields: { "F(_)": "0" } };
@@ -610,7 +614,7 @@ describe("judging a task", () => {
 
   test("an unreadable model is not evaluated at all", () => {
     const verdict = checkModel(
-      modelSignature(["AxF(x)"].map(parse)),
+      modelSignature(["AxF(x)"].map(parse), CALGARY),
       task(["AxF(x)"], "all-true"),
       { domain: "", fields: {} },
     );
@@ -667,7 +671,7 @@ infixl nand: $↑$ prec 30;
 
   function holdsIn(source: string, input: ModelInput): boolean {
     const formula = parseExtended(source);
-    const read = readModel(modelSignature([formula]), input);
+    const read = readModel(modelSignature([formula], CALGARY), input);
 
     if (!read.ok) {
       throw new Error(`Expected the model to read: ${read.problem.kind}`);
@@ -704,9 +708,10 @@ infixl nand: $↑$ prec 30;
 
 describe("symbols of fixed arity", () => {
   /**
-   * A model is keyed by constructor name and arity, whatever the notation:
-   * `a + b` asks for a value table under `plus(_,_)`, and `Red(a)` for an
-   * extension under `Red(_)`, exactly as a textbook letter would.
+   * A model is keyed by constructor name and arity, whatever the notation, and
+   * *labelled* through the notation: `a + b` asks for a value table headed
+   * `_+_`, and `Red(a)` for an extension under `Red(_)`, exactly as a textbook
+   * letter would.
    */
   const FIXED = fixedArityLanguage();
 
@@ -725,33 +730,34 @@ describe("symbols of fixed arity", () => {
   test("the fields a mixed atom implies, in the usual order", () => {
     const signature = modelSignature(
       ["a + b < succ(c) ∧ Red(a)", "R(f(a), b)"].map(parseFixed),
+      FIXED,
     );
 
     expect(signature.map((field) => field.label)).toEqual([
       DOMAIN_FIELD_LABEL,
       "R(_,_)",
       "Red(_)",
-      "lt(_,_)",
+      "_<_",
       "a",
       "b",
       "c",
+      "_+_",
       "f(_)",
-      "plus(_,_)",
       "succ(_)",
     ]);
   });
 
   test("an infix function is evaluated through its two-argument table", () => {
     const sources = ["a + b = succ(c)", "Red(a + b)", "a < b"];
-    const read = readModel(modelSignature(sources.map(parseFixed)), {
+    const read = readModel(modelSignature(sources.map(parseFixed), FIXED), {
       domain: "0,1",
       fields: {
         a: "0",
         b: "1",
         c: "0",
         "Red(_)": "1",
-        "lt(_,_)": "[0,1]",
-        "plus(_,_)": "[0,0;0],[0,1;1],[1,0;1],[1,1;0]",
+        "_+_": "[0,0;0],[0,1;1],[1,0;1],[1,1;0]",
+        "_<_": "[0,1]",
         "succ(_)": "[0;1],[1;0]",
       },
     });

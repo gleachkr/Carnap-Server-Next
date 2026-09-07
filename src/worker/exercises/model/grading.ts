@@ -127,7 +127,7 @@ export function resolveModel(
 
   return {
     language,
-    signature: modelSignature([...required, ...targeted]),
+    signature: modelSignature([...required, ...targeted], language),
     task: { required, target: publicData.target, targeted },
   };
 }

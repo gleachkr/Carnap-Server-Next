@@ -176,8 +176,9 @@ is a file in that directory.
   marked `@syntax role argument-list`; the reader flattens a node of that
   sort into the argument list. A course's own fixed-arity symbols — `term
   Red (x: tm): wff;`, or an infix `plus` written `+` — read as the
-  constructor applied to its binders, and get fields keyed by the
-  constructor's name (`Red(_)`, `plus(_,_)`).
+  constructor applied to its binders, and get one field each, keyed by the
+  constructor's name and arity but **labelled the way the symbol is written**:
+  `Red(_)` for one with no notation, `_+_` for one written `+`.
 - **Variables** `s`–`z`; **names** `a`–`e`; **function symbols** `f`–`r`, a
   function when parentheses follow and a constant when they do not. Names and
   variables are separate *sorts*, which is what lets the proof system state

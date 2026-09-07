@@ -44,6 +44,7 @@
 
 import type {
   AppTerm,
+  NotationInfo,
   SurfaceLanguage,
   Term as SurfaceTerm,
 } from "@aufbau/syntax";
@@ -452,28 +453,162 @@ export function parseFormula(
   }
 }
 
-/** Render a term back to source. */
-export function termToString(term: Term): string {
-  if (term.type === "function") {
-    return `${term.name}(${term.args.map(termToString).join(",")})`;
+/**
+ * Printed text and the precedence of the operator at its head — `a+b` is the
+ * rung `+` sits on, a name or an application is `max`, and a sentential
+ * compound is `max` as well because {@link schematize} brackets every one of
+ * them.
+ *
+ * Carrying the rung is what lets an operand be bracketed exactly where the
+ * spec's ladder needs it. It matters more than looks: the stored form of a
+ * formula is text this printer wrote, and text the parser cannot read back is
+ * an exercise no grader can resolve.
+ */
+interface Written {
+  readonly prec: number;
+  readonly text: string;
+}
+
+/** MM0's `max`, as a number the numbered rungs compare against. */
+const MAX_PRECEDENCE = Number.MAX_SAFE_INTEGER;
+
+/** Something nothing needs brackets around: a name, or an already-bracketed compound. */
+const atom = (text: string): Written => ({ prec: MAX_PRECEDENCE, text });
+
+function precedenceOf(prec: number | "max"): number {
+  return prec === "max" ? MAX_PRECEDENCE : prec;
+}
+
+/** An operand, bracketed where its head binds looser than the slot allows. */
+function bracketed(written: Written, minimum: number): string {
+  return written.prec < minimum ? `(${written.text})` : written.text;
+}
+
+/**
+ * The notation to write a symbol in: the spec's canonical (last-declared) one,
+ * when it can say the arity the symbol is applied at.
+ *
+ * A textbook's variadic letter is applied at every arity and notated at none,
+ * so it falls through to `F(a,b)` — its constructor's name, which is the
+ * letter itself. A fixed-arity `plus` notated `infixl +` is written `a+b`, and
+ * a nullary `zero` notated `0` is written `0`. Anything else falls through
+ * too: this printer interleaves the two simple shapes and nothing more, and a
+ * general notation with argument slots is the printer in `@aufbau/syntax`'s
+ * job, over its own tree.
+ */
+function notationFor(
+  name: string,
+  arity: number,
+  lang: SurfaceLanguage,
+): NotationInfo | null {
+  const notation = lang.canonical.get(name);
+
+  if (notation === undefined) {
+    return null;
   }
 
-  return term.name;
+  if (notation.form === "general") {
+    return arity === 0 &&
+      notation.literals.every((literal) => literal.kind === "constant")
+      ? notation
+      : null;
+  }
+
+  return (notation.fixity === "prefix" ? 1 : 2) === arity ? notation : null;
+}
+
+/**
+ * A symbol applied to terms, through its notation where it has a fitting one
+ * and as `name(a,b)` where it has none.
+ */
+function writeSymbol(
+  name: string,
+  args: readonly Term[],
+  lang: SurfaceLanguage,
+): Written {
+  const notation = notationFor(name, args.length, lang);
+
+  if (notation === null) {
+    return atom(
+      args.length === 0
+        ? name
+        : `${name}(${args.map((arg) => writeTerm(arg, lang).text).join(",")})`,
+    );
+  }
+
+  if (notation.form === "general") {
+    return atom(
+      notation.literals
+        .flatMap((literal) =>
+          literal.kind === "constant" ? [literal.token] : [],
+        )
+        .join(""),
+    );
+  }
+
+  const prec = precedenceOf(notation.prec);
+  const tighter = Math.min(prec + 1, MAX_PRECEDENCE);
+  // The side an infix associates on takes an operand at its own rung — that is
+  // what makes `a+b+c` one reading — and the other side has to bind tighter.
+  const associative = notation.fixity === "infixl" ? 0 : 1;
+  const parts = args.map((arg, at) =>
+    bracketed(
+      writeTerm(arg, lang),
+      notation.fixity === "prefix" || at === associative ? prec : tighter,
+    ),
+  );
+
+  return {
+    prec,
+    text:
+      notation.fixity === "prefix"
+        ? `${notation.token}${parts.join("")}`
+        : parts.join(notation.token),
+  };
+}
+
+function writeTerm(term: Term, lang: SurfaceLanguage): Written {
+  if (term.type === "variable") {
+    return atom(term.name);
+  }
+
+  return writeSymbol(
+    term.name,
+    term.type === "function" ? term.args : [],
+    lang,
+  );
+}
+
+/** Render a term back to source, in the spec's own notation. */
+export function termToString(term: Term, lang: SurfaceLanguage): string {
+  return writeTerm(term, lang).text;
 }
 
 /**
  * The symbol each role is written with: the spec's *last* notation for it,
  * which is the one convention `@aufbau/syntax` fixes and every spec here
- * follows by listing its ASCII spellings first and its glyph last.
+ * follows by listing its ASCII spellings first and its glyph last. Its rung
+ * comes along, since a prefix operator has to bracket an operand that binds
+ * looser than it does.
  *
  * The fallbacks are unreachable for anything a student can write — a
  * constructor with no notation cannot be typed — and are here so that a spec
- * missing one prints something rather than `undefined`.
+ * missing one prints something rather than `undefined`. A missing rung falls
+ * back to `0`, which brackets nothing: the right answer where the spec has
+ * said nothing to bracket by.
  */
 function symbols(lang: SurfaceLanguage) {
   const index = roleIndex(lang);
   const of = (role: string, fallback: string): string =>
     index.spellingFor(role) ?? fallback;
+  const rung = (role: string): number => {
+    const term = index.termFor(role);
+    const notation = term === null ? undefined : lang.canonical.get(term);
+
+    return notation === undefined || notation.form === "general"
+      ? 0
+      : precedenceOf(notation.prec);
+  };
   const binary = {} as Record<BinaryConnective, string>;
 
   for (const connective of BINARY_CONNECTIVES) {
@@ -486,10 +621,13 @@ function symbols(lang: SurfaceLanguage) {
   return {
     binary,
     exists: of("exists", "∃"),
+    existsPrec: rung("exists"),
     falsum: of("falsum", "⊥"),
     forall: of("forall", "∀"),
+    forallPrec: rung("forall"),
     identity: of("identity", "="),
     not: of("negation", "¬"),
+    notPrec: rung("negation"),
     verum: of("verum", "⊤"),
   };
 }
@@ -497,34 +635,61 @@ function symbols(lang: SurfaceLanguage) {
 /**
  * Carnap's `schematize`: **every** binary compound parenthesized with spaces
  * around the connective, a quantifier or a negation written straight onto what
- * follows it, and identity closed up (`a=b`).
+ * follows it, and identity closed up (`a=b`). A symbol with a notation is
+ * written through it on the same terms — `x<x+a`, tight, like identity — and
+ * one without through its constructor's name, `F(a,b)`.
  */
 function schematize(
   formula: Formula,
+  lang: SurfaceLanguage,
   spelling: ReturnType<typeof symbols>,
-): string {
-  const inner = (part: Formula): string => schematize(part, spelling);
+): Written {
+  const inner = (part: Formula): Written => schematize(part, lang, spelling);
 
   switch (formula.type) {
     case "predicate":
-      return formula.args.length === 0
-        ? formula.name
-        : `${formula.name}(${formula.args.map(termToString).join(",")})`;
-    case "identity":
-      return `${termToString(formula.left)}${spelling.identity}${termToString(formula.right)}`;
+      return writeSymbol(formula.name, formula.args, lang);
+    case "identity": {
+      // Identity is an ordinary notated symbol, so it is written as one; the
+      // fallback is for a spec that gives the role a constructor with no
+      // notation, which would otherwise print as `ideq(a,b)`.
+      const term = roleIndex(lang).termFor("identity");
+
+      return term !== null && notationFor(term, 2, lang) !== null
+        ? writeSymbol(term, [formula.left, formula.right], lang)
+        : atom(
+            `${writeTerm(formula.left, lang).text}${spelling.identity}${
+              writeTerm(formula.right, lang).text
+            }`,
+          );
+    }
     case "falsum":
-      return spelling.falsum;
+      return atom(spelling.falsum);
     case "verum":
-      return spelling.verum;
+      return atom(spelling.verum);
     case "not":
-      return `${spelling.not}${inner(formula.operand)}`;
+      return {
+        prec: spelling.notPrec,
+        text: `${spelling.not}${bracketed(inner(formula.operand), spelling.notPrec)}`,
+      };
     case "forall":
-    case "exists":
-      return `${
-        formula.type === "forall" ? spelling.forall : spelling.exists
-      }${formula.variable}${inner(formula.body)}`;
+    case "exists": {
+      const prec =
+        formula.type === "forall" ? spelling.forallPrec : spelling.existsPrec;
+
+      return {
+        prec,
+        text: `${
+          formula.type === "forall" ? spelling.forall : spelling.exists
+        }${formula.variable}${bracketed(inner(formula.body), prec)}`,
+      };
+    }
     default:
-      return `(${inner(formula.left)} ${spelling.binary[formula.type]} ${inner(formula.right)})`;
+      return atom(
+        `(${inner(formula.left).text} ${spelling.binary[formula.type]} ${
+          inner(formula.right).text
+        })`,
+      );
   }
 }
 
@@ -574,7 +739,7 @@ export function formulaToString(
   formula: Formula,
   lang: SurfaceLanguage,
 ): string {
-  const shown = schematize(formula, symbols(lang));
+  const shown = schematize(formula, lang, symbols(lang)).text;
 
   return lang.spec.display.dropOuterParens ? dropOuterParens(shown) : shown;
 }

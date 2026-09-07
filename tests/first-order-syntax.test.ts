@@ -695,6 +695,35 @@ describe("symbols of fixed arity, and every notation", () => {
     });
   });
 
+  test("a notated symbol is written back through its notation", () => {
+    expect(show("a + b = c", FIXED)).toBe("a+b=c");
+    expect(show("a < b", FIXED)).toBe("a<b");
+    // One with no notation keeps its constructor's name and its brackets,
+    // which for a textbook letter is how it was written in the first place.
+    expect(show("Red(succ(a))", FIXED)).toBe("Red(succ(a))");
+    expect(show("f(a + b) = c", FIXED)).toBe("f(a+b)=c");
+  });
+
+  test("association is bracketed back in, so the tree survives storage", () => {
+    // `+` is `infixl`: a left nest is what the notation already says, and a
+    // right one has to be bracketed or it would read back as the other tree.
+    expect(show("(a + b) + c = c", FIXED)).toBe("a+b+c=c");
+    expect(show("a + (b + c) = c", FIXED)).toBe("a+(b+c)=c");
+
+    for (const source of [
+      "a+b+c=c",
+      "a+(b+c)=c",
+      "a<b+c",
+      "Red(a+b) → F(c)",
+      "∃x(a<x ∧ x<b)",
+    ]) {
+      const once = show(source, FIXED);
+
+      expect(parseFormula(once, FIXED).ok, once).toBe(true);
+      expect(parse(once, FIXED)).toEqual(parse(source, FIXED));
+    }
+  });
+
   test("the two shapes mix in one atom, under a quantifier", () => {
     expect(parse("∀x R(x + a, succ(b))", FIXED)).toEqual({
       body: {

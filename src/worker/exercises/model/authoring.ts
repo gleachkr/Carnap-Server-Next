@@ -740,7 +740,7 @@ export async function compileModel(
   });
   const givens = parseGivens(
     body.givenLines,
-    modelSignature(parsed),
+    modelSignature(parsed, language),
     diagnostics,
   );
 

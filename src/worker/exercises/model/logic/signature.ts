@@ -12,7 +12,9 @@
  * predicates and get two separate fields.
  */
 
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { Formula, Term } from "../../first-order";
+import { termToString } from "../../first-order";
 
 export type ModelFieldKind =
   | "domain"
@@ -46,13 +48,35 @@ export const DOMAIN_FIELD: ModelField = {
   symbol: DOMAIN_FIELD_LABEL,
 };
 
-/** `F` with arity 2 → `F(_,_)`; arity 0 → `F`. */
-export function blankedLabel(symbol: string, arity: number): string {
-  if (arity === 0) {
-    return symbol;
-  }
-
-  return `${symbol}(${Array.from({ length: arity }, () => "_").join(",")})`;
+/**
+ * `F` with arity 2 → `F(_,_)`; arity 0 → `F`. A symbol the spec gives a
+ * notation is labelled *through* it — `lt` written `<` is `_<_`, and a
+ * notated constant `zero` is `0` — because the label is what the exercise
+ * shows beside the sentences, and a student reading `x<a` should not have to
+ * work out that the table headed `lt(_,_)` is the same symbol.
+ *
+ * Blanking the arguments is printing the symbol applied to blanks, so that is
+ * how it is done: one printer decides how a symbol is written, here and in the
+ * sentences both.
+ */
+export function blankedLabel(
+  symbol: string,
+  arity: number,
+  lang: SurfaceLanguage,
+): string {
+  return termToString(
+    arity === 0
+      ? { name: symbol, type: "constant" }
+      : {
+          args: Array.from(
+            { length: arity },
+            () => ({ name: "_", type: "variable" }) as const,
+          ),
+          name: symbol,
+          type: "function",
+        },
+    lang,
+  );
 }
 
 /** A symbol's key in a model, distinguishing arities of the same letter. */
@@ -60,7 +84,11 @@ export function symbolKey(symbol: string, arity: number): string {
   return `${symbol}/${arity}`;
 }
 
-function collectFromTerm(term: Term, into: Map<string, ModelField>): void {
+function collectFromTerm(
+  term: Term,
+  into: Map<string, ModelField>,
+  lang: SurfaceLanguage,
+): void {
   if (term.type === "variable") {
     return;
   }
@@ -70,7 +98,7 @@ function collectFromTerm(term: Term, into: Map<string, ModelField>): void {
     into.set(key, {
       arity: 0,
       kind: "constant",
-      label: term.name,
+      label: blankedLabel(term.name, 0, lang),
       symbol: term.name,
     });
     return;
@@ -80,18 +108,19 @@ function collectFromTerm(term: Term, into: Map<string, ModelField>): void {
   into.set(key, {
     arity: term.args.length,
     kind: "function",
-    label: blankedLabel(term.name, term.args.length),
+    label: blankedLabel(term.name, term.args.length, lang),
     symbol: term.name,
   });
 
   for (const argument of term.args) {
-    collectFromTerm(argument, into);
+    collectFromTerm(argument, into, lang);
   }
 }
 
 function collectFromFormula(
   formula: Formula,
   into: Map<string, ModelField>,
+  lang: SurfaceLanguage,
 ): void {
   switch (formula.type) {
     case "predicate": {
@@ -99,33 +128,33 @@ function collectFromFormula(
       into.set(symbolKey(formula.name, arity), {
         arity,
         kind: arity === 0 ? "proposition" : "relation",
-        label: blankedLabel(formula.name, arity),
+        label: blankedLabel(formula.name, arity, lang),
         symbol: formula.name,
       });
 
       for (const argument of formula.args) {
-        collectFromTerm(argument, into);
+        collectFromTerm(argument, into, lang);
       }
 
       return;
     }
     case "identity":
-      collectFromTerm(formula.left, into);
-      collectFromTerm(formula.right, into);
+      collectFromTerm(formula.left, into, lang);
+      collectFromTerm(formula.right, into, lang);
       return;
     case "falsum":
     case "verum":
       return;
     case "not":
-      collectFromFormula(formula.operand, into);
+      collectFromFormula(formula.operand, into, lang);
       return;
     case "forall":
     case "exists":
-      collectFromFormula(formula.body, into);
+      collectFromFormula(formula.body, into, lang);
       return;
     default:
-      collectFromFormula(formula.left, into);
-      collectFromFormula(formula.right, into);
+      collectFromFormula(formula.left, into, lang);
+      collectFromFormula(formula.right, into, lang);
   }
 }
 
@@ -146,11 +175,12 @@ const KIND_ORDER: readonly ModelFieldKind[] = [
  */
 export function modelSignature(
   formulas: readonly Formula[],
+  lang: SurfaceLanguage,
 ): readonly ModelField[] {
   const collected = new Map<string, ModelField>();
 
   for (const formula of formulas) {
-    collectFromFormula(formula, collected);
+    collectFromFormula(formula, collected, lang);
   }
 
   const fields = [...collected.values()].sort((left, right) => {

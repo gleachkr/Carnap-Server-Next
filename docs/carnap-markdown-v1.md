@@ -1089,6 +1089,14 @@ or a cons all read the same way and the reader is never told a constructor's
 name. Leave it off and every binder is one argument, which is right for a
 language whose symbols all have fixed arity.
 
+Reading is by constructor; *writing* is by notation. A stored formula, a
+verdict's quotation and a model's field labels all go back through the spec's
+canonical spelling, so `plus` set as `infixl +` is written `a+b` and its table
+is headed `_+_`, while a symbol with no notation keeps its constructor's name
+and brackets — `Red(_)`, and a textbook letter's `F(_,_)`. That is not only
+cosmetic: what is stored has to parse back, so a symbol written by name where
+the language expects `+` would be an exercise no grader could read.
+
 **Every truth function has a role, not just the five a textbook opens with.**
 Which connectives a course takes as primitive is the textbook's business:
 Quine's stroke, exclusive disjunction, NAND and NOR before anything else in a
