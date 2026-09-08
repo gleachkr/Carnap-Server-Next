@@ -123,6 +123,12 @@ theorem andcomm (P Q: wff): $ ((P ∧ Q) ⊢ (Q ∧ P)) $;`,
     );
   });
 
+  /**
+   * This theory declares no `delimiter`, so the engine splits its math strings
+   * on whitespace alone: `((P` would be one token. The goal is re-printed with
+   * the parentheses spaced out for exactly that reason — what a theory has not
+   * declared as a delimiter cannot be written flush against a name.
+   */
   test("a body with no src is still the whole theory", async () => {
     const mm0 = await frozenMm0(
       lesson(`:::aufbau-mm0{name="forallx"}
@@ -144,7 +150,7 @@ axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
     );
 
     expect(mm0).toBe(
-      "provable sort wff;\nsort ctx;\nterm and (a b: wff): wff;\ninfixl and: $∧$ prec 30;\nterm join (g h: ctx): ctx;\ninfixl join: $,$ prec 5;\nterm hyp (a: wff): ctx;\ncoercion hyp: wff > ctx;\nterm nd (g: ctx) (a: wff): wff;\ninfixl nd: $⊢$ prec 0;\naxiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;\ntheorem andcomm (P Q: wff): $ ((P ∧ Q) ⊢ (Q ∧ P)) $;",
+      "provable sort wff;\nsort ctx;\nterm and (a b: wff): wff;\ninfixl and: $∧$ prec 30;\nterm join (g h: ctx): ctx;\ninfixl join: $,$ prec 5;\nterm hyp (a: wff): ctx;\ncoercion hyp: wff > ctx;\nterm nd (g: ctx) (a: wff): wff;\ninfixl nd: $⊢$ prec 0;\naxiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;\ntheorem andcomm (P Q: wff): $ ( ( P ∧ Q ) ⊢ ( Q ∧ P ) ) $;",
     );
   });
 
