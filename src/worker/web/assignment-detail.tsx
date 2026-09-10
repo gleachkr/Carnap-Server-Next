@@ -2528,14 +2528,13 @@ const ReviewFilterBar: FC<{
   return (
     <nav
       aria-label={i18n.t("Filter submissions")}
-      class="review-filter"
+      class="segmented review-filter"
       data-filter={filter}
     >
       <a
-        class="review-filter-option"
         href={base}
         {...(filter === "needs-review"
-          ? { "aria-current": "true" as const }
+          ? { "aria-current": "page" as const }
           : {})}
       >
         {countBefore}
@@ -2543,9 +2542,8 @@ const ReviewFilterBar: FC<{
         {countAfter}
       </a>
       <a
-        class="review-filter-option"
         href={`${base}?review=all`}
-        {...(filter === "all" ? { "aria-current": "true" as const } : {})}
+        {...(filter === "all" ? { "aria-current": "page" as const } : {})}
       >
         {i18n.t("All ({count})", { count: total })}
       </a>

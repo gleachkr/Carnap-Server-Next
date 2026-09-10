@@ -2106,7 +2106,9 @@ Choose yes.
       // The review actions are enhanced to submit without a full reload; the
       // hooks the script reconciles against ride along with the page, and the
       // script itself is linked.
-      expect(defaultView).toContain('class="review-filter" data-filter=');
+      expect(defaultView).toContain(
+        'class="segmented review-filter" data-filter=',
+      );
       expect(defaultView).toContain(REVIEW_SCRIPT_ASSET.href);
       expect(REVIEW_SCRIPT).toContain("form.approve-score-form");
       expect(REVIEW_SCRIPT).toContain("form.manual-evaluation-form");

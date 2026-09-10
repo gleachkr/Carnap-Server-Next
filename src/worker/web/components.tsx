@@ -383,7 +383,7 @@ export function splitView(options: {
   return {
     split: <ContentSplit {...split} view={start} />,
     viewSwitch: (
-      <fieldset class="split-switch" data-split-switch>
+      <fieldset class="segmented split-switch" data-split-switch>
         <legend class="visually-hidden">{legend}</legend>
         <button
           aria-pressed={String(start === "rail")}

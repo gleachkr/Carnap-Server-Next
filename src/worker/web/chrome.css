@@ -1072,27 +1072,10 @@ a.score-uncounted {
   margin: 0;
 }
 
+/* Drawn as a segmented track (see `.segmented`): the two options are one
+   list seen two ways, not two separate places to go. */
 .review-filter {
-  display: flex;
-  gap: 1.25rem;
   margin-bottom: 1rem;
-}
-
-.review-filter-option {
-  color: var(--ink-muted);
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding-bottom: 0.15rem;
-  text-decoration: none;
-}
-
-.review-filter-option:hover {
-  color: var(--ink);
-}
-
-.review-filter-option[aria-current] {
-  border-bottom: 2px solid var(--blue);
-  color: var(--ink);
 }
 
 .submission-review-list {
@@ -1495,62 +1478,84 @@ a.score-uncounted {
   padding: 0.9rem clamp(1rem, 2vw, 1.5rem);
 }
 
-/* The switch between a split's two views matters only where the columns
-   stack, and it is inert without JS — so it stays hidden until its bundle
-   marks it enhanced, and never shows on wide viewports.
+/* A segmented control: one track divided in two, with the half you are on
+   raised out of it. Two separately-bordered controls said "here are two
+   things you can do"; a track says "here is one thing, seen one of two
+   ways", which is what both of the pairs wearing this are.
 
-   It is drawn as one control divided in two, not as two controls: a single
-   track with the current view raised out of it. Two separately-bordered
-   buttons said "here are two things you can do"; a segmented track says
-   "here is one thing, seen one of two ways", which is what the columns
-   below it actually are. The halves are equal columns rather than
-   content-width so the track doesn't resize as the label changes under
-   translation. */
-.split-switch {
+   Only the drawing lives here, because the two are not the same kind of
+   control. A split view's switch is a pair of buttons that flip which pane
+   is on screen without navigating; the review filter is a pair of links to
+   two server-rendered lists. So the half that is on is read from
+   `aria-pressed` on the one and `aria-current` on the other, and whatever
+   else each needs sits in its own block below. */
+.segmented {
   background: var(--surface-soft);
   border: 1px solid var(--rule);
   /* The sheet's radius outside, the button's inside: this is a control made
      of controls, and both radii are already in use on the page. */
   border-radius: 6px;
-  display: none;
+  display: grid;
   gap: 0.25rem;
-  grid-auto-columns: 1fr;
   grid-auto-flow: column;
-  /* Overriding the shared `fieldset` block, which frames a stack of form
-     fields: this fieldset is a control, and its own rules above are the
-     whole of its frame. `min-inline-size` undoes the min-content floor a
-     fieldset carries by default, which would otherwise beat `fit-content`. */
-  margin: 0;
-  min-inline-size: 0;
   padding: 0.25rem;
   width: fit-content;
 }
 
-/* The halves give up the button frame entirely — the track is the frame. */
-.split-switch button {
+/* The halves give up their own frame entirely — the track is the frame. A
+   link is laid out as a box so that it fills its half the way a button
+   does, rather than sitting on the surrounding text's baseline. */
+.segmented > :is(a, button) {
+  align-items: center;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 4px;
   color: var(--ink-muted);
+  display: inline-flex;
   font-weight: 600;
+  justify-content: center;
   min-height: 36px;
-  min-width: 7rem;
   padding: 0.35rem 1.1rem;
+  text-decoration: none;
 }
 
-/* Hover on the inactive half hints that it is live without borrowing the
-   raised treatment that means "this is the view you are in". */
-.split-switch button:hover {
+/* Hover on the half you are not on hints that it is live without borrowing
+   the raised treatment, which means "this is the one you are looking at". */
+.segmented > :is(a, button):hover {
   background: transparent;
   color: var(--ink);
 }
 
-.split-switch button[aria-pressed="true"] {
+.segmented > :is([aria-current], [aria-pressed="true"]) {
   background: var(--control-surface);
   border-color: color-mix(in srgb, var(--blue) 28%, transparent);
   box-shadow: 0 1px 2px
     color-mix(in srgb, var(--shadow-color) 14%, transparent);
   color: var(--blue-strong);
+}
+
+/* The switch between a split's two views matters only where the columns
+   stack, and it is inert without JS — so it stays hidden until its bundle
+   marks it enhanced, and never shows on wide viewports. That is why this
+   `display` and the media query below stay off `.segmented`: a control
+   that always belongs on the page must not inherit them. */
+.split-switch {
+  display: none;
+  /* Equal columns rather than content-width, so the track doesn't resize as
+     the label changes under translation. The review filter keeps the track's
+     auto columns instead: its two labels are of unlike length, and the first
+     carries a count that changes as submissions are reviewed. */
+  grid-auto-columns: 1fr;
+  /* Overriding the shared `fieldset` block, which frames a stack of form
+     fields: this fieldset is a control, and the track is the whole of its
+     frame. `min-inline-size` undoes the min-content floor a fieldset carries
+     by default, which would otherwise beat `fit-content`. */
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.split-switch button {
+  min-width: 7rem;
 }
 
 @media (max-width: 69.99rem) {
