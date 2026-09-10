@@ -332,6 +332,28 @@ table button:not(:where(.modal-dialog button)) {
   background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 
+/* The row under the navbar: the breadcrumb, and opposite it whatever the
+   page put in `headerAside`. A wrapper rather than a rule on the breadcrumb
+   itself, because the aside is not navigation and does not belong inside the
+   nav landmark — and because the gap below the row is the row's, so an empty
+   aside leaves the spacing exactly as it was. */
+.page-header {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  justify-content: space-between;
+  margin-bottom: 2.75rem;
+}
+
+/* Takes the row's leftover width, so a long trail wraps against the page
+   rather than against its own content — which is what it did before the
+   wrapper made it a flex item. */
+.page-header .breadcrumb {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .breadcrumb {
   align-items: baseline;
   color: var(--ink-muted);
@@ -340,7 +362,6 @@ table button:not(:where(.modal-dialog button)) {
   font-size: 0.92rem;
   gap: 0.4rem 0.55rem;
   letter-spacing: 0.005em;
-  margin-bottom: 2.75rem;
 }
 
 .breadcrumb-link {
@@ -357,9 +378,18 @@ table button:not(:where(.modal-dialog button)) {
   color: var(--ink-faint);
 }
 
+/* The trail's last step names the page, and a page can be named by free
+   text the author wrote — a revision is named by its note. That is one line
+   about where you are, so a long name is cut short rather than allowed to
+   become the row; the whole of it is still in the markup, and still read
+   out. */
 .breadcrumb-current {
   color: var(--ink);
   font-weight: 560;
+  max-width: 46ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .page-content {
@@ -1465,29 +1495,78 @@ a.score-uncounted {
   padding: 0.9rem clamp(1rem, 2vw, 1.5rem);
 }
 
-/* The editor's Write/Preview switch matters only where the split columns
-   stack, and it is inert without JS — so it stays hidden until the preview
-   bundle marks it enhanced, and never shows on wide viewports. */
-.editor-mode-switch {
+/* The switch between a split's two views matters only where the columns
+   stack, and it is inert without JS — so it stays hidden until its bundle
+   marks it enhanced, and never shows on wide viewports.
+
+   It is drawn as one control divided in two, not as two controls: a single
+   track with the current view raised out of it. Two separately-bordered
+   buttons said "here are two things you can do"; a segmented track says
+   "here is one thing, seen one of two ways", which is what the columns
+   below it actually are. The halves are equal columns rather than
+   content-width so the track doesn't resize as the label changes under
+   translation. */
+.split-switch {
+  background: var(--surface-soft);
+  border: 1px solid var(--rule);
+  /* The sheet's radius outside, the button's inside: this is a control made
+     of controls, and both radii are already in use on the page. */
+  border-radius: 6px;
   display: none;
-  gap: 0.4rem;
+  gap: 0.25rem;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  /* Overriding the shared `fieldset` block, which frames a stack of form
+     fields: this fieldset is a control, and its own rules above are the
+     whole of its frame. `min-inline-size` undoes the min-content floor a
+     fieldset carries by default, which would otherwise beat `fit-content`. */
+  margin: 0;
+  min-inline-size: 0;
+  padding: 0.25rem;
+  width: fit-content;
 }
 
-.editor-mode-switch button[aria-pressed="true"] {
-  border-color: var(--blue);
-  color: var(--blue);
+/* The halves give up the button frame entirely — the track is the frame. */
+.split-switch button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--ink-muted);
+  font-weight: 600;
+  min-height: 36px;
+  min-width: 7rem;
+  padding: 0.35rem 1.1rem;
+}
+
+/* Hover on the inactive half hints that it is live without borrowing the
+   raised treatment that means "this is the view you are in". */
+.split-switch button:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
+.split-switch button[aria-pressed="true"] {
+  background: var(--control-surface);
+  border-color: color-mix(in srgb, var(--blue) 28%, transparent);
+  box-shadow: 0 1px 2px
+    color-mix(in srgb, var(--shadow-color) 14%, transparent);
+  color: var(--blue-strong);
 }
 
 @media (max-width: 69.99rem) {
-  .editor-mode-switch[data-enhanced] {
-    display: flex;
+  .split-switch[data-enhanced] {
+    display: grid;
   }
 
-  .content-split[data-mode="write"] > .content-split-doc {
+  /* Where the switch shows, the columns are two views rather than two
+     columns: whichever one is not being looked at is not on the page at
+     all. Only a split that has a switch carries `data-mode`; the ones that
+     simply stack (the course page, an assignment) go on stacking. */
+  .content-split[data-mode="rail"] > .content-split-doc {
     display: none;
   }
 
-  .content-split[data-mode="preview"] > .content-split-rail {
+  .content-split[data-mode="content"] > .content-split-rail {
     display: none;
   }
 }
@@ -1508,7 +1587,7 @@ a.score-uncounted {
     max-width: 120rem;
   }
 
-  .page-shell:has(.content-split) .breadcrumb {
+  .page-shell:has(.content-split) .page-header {
     margin-inline: auto;
     max-width: var(--page-measure);
     width: 100%;

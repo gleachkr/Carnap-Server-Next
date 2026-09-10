@@ -1870,6 +1870,73 @@ ${sampleSource("styled_doc")}`,
     });
   });
 
+  test("a revision page is its document and its source, named by its note", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "noting-author@example.test");
+      const item = await createContent(env, author);
+      const noted = (await (
+        await appRequest(
+          createTestApp(),
+          `/content/${item.item.id}/revisions`,
+          jsonRequest(
+            {
+              details: "Rewrote the second exercise.",
+              sourceText: sampleSource("noted_rev"),
+            },
+            author,
+          ),
+          env,
+        )
+      ).json()) as ContentRevisionResponse;
+      const unnoted = (await (
+        await appRequest(
+          createTestApp(),
+          `/content/${item.item.id}/revisions`,
+          jsonRequest({ sourceText: sampleSource("unnoted_rev") }, author),
+          env,
+        )
+      ).json()) as ContentRevisionResponse;
+      const notedPage = await appRequest(
+        createTestApp(),
+        `/content/revisions/${noted.revision.id}`,
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+      const html = await notedPage.text();
+      const unnotedPage = await appRequest(
+        createTestApp(),
+        `/content/revisions/${unnoted.revision.id}`,
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+      const unnotedHtml = await unnotedPage.text();
+
+      expect(notedPage.status).toBe(200);
+      // The author's note names the page — in the trail and in the tab. It is
+      // what tells two revisions apart; "Content revision" is only what every
+      // page here is, and so is what a revision saved without a note falls
+      // back to.
+      expect(html).toContain("Rewrote the second exercise.");
+      expect(html).toContain(
+        "<title>Rewrote the second exercise. · Carnap</title>",
+      );
+      expect(html).not.toContain("Content revision");
+      expect(unnotedHtml).toContain(
+        "<title>Content revision · Carnap</title>",
+      );
+      // Two views of one revision rather than a record card above a pair of
+      // columns: the switch rides in the shell's header row, and where only
+      // one view shows it is the compiled document — what the revision is
+      // for — that shows first.
+      expect(html).not.toContain("Revision record");
+      expect(html).toContain("data-split-switch");
+      expect(html).toContain('data-mode="content"');
+      expect(html.indexOf("data-split-switch")).toBeLessThan(
+        html.indexOf("data-split-view"),
+      );
+    });
+  });
+
   function editorForm(login: LoginResult, fields: Record<string, string>) {
     return {
       body: new URLSearchParams({ csrfToken: login.csrfToken, ...fields }),
@@ -1905,10 +1972,19 @@ ${sampleSource("styled_doc")}`,
         "data-component=&quot;carnap-multiple-choice&quot;",
       );
       expect(html).toContain('src="/assets/editor-preview.js"');
-      // The narrow-viewport Write/Preview switch ships in the markup (the
-      // bundle reveals it; CSS keeps it to stacked layouts).
-      expect(html).toContain("data-editor-mode-switch");
-      expect(html).toContain('data-mode="write"');
+      // The narrow-viewport view switch ships in the markup (its bundle
+      // reveals it; CSS keeps it to the widths where the columns stop being
+      // columns), opened on the column this page is for.
+      expect(html).toContain("data-split-switch");
+      expect(html).toContain('data-mode="rail"');
+      // And it rides in the shell's header row, ahead of the split: below the
+      // breakpoint the split hides whichever column is not showing, so a
+      // switch inside either column would take itself off screen the moment
+      // it was used.
+      expect(html).toContain('<div class="page-header">');
+      expect(html.indexOf("data-split-switch")).toBeLessThan(
+        html.indexOf("data-split-view"),
+      );
     });
   });
 

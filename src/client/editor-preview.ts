@@ -5,8 +5,9 @@
  * document route will serve. Edits recompile after a short pause and replace
  * the preview iframe's srcdoc; diagnostics render under the textarea.
  *
- * On narrow viewports the two split columns stack, so a Write/Preview switch
- * (revealed here — it is inert without JS) shows one at a time instead.
+ * On narrow viewports the two columns are two views of the page rather than
+ * two columns, and the shared split-view switch (set up here, because this is
+ * the bundle the editor loads) is what moves between them.
  */
 
 import type { EditorView } from "@codemirror/view";
@@ -52,6 +53,7 @@ import {
 } from "../worker/web/ui-strings";
 import { createMarkdownEditor, showDiagnostics } from "./markdown-editor";
 import { loadProofCompiler } from "./proof-compiler";
+import { setUpSplitView } from "./split-view";
 import { warnBeforeDiscarding } from "./unsaved-changes";
 
 const DEBOUNCE_MS = 250;
@@ -583,43 +585,25 @@ function setUpEditor<
   }
 }
 
-function setUpModeSwitch(split: HTMLElement, control: HTMLElement): void {
-  // The switch only matters when the columns stack; CSS keeps it hidden on
-  // wide viewports, and this reveal keeps it hidden without JS.
-  control.dataset.enhanced = "true";
-
-  control.addEventListener("click", (event) => {
-    const target = event.target;
-
-    if (!(target instanceof Element)) {
-      return;
-    }
-
-    const button = target.closest("[data-mode-target]");
-
-    if (!(button instanceof HTMLElement)) {
-      return;
-    }
-
-    split.dataset.mode = button.dataset.modeTarget;
-
-    for (const other of control.querySelectorAll("[data-mode-target]")) {
-      other.setAttribute("aria-pressed", String(other === button));
-    }
-  });
-}
-
-const split = document.querySelector<HTMLElement>("[data-editor-split]");
+const split = document.querySelector<HTMLElement>("[data-split-view]");
 const source = document.querySelector<HTMLTextAreaElement>(
   "[data-editor-source]",
 );
 const frame = split?.querySelector<HTMLIFrameElement>("iframe.content-frame");
+// What this page is editing, from the page itself. This was once inferred —
+// an MM0 item was the editor with no preview column — and the two really are
+// the same fact, but only for a bundle and a page that were built together: a
+// stale bundle looking for a column hook the page had renamed found no split,
+// concluded "theory", and listed every line of a Markdown lesson as an MM0
+// error. Asking outright degrades the other way, to setting nothing up.
+const sourceFormat = source?.dataset.sourceFormat;
 const diagnosticsHost = document.querySelector<HTMLElement>(
   "[data-editor-diagnostics]",
 );
-const modeSwitch = document.querySelector<HTMLElement>(
-  "[data-editor-mode-switch]",
-);
+// Independent of the preview: the switch moves between two columns the server
+// already rendered, so it is worth having even on a page where compiling could
+// not be set up. It does nothing where there is no split (a theory item).
+setUpSplitView();
 
 // Guarded on its own, ahead of the preview: a revision that is only ever saved
 // once is exactly the thing worth not losing, and it is still worth not losing
@@ -628,10 +612,9 @@ if (source?.form != null) {
   warnBeforeDiscarding(source.form);
 }
 
-// An MM0 item has no preview column and no document to build, so it is
-// recognized by the absence of the split rather than by asking the page what
-// format it is: the two are the same fact, and one of them cannot be wrong.
-if (source !== null && diagnosticsHost !== null && split === null) {
+// An MM0 item has no preview column and no document to build: the editor and
+// its diagnostics are the whole page.
+if (source !== null && diagnosticsHost !== null && sourceFormat === "mm0") {
   setUpEditor(
     source,
     diagnosticsHost,
@@ -641,6 +624,7 @@ if (source !== null && diagnosticsHost !== null && split === null) {
 }
 
 if (
+  sourceFormat === "markdown" &&
   split !== null &&
   source !== null &&
   frame !== null &&
@@ -654,8 +638,4 @@ if (
       compileCarnapMarkdown(text, { resolveTheory: fetchHostedTheory }),
     drawPreview(split, frame, diagnosticsHost),
   );
-
-  if (modeSwitch !== null) {
-    setUpModeSwitch(split, modeSwitch);
-  }
 }

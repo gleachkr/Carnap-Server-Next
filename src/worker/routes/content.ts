@@ -588,7 +588,6 @@ async function revisionPage(
   }
 
   return renderRevision(context, {
-    createdAt: revision.createdAt,
     details: revision.details,
     itemId: item.id,
     itemTitle: item.title,

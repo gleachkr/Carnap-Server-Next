@@ -2,6 +2,11 @@
  * Read-only Carnap Markdown, wherever a page shows source it does not let you
  * edit — today, a saved revision's immutable text.
  *
+ * It also sets up the page's view switch, where the revision's source and its
+ * compiled form are two views rather than two columns: this is the bundle a
+ * revision page loads, and it loads it exactly when there is a source column
+ * to switch to.
+ *
  * The server renders that text in a `<pre>`, which is correct and complete on
  * its own; this replaces it with the same CodeMirror rendering the editor uses,
  * so a directive looks like a directive in both places rather than only in the
@@ -9,6 +14,7 @@
  * view and the Markdown language, and none of the authoring machinery.
  */
 import { createMarkdownViewer } from "./markdown-editor";
+import { setUpSplitView } from "./split-view";
 
 const SOURCE_LABEL_ATTRIBUTE = "data-source-label";
 const FOLD_LABEL_ATTRIBUTE = "data-fold-label";
@@ -52,3 +58,5 @@ for (const host of document.querySelectorAll<HTMLElement>(
   });
   host.dataset.enhanced = "true";
 }
+
+setUpSplitView();

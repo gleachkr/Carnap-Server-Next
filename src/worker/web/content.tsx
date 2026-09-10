@@ -23,7 +23,6 @@ import { hostedTheoryPath } from "../logic/theories";
 import { contentCrumb, contentItemCrumb } from "./breadcrumbs";
 import {
   ContentFrame,
-  ContentSplit,
   CopyField,
   CreateBar,
   CsrfInput,
@@ -32,6 +31,7 @@ import {
   Sheet,
   StatusBadge,
   SummaryStrip,
+  splitView,
   TableScroll,
   Time,
 } from "./components";
@@ -384,6 +384,13 @@ const RevisionEditor: FC<{
         </label>
         <textarea
           data-editor-source
+          // What the preview bundle compiles this with. Said outright rather
+          // than left to be inferred from the page's shape: an MM0 item used
+          // to be recognized as "the editor with no preview column beside
+          // it", which meant a bundle that no longer recognized the column
+          // read a Markdown lesson as a theory and listed every line of it as
+          // an error.
+          data-source-format={sourceFormat}
           id={SOURCE_FIELD_ID}
           name="sourceText"
           required
@@ -926,6 +933,43 @@ export function renderRevisionEditor(
       sourceText={model.sourceText}
     />
   );
+  /*
+   * A theory has neither a preview nor a second column: the editor is the
+   * whole page, and there is nothing to switch to.
+   */
+  const views =
+    model.sourceFormat === "mm0"
+      ? undefined
+      : splitView({
+          // Nothing has compiled yet, so there is no earlier preview to dim
+          // as stale — the column would just be an empty box. The preview
+          // bundle drops the class for good the first time a document lands.
+          ...(model.previewDocumentHtml === null
+            ? { className: "preview-empty" }
+            : {}),
+          content: (
+            // srcdoc rather than a URL: the source is unsaved, so there is no
+            // document route to point at (and no fullscreen link).
+            <ContentFrame
+              placeholder={
+                <>
+                  <p class="content-frame-empty-title">
+                    {i18n.t("Nothing to preview yet")}
+                  </p>
+                  <p>{i18n.t("The source doesn't compile.")}</p>
+                </>
+              }
+              srcdoc={model.previewDocumentHtml ?? ""}
+              title={i18n.t("Preview")}
+            />
+          ),
+          contentLabel: i18n.t("Preview"),
+          legend: i18n.t("Editor view"),
+          rail: editor,
+          railLabel: i18n.t("Write"),
+          // Writing is what this page is for; the preview is the second look.
+          start: "rail",
+        });
 
   return renderShell(
     context,
@@ -934,6 +978,7 @@ export function renderRevisionEditor(
         contentCrumb(i18n),
         contentItemCrumb(model.itemId, model.itemTitle),
       ],
+      ...(views === undefined ? {} : { headerAside: views.viewSwitch }),
       ...(model.status === undefined ? {} : { status: model.status }),
       title: i18n.t("New revision"),
     },
@@ -941,56 +986,7 @@ export function renderRevisionEditor(
       {model.error === undefined ? null : (
         <ErrorSummary>{model.error}</ErrorSummary>
       )}
-      {model.sourceFormat === "mm0" ? (
-        editor
-      ) : (
-        <>
-          <div class="editor-mode-switch" data-editor-mode-switch>
-            <button
-              aria-pressed="true"
-              class="ghost"
-              data-mode-target="write"
-              type="button"
-            >
-              {i18n.t("Write")}
-            </button>
-            <button
-              aria-pressed="false"
-              class="ghost"
-              data-mode-target="preview"
-              type="button"
-            >
-              {i18n.t("Preview")}
-            </button>
-          </div>
-          <ContentSplit
-            // Nothing has compiled yet, so there is no earlier preview to dim as
-            // stale — the column would just be an empty box. The preview bundle
-            // drops the class for good the first time a document lands.
-            {...(model.previewDocumentHtml === null
-              ? { className: "preview-empty" }
-              : {})}
-            content={
-              // srcdoc rather than a URL: the source is unsaved, so there is no
-              // document route to point at (and no fullscreen link).
-              <ContentFrame
-                placeholder={
-                  <>
-                    <p class="content-frame-empty-title">
-                      {i18n.t("Nothing to preview yet")}
-                    </p>
-                    <p>{i18n.t("The source doesn't compile.")}</p>
-                  </>
-                }
-                srcdoc={model.previewDocumentHtml ?? ""}
-                title={i18n.t("Preview")}
-              />
-            }
-            mode="write"
-            rail={editor}
-          />
-        </>
-      )}
+      {views === undefined ? editor : views.split}
       {raw(
         uiStringsScript(
           EDITOR_UI_STRINGS_ATTRIBUTE,
@@ -1063,7 +1059,6 @@ const TheorySummary: FC<{
 export function renderRevision(
   context: Context<AppBindings>,
   model: {
-    readonly createdAt: string;
     readonly details: string;
     readonly itemId: string;
     readonly itemTitle: string;
@@ -1092,6 +1087,71 @@ export function renderRevision(
   const i18n = context.get("i18n");
   const documentUrl = `/content/revisions/${model.revisionId}/document`;
   const foldStrings = markdownFoldStrings(i18n);
+  const compiled =
+    model.theory === undefined ? (
+      <ContentFrame
+        fullscreenHref={documentUrl}
+        src={documentUrl}
+        title={i18n.t("Compiled content")}
+      />
+    ) : (
+      <TheorySummary
+        artifact={model.theory}
+        path={hostedTheoryPath(model.revisionId)}
+      />
+    );
+  /*
+   * The source, when this reader has it — and the whole of the second column
+   * when they do. A revision used to be introduced by a record card carrying
+   * its note and the date it was saved; the note names the page in the
+   * breadcrumb now, and the date is on the item's revision list, one click
+   * away, which leaves this page holding the two things a revision is.
+   */
+  const source =
+    model.sourceText === null ? null : (
+      <>
+        <Sheet className="source-sheet" title={i18n.t("Source")}>
+          {/* The `<pre>` is the whole rendering without JS; the
+              source-view bundle swaps it for the read-only CodeMirror the
+              editor uses, so a directive reads as a directive here too.
+              The names travel as attributes because that bundle has no
+              catalog of its own. */}
+          <div
+            class="markdown-source"
+            data-fold-label={foldStrings.fold}
+            data-source-label={i18n.t("Revision source")}
+            data-source-view
+            data-unfold-label={foldStrings.unfold}
+          >
+            <pre>
+              <code>{model.sourceText}</code>
+            </pre>
+          </div>
+        </Sheet>
+        <script src="/assets/source-view.js" type="module" />
+      </>
+    );
+  /*
+   * A shared revision whose author did not also share the source is a single
+   * document, and a split with an empty column beside it would only be a
+   * narrower way to read it.
+   */
+  const views =
+    source === null
+      ? undefined
+      : splitView({
+          content: compiled,
+          contentLabel:
+            model.theory === undefined
+              ? i18n.t("Document")
+              : i18n.t("Theory"),
+          legend: i18n.t("Revision view"),
+          rail: source,
+          railLabel: i18n.t("Source"),
+          // What the revision is *for* is the compiled thing; the source is
+          // how it was made, and it is one tap away.
+          start: "content",
+        });
 
   return renderShell(
     context,
@@ -1102,75 +1162,19 @@ export function renderRevision(
           ? contentItemCrumb(model.itemId, model.itemTitle)
           : { label: model.itemTitle },
       ],
-      title: i18n.t("Content revision"),
+      ...(views === undefined ? {} : { headerAside: views.viewSwitch }),
+      /*
+       * The author's own words for this revision, which is what tells two of
+       * them apart — "Content revision" only says what every page here is.
+       * The trail cuts a long note short (CSS); the words are all still here
+       * for a reader who is being read to, and for the tab.
+       */
+      title:
+        model.details.length === 0
+          ? i18n.t("Content revision")
+          : model.details,
     },
-    <ContentSplit
-      content={
-        model.theory === undefined ? (
-          <ContentFrame
-            fullscreenHref={documentUrl}
-            src={documentUrl}
-            title={i18n.t("Compiled content")}
-          />
-        ) : (
-          <TheorySummary
-            artifact={model.theory}
-            path={hostedTheoryPath(model.revisionId)}
-          />
-        )
-      }
-      rail={
-        <>
-          <Sheet
-            description={i18n.t(
-              "Immutable source and compiled output for this revision.",
-            )}
-            summary={
-              <SummaryStrip
-                items={[
-                  {
-                    label: i18n.t("Created"),
-                    value: <Time value={model.createdAt} />,
-                  },
-                ]}
-              />
-            }
-            title={i18n.t("Revision record")}
-          >
-            {/* The note reads as the sentence it is. It was briefly a
-                summary-strip cell next to the date, but that slot sets its value
-                in the large display serif — sized for a count or a timestamp,
-                and a sentence wrapped across three lines of it. */}
-            <p {...(model.details.length === 0 ? { class: "muted" } : {})}>
-              {revisionDetailsText(i18n, model.details)}
-            </p>
-          </Sheet>
-          {model.sourceText === null ? null : (
-            <>
-              <Sheet className="source-sheet" title={i18n.t("Source")}>
-                {/* The `<pre>` is the whole rendering without JS; the
-                    source-view bundle swaps it for the read-only CodeMirror the
-                    editor uses, so a directive reads as a directive here too.
-                    The names travel as attributes because that bundle has no
-                    catalog of its own. */}
-                <div
-                  class="markdown-source"
-                  data-fold-label={foldStrings.fold}
-                  data-source-label={i18n.t("Revision source")}
-                  data-source-view
-                  data-unfold-label={foldStrings.unfold}
-                >
-                  <pre>
-                    <code>{model.sourceText}</code>
-                  </pre>
-                </div>
-              </Sheet>
-              <script src="/assets/source-view.js" type="module" />
-            </>
-          )}
-        </>
-      }
-    />,
+    views === undefined ? compiled : views.split,
   );
 }
 

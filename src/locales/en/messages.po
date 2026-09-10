@@ -1438,6 +1438,10 @@ msgstr "Display order"
 msgid "Display order must be a non-negative integer."
 msgstr "Display order must be a non-negative integer."
 
+#: src/worker/web/content.tsx
+msgid "Document"
+msgstr "Document"
+
 #: src/worker/exercises/model/strings.ts
 msgid "Domain"
 msgstr "Domain"
@@ -1540,6 +1544,10 @@ msgstr "Edit the line's rule"
 #: src/worker/web/assignment-detail.tsx
 msgid "Edit the override for {name}"
 msgstr "Edit the override for {name}"
+
+#: src/worker/web/content.tsx
+msgid "Editor view"
+msgstr "Editor view"
 
 #: src/worker/web/admin.tsx
 #: src/worker/web/auth.tsx
@@ -1956,10 +1964,6 @@ msgstr "If you did not expect this, ignore this email and nothing will be linked
 #: src/worker/web/content.tsx
 msgid "Immutable snapshots that published assignments point to. Each is shared, or not, on its own."
 msgstr "Immutable snapshots that published assignments point to. Each is shared, or not, on its own."
-
-#: src/worker/web/content.tsx
-msgid "Immutable source and compiled output for this revision."
-msgstr "Immutable source and compiled output for this revision."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "In the starter, assumption line “{line}” can't have premises."
@@ -3095,12 +3099,12 @@ msgid "Revision not created"
 msgstr "Revision not created"
 
 #: src/worker/web/content.tsx
-msgid "Revision record"
-msgstr "Revision record"
-
-#: src/worker/web/content.tsx
 msgid "Revision source"
 msgstr "Revision source"
+
+#: src/worker/web/content.tsx
+msgid "Revision view"
+msgstr "Revision view"
 
 #: src/worker/web/content.tsx
 msgid "Revisions"

@@ -1438,6 +1438,10 @@ msgstr "Anzeigereihenfolge"
 msgid "Display order must be a non-negative integer."
 msgstr "Die Anzeigereihenfolge muss eine nicht negative ganze Zahl sein."
 
+#: src/worker/web/content.tsx
+msgid "Document"
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "Domain"
 msgstr "Individuenbereich"
@@ -1540,6 +1544,10 @@ msgstr "Bearbeitet die Regel der Zeile"
 #: src/worker/web/assignment-detail.tsx
 msgid "Edit the override for {name}"
 msgstr "Abweichung für {name} bearbeiten"
+
+#: src/worker/web/content.tsx
+msgid "Editor view"
+msgstr ""
 
 #: src/worker/web/admin.tsx
 #: src/worker/web/auth.tsx
@@ -1956,10 +1964,6 @@ msgstr "Falls Sie das nicht erwartet haben, ignorieren Sie diese E-Mail; es wird
 #: src/worker/web/content.tsx
 msgid "Immutable snapshots that published assignments point to. Each is shared, or not, on its own."
 msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Immutable source and compiled output for this revision."
-msgstr "Unveränderlicher Quelltext und kompilierte Ausgabe dieser Revision."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "In the starter, assumption line “{line}” can't have premises."
@@ -3095,12 +3099,12 @@ msgid "Revision not created"
 msgstr "Revision nicht angelegt"
 
 #: src/worker/web/content.tsx
-msgid "Revision record"
-msgstr "Revisionsdatensatz"
-
-#: src/worker/web/content.tsx
 msgid "Revision source"
 msgstr "Quelltext der Revision"
+
+#: src/worker/web/content.tsx
+msgid "Revision view"
+msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Revisions"

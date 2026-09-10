@@ -57,6 +57,13 @@ export interface ShellOptions {
    * the one resource the launch named.
    */
   readonly chromeless?: boolean;
+  /**
+   * A control placed opposite the breadcrumb, on the same row. For something
+   * that governs the whole page rather than any one sheet on it — the
+   * revision editor's Write/Preview switch, which has to outlive the column
+   * it would otherwise sit in. Renders only where the breadcrumb does.
+   */
+  readonly headerAside?: Child;
   readonly showTitle?: boolean;
   readonly status?: 200 | 400 | 401 | 403 | 404 | 429 | 500;
   readonly title: string;
@@ -92,6 +99,7 @@ interface LayoutProps {
   readonly breadcrumb: readonly Crumb[];
   readonly children: Child;
   readonly chromeless: boolean;
+  readonly headerAside: Child;
   /**
    * The incomplete-profile strip, or null when there is nothing to ask for.
    * Built by `renderShell` because it needs the request — the layout itself
@@ -108,6 +116,7 @@ const Layout: FC<LayoutProps> = ({
   breadcrumb,
   children,
   chromeless,
+  headerAside,
   prompt,
   showTitle,
   title,
@@ -208,25 +217,28 @@ const Layout: FC<LayoutProps> = ({
               both an axe finding and a genuine navigation dead spot. */}
           {prompt}
           {showTitle && !chromeless ? (
-            <nav aria-label={i18n.t("Breadcrumb")} class="breadcrumb">
-              {breadcrumb.map((crumb) => (
-                <>
-                  {crumb.href === undefined ? (
-                    <span class="breadcrumb-current">{crumb.label}</span>
-                  ) : (
-                    <a class="breadcrumb-link" href={crumb.href}>
-                      {crumb.label}
-                    </a>
-                  )}
-                  <span aria-hidden="true" class="breadcrumb-sep">
-                    ›
-                  </span>
-                </>
-              ))}
-              <span aria-current="page" class="breadcrumb-current">
-                {title}
-              </span>
-            </nav>
+            <div class="page-header">
+              <nav aria-label={i18n.t("Breadcrumb")} class="breadcrumb">
+                {breadcrumb.map((crumb) => (
+                  <>
+                    {crumb.href === undefined ? (
+                      <span class="breadcrumb-current">{crumb.label}</span>
+                    ) : (
+                      <a class="breadcrumb-link" href={crumb.href}>
+                        {crumb.label}
+                      </a>
+                    )}
+                    <span aria-hidden="true" class="breadcrumb-sep">
+                      ›
+                    </span>
+                  </>
+                ))}
+                <span aria-current="page" class="breadcrumb-current">
+                  {title}
+                </span>
+              </nav>
+              {headerAside}
+            </div>
           ) : null}
           <div class="page-content">{children}</div>
         </main>
@@ -279,6 +291,7 @@ export function renderShell(
         actor={context.get("actor")}
         breadcrumb={options.breadcrumb ?? []}
         chromeless={chromeless}
+        headerAside={options.headerAside ?? null}
         // Not on a chromeless page: those are launches framed by someone
         // else's application, where our own housekeeping is an interruption
         // in the middle of their assignment.

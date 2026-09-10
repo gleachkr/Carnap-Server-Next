@@ -1438,6 +1438,10 @@ msgstr ""
 msgid "Display order must be a non-negative integer."
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Document"
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "Domain"
 msgstr ""
@@ -1539,6 +1543,10 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Edit the override for {name}"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Editor view"
 msgstr ""
 
 #: src/worker/web/admin.tsx
@@ -1955,10 +1963,6 @@ msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Immutable snapshots that published assignments point to. Each is shared, or not, on its own."
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Immutable source and compiled output for this revision."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -3095,11 +3099,11 @@ msgid "Revision not created"
 msgstr ""
 
 #: src/worker/web/content.tsx
-msgid "Revision record"
+msgid "Revision source"
 msgstr ""
 
 #: src/worker/web/content.tsx
-msgid "Revision source"
+msgid "Revision view"
 msgstr ""
 
 #: src/worker/web/content.tsx

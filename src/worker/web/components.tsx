@@ -309,28 +309,100 @@ export const ContentFrame: FC<{
  * on wide screens the content moves into its own right-hand column, so a
  * long reading sits beside the administrative sheets instead of under them.
  *
- * Passing `mode` marks the split as the revision editor's: the preview
- * bundle finds it by the data hook, and on narrow viewports the mode decides
- * which single column shows (the Write/Preview switch toggles it).
+ * Passing `view` makes the two columns two *views of one page* instead: below
+ * the breakpoint they stop stacking, and the one named shows alone. That is
+ * only half a control — {@link splitView} builds both halves, and is what a
+ * page should call.
  */
 export const ContentSplit: FC<{
   readonly className?: string;
   readonly content: Child;
-  readonly mode?: "preview" | "write";
   readonly rail: Child;
-}> = ({ className, content, mode, rail }) => (
+  readonly view?: SplitViewName;
+}> = ({ className, content, rail, view }) => (
   <div
     class={
       className === undefined ? "content-split" : `content-split ${className}`
     }
-    {...(mode === undefined
+    {...(view === undefined
       ? {}
-      : { "data-editor-split": "", "data-mode": mode })}
+      : { "data-mode": view, "data-split-view": "" })}
   >
     <div class="content-split-rail">{rail}</div>
     <div class="content-split-doc">{content}</div>
   </div>
 );
+
+/** Which of a split's two columns is being looked at. */
+export type SplitViewName = "content" | "rail";
+
+/** The two pieces {@link splitView} hands back: one for the page, one for its shell. */
+export interface SplitViewParts {
+  /** The split itself, for the page body. */
+  readonly split: Child;
+  /** The switch between the two views, for the shell's `headerAside`. */
+  readonly viewSwitch: Child;
+}
+
+/**
+ * A split whose columns become two views of one page where there is no room
+ * for two columns, with a switch between them.
+ *
+ * The switch comes back separately rather than inside the split, and that is
+ * the whole reason this is a function and not a component: below the
+ * breakpoint the split hides whichever column is not showing, so a switch
+ * living in either column would take itself off screen the moment it was
+ * used. It belongs to the page — the shell's header row, opposite the
+ * breadcrumb — and not to either column.
+ *
+ * Both halves come from here so they cannot drift: the pressed half of the
+ * switch is the column the split starts on, in one place.
+ *
+ * The switch is drawn as one control divided in two rather than as two
+ * buttons: these are two views of the same thing, and a pair of peer buttons
+ * reads as a pair of actions. A fieldset with a hidden legend is what says
+ * "one control" to a screen reader, the same way the segmented track says it
+ * on screen. Real ARIA tabs would be a lie — above the breakpoint both panels
+ * are on screen at once.
+ */
+export function splitView(options: {
+  readonly className?: string;
+  readonly content: Child;
+  /** What the switch calls the document column. */
+  readonly contentLabel: string;
+  /** Names the whole control, for a reader who meets its halves one at a time. */
+  readonly legend: string;
+  readonly rail: Child;
+  /** What the switch calls the rail. */
+  readonly railLabel: string;
+  /** The column shown first where only one shows. */
+  readonly start: SplitViewName;
+}): SplitViewParts {
+  const { contentLabel, legend, railLabel, start, ...split } = options;
+
+  return {
+    split: <ContentSplit {...split} view={start} />,
+    viewSwitch: (
+      <fieldset class="split-switch" data-split-switch>
+        <legend class="visually-hidden">{legend}</legend>
+        <button
+          aria-pressed={String(start === "rail")}
+          data-view-target="rail"
+          type="button"
+        >
+          {railLabel}
+        </button>
+        <button
+          aria-pressed={String(start === "content")}
+          data-view-target="content"
+          type="button"
+        >
+          {contentLabel}
+        </button>
+      </fieldset>
+    ),
+  };
+}
 
 /**
  * An inline "add a new record" form for a sheet footer. Replaces the older

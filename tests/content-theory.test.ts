@@ -629,8 +629,8 @@ describe("the pages an MM0 item gets", () => {
       expect(response.status).toBe(200);
       expect(html).toContain("MM0 source");
       // No second column, and so no Write/Preview switch for one.
-      expect(html).not.toContain("data-editor-split");
-      expect(html).not.toContain("data-editor-mode-switch");
+      expect(html).not.toContain("data-split-view");
+      expect(html).not.toContain("data-split-switch");
     });
   });
 
