@@ -20,11 +20,6 @@ export { useI18n };
 
 type Actor = NonNullable<AppBindings["Variables"]["actor"]>;
 
-export interface PageAction {
-  readonly href: string;
-  readonly label: string;
-}
-
 /**
  * One step in the breadcrumb trail rendered under the navbar. The trail holds
  * only ancestors; the current page is the shell `title`, rendered as the final
@@ -48,7 +43,6 @@ export interface Crumb {
 export type LinkedCrumb = Crumb & { readonly href: string };
 
 export interface ShellOptions {
-  readonly actions?: readonly PageAction[];
   readonly breadcrumb?: readonly Crumb[];
   /**
    * Drop the navbar, breadcrumb and footer, keeping the styles and scripts.
@@ -78,23 +72,47 @@ function canUseAdmin(actor: Actor): boolean {
 }
 
 /**
+ * The monogram a narrow viewport shows in place of the name: its first
+ * character, upper-cased. By code point rather than `label[0]`, which on a name
+ * beginning outside the BMP would be half a surrogate pair; and clamped back to
+ * one code point afterwards, because "ß" upper-cases to "SS" and a two-letter
+ * circle is not a monogram.
+ */
+function profileInitial(label: string): string {
+  const [first = ""] = label;
+  const [upper = ""] = first.toUpperCase();
+
+  return upper;
+}
+
+/**
  * The signed-in actor's account link. We only have a single free-text `name`,
  * so "first name" is just its leading whitespace-delimited word; the profile
  * page (which this opens) carries the full name and the log-out control.
+ *
+ * Below 700px the name gives way to a monogram (`.nav-profile-mark` in
+ * chrome.css), since an admin's three nav items plus an ordinary first name
+ * already overflow a phone and wrap the bar to two rows. The link carries the
+ * name as its `aria-label` so its accessible name is the same on both sides of
+ * the breakpoint: the visible name can then be `display: none`d on a phone
+ * without taking the name out of the accessibility tree, and the monogram,
+ * which repeats one letter of it, stays out of that tree altogether.
  */
 const ProfileLink: FC<{ readonly actor: Actor }> = ({ actor }) => {
   const name = actor.user.name?.trim();
   const label = name ? (name.split(/\s+/)[0] ?? name) : actor.user.email;
 
   return (
-    <a class="nav-profile" href="/profile">
-      {label}
+    <a aria-label={label} class="nav-profile" href="/profile">
+      <span class="nav-profile-name">{label}</span>
+      <span aria-hidden="true" class="nav-profile-mark">
+        {profileInitial(label)}
+      </span>
     </a>
   );
 };
 
 interface LayoutProps {
-  readonly actions: readonly PageAction[];
   readonly actor: Actor | null;
   readonly breadcrumb: readonly Crumb[];
   readonly children: Child;
@@ -111,7 +129,6 @@ interface LayoutProps {
 }
 
 const Layout: FC<LayoutProps> = ({
-  actions,
   actor,
   breadcrumb,
   children,
@@ -130,7 +147,7 @@ const Layout: FC<LayoutProps> = ({
   // holding nothing but the brand — and on the login page that brand links to
   // "/", which sends them back to the login page. The footer carries the same
   // brand link, so the way in is still on every page that drops the header.
-  const showHeader = !chromeless && (actor !== null || actions.length > 0);
+  const showHeader = !chromeless && actor !== null;
 
   return (
     <html lang={i18n.locale}>
@@ -197,11 +214,6 @@ const Layout: FC<LayoutProps> = ({
               {actor !== null && canUseAdmin(actor) ? (
                 <a href="/admin">{i18n.t("Admin")}</a>
               ) : null}
-              {actions.map((action) => (
-                <a class="nav-action" href={action.href}>
-                  {action.label}
-                </a>
-              ))}
             </nav>
             {actor === null ? null : (
               <>
@@ -287,7 +299,6 @@ export function renderShell(
   const node = (
     <I18nProvider i18n={context.get("i18n")}>
       <Layout
-        actions={options.actions ?? []}
         actor={context.get("actor")}
         breadcrumb={options.breadcrumb ?? []}
         chromeless={chromeless}

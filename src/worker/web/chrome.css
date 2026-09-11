@@ -183,15 +183,6 @@ table button:not(:where(.modal-dialog button)) {
   color: var(--blue);
 }
 
-/* Specificity rather than `!important`, which is what this was when the rules
-   lived in a template literal no linter could read. `.app-nav a` (0,1,1) would
-   otherwise win on class count alone; on hover `.app-nav a:hover` still takes
-   it, and sets the same colour. The action link is only ever inside the nav
-   (`web/layout.tsx`), so the descendant selector costs nothing. */
-.app-nav .nav-action {
-  color: var(--blue);
-}
-
 .nav-divider {
   align-self: center;
   background: var(--rule);
@@ -201,7 +192,9 @@ table button:not(:where(.modal-dialog button)) {
 }
 
 .nav-profile {
+  align-items: center;
   color: var(--ink);
+  display: inline-flex;
   flex: 0 0 auto;
   font-size: 0.96rem;
   font-weight: 620;
@@ -210,6 +203,12 @@ table button:not(:where(.modal-dialog button)) {
 
 .nav-profile:hover {
   color: var(--blue);
+}
+
+/* The monogram that stands in for the name on a phone; see the 700px block
+   below, and `ProfileLink` in ./layout.tsx for the accessible-name handling. */
+.nav-profile-mark {
+  display: none;
 }
 
 /* The read-only account facts sit below the edit form, divided from it by a
@@ -1848,10 +1847,43 @@ a.score-uncounted {
   }
 }
 
-/* On a phone the brand wordmark + nav links + account name overflow one line
-   and wrap the navbar to two rows. Dropping the "Carnap" wordmark to just the
-   ⊨ turnstile mark reclaims the width so the header stays on a single line;
-   the footer keeps the full wordmark (it stacks vertically, with room). */
+/* The account name gives way to a monogram in a ring. An admin's three nav
+   items plus an ordinary first name overflow a 390px phone and wrap the bar to
+   two rows; the German nav (Kurse · Inhalte · Verwaltung) does it with a
+   shorter name still. 700px and not 640px, where the wordmark returns: the bar
+   measures narrowest at exactly 641px, wordmark back and no room yet for it,
+   and an email-fallback label wraps there and nowhere else above the phone
+   range. Letting the monogram overlap the wordmark by 60px closes that pocket.
+
+   The ring's 2rem clears the 24px target minimum (WCAG 2.5.8) with room to
+   spare, which the bare text link only cleared by the width of a long name. */
+@media (max-width: 700px) {
+  .nav-profile-name {
+    display: none;
+  }
+
+  .nav-profile-mark {
+    align-items: center;
+    border: 1px solid var(--rule);
+    border-radius: 50%;
+    display: inline-flex;
+    font-size: 0.9rem;
+    font-weight: 640;
+    height: 2rem;
+    justify-content: center;
+    line-height: 1;
+    width: 2rem;
+  }
+
+  .nav-profile:hover .nav-profile-mark {
+    border-color: var(--blue);
+  }
+}
+
+/* On a phone the brand wordmark + nav links + monogram overflow one line and
+   wrap the navbar to two rows. Dropping the "Carnap" wordmark to just the ⊨
+   turnstile mark reclaims the width so the header stays on a single line; the
+   footer keeps the full wordmark (it stacks vertically, with room). */
 @media (max-width: 640px) {
   .app-header .brand-word {
     display: none;
