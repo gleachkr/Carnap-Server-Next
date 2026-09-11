@@ -1092,9 +1092,11 @@ describe("native web workflow", () => {
       // Both keep the footer, which is where the brand link survives.
       expect(formHtml).toContain("app-footer");
       expect(sentHtml).toContain("app-footer");
+      expect(formHtml).toContain('class="brand" href="/"');
 
       // And the rule is about having somewhere to go, not about these two
-      // pages: signing in puts the navbar back.
+      // pages: signing in puts the navbar back — and takes the footer's copy
+      // of the brand away, since one link home per page is enough.
       const login = await webLogin(env, "no-navbar@example.test");
       const courses = await appRequest(
         createTestApp(),
@@ -1102,8 +1104,65 @@ describe("native web workflow", () => {
         { headers: htmlHeaders(login.cookieHeader) },
         env,
       );
+      const coursesHtml = await courses.text();
 
-      expect(await courses.text()).toContain("app-header");
+      expect(coursesHtml).toContain("app-header");
+      expect(coursesHtml).toContain("app-footer");
+      expect(coursesHtml).toContain("Donate to charity");
+      expect(coursesHtml.match(/class="brand" href="\/"/g)).toHaveLength(1);
+      expect(coursesHtml.indexOf('class="brand"')).toBeLessThan(
+        coursesHtml.indexOf("app-nav"),
+      );
+    });
+  });
+
+  test("a top-level page has no breadcrumb, only a page with ancestors", async () => {
+    await withStorage(async (_storage, env) => {
+      const login = await webLogin(env, "no-trail@example.test");
+      const headers = htmlHeaders(login.cookieHeader);
+      const courses = await appRequest(
+        createTestApp(),
+        "/courses",
+        { headers },
+        env,
+      );
+      const profile = await appRequest(
+        createTestApp(),
+        "/profile",
+        { headers },
+        env,
+      );
+
+      // A trail of one crumb would only be the page title over again: the
+      // list of courses is where the trail starts, not somewhere on it.
+      for (const html of [await courses.text(), await profile.text()]) {
+        expect(html).not.toContain("page-header");
+        expect(html).not.toContain('class="breadcrumb"');
+      }
+
+      // A page under one of them has somewhere to go back to, and says so.
+      await grantTestCourseCreator(env, login.actorId);
+
+      const created = await appRequest(
+        createTestApp(),
+        "/courses",
+        formRequest(
+          { csrfToken: login.csrfToken, timezone: "UTC", title: "Trail 101" },
+          login.cookieHeader,
+        ),
+        env,
+      );
+      const course = await appRequest(
+        createTestApp(),
+        expectLocation(created).split("?")[0] ?? "",
+        { headers },
+        env,
+      );
+      const courseHtml = await course.text();
+
+      expect(courseHtml).toContain('class="breadcrumb"');
+      expect(courseHtml).toContain('class="breadcrumb-link" href="/courses"');
+      expect(courseHtml).toContain('aria-current="page"');
     });
   });
 

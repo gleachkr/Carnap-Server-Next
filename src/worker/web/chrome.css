@@ -1799,10 +1799,17 @@ a.score-uncounted {
 }
 
 .app-footer .footer-meta {
-  align-items: flex-end;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+}
+
+/* The meta lines sit against the right edge only when the brand holds the
+   left one. A signed-in page's footer has no brand (the navbar's is a
+   screen's height up) and the lines are the footer's whole content, which is
+   read from the left like the rest of the page. */
+.app-footer .brand + .footer-meta {
+  align-items: flex-end;
   text-align: right;
 }
 
@@ -1895,7 +1902,7 @@ a.score-uncounted {
     flex-direction: column;
   }
 
-  .app-footer .footer-meta {
+  .app-footer .brand + .footer-meta {
     align-items: flex-start;
     text-align: left;
   }

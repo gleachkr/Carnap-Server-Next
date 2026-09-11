@@ -145,9 +145,19 @@ const Layout: FC<LayoutProps> = ({
   // The header is navigation, so it appears when there is somewhere to go. A
   // signed-out visitor gets no nav items and no profile link, which left a bar
   // holding nothing but the brand — and on the login page that brand links to
-  // "/", which sends them back to the login page. The footer carries the same
-  // brand link, so the way in is still on every page that drops the header.
+  // "/", which sends them back to the login page. The footer carries the brand
+  // link on exactly those pages, so the way in is still on every one of them.
   const showHeader = !chromeless && actor !== null;
+  // The trail holds ancestors, so a top-level page — the course list, the
+  // library, the admin index — has none, and a trail of one is not a trail:
+  // it is the page title wearing a breadcrumb's clothes, which is exactly
+  // the heading these pages don't have. The row still appears for an aside
+  // on its own, since the aside needs a row to sit in whatever the trail
+  // does.
+  const showHeaderRow =
+    showTitle &&
+    !chromeless &&
+    (breadcrumb.length > 0 || headerAside !== null);
 
   return (
     <html lang={i18n.locale}>
@@ -228,27 +238,29 @@ const Layout: FC<LayoutProps> = ({
               header and `main` is content belonging to no region, which is
               both an axe finding and a genuine navigation dead spot. */}
           {prompt}
-          {showTitle && !chromeless ? (
+          {showHeaderRow ? (
             <div class="page-header">
-              <nav aria-label={i18n.t("Breadcrumb")} class="breadcrumb">
-                {breadcrumb.map((crumb) => (
-                  <>
-                    {crumb.href === undefined ? (
-                      <span class="breadcrumb-current">{crumb.label}</span>
-                    ) : (
-                      <a class="breadcrumb-link" href={crumb.href}>
-                        {crumb.label}
-                      </a>
-                    )}
-                    <span aria-hidden="true" class="breadcrumb-sep">
-                      ›
-                    </span>
-                  </>
-                ))}
-                <span aria-current="page" class="breadcrumb-current">
-                  {title}
-                </span>
-              </nav>
+              {breadcrumb.length === 0 ? null : (
+                <nav aria-label={i18n.t("Breadcrumb")} class="breadcrumb">
+                  {breadcrumb.map((crumb) => (
+                    <>
+                      {crumb.href === undefined ? (
+                        <span class="breadcrumb-current">{crumb.label}</span>
+                      ) : (
+                        <a class="breadcrumb-link" href={crumb.href}>
+                          {crumb.label}
+                        </a>
+                      )}
+                      <span aria-hidden="true" class="breadcrumb-sep">
+                        ›
+                      </span>
+                    </>
+                  ))}
+                  <span aria-current="page" class="breadcrumb-current">
+                    {title}
+                  </span>
+                </nav>
+              )}
               {headerAside}
             </div>
           ) : null}
@@ -256,12 +268,18 @@ const Layout: FC<LayoutProps> = ({
         </main>
         {chromeless ? null : (
           <footer class="app-footer">
-            <a class="brand" href="/" aria-label={i18n.t("Carnap home")}>
-              <span class="brand-mark" aria-hidden="true">
-                ⊨
-              </span>
-              <span>Carnap</span>
-            </a>
+            {/* The way in for a page that dropped the header (see
+                `showHeader`); where the header is there, its brand is the
+                same link a screen's height above, and a second one is a
+                second stop on the way through the page. */}
+            {showHeader ? null : (
+              <a class="brand" href="/" aria-label={i18n.t("Carnap home")}>
+                <span class="brand-mark" aria-hidden="true">
+                  ⊨
+                </span>
+                <span>Carnap</span>
+              </a>
+            )}
             <div class="footer-meta">
               <span class="copyright">
                 {i18n.t(
