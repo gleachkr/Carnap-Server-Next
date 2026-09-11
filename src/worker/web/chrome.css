@@ -715,6 +715,15 @@ a.score-uncounted {
 
 .revision-actions .create-bar {
   flex: 1 1 16rem;
+  /* A flex item will not shrink below its min-content width unless told to,
+     and this form's min-content is the file input's — "Choose File" plus
+     "No file chosen" at the browser's own size — which is wider than a
+     phone's footer. So the form spilled out of the sheet and the row inside
+     it, wrapping against the form's width rather than the footer's, clipped
+     the details field and half the Upload button off the right edge. With
+     the floor lifted the form takes the footer's width and its own wrap
+     does the rest; the inputs already carry `min-width: 0`. */
+  min-width: 0;
   width: auto;
 }
 
@@ -1935,6 +1944,21 @@ a.score-uncounted {
      the next. Same technique as .correction-bars. */
   .footer-row > .create-bar {
     display: contents;
+  }
+
+  /* The Revisions footer, the same way: the upload form's box goes, so its
+     two fields and Upload button flow in .revision-actions beside "Create
+     revision". Each field is then pinned to a line of its own — the file
+     picker and a details field are both too wide to share one on a phone,
+     and a row that sometimes paired them and sometimes didn't read as a
+     glitch — which leaves the two buttons to share the last row: the two
+     ways of making a revision, side by side. */
+  .revision-actions .create-bar {
+    display: contents;
+  }
+
+  .revision-actions .create-bar input {
+    flex-basis: 100%;
   }
 
   /* The corrections footer's three columns are two fields and a button, and
