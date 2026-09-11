@@ -1550,7 +1550,9 @@ Rules and behavior:
   classes: `.exercise`, `.exercise-prompt`, `.exercise-status`,
   `.exercise-actions` and the controls in it, including
   `.exercise-check-status` — the line a widget's own Check writes under the
-  button row. Interactive widget chrome (e.g. multiple-choice options) lives
+  button row. `.exercise` is on every exercise's outermost element, of every
+  kind, so a rule written against it reaches all ten. Interactive widget
+  chrome (e.g. multiple-choice options) lives
   inside a shadow root and is deliberately unreachable from author styles; only
   the slotted prompt, the action bar, and option labels can be styled.
 - Long documents print best from the fullscreen view.

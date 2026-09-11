@@ -1925,12 +1925,13 @@ ${sampleSource("styled_doc")}`,
         "<title>Content revision · Carnap</title>",
       );
       // Two views of one revision rather than a record card above a pair of
-      // columns: the switch rides in the shell's header row, and where only
-      // one view shows it is the compiled document — what the revision is
-      // for — that shows first.
+      // columns: the switch rides in the shell's header row. The page opens
+      // showing both, and where there is room for only one it is the compiled
+      // document — what the revision is for — that shows.
       expect(html).not.toContain("Revision record");
       expect(html).toContain("data-split-switch");
-      expect(html).toContain('data-mode="content"');
+      expect(html).toContain('data-mode="split"');
+      expect(html).toContain('data-narrow-view="content"');
       expect(html.indexOf("data-split-switch")).toBeLessThan(
         html.indexOf("data-split-view"),
       );
@@ -1972,11 +1973,12 @@ ${sampleSource("styled_doc")}`,
         "data-component=&quot;carnap-multiple-choice&quot;",
       );
       expect(html).toContain('src="/assets/editor-preview.js"');
-      // The narrow-viewport view switch ships in the markup (its bundle
-      // reveals it; CSS keeps it to the widths where the columns stop being
-      // columns), opened on the column this page is for.
+      // The view switch ships in the markup, opened on both columns (its
+      // bundle reveals it); where there is room for only one it is the
+      // editor — the column this page is for — that shows.
       expect(html).toContain("data-split-switch");
-      expect(html).toContain('data-mode="rail"');
+      expect(html).toContain('data-mode="split"');
+      expect(html).toContain('data-narrow-view="rail"');
       // And it rides in the shell's header row, ahead of the split: below the
       // breakpoint the split hides whichever column is not showing, so a
       // switch inside either column would take itself off screen the moment

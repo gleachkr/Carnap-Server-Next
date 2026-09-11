@@ -1534,11 +1534,10 @@ a.score-uncounted {
   color: var(--blue-strong);
 }
 
-/* The switch between a split's two views matters only where the columns
-   stack, and it is inert without JS — so it stays hidden until its bundle
-   marks it enhanced, and never shows on wide viewports. That is why this
-   `display` and the media query below stay off `.segmented`: a control
-   that always belongs on the page must not inherit them. */
+/* The switch between a split's views is inert without JS, so it stays hidden
+   until its bundle marks it enhanced. That is why this `display` stays off
+   `.segmented`: a control that always belongs on the page must not inherit
+   it. */
 .split-switch {
   display: none;
   /* Equal columns rather than content-width, so the track doesn't resize as
@@ -1554,25 +1553,106 @@ a.score-uncounted {
   min-inline-size: 0;
 }
 
+.split-switch[data-enhanced] {
+  display: grid;
+}
+
 .split-switch button {
   min-width: 7rem;
 }
 
+/* Whichever column is not being looked at is not on the page at all, at any
+   width: wanting the document to have the page is not something that stops
+   being wanted on a large screen. Only a split that has a switch carries
+   `data-mode`; the ones that simply stack (the course page, an assignment)
+   go on stacking. */
+.content-split[data-mode="rail"] > .content-split-doc,
+.content-split[data-mode="content"] > .content-split-rail {
+  display: none;
+}
+
 @media (max-width: 69.99rem) {
-  .split-switch[data-enhanced] {
-    display: grid;
-  }
-
-  /* Where the switch shows, the columns are two views rather than two
-     columns: whichever one is not being looked at is not on the page at
-     all. Only a split that has a switch carries `data-mode`; the ones that
-     simply stack (the course page, an assignment) go on stacking. */
-  .content-split[data-mode="rail"] > .content-split-doc {
+  /* Two columns is not a state a narrow window can be in, so the switch does
+     not offer it — and a page opened in it shows the column it names as its
+     fallback. The bundle presses that column's half, so the control agrees
+     with the page. */
+  .split-switch [data-view-target="split"] {
     display: none;
   }
 
-  .content-split[data-mode="content"] > .content-split-rail {
+  .content-split[data-mode="split"][data-narrow-view="rail"]
+    > .content-split-doc,
+  .content-split[data-mode="split"][data-narrow-view="content"]
+    > .content-split-rail {
     display: none;
+  }
+}
+
+/* The boundary between the columns, and the handle for moving it: drawn in
+   the gutter the grid already leaves between them, so it costs no width and
+   the columns meet exactly where `--split-rail` says.
+
+   It shows only where there are two columns to divide *and* the bundle that
+   moves them has run — like the switch, and for the same reason: a handle
+   that cannot be dragged is a decoration in the tab order. Hidden, it is out
+   of that order too, which is what `display: none` is doing here. */
+.content-split-resizer {
+  display: none;
+}
+
+@media (min-width: 70rem) {
+  .content-split[data-mode="split"] {
+    position: relative;
+  }
+
+  .content-split[data-mode="split"] > .content-split-resizer[data-enhanced] {
+    bottom: 0;
+    cursor: col-resize;
+    display: block;
+    left: var(--split-rail, 40%);
+    position: absolute;
+    top: 0;
+    /* The gap, exactly. */
+    width: 1.75rem;
+    z-index: 1;
+  }
+
+  /* A hairline down the middle of that space, which the columns already
+     suggest — it only has to be seen to be reached for. It thickens and takes
+     the accent under the pointer and under focus, where "you can move this"
+     is the thing to say. */
+  .content-split-resizer::after {
+    background: var(--rule);
+    border-radius: 1px;
+    content: "";
+    inset: 0.25rem auto;
+    left: calc(50% - 1px);
+    position: absolute;
+    width: 2px;
+  }
+
+  .content-split-resizer:hover::after,
+  .content-split-resizer:focus-visible::after {
+    background: var(--blue);
+    width: 3px;
+  }
+
+  /* The line above is the focus ring: a 1.75rem-wide box drawn around empty
+     gutter is a ring around nothing. */
+  .content-split-resizer:focus-visible {
+    outline: none;
+  }
+
+  /* While the handle is held: the pointer is setting a width, not selecting
+     text across both columns, and not talking to the preview — which would
+     otherwise swallow it the moment the drag crossed the iframe. */
+  .content-split[data-resizing] {
+    cursor: col-resize;
+    user-select: none;
+  }
+
+  .content-split[data-resizing] iframe {
+    pointer-events: none;
   }
 }
 
@@ -1592,6 +1672,13 @@ a.score-uncounted {
     max-width: 120rem;
   }
 
+  /* One column asked for on purpose is an ordinary page again: the gutters
+     the second column was spreading into have nothing to hold, and a lone
+     editor run out to 120rem is a line no one wants to read or write. */
+  .page-shell:has(.content-split[data-mode]:not([data-mode="split"])) {
+    max-width: 85rem;
+  }
+
   .page-shell:has(.content-split) .page-header {
     margin-inline: auto;
     max-width: var(--page-measure);
@@ -1601,6 +1688,21 @@ a.score-uncounted {
   .content-split {
     align-items: start;
     grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  }
+
+  /* Where the columns are two views, the boundary between them is the
+     reader's to set, and `--split-rail` is where they put it — the same 2:3
+     to begin with, said as a share of the width so the drag has one number
+     to move. `minmax(0, …)` on both, so a long unbroken line of source or a
+     wide table stretches its column rather than the page. */
+  .content-split[data-mode="split"] {
+    grid-template-columns: minmax(0, var(--split-rail, 40%)) minmax(0, 1fr);
+  }
+
+  /* And where one view has the page, it has all of it: the hidden column
+     leaves no track behind for its share of the width to sit empty in. */
+  .content-split[data-mode]:not([data-mode="split"]) {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   /* The course page splits its columns evenly: the content-heavy rail (the

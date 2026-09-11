@@ -709,17 +709,22 @@ function exerciseHydration(
 }
 
 /**
- * The action bar for an element that projects its own controls, resolved for the
- * viewer. Every per-kind form needs exactly this, so it is spelled once.
+ * The action bar for one exercise, resolved for the viewer. Every per-kind form
+ * needs exactly this, so it is spelled once.
+ *
+ * `slotted` is what projects the bar into an element's shadow card. The two text
+ * kinds have no card to project into, so theirs sits in the light DOM beside the
+ * fields — the same row, in the same place, either way.
  */
 function exerciseActions(
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
+  slotted = true,
 ): string {
   const i18n = submission.context.get("i18n");
 
   return exerciseActionsHtml(i18n, {
-    slotted: true,
+    slotted,
     status: exerciseStatusText(
       i18n,
       submission.runtimeState[node.exerciseId],
@@ -727,18 +732,29 @@ function exerciseActions(
   });
 }
 
+/**
+ * The envelope that lets one exercise post an answer: the form, its hidden
+ * fields, and the hydration payload the element reads on connect. Nothing more
+ * — the exercise itself is `children`, and it is `children` that carries
+ * `class="exercise"` (see `exerciseRootAttributes`), on this path exactly as on
+ * a preview or a saved revision.
+ *
+ * Hence `exercise-submission` rather than `exercise` on the form. The class had
+ * been doing two jobs: naming the exercise's box for the stylesheet and finding
+ * the posting form for the runtime. Only a graded attempt has a form, so the
+ * second job kept the first from ever being uniform — and an author's
+ * `.exercise` rule, which the style docs invite, drew itself twice here and
+ * once everywhere else.
+ */
 const ExerciseFormShell: FC<{
   readonly children: Child;
   readonly node: Extract<ContentNode, { readonly kind: "exercise" }>;
-  readonly renderActions?: boolean;
   readonly submission: InlineSubmissionContext;
-}> = ({ children, node, renderActions = true, submission }) => {
-  const i18n = useI18n();
-
+}> = ({ children, node, submission }) => {
   return (
     <form
       action={exerciseFormAction(submission)}
-      class="exercise"
+      class="exercise-submission"
       data-component={node.render.component}
       data-component-version={node.render.componentVersion}
       data-content-revision-id={submission.contentRevisionId}
@@ -755,20 +771,6 @@ const ExerciseFormShell: FC<{
         render from, and the student's own prior answer to restore. */}
       {raw(exerciseHydrationScript(exerciseHydration(node, submission)))}
       {children}
-      {/* The same bar the interactive types project, minus the slot: a text
-        exercise has no shadow card to project into, but it still gets the row
-        — and so the same submit, the same status line and the same correctness
-        mark in the same place. */}
-      {renderActions
-        ? raw(
-            exerciseActionsHtml(i18n, {
-              status: exerciseStatusText(
-                i18n,
-                submission.runtimeState[node.exerciseId],
-              ),
-            }),
-          )
-        : null}
     </form>
   );
 };
@@ -788,11 +790,7 @@ function multipleChoiceSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"
@@ -867,27 +865,38 @@ function textSubmissionForm(
     <ExerciseFormShell node={node} submission={submission}>
       <input name="answerKind" type="hidden" value={answerKind} />
       <input name="schemaVersion" type="hidden" value={schemaVersion} />
-      <fieldset class="exercise-group">
-        <legend
-          class={
-            label.hidden
-              ? "exercise-legend visually-hidden"
-              : "exercise-legend"
-          }
-        >
-          {label.text}
-        </legend>
-        <div class="exercise-prompt">{raw(publicData.promptHtml)}</div>
-        {/* Associated by `for`/`id` rather than by nesting, so the label and the
-            control are siblings the layout can place independently — and so the
-            field's accessible name never depends on what else the label wraps. */}
-        <label for={fieldId}>{i18n.t("Answer")}</label>
-        {kind === FREE_RESPONSE_KIND ? (
-          <textarea id={fieldId} name="text" rows={8} />
-        ) : (
-          <input id={fieldId} name="text" />
-        )}
-      </fieldset>
+      {/* The box the eight widget kinds get from their custom element. A text
+          exercise has no element, so its section is the exercise here — the same
+          `<section class="exercise">` the no-submission renderer builds, holding
+          the same fieldset and the same closing row. */}
+      <section class="exercise">
+        <fieldset class="exercise-group">
+          <legend
+            class={
+              label.hidden
+                ? "exercise-legend visually-hidden"
+                : "exercise-legend"
+            }
+          >
+            {label.text}
+          </legend>
+          <div class="exercise-prompt">{raw(publicData.promptHtml)}</div>
+          {/* Associated by `for`/`id` rather than by nesting, so the label and
+              the control are siblings the layout can place independently — and
+              so the field's accessible name never depends on what else the
+              label wraps. */}
+          <label for={fieldId}>{i18n.t("Answer")}</label>
+          {kind === FREE_RESPONSE_KIND ? (
+            <textarea id={fieldId} name="text" rows={8} />
+          ) : (
+            <input id={fieldId} name="text" />
+          )}
+        </fieldset>
+        {/* Unslotted: there is no shadow card to project into, but it is the
+            same row, with the same submit, status line and correctness mark in
+            the same place. */}
+        {raw(exerciseActions(submission, node, false))}
+      </section>
     </ExerciseFormShell>
   );
 }
@@ -907,11 +916,7 @@ function truthTableSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"
@@ -961,11 +966,7 @@ function modelSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input name="answerKind" type="hidden" value={MODEL_ANSWER_KIND} />
       <input
         name="schemaVersion"
@@ -1012,11 +1013,7 @@ function translationSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"
@@ -1065,11 +1062,7 @@ function aufbauProofSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"
@@ -1119,11 +1112,7 @@ function aufbauProofTreeSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"
@@ -1173,11 +1162,7 @@ function aufbauProofFitchSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"
@@ -1227,11 +1212,7 @@ function aufbauProofPrawitzSubmissionForm(
   const publicData = node.publicData;
 
   return (
-    <ExerciseFormShell
-      node={node}
-      renderActions={false}
-      submission={submission}
-    >
+    <ExerciseFormShell node={node} submission={submission}>
       <input
         name="answerKind"
         type="hidden"

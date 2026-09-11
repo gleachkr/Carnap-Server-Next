@@ -38,7 +38,7 @@ function pageWith(evaluation: unknown): string {
        <script data-carnap-exercise-runtime-state type="application/json">${JSON.stringify(
          state,
        )}</script>
-       <form action="/attempts/a1/submissions" class="exercise"
+       <form action="/attempts/a1/submissions" class="exercise-submission"
              data-exercise-id="q1" method="post">
          <input name="csrfToken" type="hidden" value="csrf">
          <input name="exerciseId" type="hidden" value="q1">

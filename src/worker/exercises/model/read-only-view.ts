@@ -1,6 +1,7 @@
 import {
-  contentRevisionAttribute,
+  type ExerciseElementMeta,
   escapeHtml,
+  exerciseRootAttributes,
   VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
@@ -225,12 +226,7 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
   );
 }
 
-interface ModelElementMeta {
-  readonly component: string;
-  readonly componentVersion: string;
-  readonly contentRevisionId?: string | undefined;
-  readonly exerciseId: string;
-  readonly exerciseKind: string;
+interface ModelElementMeta extends ExerciseElementMeta {
   readonly i18n: Translator;
   /** The author's title, or null for the hidden generic group name. */
   readonly title: string | null;
@@ -266,7 +262,7 @@ export function renderModelElement(
     .map((field) => renderField(field, context))
     .join("");
 
-  return `<carnap-model data-component="${escapeHtml(meta.component)}" data-component-version="${escapeHtml(meta.componentVersion)}" data-exercise-id="${escapeHtml(meta.exerciseId)}" data-exercise-kind="${escapeHtml(meta.exerciseKind)}"${contentRevisionAttribute(meta.contentRevisionId)}>
+  return `<carnap-model${exerciseRootAttributes(meta)}>
         <template shadowrootmode="open">
           <style>${MODEL_SHADOW_STYLES}</style>
           <fieldset aria-busy="true" class="exercise-group model">

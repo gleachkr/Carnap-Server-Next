@@ -239,7 +239,7 @@ export abstract class CarnapExerciseElement<
   private lastDraft: { authored: string; saved: string } | null = null;
 
   connectedCallback(): void {
-    this.form = this.closest<HTMLFormElement>("form.exercise");
+    this.form = this.closest<HTMLFormElement>("form.exercise-submission");
     this.hydration = this.readHydration();
     this.draftKey = this.resolveDraftKey();
 

@@ -1,6 +1,6 @@
 import {
-  contentRevisionAttribute,
   escapeHtml,
+  exerciseRootAttributes,
   hasPromptHtml,
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
@@ -20,9 +20,13 @@ export function renderFreeResponse(
     return `<div data-component="${escapeHtml(node.render.component)}" data-exercise-id="${escapeHtml(node.exerciseId)}"></div>`;
   }
 
-  const revisionAttribute = contentRevisionAttribute(
-    context.contentRevisionId,
-  );
+  const rootAttributes = exerciseRootAttributes({
+    component: node.render.component,
+    componentVersion: node.render.componentVersion,
+    contentRevisionId: context.contentRevisionId,
+    exerciseId: node.exerciseId,
+    exerciseKind: node.exerciseKind,
+  });
   // Spelled as a local named `i18n` because Lingui's extractor matches the
   // receiver's *name*; `context.i18n.t("Answer")` would render fine in English
   // and never reach a catalog.
@@ -35,7 +39,7 @@ export function renderFreeResponse(
   // The same closing row a student's copy has, unslotted — a text exercise has no
   // shadow card to project into — and with the submit disabled: there is no
   // attempt behind a preview to record an answer against.
-  return `<section class="exercise" data-component="${escapeHtml(node.render.component)}" data-component-version="${escapeHtml(node.render.componentVersion)}" data-exercise-id="${escapeHtml(node.exerciseId)}" data-exercise-kind="${escapeHtml(node.exerciseKind)}"${revisionAttribute}>
+  return `<section${rootAttributes}>
         <fieldset class="exercise-group">
           ${legend}
           <div class="exercise-prompt">${node.publicData.promptHtml}</div>

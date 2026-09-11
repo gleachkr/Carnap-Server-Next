@@ -303,32 +303,77 @@ export const ContentFrame: FC<{
   );
 };
 
+/*
+ * How far the drag handle lets the rail column go, as a share of the split's
+ * width, and where it sits before anyone drags it. Written into the handle's
+ * `aria-value*` attributes, which is also where its bundle reads them back
+ * from — the numbers are stated once, in the markup, rather than kept in step
+ * across a worker module and a client one.
+ */
+const SPLIT_RAIL_DEFAULT = 40;
+const SPLIT_RAIL_MAX = 80;
+const SPLIT_RAIL_MIN = 20;
+
 /**
  * Pairs a stack of ordinary sheets with a content document. Below the
  * breakpoint everything stacks in DOM order — rail first, content last — and
  * on wide screens the content moves into its own right-hand column, so a
  * long reading sits beside the administrative sheets instead of under them.
  *
- * Passing `view` makes the two columns two *views of one page* instead: below
- * the breakpoint they stop stacking, and the one named shows alone. That is
- * only half a control — {@link splitView} builds both halves, and is what a
- * page should call.
+ * Passing `view` makes the two columns two *views of one page* instead, with
+ * `data-mode` saying which is being looked at: `split` for both at once, or
+ * one column's name for that column alone. It ships in `split`, and `view`
+ * names the column to fall back to where there is only room for one — the
+ * page's own answer to "if you can see one of these, which?". That is only
+ * half a control: {@link splitView} builds both halves, and is what a page
+ * should call.
  */
 export const ContentSplit: FC<{
   readonly className?: string;
   readonly content: Child;
   readonly rail: Child;
+  /** Names the drag handle between the columns; omitted, there is none. */
+  readonly resizeLabel?: string;
   readonly view?: SplitViewName;
-}> = ({ className, content, rail, view }) => (
+}> = ({ className, content, rail, resizeLabel, view }) => (
   <div
     class={
       className === undefined ? "content-split" : `content-split ${className}`
     }
     {...(view === undefined
       ? {}
-      : { "data-mode": view, "data-split-view": "" })}
+      : {
+          "data-mode": "split",
+          "data-narrow-view": view,
+          "data-split-view": "",
+        })}
   >
     <div class="content-split-rail">{rail}</div>
+    {view === undefined || resizeLabel === undefined ? null : (
+      /*
+       * A window splitter, in the gap the two columns already leave between
+       * them. Focusable and arrow-driven as well as draggable: the split is
+       * a reading position, and a reading position that only a mouse can set
+       * is one a keyboard reader cannot have. CSS shows it only where the
+       * columns really are columns; `aria-valuenow` is the rail's share of
+       * the width, which is what the drag moves.
+       */
+      // `<hr>` is the thematic break that carries this role by default, and
+      // it is not this widget: a window splitter is focusable and holds a
+      // value, which an `<hr>` is neither.
+      // biome-ignore lint/a11y/useSemanticElements: a focusable, valued window splitter is not a thematic break.
+      <div
+        aria-label={resizeLabel}
+        aria-orientation="vertical"
+        aria-valuemax={String(SPLIT_RAIL_MAX)}
+        aria-valuemin={String(SPLIT_RAIL_MIN)}
+        aria-valuenow={String(SPLIT_RAIL_DEFAULT)}
+        class="content-split-resizer"
+        data-split-resizer
+        role="separator"
+        tabIndex={0}
+      />
+    )}
     <div class="content-split-doc">{content}</div>
   </div>
 );
@@ -340,30 +385,36 @@ export type SplitViewName = "content" | "rail";
 export interface SplitViewParts {
   /** The split itself, for the page body. */
   readonly split: Child;
-  /** The switch between the two views, for the shell's `headerAside`. */
+  /** The switch between the split and its two columns, for `headerAside`. */
   readonly viewSwitch: Child;
 }
 
 /**
- * A split whose columns become two views of one page where there is no room
- * for two columns, with a switch between them.
+ * A split whose columns are two views of one page, with a switch between
+ * them and a handle for setting where they meet.
  *
  * The switch comes back separately rather than inside the split, and that is
- * the whole reason this is a function and not a component: below the
- * breakpoint the split hides whichever column is not showing, so a switch
- * living in either column would take itself off screen the moment it was
- * used. It belongs to the page — the shell's header row, opposite the
- * breadcrumb — and not to either column.
+ * the whole reason this is a function and not a component: where only one
+ * column shows, the split hides the other, so a switch living in either
+ * column would take itself off screen the moment it was used. It belongs to
+ * the page — the shell's header row, opposite the breadcrumb — and not to
+ * either column.
  *
- * Both halves come from here so they cannot drift: the pressed half of the
- * switch is the column the split starts on, in one place.
+ * Both halves come from here so they cannot drift: which half is pressed and
+ * which column the split opens on are the same fact, stated once.
  *
- * The switch is drawn as one control divided in two rather than as two
- * buttons: these are two views of the same thing, and a pair of peer buttons
- * reads as a pair of actions. A fieldset with a hidden legend is what says
- * "one control" to a screen reader, the same way the segmented track says it
- * on screen. Real ARIA tabs would be a lie — above the breakpoint both panels
- * are on screen at once.
+ * Three views, not two. Where there is room for both columns the pair is the
+ * point, so `Split` is the state the page opens in — but wanting one of them
+ * whole does not stop at narrow windows, and a reader who wants the document
+ * to have the page can say so on any screen. Where there is no room for two
+ * columns there is nothing for `Split` to mean, and CSS drops it, leaving the
+ * two-way switch that was here before.
+ *
+ * The switch is drawn as one track divided in three rather than as separate
+ * buttons: these are views of the same thing, and peer buttons read as a row
+ * of actions. A fieldset with a hidden legend is what says "one control" to a
+ * screen reader, the same way the segmented track says it on screen. Real
+ * ARIA tabs would be a lie — in `Split` both panels are on screen at once.
  */
 export function splitView(options: {
   readonly className?: string;
@@ -375,28 +426,35 @@ export function splitView(options: {
   readonly rail: Child;
   /** What the switch calls the rail. */
   readonly railLabel: string;
-  /** The column shown first where only one shows. */
+  /** Names the handle between the columns. */
+  readonly resizeLabel: string;
+  /** What the switch calls both columns at once. */
+  readonly splitLabel: string;
+  /** The column shown where there is only room for one. */
   readonly start: SplitViewName;
 }): SplitViewParts {
-  const { contentLabel, legend, railLabel, start, ...split } = options;
+  const { contentLabel, legend, railLabel, splitLabel, start, ...split } =
+    options;
 
   return {
     split: <ContentSplit {...split} view={start} />,
     viewSwitch: (
       <fieldset class="segmented split-switch" data-split-switch>
         <legend class="visually-hidden">{legend}</legend>
-        <button
-          aria-pressed={String(start === "rail")}
-          data-view-target="rail"
-          type="button"
-        >
+        <button aria-pressed="false" data-view-target="rail" type="button">
           {railLabel}
         </button>
-        <button
-          aria-pressed={String(start === "content")}
-          data-view-target="content"
-          type="button"
-        >
+        {/*
+         * In the middle, where what it does is: the halves either side of it
+         * are the two columns, in the order they sit on the page. The page
+         * ships in this state, so this is the half that ships pressed; where
+         * the state is not on offer the bundle presses one of its neighbours
+         * instead, because that is the column actually being looked at.
+         */}
+        <button aria-pressed="true" data-view-target="split" type="button">
+          {splitLabel}
+        </button>
+        <button aria-pressed="false" data-view-target="content" type="button">
           {contentLabel}
         </button>
       </fieldset>

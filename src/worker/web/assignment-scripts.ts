@@ -42,7 +42,7 @@ const COMPONENT_FAILURE_SCRIPT = `
 ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
 
   const DEADLINE_MS = 8000;
-  const forms = document.querySelectorAll("form.exercise");
+  const forms = document.querySelectorAll("form.exercise-submission");
 
   if (forms.length === 0) {
     return;
@@ -250,7 +250,7 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
   }
 
   function hasUnsavedWork() {
-    for (const form of document.querySelectorAll("form.exercise")) {
+    for (const form of document.querySelectorAll("form.exercise-submission")) {
       if (form.querySelector("[data-exercise-id][${UNSAVED_ANSWER_ATTRIBUTE}]") !== null) {
         return true;
       }
@@ -277,7 +277,7 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
     event.returnValue = "";
   });
 
-  for (const form of document.querySelectorAll("form.exercise")) {
+  for (const form of document.querySelectorAll("form.exercise-submission")) {
     const exerciseId = form.dataset.exerciseId || "";
     const status = form.querySelector("[data-exercise-status]");
     const button = form.querySelector("button[type=submit]");

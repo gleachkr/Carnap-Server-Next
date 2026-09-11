@@ -42,6 +42,12 @@ Tab/Shift-Tab, arrows, Enter/Space, Esc only.
         folded block is a Tab stop of its own that unfolds it. The gutter's fold
         arrow is a mouse affordance only — the gutter is `aria-hidden`, so the
         keyboard path must not depend on it.
+  - [ ] Split view (revision editor, a shared revision) — the Write/Split/
+        Preview switch is three buttons, and the pressed one is the view on
+        screen; below 70rem `Split` is not offered and the pressed half is the
+        column showing. In `Split`, the boundary handle between the columns is
+        a Tab stop with `role="separator"`: Left/Right move it, Home/End take
+        it to its limits, and its `aria-valuenow` follows.
 - [ ] **2.1.2 No keyboard trap** — focus never gets stuck (esp. CodeMirror and
       the contenteditable proof-tree fields — Tab must escape them).
 - [ ] **2.4.3 Focus order** — Tab order follows reading/visual order on each
@@ -54,8 +60,10 @@ Tab/Shift-Tab, arrows, Enter/Space, Esc only.
       container is all inline, which is why those fields are `inline-block`.
 - [ ] **2.4.11 Focus not obscured** — the focused element isn't hidden behind the
       sticky header or a dialog edge.
-- [ ] **2.5.7 Dragging** — any drag affordance (e.g. future tree reparent) has a
-      single-pointer / keyboard alternative.
+- [ ] **2.5.7 Dragging** — any drag affordance has a single-pointer / keyboard
+      alternative: the split view's column boundary moves with Left/Right and
+      Home/End as well as by drag, and double-click returns it to where the
+      page opened it. (Also: future tree reparent.)
 
 ## Dialogs / modals
 

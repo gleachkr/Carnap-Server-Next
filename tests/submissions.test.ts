@@ -530,7 +530,11 @@ Fill it in.
       );
       const html = await response.text();
 
+      // One box per exercise, and exactly one: the form around it is
+      // `.exercise-submission`, so this counts the exercises themselves —
+      // two custom elements and two sections — as it does on every other path.
       expect(countOccurrences(html, 'class="exercise"')).toBe(4);
+      expect(countOccurrences(html, 'class="exercise-submission"')).toBe(4);
       expect(countOccurrences(html, 'class="exercise-mark"')).toBe(4);
 
       // Idle from the first paint, not conjured when there is finally something

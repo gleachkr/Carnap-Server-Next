@@ -489,6 +489,24 @@ describe("every exercise names itself", () => {
 });
 
 /**
+ * Every exercise is one box in the reading flow, whatever element the type
+ * renders it as. The class is how `content.css` spaces that box, and for a
+ * long time only the two `<section>` kinds carried it — so a widget sat flush
+ * against the paragraph after it everywhere except a graded attempt, where the
+ * wrapping `<form>` supplied the class instead.
+ */
+describe("every exercise is one box in the flow", () => {
+  test("each renderer's root carries the class the stylesheet spaces", async () => {
+    const html = await render();
+
+    // Six exercises, six roots — two `<section>`s and four custom elements.
+    // The other `exercise-` classes are longer strings, so the closing quote
+    // is what keeps this counting roots rather than chrome.
+    expect((html.match(/ class="exercise"/g) ?? []).length).toBe(6);
+  });
+});
+
+/**
  * What an author is writing towards.
  *
  * A preview renders the exercises with no attempt behind them, and used to stop

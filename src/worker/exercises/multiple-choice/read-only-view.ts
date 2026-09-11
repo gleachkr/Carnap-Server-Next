@@ -1,6 +1,7 @@
 import {
-  contentRevisionAttribute,
+  type ExerciseElementMeta,
   escapeHtml,
+  exerciseRootAttributes,
   isMultipleChoicePublicData,
   VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
@@ -41,12 +42,7 @@ function slottedOptionLabels(
     .join("");
 }
 
-interface MultipleChoiceElementMeta {
-  readonly component: string;
-  readonly componentVersion: string;
-  readonly contentRevisionId?: string | undefined;
-  readonly exerciseId: string;
-  readonly exerciseKind: string;
+interface MultipleChoiceElementMeta extends ExerciseElementMeta {
   readonly i18n: Translator;
   /** The author's title, or null for the hidden generic group name. */
   readonly title: string | null;
@@ -85,7 +81,7 @@ export function renderMultipleChoiceElement(
     .join("");
   const labels = slottedOptionLabels(publicData.options);
 
-  return `<carnap-multiple-choice data-component="${escapeHtml(meta.component)}" data-component-version="${escapeHtml(meta.componentVersion)}" data-exercise-id="${escapeHtml(meta.exerciseId)}" data-exercise-kind="${escapeHtml(meta.exerciseKind)}"${contentRevisionAttribute(meta.contentRevisionId)}>
+  return `<carnap-multiple-choice${exerciseRootAttributes(meta)}>
         <template shadowrootmode="open">
           <style>${MULTIPLE_CHOICE_SHADOW_STYLES}</style>
           <fieldset aria-busy="true" class="exercise-group mc">

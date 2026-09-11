@@ -1,6 +1,7 @@
 import {
-  contentRevisionAttribute,
+  type ExerciseElementMeta,
   escapeHtml,
+  exerciseRootAttributes,
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
@@ -25,12 +26,7 @@ const AUFBAU_PROOF_SHADOW_STYLES = [
   shadowStyles,
 ].join("\n");
 
-interface AufbauProofElementMeta {
-  readonly component: string;
-  readonly componentVersion: string;
-  readonly contentRevisionId?: string | undefined;
-  readonly exerciseId: string;
-  readonly exerciseKind: string;
+interface AufbauProofElementMeta extends ExerciseElementMeta {
   readonly i18n: Translator;
   /** The author's title, or null for the hidden generic group name. */
   readonly title: string | null;
@@ -55,7 +51,7 @@ export function renderAufbauProofElement(
   meta: AufbauProofElementMeta,
   actions = "",
 ): string {
-  return `<carnap-aufbau-proof data-component="${escapeHtml(meta.component)}" data-component-version="${escapeHtml(meta.componentVersion)}" data-exercise-id="${escapeHtml(meta.exerciseId)}" data-exercise-kind="${escapeHtml(meta.exerciseKind)}"${contentRevisionAttribute(meta.contentRevisionId)}>
+  return `<carnap-aufbau-proof${exerciseRootAttributes(meta)}>
         <template shadowrootmode="open">
           <style>${AUFBAU_PROOF_SHADOW_STYLES}</style>
           <fieldset aria-busy="true" class="exercise-group proof">

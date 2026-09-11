@@ -75,7 +75,7 @@ function mount(priorAnswer: unknown): {
 } {
   const form = dom.window.document.createElement("form");
 
-  form.className = "exercise";
+  form.className = "exercise-submission";
   form.innerHTML = `<input name="answerData" type="hidden">`;
   dom.window.document.body.appendChild(form);
 

@@ -64,7 +64,7 @@ function mount(): {
     )
     .join(" ");
 
-  form.className = "exercise";
+  form.className = "exercise-submission";
   form.innerHTML =
     `<input name="answerData" type="hidden">` +
     `<div class="exercise-actions"><span class="${CORRECTNESS_MARK_CLASS}"` +
@@ -149,7 +149,7 @@ describe("the correctness mark a widget sets", () => {
   test("a widget with no mark in its form does not throw", () => {
     const form = dom.window.document.createElement("form");
 
-    form.className = "exercise";
+    form.className = "exercise-submission";
     form.innerHTML = `<input name="answerData" type="hidden">`;
     dom.window.document.body.appendChild(form);
 

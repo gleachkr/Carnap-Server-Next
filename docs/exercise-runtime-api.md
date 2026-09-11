@@ -179,8 +179,11 @@ Each element then reads one hydration payload, most specific channel first:
 
 1. `<script data-exercise-hydration>` inside the element (a self-contained
    widget, e.g. a hydrated review),
-2. the same script inside the enclosing `form.exercise` — the interactive path,
-   whose payload carries the viewer's own `priorAnswer`,
+2. the same script inside the enclosing `form.exercise-submission` — the
+   interactive path, whose payload carries the viewer's own `priorAnswer`. The
+   form is named for what it does rather than what it holds: `.exercise` is on
+   the exercise's own box, which the form wraps on this path and nothing wraps
+   on the others,
 3. the document's hydration table, keyed by exercise id:
 
 ```html

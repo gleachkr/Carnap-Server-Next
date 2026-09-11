@@ -3031,6 +3031,14 @@ msgstr ""
 msgid "Reset"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Resize the editor and preview columns"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Resize the source and document columns"
+msgstr ""
+
 #: src/worker/application/content/assessment-support.ts
 msgid "Response"
 msgstr ""
@@ -3331,6 +3339,10 @@ msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Source"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Split"
 msgstr ""
 
 #: src/worker/routes/courses.ts

@@ -504,8 +504,11 @@ describe("exercise component pipeline", () => {
       expect(html).toContain("data-exercise-hydration-map");
       expect(html).toContain('{"q1":{"mode":"answer"');
       expect(html).toContain('"promptHtml"');
-      // Preview, not attempt: nothing to submit and nothing recorded.
-      expect(html).not.toContain('class="exercise"');
+      // Preview, not attempt: nothing to submit and nothing recorded. The
+      // marker is the posting form, not `class="exercise"` — every exercise
+      // carries that on every path, and only an attempt wraps it in something
+      // that can post.
+      expect(html).not.toContain("exercise-submission");
       expect(html).not.toContain('name="answerData"');
     });
   });

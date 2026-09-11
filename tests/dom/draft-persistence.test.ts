@@ -112,7 +112,7 @@ function mount(
   };
   const form = domDocument.createElement("form");
 
-  form.className = "exercise";
+  form.className = "exercise-submission";
   form.setAttribute("action", ACTION);
   form.dataset.exerciseId = exerciseId;
   form.innerHTML =
@@ -346,7 +346,7 @@ describe("a real widget", () => {
       };
       const form = domDocument.createElement("form");
 
-      form.className = "exercise";
+      form.className = "exercise-submission";
       form.setAttribute("action", ACTION);
       form.dataset.exerciseId = "mc1";
       form.innerHTML =

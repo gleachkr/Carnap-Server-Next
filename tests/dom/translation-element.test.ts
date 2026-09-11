@@ -108,7 +108,7 @@ function mount(
   );
 
   const form = domDocument.createElement("form");
-  form.className = "exercise";
+  form.className = "exercise-submission";
   form.innerHTML = `<input name="answerData" type="hidden">${html}`;
   adoptShadowRoots(form);
   domDocument.body.append(form);

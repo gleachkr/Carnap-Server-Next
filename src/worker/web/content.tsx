@@ -967,6 +967,8 @@ export function renderRevisionEditor(
           legend: i18n.t("Editor view"),
           rail: editor,
           railLabel: i18n.t("Write"),
+          resizeLabel: i18n.t("Resize the editor and preview columns"),
+          splitLabel: i18n.t("Split"),
           // Writing is what this page is for; the preview is the second look.
           start: "rail",
         });
@@ -1148,6 +1150,8 @@ export function renderRevision(
           legend: i18n.t("Revision view"),
           rail: source,
           railLabel: i18n.t("Source"),
+          resizeLabel: i18n.t("Resize the source and document columns"),
+          splitLabel: i18n.t("Split"),
           // What the revision is *for* is the compiled thing; the source is
           // how it was made, and it is one tap away.
           start: "content",

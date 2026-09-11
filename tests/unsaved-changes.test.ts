@@ -45,7 +45,7 @@ describe("the assignment page's unsaved-answer guard", () => {
   } {
     const dom = new JSDOM(
       `<!doctype html><html lang="en"><head><title>Content</title></head><body>
-         <form action="/attempts/a1/submissions" class="exercise"
+         <form action="/attempts/a1/submissions" class="exercise-submission"
                data-exercise-id="text_1" method="post">
            <input name="csrfToken" type="hidden" value="csrf">
            <input name="exerciseId" type="hidden" value="text_1">
@@ -56,7 +56,7 @@ describe("the assignment page's unsaved-answer guard", () => {
            <button type="submit">Submit answer</button>
            <p data-exercise-status></p>
          </form>
-         <form action="/attempts/a1/submissions" class="exercise"
+         <form action="/attempts/a1/submissions" class="exercise-submission"
                data-exercise-id="widget_1" method="post">
            <input name="csrfToken" type="hidden" value="csrf">
            <input name="exerciseId" type="hidden" value="widget_1">
@@ -79,7 +79,9 @@ describe("the assignment page's unsaved-answer guard", () => {
       EXERCISE_RUNTIME_SCRIPT,
     );
 
-    const forms = window.document.querySelectorAll("form.exercise");
+    const forms = window.document.querySelectorAll(
+      "form.exercise-submission",
+    );
 
     return {
       textForm: forms[0] as HTMLFormElement,

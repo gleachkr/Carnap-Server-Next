@@ -689,12 +689,25 @@ mrow.math-enclose-strike-down {
 
 /* Exercise and submission review surfaces */
 
-.exercise {
-  margin-bottom: 1.1rem;
-}
+/* One exercise's box in the reading flow, and exactly one per exercise on every
+   path: a `<carnap-…>` element for the eight widget kinds, a `<section>` for the
+   two text kinds (see `exerciseRootAttributes`). A graded attempt wraps that box
+   in `form.exercise-submission`, which is the posting envelope and not the
+   exercise — so a rule written here, by us or by an author, applies once whether
+   a lesson is being read, previewed, or worked through.
 
-.exercise + .exercise {
-  margin-top: 1rem;
+   `display` is load-bearing, not tidiness: an unknown element is `inline` by
+   default, and vertical margins do nothing on an inline box. That is why the
+   widgets used to sit flush against the paragraph after them while the two
+   `<section>` kinds did not.
+
+   Margin on both sides rather than the bottom alone, so an exercise brings its
+   own space rather than depending on what precedes it having a bottom margin;
+   adjacent margins collapse, so a run of exercises is spaced once, not twice. */
+
+.exercise {
+  display: block;
+  margin-block: 1.1rem;
 }
 
 /* A submitted answer, as the grader or the student reviews it: a soft box

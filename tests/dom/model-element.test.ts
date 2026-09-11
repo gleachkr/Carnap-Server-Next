@@ -95,7 +95,7 @@ function mount(
   // A fresh form appended to the shared body, never a replacement of it: other
   // element tests keep their fixtures in the same document.
   const form = domDocument.createElement("form");
-  form.className = "exercise";
+  form.className = "exercise-submission";
   form.innerHTML = `<input name="answerData" type="hidden">${html}`;
   adoptShadowRoots(form);
   domDocument.body.append(form);
