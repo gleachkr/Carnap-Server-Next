@@ -10,6 +10,7 @@ import {
   CONTENT_SANITIZE_SCHEMA,
   compileCarnapMarkdown,
 } from "../src/worker/application/content/compiler";
+import { compileTheorySource } from "../src/worker/application/content/mm0";
 import {
   createDefaultExerciseKindRegistry,
   FREE_RESPONSE_ANSWER_KIND,
@@ -231,10 +232,30 @@ describe("content compiler", () => {
    * only one no author can be blamed for.
    */
   test("the editor's starter template compiles", async () => {
-    const compiled = await compileCarnapMarkdown(starterTemplate());
+    const compiled = await compileCarnapMarkdown(starterTemplate("markdown"));
 
     expect(compiled.diagnostics).toEqual([]);
     expect(compiled.ok).toBe(true);
+  });
+
+  /**
+   * The same guarantee for a theory item, whose editor used to open on the
+   * Markdown starter — a file its own save could only refuse.
+   */
+  test("the editor's MM0 starter compiles as a language with a rule", () => {
+    const compiled = compileTheorySource(starterTemplate("mm0"));
+
+    expect(compiled.diagnostics).toEqual([]);
+    expect(compiled.ok).toBe(true);
+
+    if (!compiled.ok) {
+      return;
+    }
+
+    // Both halves of what the comments in it promise: `system=` will take it,
+    // and a proof over it has something to cite.
+    expect(compiled.artifact.sentenceSort).toBe("wff");
+    expect(compiled.artifact.axioms).toEqual(["ax_k"]);
   });
 
   test("compiles interleaved prose and multiple-choice directives", async () => {

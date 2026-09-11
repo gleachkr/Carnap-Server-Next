@@ -495,8 +495,8 @@ async function revisionEditorPage(
 
     const item = await service.getItem(actor, itemId);
     // A new revision starts from where the item left off; the sample is
-    // only for an item with no revisions yet. The list is newest first, so
-    // the head of it is where the item left off.
+    // only for an item with no revisions yet, and is in the item's format.
+    // The list is newest first, so the head of it is where the item left off.
     const latest = (await service.listRevisions(actor, itemId))[0];
 
     // A fresh editor has no note yet: the field is for what this save changes,
@@ -504,7 +504,7 @@ async function revisionEditorPage(
     return renderEditor(
       context,
       item,
-      latest?.sourceText ?? sampleSource(),
+      latest?.sourceText ?? sampleSource(item.sourceFormat),
       "",
     );
   } catch (error) {

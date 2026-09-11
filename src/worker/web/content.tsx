@@ -51,7 +51,53 @@ import { userDisplayName } from "./users";
 
 type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 
-export function sampleSource(): string {
+/**
+ * What a fresh item's editor opens with, in the item's own format. A theory
+ * item used to open on the Markdown lesson, which its editor cannot save: the
+ * first thing its author saw was a compile error in a format they had not
+ * chosen.
+ *
+ * The MM0 starter is a language and a proof system both — a sentence role,
+ * two connectives with roles, one rule — because that is the file an
+ * instructor most often wants: something `system=` will take *and* a proof can
+ * cite. Each annotation carries a line saying what it buys, since the shipped
+ * theories under /theories are the only other examples and they are long.
+ */
+export function sampleSource(format: ContentSourceFormat): string {
+  if (format === "mm0") {
+    return `-- A small propositional language with one rule, to start from.
+-- The shipped systems are longer examples of the same shape:
+-- /theories/carnap-prop.mm0 is this language in full.
+
+-- Where one token of a student's formula ends and the next begins.
+-- Every operator spelling goes here, so that \`P->Q\` reads without spaces.
+--| @syntax delimiter $ ( ) ~ -> $
+delimiter $ ( ) $;
+
+-- The sort a student's formula is read at. Without this role the file is
+-- a proof system only, and \`system=\` will not take it as a language.
+--| @syntax role sentence
+provable sort wff;
+
+term P: wff;
+term Q: wff;
+term R: wff;
+
+-- A role tells the exercise types what a connective means; the spelling
+-- between the dollars is what a student types.
+--| @syntax role negation
+term not (p: wff): wff;
+prefix not: $~$ prec 50;
+
+--| @syntax role conditional
+term imp (p q: wff): wff;
+infixr imp: $->$ prec 30;
+
+-- A rule a proof can cite, by this name.
+axiom ax_k (p q: wff): $ p -> q -> p $;
+`;
+  }
+
   return `# Sample exercise
 
 Read the prompt and choose an answer.
