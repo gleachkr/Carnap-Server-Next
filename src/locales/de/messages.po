@@ -383,7 +383,6 @@ msgstr "Aktionen"
 
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/admin.tsx
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/labels.ts
 msgid "Active"
@@ -585,10 +584,6 @@ msgstr ""
 #: src/worker/web/courses.tsx
 msgid "Archive course"
 msgstr "Kurs archivieren"
-
-#: src/worker/web/content.tsx
-msgid "Archive item"
-msgstr ""
 
 #: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
@@ -1045,10 +1040,6 @@ msgstr "Inhaltsbibliothek"
 #: src/worker/routes/assignments.ts
 msgid "Content not available"
 msgstr "Inhalt nicht verfügbar"
-
-#: src/worker/web/content.tsx
-msgid "Content record"
-msgstr "Inhaltsdatensatz"
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/content.tsx
@@ -1967,17 +1958,9 @@ msgstr "Verborgen"
 msgid "Hidden from the list above and from new assignments; everything set on them still works."
 msgstr ""
 
-#: src/worker/web/content.tsx
-msgid "Hidden from your library and from new assignments."
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Hide grades"
 msgstr "Noten verbergen"
-
-#: src/worker/web/content.tsx
-msgid "Hides this item from your library and from new assignments. Nothing is deleted."
-msgstr ""
 
 #: src/worker/infrastructure/turnstile.ts
 msgid "Human verification is misconfigured for this deployment."
@@ -2743,14 +2726,6 @@ msgstr "Abweichung gesetzt, keine Felder weichen ab"
 msgid "Overrides are only available for graded assignments."
 msgstr "Abweichungen sind nur bei bewerteten Aufgaben verfügbar."
 
-#: src/worker/web/content.tsx
-msgid "Owner"
-msgstr "Inhaber"
-
-#: src/worker/web/content.tsx
-msgid "Ownership and revision counts for this content item."
-msgstr "Inhaberschaft und Anzahl der Revisionen dieses Inhaltsobjekts."
-
 #: src/worker/web/errors.tsx
 msgid "Page not found"
 msgstr "Seite nicht gefunden"
@@ -3418,7 +3393,6 @@ msgstr "Zustand"
 #: src/worker/web/admin.tsx
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/lti.tsx
 msgid "Status"
@@ -4282,10 +4256,6 @@ msgstr ""
 #: src/worker/web/courses.tsx
 msgid "Unarchive course"
 msgstr "Kurs aus dem Archiv holen"
-
-#: src/worker/web/content.tsx
-msgid "Unarchive item"
-msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts

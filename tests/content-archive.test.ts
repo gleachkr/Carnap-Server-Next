@@ -286,53 +286,50 @@ describe("archiving a content item", () => {
     });
   });
 
-  test("the library folds it into a drawer, and the item page offers the way back", async () => {
+  test("the library folds it into a drawer, and the row's form comes back to the library", async () => {
     await withStorage(async (_storage, env) => {
       const author = await login(env, "author@example.test");
       const kept = await createItem(env, author, "This term");
       const retired = await createItem(env, author, "Last term");
 
-      await setArchived(env, author, retired.id, true);
+      // The archive control is the row's form, so archive the way it does.
+      const form = new URLSearchParams({ csrfToken: author.csrfToken });
+      const submitted = await appRequest(
+        createTestApp(),
+        `/content/${retired.id}/archive`,
+        {
+          body: form,
+          headers: { Cookie: author.cookieHeader },
+          method: "POST",
+        },
+        env,
+      );
+
+      expect(submitted.status).toBe(303);
+      expect(submitted.headers.get("location")).toBe("/content?archived=1");
 
       const library = await appRequest(
         createTestApp(),
-        "/content",
+        "/content?archived=1",
         asPage(author),
         env,
       );
       const libraryHtml = await library.text();
 
       expect(library.status).toBe(200);
+      expect(libraryHtml).toContain("Content item archived.");
       expect(libraryHtml).toContain("Archived content (1)");
-      expect(libraryHtml).toContain(`/content/${retired.id}/unarchive`);
-      // The active table lists the kept item and only the kept item: the
-      // retired title appears once, inside the drawer.
-      expect(libraryHtml.split(`/content/${kept.id}"`).length).toBe(2);
+      // Each row carries the way across: the kept item an archive form, the
+      // retired one an unarchive form, and neither the other.
+      expect(libraryHtml).toContain(`/content/${kept.id}/archive"`);
+      expect(libraryHtml).toContain(`/content/${retired.id}/unarchive"`);
+      expect(libraryHtml).not.toContain(`/content/${kept.id}/unarchive"`);
+      expect(libraryHtml).not.toContain(`/content/${retired.id}/archive"`);
+      // The retired title appears once, inside the drawer.
       expect(libraryHtml.split(`/content/${retired.id}"`).length).toBe(2);
       expect(libraryHtml.indexOf(`/content/${retired.id}"`)).toBeGreaterThan(
         libraryHtml.indexOf("Archived content (1)"),
       );
-
-      const page = await appRequest(
-        createTestApp(),
-        `/content/${retired.id}`,
-        asPage(author),
-        env,
-      );
-      const pageHtml = await page.text();
-
-      expect(page.status).toBe(200);
-      expect(pageHtml).toContain("Unarchive item");
-      expect(pageHtml).not.toContain("Archive item<");
-
-      const keptPage = await appRequest(
-        createTestApp(),
-        `/content/${kept.id}`,
-        asPage(author),
-        env,
-      );
-
-      expect(await keptPage.text()).toContain("Archive item");
     });
   });
 

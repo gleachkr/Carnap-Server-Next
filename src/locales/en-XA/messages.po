@@ -383,7 +383,6 @@ msgstr ""
 
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/admin.tsx
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/labels.ts
 msgid "Active"
@@ -584,10 +583,6 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Archive course"
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Archive item"
 msgstr ""
 
 #: src/worker/web/content.tsx
@@ -1044,10 +1039,6 @@ msgstr ""
 
 #: src/worker/routes/assignments.ts
 msgid "Content not available"
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Content record"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -1967,16 +1958,8 @@ msgstr ""
 msgid "Hidden from the list above and from new assignments; everything set on them still works."
 msgstr ""
 
-#: src/worker/web/content.tsx
-msgid "Hidden from your library and from new assignments."
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Hide grades"
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Hides this item from your library and from new assignments. Nothing is deleted."
 msgstr ""
 
 #: src/worker/infrastructure/turnstile.ts
@@ -2743,14 +2726,6 @@ msgstr ""
 msgid "Overrides are only available for graded assignments."
 msgstr ""
 
-#: src/worker/web/content.tsx
-msgid "Owner"
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Ownership and revision counts for this content item."
-msgstr ""
-
 #: src/worker/web/errors.tsx
 msgid "Page not found"
 msgstr ""
@@ -3418,7 +3393,6 @@ msgstr ""
 #: src/worker/web/admin.tsx
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/lti.tsx
 msgid "Status"
@@ -4281,10 +4255,6 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Unarchive course"
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Unarchive item"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts

@@ -383,7 +383,6 @@ msgstr "Actions"
 
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/admin.tsx
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/labels.ts
 msgid "Active"
@@ -585,10 +584,6 @@ msgstr "Archive {name}"
 #: src/worker/web/courses.tsx
 msgid "Archive course"
 msgstr "Archive course"
-
-#: src/worker/web/content.tsx
-msgid "Archive item"
-msgstr "Archive item"
 
 #: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
@@ -1045,10 +1040,6 @@ msgstr "Content library"
 #: src/worker/routes/assignments.ts
 msgid "Content not available"
 msgstr "Content not available"
-
-#: src/worker/web/content.tsx
-msgid "Content record"
-msgstr "Content record"
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/content.tsx
@@ -1967,17 +1958,9 @@ msgstr "Hidden"
 msgid "Hidden from the list above and from new assignments; everything set on them still works."
 msgstr "Hidden from the list above and from new assignments; everything set on them still works."
 
-#: src/worker/web/content.tsx
-msgid "Hidden from your library and from new assignments."
-msgstr "Hidden from your library and from new assignments."
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Hide grades"
 msgstr "Hide grades"
-
-#: src/worker/web/content.tsx
-msgid "Hides this item from your library and from new assignments. Nothing is deleted."
-msgstr "Hides this item from your library and from new assignments. Nothing is deleted."
 
 #: src/worker/infrastructure/turnstile.ts
 msgid "Human verification is misconfigured for this deployment."
@@ -2743,14 +2726,6 @@ msgstr "Override set, no fields differ"
 msgid "Overrides are only available for graded assignments."
 msgstr "Overrides are only available for graded assignments."
 
-#: src/worker/web/content.tsx
-msgid "Owner"
-msgstr "Owner"
-
-#: src/worker/web/content.tsx
-msgid "Ownership and revision counts for this content item."
-msgstr "Ownership and revision counts for this content item."
-
 #: src/worker/web/errors.tsx
 msgid "Page not found"
 msgstr "Page not found"
@@ -3418,7 +3393,6 @@ msgstr "State"
 #: src/worker/web/admin.tsx
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/lti.tsx
 msgid "Status"
@@ -4282,10 +4256,6 @@ msgstr "Unarchive {name}"
 #: src/worker/web/courses.tsx
 msgid "Unarchive course"
 msgstr "Unarchive course"
-
-#: src/worker/web/content.tsx
-msgid "Unarchive item"
-msgstr "Unarchive item"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts

@@ -10,7 +10,6 @@ import type {
   ContentSourceFormat,
 } from "../domain/content";
 import { CONTENT_SHARING_VALUES } from "../domain/content";
-import type { User } from "../domain/users";
 import type { AppBindings } from "../http";
 import {
   splitAtValue,
@@ -52,7 +51,6 @@ import {
   markdownFoldStrings,
   uiStringsScript,
 } from "./ui-strings";
-import { userDisplayName } from "./users";
 
 type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 
@@ -279,40 +277,6 @@ function sourceFormatLabel(
     ? i18n.t("Theory or language")
     : i18n.t("Lesson");
 }
-
-/**
- * The item page's archive control: one sentence and the button. Archiving
- * keeps the record, every revision, and every address a revision is shared
- * under; it folds the item out of the library and out of the picker a new
- * assignment is set from, and nothing else.
- */
-const ArchiveItemForm: FC<{
-  readonly context: Context<AppBindings>;
-  readonly item: ContentItem;
-}> = ({ context, item }) => {
-  const i18n = useI18n();
-  const archived = item.archivedAt !== null;
-
-  return (
-    <form
-      action={`/content/${item.id}/${archived ? "unarchive" : "archive"}`}
-      class="footer-row archive-form"
-      method="post"
-    >
-      <CsrfInput context={context} />
-      <p class="small">
-        {archived
-          ? i18n.t("Hidden from your library and from new assignments.")
-          : i18n.t(
-              "Hides this item from your library and from new assignments. Nothing is deleted.",
-            )}
-      </p>
-      <button class={archived ? "secondary" : "danger"} type="submit">
-        {archived ? i18n.t("Unarchive item") : i18n.t("Archive item")}
-      </button>
-    </form>
-  );
-};
 
 const ContentItemCreateBar: FC<{
   readonly context: Context<AppBindings>;
@@ -903,6 +867,7 @@ export function renderContentLibrary(
     readonly items: readonly ContentItem[];
     /** Item id → the revision a download of that item would hand over. */
     readonly latestRevisionIds: ReadonlyMap<string, string>;
+    readonly notices: readonly string[];
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -925,6 +890,9 @@ export function renderContentLibrary(
     context,
     { title: i18n.t("Content library") },
     <>
+      {model.notices.map((message) => (
+        <Notice>{message}</Notice>
+      ))}
       <Sheet
         description={description}
         footer={
@@ -1001,12 +969,15 @@ export function renderContentItem(
     readonly canAuthor: boolean;
     readonly item: ContentItem;
     readonly notices: readonly string[];
-    readonly owner: User | null;
     readonly revisions: readonly ContentRevision[];
   },
 ): Response {
   const i18n = context.get("i18n");
 
+  // One sheet: the revisions. A "content record" used to sit above it, with
+  // the owner (always the reader — `getItem` answers only the owner) and a
+  // revision count (the rows below). The item's archive control is on its
+  // library row, one page up.
   return renderShell(
     context,
     { breadcrumb: [contentCrumb(i18n)], title: model.item.title },
@@ -1014,46 +985,6 @@ export function renderContentItem(
       {model.notices.map((message) => (
         <Notice>{message}</Notice>
       ))}
-      <Sheet
-        description={i18n.t(
-          "Ownership and revision counts for this content item.",
-        )}
-        footer={
-          model.canAuthor ? (
-            <ArchiveItemForm context={context} item={model.item} />
-          ) : undefined
-        }
-        summary={
-          <SummaryStrip
-            items={[
-              {
-                label: i18n.t("Owner"),
-                value: userDisplayName(
-                  i18n,
-                  model.owner,
-                  model.item.ownerUserId,
-                ),
-              },
-              {
-                label: i18n.t("Revisions"),
-                value: model.revisions.length.toString(),
-              },
-              // In both states, as on the course page: it is what an author
-              // checks after pressing the button in the footer, and a cell
-              // that appeared only once the item was archived would leave one
-              // who saw no change with nothing to read.
-              {
-                label: i18n.t("Status"),
-                value:
-                  model.item.archivedAt === null
-                    ? i18n.t("Active")
-                    : i18n.t("Archived"),
-              },
-            ]}
-          />
-        }
-        title={i18n.t("Content record")}
-      />
       <Sheet
         description={i18n.t(
           "Immutable snapshots that published assignments point to. Each is shared, or not, on its own.",

@@ -54,7 +54,6 @@ import {
   wantsHtml,
 } from "../web/html";
 import { revisionDateText } from "../web/revisions";
-import { resolveUsers } from "../web/users";
 
 /**
  * A day, then revalidate. Longer than the built-in theories' hour because a
@@ -246,13 +245,24 @@ function itemNotices(
     { message: i18n.t("Content item created."), param: "created" },
     { message: i18n.t("Revision created."), param: "revisionCreated" },
     { message: i18n.t("Sharing updated."), param: "sharingUpdated" },
+  ];
+}
+
+/** The library's own: the archive controls are on its rows and return here. */
+function libraryNotices(
+  i18n: Translator,
+): readonly { readonly message: string; readonly param: string }[] {
+  return [
     { message: i18n.t("Content item archived."), param: "archived" },
     { message: i18n.t("Content item unarchived."), param: "unarchived" },
   ];
 }
 
-function collectItemNotices(url: URL, i18n: Translator): readonly string[] {
-  return itemNotices(i18n)
+function collectNotices(
+  notices: readonly { readonly message: string; readonly param: string }[],
+  url: URL,
+): readonly string[] {
+  return notices
     .filter((entry) => url.searchParams.has(entry.param))
     .map((entry) => entry.message);
 }
@@ -271,6 +281,10 @@ async function libraryPage(context: Context<AppBindings>): Promise<Response> {
   return renderContentLibrary(context, {
     canAuthor: canAuthorContent(actor),
     items,
+    notices: collectNotices(
+      libraryNotices(context.get("i18n")),
+      new URL(context.req.url),
+    ),
     // What each row's download would hand over. An item created a minute ago
     // and never written to has no revision and no entry here, and the listing
     // draws no download for it.
@@ -325,13 +339,11 @@ async function itemPage(context: Context<AppBindings>): Promise<Response> {
   try {
     const item = await service.getItem(actor, itemId);
     const revisions = await service.listRevisions(actor, itemId);
-    const directory = await resolveUsers(context, [item.ownerUserId]);
 
     return renderContentItem(context, {
       canAuthor: canAuthorContent(actor),
       item,
-      notices: collectItemNotices(url, context.get("i18n")),
-      owner: directory.get(item.ownerUserId) ?? null,
+      notices: collectNotices(itemNotices(context.get("i18n")), url),
       revisions,
     });
   } catch (error) {
@@ -368,9 +380,9 @@ async function createRevisionFromForm(
 }
 
 /**
- * Archive or unarchive, from the item page's own form or from the library's
- * archived drawer. Both send the reader to the item page, which draws the new
- * status and the notice.
+ * Archive or unarchive, from the item's row in the library. The reader goes
+ * back to the library, where the row has moved between the table and the
+ * drawer, with a notice saying so.
  */
 async function setItemArchivedFromForm(
   context: Context<AppBindings>,
@@ -382,9 +394,7 @@ async function setItemArchivedFromForm(
   try {
     await contentService(context).setItemArchived(actor, itemId, archived);
 
-    return redirect(
-      `/content/${itemId}?${archived ? "archived" : "unarchived"}=1`,
-    );
+    return redirect(`/content?${archived ? "archived" : "unarchived"}=1`);
   } catch (error) {
     return contentReadFailure(context, error);
   }
