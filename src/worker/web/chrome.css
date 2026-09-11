@@ -1579,6 +1579,44 @@ a.score-uncounted {
     display: none;
   }
 
+  /* Where there is one column, the switch leaves the header row for the foot
+     of the window. In the row it wrapped under the breadcrumb on any phone,
+     and on a tablet whenever the item's title ran long — a title is free
+     text, so that was the ordinary case and not a corner of it. Fixed to the
+     viewport it is also always in reach, which a control for flipping
+     between two long columns wants to be. Only the drawing moves: it stays
+     after the breadcrumb in the markup, so the tab order and the accessible
+     name are what they were. Below 70rem and not at some phone width, because
+     this is where the page itself changes shape; one breakpoint, not two.
+
+     A notch smaller than the shared track, since it now sits over the text
+     rather than beside a heading; the halves keep well clear of the 24px
+     target floor. The surface is opaque so the words underneath don't show
+     through, and the shell grows its bottom padding by the switch's height so
+     the last lines of a column can still scroll out from under it. The
+     footer is left to sit beneath it. */
+  .split-switch[data-enhanced] {
+    background: var(--surface);
+    bottom: max(0.85rem, env(safe-area-inset-bottom));
+    box-shadow: 0 6px 22px
+      color-mix(in srgb, var(--shadow-color) 22%, transparent);
+    left: 50%;
+    position: fixed;
+    transform: translateX(-50%);
+    z-index: 2;
+  }
+
+  .split-switch button {
+    font-size: 0.86rem;
+    min-height: 30px;
+    min-width: 5.5rem;
+    padding: 0.25rem 0.85rem;
+  }
+
+  .page-shell:has(.split-switch[data-enhanced]) {
+    padding-bottom: 7rem;
+  }
+
   .content-split[data-mode="split"][data-narrow-view="rail"]
     > .content-split-doc,
   .content-split[data-mode="split"][data-narrow-view="content"]

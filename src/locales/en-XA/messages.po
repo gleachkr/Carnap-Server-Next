@@ -4432,14 +4432,6 @@ msgstr ""
 msgid "Write"
 msgstr ""
 
-#: src/worker/web/content.tsx
-msgid "Write Carnap Markdown — the preview follows along — then save an immutable revision."
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by."
-msgstr ""
-
 #: src/worker/web/courses.tsx
 msgid "You are about to join a course with an enrollment link."
 msgstr ""

@@ -4432,14 +4432,6 @@ msgstr "Whoever names this from a lesson freezes its text into that lesson, and 
 msgid "Write"
 msgstr "Write"
 
-#: src/worker/web/content.tsx
-msgid "Write Carnap Markdown — the preview follows along — then save an immutable revision."
-msgstr "Write Carnap Markdown — the preview follows along — then save an immutable revision."
-
-#: src/worker/web/content.tsx
-msgid "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by."
-msgstr "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by."
-
 #: src/worker/web/courses.tsx
 msgid "You are about to join a course with an enrollment link."
 msgstr "You are about to join a course with an enrollment link."

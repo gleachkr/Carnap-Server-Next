@@ -325,19 +325,17 @@ const RevisionEditor: FC<{
   const i18n = useI18n();
   const theory = sourceFormat === "mm0";
 
+  /*
+   * No heading on the sheet. The breadcrumb already ends in "New revision"
+   * and the view switch says "Write" over this column, so a card titled the
+   * same thing under them was the page's name a third time — and its blurb,
+   * on a phone, was the first screenful of an editor. The sheet's frame now
+   * starts at the source; the field's name lives in the hidden label below.
+   */
   return (
     <form action={`/content/${itemId}/revisions/new`} method="post">
       <Sheet
         className="source-sheet"
-        description={
-          theory
-            ? i18n.t(
-                "Write the MM0 of a proof system or a language, then save an immutable revision. Its address becomes the src a lesson names it by.",
-              )
-            : i18n.t(
-                "Write Carnap Markdown — the preview follows along — then save an immutable revision.",
-              )
-        }
         footer={
           <div class="sheet-actions">
             {/* The note travels with the save, in the footer beside it, because
@@ -365,7 +363,6 @@ const RevisionEditor: FC<{
             </div>
           </div>
         }
-        title={i18n.t("New revision")}
       >
         <CsrfInput context={context} />
         {/* Off-screen, not absent. The sheet's own heading and description
@@ -1108,11 +1105,16 @@ export function renderRevision(
    * its note and the date it was saved; the note names the page in the
    * breadcrumb now, and the date is on the item's revision list, one click
    * away, which leaves this page holding the two things a revision is.
+   *
+   * No heading on the sheet: the view switch in the header row already says
+   * "Source" over this column, and a sheet titled the same thing under it
+   * said it twice. The `data-source-label` below is what names the source
+   * view to a screen reader.
    */
   const source =
     model.sourceText === null ? null : (
       <>
-        <Sheet className="source-sheet" title={i18n.t("Source")}>
+        <Sheet className="source-sheet">
           {/* The `<pre>` is the whole rendering without JS; the
               source-view bundle swaps it for the read-only CodeMirror the
               editor uses, so a directive reads as a directive here too.
