@@ -1205,13 +1205,14 @@ export function renderCourseList(
   // Whole sentences per branch rather than a sentence with a sentence spliced
   // into it: the second half changes the first half's grammar in some
   // languages, and a translator cannot see the seam from inside a fragment.
+  // A reader who cannot create courses is told nothing about it: for a
+  // student that is the ordinary state of affairs, and "you do not have
+  // permission" reads as though something has gone wrong with their account.
   const description = model.canCreate
     ? i18n.t(
         "Courses where you have an active or historical membership. Use the row below the table to create a new course.",
       )
-    : i18n.t(
-        "Courses where you have an active or historical membership. You do not have permission to create new courses.",
-      );
+    : i18n.t("Courses where you have an active or historical membership.");
   const activeCourses = model.courses.filter(
     (entry) => entry.course.archivedAt === null,
   );

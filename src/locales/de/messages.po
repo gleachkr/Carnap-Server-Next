@@ -1285,12 +1285,12 @@ msgid "Courses that have been archived. They keep all your work — open one to 
 msgstr "Archivierte Kurse. Ihre gesamte Arbeit bleibt erhalten — öffnen Sie einen Kurs, um sie noch einmal durchzusehen."
 
 #: src/worker/web/courses.tsx
-msgid "Courses where you have an active or historical membership. Use the row below the table to create a new course."
-msgstr "Kurse, in denen Sie eine aktive oder frühere Mitgliedschaft haben. Über die Zeile unter der Tabelle legen Sie einen neuen Kurs an."
+msgid "Courses where you have an active or historical membership."
+msgstr "Kurse, in denen Sie eine aktive oder frühere Mitgliedschaft haben."
 
 #: src/worker/web/courses.tsx
-msgid "Courses where you have an active or historical membership. You do not have permission to create new courses."
-msgstr "Kurse, in denen Sie eine aktive oder frühere Mitgliedschaft haben. Sie haben keine Berechtigung, neue Kurse anzulegen."
+msgid "Courses where you have an active or historical membership. Use the row below the table to create a new course."
+msgstr "Kurse, in denen Sie eine aktive oder frühere Mitgliedschaft haben. Über die Zeile unter der Tabelle legen Sie einen neuen Kurs an."
 
 #: src/worker/web/courses.tsx
 msgid "Courses you have archived. They keep all their data and can be returned to the active list at any time."
