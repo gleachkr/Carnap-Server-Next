@@ -320,8 +320,20 @@ textarea {
   border-radius: 4px;
   color: var(--ink);
   font: inherit;
+  /* Stated, not inherited, because the select's floor below is computed
+     from it and the two have to agree by construction. */
+  line-height: 1.5;
   padding: 0.55rem 0.65rem;
   width: 100%;
+}
+
+/* Chromium's stylesheet pins a drop-down select to `line-height: normal`
+   with !important, which `font: inherit` cannot reach, so beside a text
+   input in the same row it came out a couple of pixels shorter. The floor is
+   the input's own box — its line, padding and border — so the two match
+   whatever the font size. */
+select {
+  min-height: calc(1.5em + 1.1rem + 2px);
 }
 
 input:focus,
