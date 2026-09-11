@@ -95,6 +95,19 @@ export interface ContentItem {
   readonly sourceFormat: ContentSourceFormat;
   readonly createdAt: Timestamp;
   readonly updatedAt: Timestamp;
+  /**
+   * When the author retired this item from their library, or null while it is
+   * in use.
+   *
+   * Archiving is a fact about the *library view* and about nothing else. An
+   * assignment points at a revision, not an item, and a shared revision is
+   * held under an address somebody else may have written into a lesson — so
+   * an archived item's revisions go on resolving exactly as they did, and
+   * what changes is that the library folds the item away and stops offering
+   * it for new assignments. Nothing deletes a content item, for the same
+   * reason nothing deletes a course.
+   */
+  readonly archivedAt: Timestamp | null;
 }
 
 export interface ContentRevision {

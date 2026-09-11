@@ -290,6 +290,41 @@ export class ContentService {
   }
 
   /**
+   * Retire an item from the library, or return it to use.
+   *
+   * Yours to do, and — as `createRevision` and `setRevisionSharing` reason —
+   * an author's thing to do rather than an owner's, since an item outlives the
+   * permission that created it. Somebody else's item answers as `getItem`
+   * does, so this is not a second way to tell an id that exists from one that
+   * does not.
+   *
+   * Idempotent: archiving an archived item restamps the time and unarchiving
+   * an active one is a no-op, since the form that asks cannot know what
+   * happened between the page being drawn and the button being pressed.
+   */
+  async setItemArchived(
+    actor: AuthenticatedActor,
+    itemId: AppId,
+    archived: boolean,
+  ): Promise<ContentItem> {
+    requireContentAuthor(actor);
+
+    const item = await this.getItem(actor, itemId);
+    const updated = await this.options.stores.content.setItemArchived({
+      archivedAt: archived
+        ? timestampNow(this.options.now?.() ?? new Date())
+        : null,
+      id: item.id,
+    });
+
+    if (updated === null) {
+      throw contentNotFound();
+    }
+
+    return updated;
+  }
+
+  /**
    * Who may read this revision, as its owner has decided.
    *
    * Both fields at once, because they are one decision on one form. Two

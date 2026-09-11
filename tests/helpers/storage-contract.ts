@@ -607,6 +607,41 @@ export function describeStorageContract(
       });
     });
 
+    test("archiving a content item is a flag on the item alone", async () => {
+      await withStorage(async ({ stores }) => {
+        const { item, revision } = await createContentRevision(stores);
+        const archived = await stores.content.setItemArchived({
+          archivedAt: "2026-02-01T00:00:00.000Z",
+          id: item.id,
+        });
+
+        // `updatedAt` orders the library by when the content last changed,
+        // and archiving is not a change to the content.
+        expect(archived).toEqual({
+          ...item,
+          archivedAt: "2026-02-01T00:00:00.000Z",
+        });
+        await expect(stores.content.getItem(item.id)).resolves.toEqual(
+          archived,
+        );
+        // The revision is untouched: an assignment or a shared address still
+        // resolves it exactly as before.
+        await expect(
+          stores.content.getRevision(revision.id),
+        ).resolves.toEqual(revision);
+
+        await expect(
+          stores.content.setItemArchived({ archivedAt: null, id: item.id }),
+        ).resolves.toEqual(item);
+        await expect(
+          stores.content.setItemArchived({
+            archivedAt: "2026-02-01T00:00:00.000Z",
+            id: "content-item-nobody-made",
+          }),
+        ).resolves.toBeNull();
+      });
+    });
+
     test("assignments can be published by content revision ID", async () => {
       await withStorage(async ({ stores }) => {
         const { assignment, instructor } =

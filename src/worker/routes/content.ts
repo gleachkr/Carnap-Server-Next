@@ -187,6 +187,7 @@ function contentReadFailure(
 
 function publicContentItem(item: ContentItem) {
   return {
+    archivedAt: item.archivedAt,
     createdAt: item.createdAt,
     id: item.id,
     ownerUserId: item.ownerUserId,
@@ -245,6 +246,8 @@ function itemNotices(
     { message: i18n.t("Content item created."), param: "created" },
     { message: i18n.t("Revision created."), param: "revisionCreated" },
     { message: i18n.t("Sharing updated."), param: "sharingUpdated" },
+    { message: i18n.t("Content item archived."), param: "archived" },
+    { message: i18n.t("Content item unarchived."), param: "unarchived" },
   ];
 }
 
@@ -361,6 +364,29 @@ async function createRevisionFromForm(
     }
 
     throw error;
+  }
+}
+
+/**
+ * Archive or unarchive, from the item page's own form or from the library's
+ * archived drawer. Both send the reader to the item page, which draws the new
+ * status and the notice.
+ */
+async function setItemArchivedFromForm(
+  context: Context<AppBindings>,
+  archived: boolean,
+): Promise<Response> {
+  const actor = requireAuthenticated(context);
+  const itemId = requiredParam(context, "itemId");
+
+  try {
+    await contentService(context).setItemArchived(actor, itemId, archived);
+
+    return redirect(
+      `/content/${itemId}?${archived ? "archived" : "unarchived"}=1`,
+    );
+  } catch (error) {
+    return contentReadFailure(context, error);
   }
 }
 
@@ -908,6 +934,34 @@ contentRoutes.get("/:itemId", async (context) => {
     item: publicContentItem(item),
     revisions: revisions.map(publicRevision),
   });
+});
+
+contentRoutes.post("/:itemId/archive", async (context) => {
+  if (isFormSubmission(context)) {
+    return setItemArchivedFromForm(context, true);
+  }
+
+  const item = await contentService(context).setItemArchived(
+    requireAuthenticated(context),
+    requiredParam(context, "itemId"),
+    true,
+  );
+
+  return context.json({ item: publicContentItem(item) });
+});
+
+contentRoutes.post("/:itemId/unarchive", async (context) => {
+  if (isFormSubmission(context)) {
+    return setItemArchivedFromForm(context, false);
+  }
+
+  const item = await contentService(context).setItemArchived(
+    requireAuthenticated(context),
+    requiredParam(context, "itemId"),
+    false,
+  );
+
+  return context.json({ item: publicContentItem(item) });
 });
 
 contentRoutes.get("/:itemId/revisions/new", revisionEditorPage);

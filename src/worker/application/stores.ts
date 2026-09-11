@@ -379,6 +379,11 @@ export interface CreateContentRevisionInput {
   readonly createdAt: Timestamp;
 }
 
+export interface SetContentItemArchivedInput {
+  readonly id: AppId;
+  readonly archivedAt: Timestamp | null;
+}
+
 export interface UpdateContentRevisionSharingInput {
   readonly id: AppId;
   readonly sharing: ContentRevision["sharing"];
@@ -390,6 +395,18 @@ export interface ContentStore {
   getItem(id: AppId): Promise<ContentItem | null>;
 
   listItemsForOwner(ownerUserId: AppId): Promise<ContentItem[]>;
+  /**
+   * Retire an item from its owner's library, or return it. Null for an id
+   * that names nothing.
+   *
+   * Like `updateRevisionSharing`, this leaves `updatedAt` alone: that column
+   * says when the *content* last changed and orders the library by it, and
+   * folding an item away is not writing to it. An unarchived item comes back
+   * where it was in the list, not at the top as though it had been edited.
+   */
+  setItemArchived(
+    input: SetContentItemArchivedInput,
+  ): Promise<ContentItem | null>;
   createRevision(input: CreateContentRevisionInput): Promise<ContentRevision>;
   getRevision(id: AppId): Promise<ContentRevision | null>;
   /**

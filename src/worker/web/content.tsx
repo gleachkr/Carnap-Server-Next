@@ -138,9 +138,12 @@ const SourceDownload: FC<{
 
 const ItemsTable: FC<{
   readonly canAuthor: boolean;
+  /** Whether the drawer below holds anything: "none" and "all archived" are
+   * different facts, and the first sentence would be a lie under the second. */
+  readonly hasArchived: boolean;
   readonly items: readonly ContentItem[];
   readonly latestRevisionIds: ReadonlyMap<string, string>;
-}> = ({ canAuthor, items, latestRevisionIds }) => {
+}> = ({ canAuthor, hasArchived, items, latestRevisionIds }) => {
   const i18n = useI18n();
 
   if (items.length === 0) {
@@ -148,9 +151,11 @@ const ItemsTable: FC<{
     // somebody who cannot. The sheet's description says why; this says what.
     return (
       <p class="small">
-        {canAuthor
-          ? i18n.t("You have not created any content items yet.")
-          : i18n.t("You do not own any content items.")}
+        {hasArchived
+          ? i18n.t("All of your content items are archived.")
+          : canAuthor
+            ? i18n.t("You have not created any content items yet.")
+            : i18n.t("You do not own any content items.")}
       </p>
     );
   }
@@ -178,11 +183,7 @@ const ItemsTable: FC<{
               <td>
                 <a href={`/content/${item.id}`}>{item.title}</a>
               </td>
-              <td>
-                {item.sourceFormat === "mm0"
-                  ? i18n.t("Theory or language")
-                  : i18n.t("Lesson")}
-              </td>
+              <td>{sourceFormatLabel(i18n, item.sourceFormat)}</td>
               {/* The instant behind the localized date, which does not sort. */}
               <td data-sort-value={item.updatedAt}>
                 <Time value={item.updatedAt} />
@@ -202,6 +203,105 @@ const ItemsTable: FC<{
         })}
       </tbody>
     </TableScroll>
+  );
+};
+
+/**
+ * Archived items, listed inside the drawer below the active ones. No download
+ * here: the item page has one per revision, and this table exists to answer
+ * "where did that lesson go?" and to offer the way back. The actions column
+ * is dropped for a reader who can no longer author, since unarchiving needs
+ * the same permission archiving did.
+ */
+const ArchivedItemsTable: FC<{
+  readonly canAuthor: boolean;
+  readonly context: Context<AppBindings>;
+  readonly items: readonly ContentItem[];
+}> = ({ canAuthor, context, items }) => {
+  const i18n = useI18n();
+
+  return (
+    <TableScroll>
+      <thead>
+        <tr>
+          <SortHeader label={i18n.t("Title")} />
+          <SortHeader label={i18n.t("Kind")} />
+          <SortHeader label={i18n.t("Archived")} />
+          {canAuthor ? <th scope="col">{i18n.t("Actions")}</th> : null}
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <tr>
+            <td>
+              <a href={`/content/${item.id}`}>{item.title}</a>
+            </td>
+            <td>{sourceFormatLabel(i18n, item.sourceFormat)}</td>
+            <td data-sort-value={item.archivedAt ?? ""}>
+              {item.archivedAt === null ? null : (
+                <Time value={item.archivedAt} />
+              )}
+            </td>
+            {canAuthor ? (
+              <td>
+                <form action={`/content/${item.id}/unarchive`} method="post">
+                  <CsrfInput context={context} />
+                  <button class="secondary" type="submit">
+                    {i18n.t("Unarchive")}
+                  </button>
+                </form>
+              </td>
+            ) : null}
+          </tr>
+        ))}
+      </tbody>
+    </TableScroll>
+  );
+};
+
+/** The library's word for what an item holds. */
+function sourceFormatLabel(
+  i18n: Translator,
+  sourceFormat: ContentSourceFormat,
+): string {
+  return sourceFormat === "mm0"
+    ? i18n.t("Theory or language")
+    : i18n.t("Lesson");
+}
+
+/**
+ * The item page's archive control: a sentence saying what the button does,
+ * then the button. Archiving keeps the record, every revision, and every
+ * address a revision is shared under; it folds the item out of the library
+ * and out of the picker a new assignment is set from, and nothing else.
+ */
+const ArchiveItemForm: FC<{
+  readonly context: Context<AppBindings>;
+  readonly item: ContentItem;
+}> = ({ context, item }) => {
+  const i18n = useI18n();
+  const archived = item.archivedAt !== null;
+
+  return (
+    <form
+      action={`/content/${item.id}/${archived ? "unarchive" : "archive"}`}
+      class="footer-row archive-form"
+      method="post"
+    >
+      <CsrfInput context={context} />
+      <p class="small">
+        {archived
+          ? i18n.t(
+              "This item is archived. Unarchive it to return it to your library and to the assignment picker.",
+            )
+          : i18n.t(
+              "Archiving folds this item out of your library and out of the assignment picker. Nothing is deleted: its revisions, the assignments set on them and any sharing stay as they are, and you can unarchive it later.",
+            )}
+      </p>
+      <button class={archived ? "secondary" : "danger"} type="submit">
+        {archived ? i18n.t("Unarchive item") : i18n.t("Archive item")}
+      </button>
+    </form>
   );
 };
 
@@ -807,24 +907,59 @@ export function renderContentLibrary(
         "Reusable content records owned by your account. You do not have permission to write content.",
       );
 
+  const activeItems = model.items.filter((item) => item.archivedAt === null);
+  const archivedItems = model.items.filter(
+    (item) => item.archivedAt !== null,
+  );
+
   return renderShell(
     context,
     { title: i18n.t("Content library") },
-    <Sheet
-      description={description}
-      footer={
-        model.canAuthor ? (
-          <ContentItemCreateBar context={context} />
-        ) : undefined
-      }
-      title={i18n.t("Your content")}
-    >
-      <ItemsTable
-        canAuthor={model.canAuthor}
-        items={model.items}
-        latestRevisionIds={model.latestRevisionIds}
-      />
-    </Sheet>,
+    <>
+      <Sheet
+        description={description}
+        footer={
+          model.canAuthor ? (
+            <ContentItemCreateBar context={context} />
+          ) : undefined
+        }
+        title={i18n.t("Your content")}
+      >
+        <ItemsTable
+          canAuthor={model.canAuthor}
+          hasArchived={archivedItems.length > 0}
+          items={activeItems}
+          latestRevisionIds={model.latestRevisionIds}
+        />
+      </Sheet>
+      {archivedItems.length > 0 ? (
+        // The courses list's drawer, for the same reason: an archived item is
+        // reference material, opened to find or unarchive something and
+        // otherwise in the way. Closed, the count on the summary is the
+        // answer to "where did that lesson go?".
+        <details class="sheet archived-sheet">
+          <summary class="sheet-header">
+            <h2>
+              {i18n.t("Archived content ({count})", {
+                count: archivedItems.length,
+              })}
+            </h2>
+          </summary>
+          <div class="sheet-section">
+            <p class="small">
+              {i18n.t(
+                "Items you have archived. They keep every revision, and the assignments set on them go on working; unarchive one to return it to the list above.",
+              )}
+            </p>
+            <ArchivedItemsTable
+              canAuthor={model.canAuthor}
+              context={context}
+              items={archivedItems}
+            />
+          </div>
+        </details>
+      ) : null}
+    </>,
   );
 }
 
@@ -869,6 +1004,11 @@ export function renderContentItem(
         description={i18n.t(
           "Ownership and revision counts for this content item.",
         )}
+        footer={
+          model.canAuthor ? (
+            <ArchiveItemForm context={context} item={model.item} />
+          ) : undefined
+        }
         summary={
           <SummaryStrip
             items={[
@@ -883,6 +1023,17 @@ export function renderContentItem(
               {
                 label: i18n.t("Revisions"),
                 value: model.revisions.length.toString(),
+              },
+              // In both states, as on the course page: it is what an author
+              // checks after pressing the button in the footer, and a cell
+              // that appeared only once the item was archived would leave one
+              // who saw no change with nothing to read.
+              {
+                label: i18n.t("Status"),
+                value:
+                  model.item.archivedAt === null
+                    ? i18n.t("Active")
+                    : i18n.t("Archived"),
               },
             ]}
           />

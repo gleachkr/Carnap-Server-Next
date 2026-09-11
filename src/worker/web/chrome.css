@@ -835,6 +835,17 @@ a.score-uncounted {
   width: auto;
 }
 
+/* The content item's archive form: the sentence takes the row and the button
+   holds its natural width at the end, wrapping under it on a phone. */
+.archive-form {
+  margin: 0;
+}
+
+.archive-form > .small {
+  flex: 1 1 16rem;
+  margin: 0;
+}
+
 /* Two add-bars sharing one footer (corrections: publish + excuse). A grid
    with display:contents forms lines up the fields into equal columns across
    both rows, so the two inputs are the same size regardless of button width. */

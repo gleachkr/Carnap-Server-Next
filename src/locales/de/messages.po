@@ -383,6 +383,7 @@ msgstr "Aktionen"
 
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/admin.tsx
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/labels.ts
 msgid "Active"
@@ -486,6 +487,10 @@ msgstr "Alle Felder richtig."
 msgid "All grades"
 msgstr "Alle Noten"
 
+#: src/worker/web/content.tsx
+msgid "All of your content items are archived."
+msgstr ""
+
 #: src/worker/web/courses.tsx
 msgid "All of your courses are archived."
 msgstr "Alle Ihre Kurse sind archiviert."
@@ -577,13 +582,26 @@ msgstr "Die automatisch ermittelte Punktzahl als endgültig bestätigen"
 msgid "Archive course"
 msgstr "Kurs archivieren"
 
+#: src/worker/web/content.tsx
+msgid "Archive item"
+msgstr ""
+
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Archived"
 msgstr "Archiviert"
 
+#: src/worker/web/content.tsx
+msgid "Archived content ({count})"
+msgstr ""
+
 #: src/worker/web/courses.tsx
 msgid "Archived courses ({count})"
 msgstr "Archivierte Kurse ({count})"
+
+#: src/worker/web/content.tsx
+msgid "Archiving folds this item out of your library and out of the assignment picker. Nothing is deleted: its revisions, the assignments set on them and any sharing stay as they are, and you can unarchive it later."
+msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Archiving moves this course out of the active list without deleting anything. You can unarchive it later."
@@ -1005,12 +1023,20 @@ msgid "Content authors"
 msgstr ""
 
 #: src/worker/routes/content.ts
+msgid "Content item archived."
+msgstr ""
+
+#: src/worker/routes/content.ts
 msgid "Content item created."
 msgstr "Inhaltsobjekt angelegt."
 
 #: src/worker/web/content.tsx
 msgid "Content item title"
 msgstr "Titel des Inhaltsobjekts"
+
+#: src/worker/routes/content.ts
+msgid "Content item unarchived."
+msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Content library"
@@ -2034,6 +2060,10 @@ msgstr "Aussteller {issuer} · Client-ID {clientId}"
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Item links must look like item:<content-item-id>."
 msgstr "Objektlinks müssen die Form item:<content-item-id> haben."
+
+#: src/worker/web/content.tsx
+msgid "Items you have archived. They keep every revision, and the assignments set on them go on working; unarchive one to return it to the list above."
+msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Join course"
@@ -3380,6 +3410,7 @@ msgstr "Zustand"
 #: src/worker/web/admin.tsx
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/assignments.tsx
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/lti.tsx
 msgid "Status"
@@ -4026,6 +4057,10 @@ msgstr ""
 msgid "This item does not record work."
 msgstr "Dieses Element erfasst keine Bearbeitungen."
 
+#: src/worker/web/content.tsx
+msgid "This item is archived. Unarchive it to return it to your library and to the assignment picker."
+msgstr ""
+
 #: src/worker/application/lti.ts
 msgid "This kind of LMS message is not supported."
 msgstr "Diese Art von LMS-Nachricht wird nicht unterstützt."
@@ -4232,6 +4267,7 @@ msgstr "Art"
 msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it."
 msgstr "Tragen Sie die Regel, die den jeweiligen Schluss rechtfertigt, in das Feld unter der Zeile ein. „Hypothese hinzufügen“ erzeugt ein Blatt, das von einer Regel darunter entlastet wird."
 
+#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Unarchive"
 msgstr "Aus dem Archiv holen"
@@ -4239,6 +4275,10 @@ msgstr "Aus dem Archiv holen"
 #: src/worker/web/courses.tsx
 msgid "Unarchive course"
 msgstr "Kurs aus dem Archiv holen"
+
+#: src/worker/web/content.tsx
+msgid "Unarchive item"
+msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts

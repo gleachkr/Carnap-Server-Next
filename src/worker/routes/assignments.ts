@@ -436,12 +436,28 @@ function formOptionalInteger(form: FormData, name: string): number | null {
   return value.length === 0 ? null : Number(value);
 }
 
+/**
+ * The author's items a revision picker may draw from: every item the library
+ * still lists, plus — for an assignment that already exists — the item it
+ * points at, archived or not.
+ *
+ * An archived item has been retired from exactly this use, so a new
+ * assignment is not offered it. But an assignment already set on one keeps
+ * it in its own picker: dropping it would leave the draft editor's select
+ * silently preselecting some other lesson, and would take the correction
+ * control away from a published assignment that depends on the item. Retiring
+ * an item from the library is not meant to reach into the courses that use
+ * it.
+ */
 async function authorRevisionOptions(
   context: Context<AppBindings>,
+  currentItemId: string | null,
 ): Promise<AssignmentRevisionOption[]> {
   const actor = requireAuthenticated(context);
   const service = contentService(context);
-  const items = await service.listItems(actor);
+  const items = (await service.listItems(actor)).filter(
+    (item) => item.archivedAt === null || item.id === currentItemId,
+  );
   const revisions = await Promise.all(
     items.map(async (item) => ({
       item,
@@ -527,7 +543,7 @@ async function quickAssignmentFormCommand(
   context: Context<AppBindings>,
   form: FormData,
 ) {
-  const [firstRevision] = await authorRevisionOptions(context);
+  const [firstRevision] = await authorRevisionOptions(context, null);
 
   if (firstRevision === undefined) {
     throw badRequest(
@@ -565,7 +581,7 @@ async function newAssignmentPage(
     context,
     courseId,
     await courseTitleFor(context, courseId),
-    await authorRevisionOptions(context),
+    await authorRevisionOptions(context, null),
   );
 }
 
@@ -603,7 +619,7 @@ async function createAssignmentFromForm(
         courseId,
         courseTitle: await courseTitleFor(context, courseId),
         message: error.localize(i18n),
-        revisions: await authorRevisionOptions(context),
+        revisions: await authorRevisionOptions(context, null),
         status: error.status,
         title: i18n.t("Assignment not created"),
         values,
@@ -642,9 +658,38 @@ async function editAssignmentPage(
     courseTitle: await courseTitleFor(context, courseId),
     revisions:
       detail.assignment.state === "draft"
-        ? await authorRevisionOptions(context)
+        ? await authorRevisionOptions(context, detail.contentItem.id)
         : [],
   });
+}
+
+/**
+ * The item an existing assignment points at, for re-rendering its edit form
+ * after a refused update — so the picker keeps offering that item even when
+ * it has since been archived. Null when the assignment cannot be read, which
+ * is then the error the form is already showing.
+ */
+async function currentItemIdOrNull(
+  context: Context<AppBindings>,
+  courseId: string,
+  assignmentId: string,
+): Promise<string | null> {
+  try {
+    const detail = await assignmentService(context).getForInstructor(
+      requireAuthenticated(context),
+      courseId,
+      assignmentId,
+      "describe",
+    );
+
+    return detail.contentItem.id;
+  } catch (error) {
+    if (error instanceof AppHttpError) {
+      return null;
+    }
+
+    throw error;
+  }
 }
 
 async function updateAssignmentFromForm(
@@ -679,7 +724,10 @@ async function updateAssignmentFromForm(
         courseId,
         courseTitle: await courseTitleFor(context, courseId),
         message: error.localize(i18n),
-        revisions: await authorRevisionOptions(context),
+        revisions: await authorRevisionOptions(
+          context,
+          await currentItemIdOrNull(context, courseId, assignmentId),
+        ),
         status: error.status,
         submitLabel: i18n.t("Save assignment"),
         title: i18n.t("Assignment not updated"),
@@ -1678,7 +1726,7 @@ async function instructorDetailPage(
   );
   const revisions =
     detail.assignment.state === "published"
-      ? await authorRevisionOptions(context)
+      ? await authorRevisionOptions(context, detail.contentItem.id)
       : [];
 
   // Overrides target a single enrolled student, so surface the course roster

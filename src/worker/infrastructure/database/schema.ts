@@ -226,6 +226,8 @@ export const contentItems = sqliteTable(
       .default("markdown"),
     createdAt: text("created_at").notNull(),
     updatedAt: text("updated_at").notNull(),
+    /** See `0029_content_item_archived.sql`; null means "in use". */
+    archivedAt: text("archived_at"),
   },
   (table) => [index("content_items_owner_user_id_idx").on(table.ownerUserId)],
 );

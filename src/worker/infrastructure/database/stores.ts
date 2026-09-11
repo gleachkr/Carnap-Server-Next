@@ -62,6 +62,7 @@ import type {
   RevokeEnrollmentLinkInput,
   RevokePlatformCapabilityInput,
   ScoreStore,
+  SetContentItemArchivedInput,
   SetCourseArchivedInput,
   SetGradesVisibleAtInput,
   UnpublishAssignmentInput,
@@ -1212,6 +1213,18 @@ class SqliteContentStore implements ContentStore {
       .from(contentItems)
       .where(eq(contentItems.ownerUserId, ownerUserId))
       .orderBy(asc(contentItems.updatedAt), asc(contentItems.id));
+  }
+
+  async setItemArchived(
+    input: SetContentItemArchivedInput,
+  ): Promise<ContentItem | null> {
+    return nullableSingle(
+      await this.db
+        .update(contentItems)
+        .set({ archivedAt: input.archivedAt })
+        .where(eq(contentItems.id, input.id))
+        .returning(),
+    );
   }
 
   async createRevision(
