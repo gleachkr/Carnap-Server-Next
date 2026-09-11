@@ -37,7 +37,12 @@ import {
 } from "./components";
 import type { ContentDocumentModel } from "./content-document";
 import { renderContentDocument } from "./content-document";
-import { DownloadIcon, PeopleIcon } from "./icons";
+import {
+  ArchiveIcon,
+  DownloadIcon,
+  PeopleIcon,
+  UnarchiveIcon,
+} from "./icons";
 import { renderShell, useI18n } from "./layout";
 import { revisionDetailsText } from "./revisions";
 import { SortHeader } from "./table-sort";
@@ -136,14 +141,64 @@ const SourceDownload: FC<{
   </a>
 );
 
+/**
+ * The archive or unarchive control on a library row: an icon in a form,
+ * because it changes something and so has to POST. Named for the row the
+ * way the download is, since a column of identical icons tells a reader
+ * listening to the page nothing about which item they are on.
+ */
+const ArchiveToggle: FC<{
+  readonly context: Context<AppBindings>;
+  readonly item: ContentItem;
+}> = ({ context, item }) => {
+  const i18n = useI18n();
+  const archived = item.archivedAt !== null;
+  const label = archived
+    ? i18n.t("Unarchive {name}", { name: item.title })
+    : i18n.t("Archive {name}", { name: item.title });
+
+  return (
+    <form
+      action={`/content/${item.id}/${archived ? "unarchive" : "archive"}`}
+      class="icon-form"
+      method="post"
+    >
+      <CsrfInput context={context} />
+      <button
+        aria-label={label}
+        class="icon-button"
+        title={label}
+        type="submit"
+      >
+        {archived ? <UnarchiveIcon /> : <ArchiveIcon />}
+      </button>
+    </form>
+  );
+};
+
+/**
+ * The library's rows, active or archived: the same table either way, with
+ * the date column saying when the item was last written or when it was put
+ * away, and the actions column offering the download and the way across.
+ */
 const ItemsTable: FC<{
+  /** Whether this is the archived drawer's table, or the active one. */
+  readonly archived: boolean;
   readonly canAuthor: boolean;
+  readonly context: Context<AppBindings>;
   /** Whether the drawer below holds anything: "none" and "all archived" are
    * different facts, and the first sentence would be a lie under the second. */
   readonly hasArchived: boolean;
   readonly items: readonly ContentItem[];
   readonly latestRevisionIds: ReadonlyMap<string, string>;
-}> = ({ canAuthor, hasArchived, items, latestRevisionIds }) => {
+}> = ({
+  archived,
+  canAuthor,
+  context,
+  hasArchived,
+  items,
+  latestRevisionIds,
+}) => {
   const i18n = useI18n();
 
   if (items.length === 0) {
@@ -168,7 +223,9 @@ const ItemsTable: FC<{
           {/* Sortable, because the reason to look is usually "where are my
               theories" — an author has many lessons and a few of these. */}
           <SortHeader label={i18n.t("Kind")} />
-          <SortHeader label={i18n.t("Updated")} />
+          <SortHeader
+            label={archived ? i18n.t("Archived") : i18n.t("Updated")}
+          />
           <th scope="col">{i18n.t("Actions")}</th>
         </tr>
       </thead>
@@ -177,6 +234,7 @@ const ItemsTable: FC<{
           // The source an author would want is the current one, which is the
           // newest revision. An item with none is a title and nothing else.
           const revisionId = latestRevisionIds.get(item.id);
+          const when = archived ? (item.archivedAt ?? "") : item.updatedAt;
 
           return (
             <tr>
@@ -185,8 +243,8 @@ const ItemsTable: FC<{
               </td>
               <td>{sourceFormatLabel(i18n, item.sourceFormat)}</td>
               {/* The instant behind the localized date, which does not sort. */}
-              <td data-sort-value={item.updatedAt}>
-                <Time value={item.updatedAt} />
+              <td data-sort-value={when}>
+                {when.length === 0 ? null : <Time value={when} />}
               </td>
               <td>
                 {revisionId === undefined ? null : (
@@ -197,63 +255,16 @@ const ItemsTable: FC<{
                     })}
                   />
                 )}
+                {/* Archiving needs the permission that made the item, as
+                    sharing does; an author who has lost it is not offered
+                    a control the server would refuse. */}
+                {canAuthor ? (
+                  <ArchiveToggle context={context} item={item} />
+                ) : null}
               </td>
             </tr>
           );
         })}
-      </tbody>
-    </TableScroll>
-  );
-};
-
-/**
- * Archived items, listed inside the drawer below the active ones. No download
- * here: the item page has one per revision, and this table exists to answer
- * "where did that lesson go?" and to offer the way back. The actions column
- * is dropped for a reader who can no longer author, since unarchiving needs
- * the same permission archiving did.
- */
-const ArchivedItemsTable: FC<{
-  readonly canAuthor: boolean;
-  readonly context: Context<AppBindings>;
-  readonly items: readonly ContentItem[];
-}> = ({ canAuthor, context, items }) => {
-  const i18n = useI18n();
-
-  return (
-    <TableScroll>
-      <thead>
-        <tr>
-          <SortHeader label={i18n.t("Title")} />
-          <SortHeader label={i18n.t("Kind")} />
-          <SortHeader label={i18n.t("Archived")} />
-          {canAuthor ? <th scope="col">{i18n.t("Actions")}</th> : null}
-        </tr>
-      </thead>
-      <tbody>
-        {items.map((item) => (
-          <tr>
-            <td>
-              <a href={`/content/${item.id}`}>{item.title}</a>
-            </td>
-            <td>{sourceFormatLabel(i18n, item.sourceFormat)}</td>
-            <td data-sort-value={item.archivedAt ?? ""}>
-              {item.archivedAt === null ? null : (
-                <Time value={item.archivedAt} />
-              )}
-            </td>
-            {canAuthor ? (
-              <td>
-                <form action={`/content/${item.id}/unarchive`} method="post">
-                  <CsrfInput context={context} />
-                  <button class="secondary" type="submit">
-                    {i18n.t("Unarchive")}
-                  </button>
-                </form>
-              </td>
-            ) : null}
-          </tr>
-        ))}
       </tbody>
     </TableScroll>
   );
@@ -270,10 +281,10 @@ function sourceFormatLabel(
 }
 
 /**
- * The item page's archive control: a sentence saying what the button does,
- * then the button. Archiving keeps the record, every revision, and every
- * address a revision is shared under; it folds the item out of the library
- * and out of the picker a new assignment is set from, and nothing else.
+ * The item page's archive control: one sentence and the button. Archiving
+ * keeps the record, every revision, and every address a revision is shared
+ * under; it folds the item out of the library and out of the picker a new
+ * assignment is set from, and nothing else.
  */
 const ArchiveItemForm: FC<{
   readonly context: Context<AppBindings>;
@@ -291,11 +302,9 @@ const ArchiveItemForm: FC<{
       <CsrfInput context={context} />
       <p class="small">
         {archived
-          ? i18n.t(
-              "This item is archived. Unarchive it to return it to your library and to the assignment picker.",
-            )
+          ? i18n.t("Hidden from your library and from new assignments.")
           : i18n.t(
-              "Archiving folds this item out of your library and out of the assignment picker. Nothing is deleted: its revisions, the assignments set on them and any sharing stay as they are, and you can unarchive it later.",
+              "Hides this item from your library and from new assignments. Nothing is deleted.",
             )}
       </p>
       <button class={archived ? "secondary" : "danger"} type="submit">
@@ -926,7 +935,9 @@ export function renderContentLibrary(
         title={i18n.t("Your content")}
       >
         <ItemsTable
+          archived={false}
           canAuthor={model.canAuthor}
+          context={context}
           hasArchived={archivedItems.length > 0}
           items={activeItems}
           latestRevisionIds={model.latestRevisionIds}
@@ -948,13 +959,16 @@ export function renderContentLibrary(
           <div class="sheet-section">
             <p class="small">
               {i18n.t(
-                "Items you have archived. They keep every revision, and the assignments set on them go on working; unarchive one to return it to the list above.",
+                "Hidden from the list above and from new assignments; everything set on them still works.",
               )}
             </p>
-            <ArchivedItemsTable
+            <ItemsTable
+              archived
               canAuthor={model.canAuthor}
               context={context}
+              hasArchived
               items={archivedItems}
+              latestRevisionIds={model.latestRevisionIds}
             />
           </div>
         </details>

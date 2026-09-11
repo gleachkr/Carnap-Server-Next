@@ -1021,6 +1021,13 @@ a.score-uncounted {
   filter: none;
 }
 
+/* An icon that has to POST — the library's archive toggle — sits in a form
+   of its own beside the download link, so the form is inline like the link. */
+.icon-form {
+  display: inline;
+  margin: 0;
+}
+
 /* Duotone icons carry two explicit fills — a gold backing layer beneath a
    blue foreground glyph — rather than one text color at two opacities. */
 .icon-duo-back {

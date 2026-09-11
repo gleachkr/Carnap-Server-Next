@@ -578,6 +578,10 @@ msgstr "Punktzahl bestätigen"
 msgid "Approve the autograded score as final"
 msgstr "Die automatisch ermittelte Punktzahl als endgültig bestätigen"
 
+#: src/worker/web/content.tsx
+msgid "Archive {name}"
+msgstr ""
+
 #: src/worker/web/courses.tsx
 msgid "Archive course"
 msgstr "Kurs archivieren"
@@ -598,10 +602,6 @@ msgstr ""
 #: src/worker/web/courses.tsx
 msgid "Archived courses ({count})"
 msgstr "Archivierte Kurse ({count})"
-
-#: src/worker/web/content.tsx
-msgid "Archiving folds this item out of your library and out of the assignment picker. Nothing is deleted: its revisions, the assignments set on them and any sharing stay as they are, and you can unarchive it later."
-msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Archiving moves this course out of the active list without deleting anything. You can unarchive it later."
@@ -1963,9 +1963,21 @@ msgstr "Erteilt"
 msgid "Hidden"
 msgstr "Verborgen"
 
+#: src/worker/web/content.tsx
+msgid "Hidden from the list above and from new assignments; everything set on them still works."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Hidden from your library and from new assignments."
+msgstr ""
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Hide grades"
 msgstr "Noten verbergen"
+
+#: src/worker/web/content.tsx
+msgid "Hides this item from your library and from new assignments. Nothing is deleted."
+msgstr ""
 
 #: src/worker/infrastructure/turnstile.ts
 msgid "Human verification is misconfigured for this deployment."
@@ -2060,10 +2072,6 @@ msgstr "Aussteller {issuer} · Client-ID {clientId}"
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Item links must look like item:<content-item-id>."
 msgstr "Objektlinks müssen die Form item:<content-item-id> haben."
-
-#: src/worker/web/content.tsx
-msgid "Items you have archived. They keep every revision, and the assignments set on them go on working; unarchive one to return it to the list above."
-msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Join course"
@@ -4057,10 +4065,6 @@ msgstr ""
 msgid "This item does not record work."
 msgstr "Dieses Element erfasst keine Bearbeitungen."
 
-#: src/worker/web/content.tsx
-msgid "This item is archived. Unarchive it to return it to your library and to the assignment picker."
-msgstr ""
-
 #: src/worker/application/lti.ts
 msgid "This kind of LMS message is not supported."
 msgstr "Diese Art von LMS-Nachricht wird nicht unterstützt."
@@ -4267,10 +4271,13 @@ msgstr "Art"
 msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it."
 msgstr "Tragen Sie die Regel, die den jeweiligen Schluss rechtfertigt, in das Feld unter der Zeile ein. „Hypothese hinzufügen“ erzeugt ein Blatt, das von einer Regel darunter entlastet wird."
 
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Unarchive"
 msgstr "Aus dem Archiv holen"
+
+#: src/worker/web/content.tsx
+msgid "Unarchive {name}"
+msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Unarchive course"

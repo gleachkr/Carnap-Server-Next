@@ -578,6 +578,10 @@ msgstr ""
 msgid "Approve the autograded score as final"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Archive {name}"
+msgstr ""
+
 #: src/worker/web/courses.tsx
 msgid "Archive course"
 msgstr ""
@@ -597,10 +601,6 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Archived courses ({count})"
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Archiving folds this item out of your library and out of the assignment picker. Nothing is deleted: its revisions, the assignments set on them and any sharing stay as they are, and you can unarchive it later."
 msgstr ""
 
 #: src/worker/web/courses.tsx
@@ -1963,8 +1963,20 @@ msgstr ""
 msgid "Hidden"
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "Hidden from the list above and from new assignments; everything set on them still works."
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Hidden from your library and from new assignments."
+msgstr ""
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Hide grades"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Hides this item from your library and from new assignments. Nothing is deleted."
 msgstr ""
 
 #: src/worker/infrastructure/turnstile.ts
@@ -2059,10 +2071,6 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Item links must look like item:<content-item-id>."
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Items you have archived. They keep every revision, and the assignments set on them go on working; unarchive one to return it to the list above."
 msgstr ""
 
 #: src/worker/web/courses.tsx
@@ -4057,10 +4065,6 @@ msgstr ""
 msgid "This item does not record work."
 msgstr ""
 
-#: src/worker/web/content.tsx
-msgid "This item is archived. Unarchive it to return it to your library and to the assignment picker."
-msgstr ""
-
 #: src/worker/application/lti.ts
 msgid "This kind of LMS message is not supported."
 msgstr ""
@@ -4267,9 +4271,12 @@ msgstr ""
 msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it."
 msgstr ""
 
-#: src/worker/web/content.tsx
 #: src/worker/web/courses.tsx
 msgid "Unarchive"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Unarchive {name}"
 msgstr ""
 
 #: src/worker/web/courses.tsx
