@@ -1970,3 +1970,33 @@ a.score-uncounted {
     grid-template-columns: 1fr;
   }
 }
+
+/* On a phone the sheets run to the screen's edge. The shell gutter bottoms
+   out at 20px a side, which with the sheet's border puts text 37px in — on a
+   360px screen that is 12% of the width spent on framing, and it is what
+   tips the summary strip from two stats a row to one. So the gutter goes,
+   and with it the sheets' side borders and corners: a box whose sides are
+   the screen's sides is a band, and a band has no corners to round. What is
+   not a sheet — the breadcrumb, the profile prompt, a notice — keeps a 1rem
+   inset, which is the sheets' own inner padding at this width, so the
+   breadcrumb lines up with the text below it rather than sitting 17px off.
+   The navbar and app footer carry their own gutter and do not move. 480px
+   and not the 640px phone block above: between the two the gutter is wider
+   and the screen wider still, and full-width bands there read as a tablet
+   that has lost its margins. */
+@media (max-width: 480px) {
+  .page-shell {
+    padding-inline: 0;
+  }
+
+  .page-header,
+  .profile-prompt,
+  .page-content > .notice {
+    margin-inline: 1rem;
+  }
+
+  .page-content .sheet {
+    border-inline: 0;
+    border-radius: 0;
+  }
+}
