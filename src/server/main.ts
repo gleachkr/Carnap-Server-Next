@@ -7,7 +7,10 @@ import { createApp } from "../worker/app";
 import type { AppStores } from "../worker/application/stores";
 import type { Env } from "../worker/env";
 import type { AppBindings } from "../worker/http";
-import { openLibSqlStorage } from "../worker/infrastructure/database/libsql";
+import {
+  fileUrlPath,
+  openLibSqlStorage,
+} from "../worker/infrastructure/database/libsql";
 import { applyPendingMigrations } from "../worker/infrastructure/database/migrate";
 import { NOSNIFF_HEADER } from "../worker/middleware/security-headers";
 import { runGradePassback } from "../worker/passback";
@@ -61,13 +64,9 @@ function readEnv(): Env {
 
 /** libsql opens the file but will not create the directory holding it. */
 async function ensureDatabaseDirectory(url: string): Promise<void> {
-  if (!url.startsWith("file:")) {
-    return;
-  }
+  const path = fileUrlPath(url);
 
-  const path = url.slice("file:".length).replace(/^\/\//, "").split("?")[0];
-
-  if (path === undefined || path.length === 0) {
+  if (path === undefined) {
     return;
   }
 

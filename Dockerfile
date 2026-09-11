@@ -62,6 +62,20 @@ COPY src ./src
 # `.tsx` page fails to import `react/jsx-runtime` on the first request.
 COPY tsconfig.json ./
 
+# `COPY` preserves the build host's mode bits and assigns the files to root, so
+# a maintainer whose umask is tighter than 022 ships a tree that `USER bun`
+# cannot read: at 027 the copied directories arrive `750` and the files `640`,
+# which leaves uid 1000 in `other` with nothing. Every `RUN` above is root and
+# unaffected, so the build succeeds and the *container* fails, with an `EACCES`
+# on `src/server/main.ts` that reads like a corrupt image rather than a umask.
+#
+# `a+rX` and not `a+rx`: the capital adds execute to directories, which is what
+# makes them traversable, while leaving ordinary source files unexecutable.
+# `COPY --chown=bun:bun` would fix the same thing by the other route, and is the
+# one a rootless builder with no subuid ranges cannot take — the same constraint
+# the `/data` line below explains.
+RUN chmod -R a+rX package.json bun.lock src tsconfig.json
+
 # The database lives outside the image, on a volume, or every `podman run`
 # starts a fresh course catalog. `file:` needs the directory to exist and to be
 # writable by the user the process runs as.
