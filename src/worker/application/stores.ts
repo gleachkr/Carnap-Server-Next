@@ -89,6 +89,12 @@ export interface UserStore {
   getByEmail(email: string): Promise<User | null>;
   getById(id: AppId): Promise<User | null>;
   /**
+   * The users behind a list of ids, in no particular order: an id that names
+   * nobody is simply absent, and a repeated id comes back once. A list of any
+   * length is one call — the store slices it under the parameter cap.
+   */
+  listByIds(ids: readonly AppId[]): Promise<User[]>;
+  /**
    * Record proof of address ownership. Only ever sets a null
    * email_verified_at; returns null when the user is missing or the address
    * was already verified.

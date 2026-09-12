@@ -612,6 +612,12 @@ class SqliteUserStore implements UserStore {
     );
   }
 
+  async listByIds(ids: readonly AppId[]): Promise<User[]> {
+    return overSlices([...new Set(ids)], (slice) =>
+      this.db.select().from(users).where(inArray(users.id, slice)),
+    );
+  }
+
   async listExternalIdentitiesForUser(
     userId: AppId,
   ): Promise<ExternalIdentity[]> {

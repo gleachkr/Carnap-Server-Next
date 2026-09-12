@@ -210,6 +210,22 @@ export function describeStorageContract(
         await expect(stores.users.getByEmail(user.email)).resolves.toEqual(
           user,
         );
+
+        // A bulk read answers for the ids that exist, once each, and says
+        // nothing about the rest.
+        const other = await createUser(stores, "user-2");
+
+        expect(
+          (
+            await stores.users.listByIds([
+              other.id,
+              "user-missing",
+              user.id,
+              user.id,
+            ])
+          ).sort((left, right) => left.id.localeCompare(right.id)),
+        ).toEqual([user, other]);
+        await expect(stores.users.listByIds([])).resolves.toEqual([]);
         await expect(
           stores.users.getExternalIdentity("native", "ada@example.test"),
         ).resolves.toEqual(identity);

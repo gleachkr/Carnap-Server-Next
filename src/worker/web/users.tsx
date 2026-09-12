@@ -9,23 +9,20 @@ import { useI18n } from "./layout";
 /** A batch-resolved lookup from user id to the user record (or null if gone). */
 export type UserDirectory = ReadonlyMap<string, User | null>;
 
-/** Load the users behind a set of ids in one pass, de-duplicating first. */
+/**
+ * Load the users behind a set of ids in one read, however many there are.
+ * Every id asked for has an entry, null where the account is gone, so a
+ * caller can tell "unknown" from "not asked".
+ */
 export async function resolveUsers(
   context: Context<AppBindings>,
   ids: Iterable<string>,
 ): Promise<UserDirectory> {
-  const store = storesForContext(context).users;
   const uniqueIds = [...new Set(ids)];
-  const entries = await Promise.all(
-    uniqueIds.map(
-      async (id): Promise<readonly [string, User | null]> => [
-        id,
-        await store.getById(id),
-      ],
-    ),
-  );
+  const users = await storesForContext(context).users.listByIds(uniqueIds);
+  const byId = new Map(users.map((user) => [user.id, user]));
 
-  return new Map(entries);
+  return new Map(uniqueIds.map((id) => [id, byId.get(id) ?? null]));
 }
 
 function shortId(id: string): string {

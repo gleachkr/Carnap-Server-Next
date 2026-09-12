@@ -1377,7 +1377,13 @@ Choose yes.
       expect(await stores.scores.listAssignmentScores(first)).toHaveLength(1);
 
       // The gradebook reads the course a column at a time, so its count moves
-      // with the assignments — three statements each.
+      // with the assignments — three statements each — and not with the class.
+      const newcomer = await login(env, "count-newcomer@example.test");
+
+      await enrollStudent(env, instructor, newcomer, courseId);
+
+      expect(await gradebook()).toBe(gradebookBaseline);
+
       await createPublishedAssignment(env, instructor, courseId, revisionId);
 
       expect(await gradebook()).toBe(gradebookBaseline + 3);

@@ -1093,22 +1093,18 @@ export class GradebookService {
   private async activeStudents(courseId: AppId): Promise<User[]> {
     const memberships =
       await this.options.stores.courses.listMembershipsForCourse(courseId);
-    const users = await Promise.all(
+    const users = await this.options.stores.users.listByIds(
       memberships
         .filter(
           (membership) =>
             membership.role === "student" && membership.status === "active",
         )
-        .map((membership) =>
-          this.options.stores.users.getById(membership.userId),
-        ),
+        .map((membership) => membership.userId),
     );
 
-    return users
-      .filter((user): user is User => user !== null)
-      .sort((left, right) =>
-        userSortKey(left).localeCompare(userSortKey(right)),
-      );
+    return users.sort((left, right) =>
+      userSortKey(left).localeCompare(userSortKey(right)),
+    );
   }
 
   /**
