@@ -134,6 +134,26 @@ Scores are projections over append-only history: submissions, automatic
 evaluations, manual evaluations, voiding records, policy decisions, and release
 settings.
 
-Refreshing a score should be deterministic and idempotent. Recalculation may
-produce the same projection again, but it should not rewrite the historical
-evidence that explains how the score was derived.
+Every score a person is shown — a student's scorecard, the gradebooks, the
+CSV exports — is that projection computed at the moment of reading, from the
+live rows, in a fixed number of statements however much work there is
+(`GradebookService` reads a scope's attempts, submissions and evaluations in
+bulk and sums in memory). There is no stored number a page shows; there is
+nothing that could disagree with the rows.
+
+The `assignment_scores` table is not that number. It is the grade-passback
+ledger: what each student's score last evaluated to, kept so that a change can
+be told from a repeat (an LMS must not be sent the same score twice) and so
+that deliveries can be ordered by data recency. It is written only by the
+paths that change what a score evaluates to — a submission, a hand-written
+grade, and an instructor's excuse, override, repoint, attempt reset, late
+policy or accommodation — and never by a page view. A path that neglected to
+write it would delay an LMS sync until the next one did; it could not put a
+wrong number in front of anyone. The table holds rows for students who have
+submitted, since the submission writes the first one, and a student who never
+has is "not started" or "missing" whatever else changes, neither of which is
+a score passback sends unprompted.
+
+Refreshing the ledger should be deterministic and idempotent. Recalculation
+may produce the same projection again, but it should not rewrite the
+historical evidence that explains how the score was derived.

@@ -568,8 +568,11 @@ describe("LTI grade passback", () => {
 
       expect(job?.id).toBe(pending[0]?.id);
 
-      // A gradebook view recomputes scores; an unchanged score must not
-      // re-queue a send.
+      // A gradebook view computes what it shows from the live rows and
+      // writes nothing, so it cannot queue a send. An instructor's change
+      // that leaves the score where it was — an override that moves nothing
+      // that matters — recomputes the ledger row and must not re-queue one
+      // either.
       const gradebookResponse = await appRequest(
         createTestApp(),
         `/courses/${courseId}/instructor/gradebook`,
@@ -580,6 +583,15 @@ describe("LTI grade passback", () => {
       );
 
       expect(gradebookResponse.status).toBe(200);
+
+      const overrideResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/overrides`,
+        jsonRequest({ maxAttempts: 5, userId: linked.actorId }, instructor),
+        env,
+      );
+
+      expect(overrideResponse.status).toBe(200);
       await expect(
         stores.lti.listGradeJobsForCourse(courseId, "pending"),
       ).resolves.toEqual([]);
@@ -1343,11 +1355,17 @@ describe("LTI grade passback", () => {
       });
 
       await linkStudentToLms(stores, platform, student.actorId, "sub-1");
-      await beginAttempt(env, student, courseId, assignmentId);
 
-      // The gradebook view recomputes a "missing" zero for the opened
-      // attempt, but pushing it would render a real grade for a student who
-      // only peeked.
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignmentId,
+      );
+
+      // The gradebook shows a "missing" zero for the opened attempt, computed
+      // for the page and recorded nowhere: the ledger only learns of a
+      // student from a write path, and opening an attempt is not one.
       const gradebookResponse = await appRequest(
         createTestApp(),
         `/courses/${courseId}/instructor/gradebook`,
@@ -1356,8 +1374,27 @@ describe("LTI grade passback", () => {
         },
         env,
       );
+      const gradebook = (await gradebookResponse.json()) as {
+        rows: { scores: { status: string }[] }[];
+      };
 
       expect(gradebookResponse.status).toBe(200);
+      expect(gradebook.rows[0]?.scores[0]?.status).toBe("missing");
+      await expect(
+        stores.scores.getAssignmentScore(assignmentId, student.actorId),
+      ).resolves.toBeNull();
+
+      // A reset does write the ledger — it is a correction path — and what
+      // it records is the same "missing" zero. Pushing that would render a
+      // real grade for a student who only peeked, so nothing is queued.
+      const resetResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/attempts/${attemptId}/reset`,
+        { headers: authHeaders(instructor), method: "POST" },
+        env,
+      );
+
+      expect(resetResponse.status).toBe(200);
       await expect(
         stores.scores.getAssignmentScore(assignmentId, student.actorId),
       ).resolves.toMatchObject({ status: "missing" });

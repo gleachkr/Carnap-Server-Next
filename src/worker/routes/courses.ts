@@ -16,6 +16,7 @@ import {
 import { timestampNow } from "../domain/time";
 import { type AppBindings, publicRequestUrl } from "../http";
 import type { Translator } from "../i18n/translator";
+import { kickGradePassback } from "../passback";
 import { storesForContext } from "../stores";
 import type { CourseView } from "../web/components";
 import {
@@ -849,6 +850,25 @@ courseRoutes.post("/:courseId/staff", async (context) => {
   return context.json({ membership: publicMembership(membership) }, 201);
 });
 
+/**
+ * An accommodation moves a student's due dates on every graded assignment in
+ * the course, and with them any late penalty — so the grade-passback ledger
+ * is recomputed for that student across the course, the way an instructor's
+ * change to one assignment recomputes it there (`routes/assignments.ts`).
+ * The pages need nothing: they compute from the live rows.
+ */
+async function refreshScoresAfterAccommodationChange(
+  context: Context<AppBindings>,
+  courseId: string,
+  userId: string,
+): Promise<void> {
+  await gradebookService(context).refreshCourseScoresForUser(
+    courseId,
+    userId,
+  );
+  kickGradePassback(context);
+}
+
 async function upsertAccommodationFromForm(
   context: Context<AppBindings>,
 ): Promise<Response> {
@@ -859,10 +879,16 @@ async function upsertAccommodationFromForm(
     const command = accommodationCommandFromForm(
       await context.req.raw.formData(),
     );
-    await courseService(context).upsertAccommodation(
+    const accommodation = await courseService(context).upsertAccommodation(
       actor,
       courseId,
       command,
+    );
+
+    await refreshScoresAfterAccommodationChange(
+      context,
+      courseId,
+      accommodation.userId,
     );
 
     return redirect(`/courses/${courseId}?accommodationSaved=1`);
@@ -895,6 +921,12 @@ courseRoutes.post("/:courseId/accommodations", async (context) => {
     actor,
     courseId,
     command,
+  );
+
+  await refreshScoresAfterAccommodationChange(
+    context,
+    courseId,
+    accommodation.userId,
   );
 
   return context.json({ accommodation: publicAccommodation(accommodation) });

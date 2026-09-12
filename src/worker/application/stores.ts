@@ -4,7 +4,13 @@ import type {
   PlatformCapability,
   PlatformCapabilityGrant,
 } from "../domain/admin";
-import type { Attempt, Evaluation, Submission } from "../domain/assessment";
+import type {
+  Attempt,
+  Evaluation,
+  EvaluationForScoring,
+  Submission,
+  SubmissionForScoring,
+} from "../domain/assessment";
 import type {
   Assignment,
   AssignmentContentVersion,
@@ -390,6 +396,47 @@ export interface UpdateContentRevisionSharingInput {
   readonly shareSource: boolean;
 }
 
+/**
+ * Which work a bulk scoring read covers: these assignments, for one student or
+ * for every student. A student's scorecard is (their course's assignments,
+ * them); a gradebook is (its assignments, everyone). Every scoring read takes
+ * the same scope, so the attempts, submissions and evaluations it returns are
+ * the rows of one another and the arithmetic can join them in memory.
+ *
+ * The assignment list is the one unbounded input — a course may have a
+ * hundred — and D1 caps a statement at 100 bound parameters, so a store slices
+ * the list and runs the statement per slice. Callers see one list.
+ */
+export interface ScoringScope {
+  readonly assignmentIds: readonly AppId[];
+  /** One student, or every student when absent. */
+  readonly userId?: AppId | undefined;
+}
+
+/**
+ * One manifest entry's worth, read out of a stored artifact by SQL without
+ * the rest of the artifact around it.
+ *
+ * The values come back as the database typed them and are deliberately
+ * `unknown`: this is a second way of reading `compiled_json` beside the
+ * validating parse in `application/content/artifact.ts`, and the checks that
+ * make the parse trustworthy are applied there (`parseManifestPoints`), not
+ * duplicated in a driver. A revision comes back as one row per manifest item,
+ * or as a single row with a null `position` when its manifest is empty or is
+ * not an array at all (`manifestType` says which); a revision that does not
+ * exist comes back as no rows.
+ */
+export interface ManifestPointsRow {
+  readonly revisionId: AppId;
+  /** SQLite's `json_type` of the manifest — `"array"` when there is one. */
+  readonly manifestType: string | null;
+  /** Index in the manifest, or null for the placeholder row of an empty one. */
+  readonly position: number | null;
+  readonly exerciseId: unknown;
+  readonly nominalPoints: unknown;
+  readonly title: unknown;
+}
+
 export interface ContentStore {
   createItem(input: CreateContentItemInput): Promise<ContentItem>;
   getItem(id: AppId): Promise<ContentItem | null>;
@@ -409,6 +456,15 @@ export interface ContentStore {
   ): Promise<ContentItem | null>;
   createRevision(input: CreateContentRevisionInput): Promise<ContentRevision>;
   getRevision(id: AppId): Promise<ContentRevision | null>;
+  /**
+   * The manifest's id, points and title for each of these revisions, without
+   * reading the artifacts themselves — a course's worth of lessons can run to
+   * a megabyte, and a gradebook needs three fields of it. See
+   * {@link ManifestPointsRow} for the shape and where it is validated.
+   */
+  listManifestPoints(
+    revisionIds: readonly AppId[],
+  ): Promise<ManifestPointsRow[]>;
   /**
    * Set who may read a revision. Both fields together, because they are one
    * decision made on one form and a partial update would let the pair drift.
@@ -584,7 +640,17 @@ export interface AssignmentStore {
   listExerciseExcuses(
     assignmentId: AppId,
   ): Promise<AssignmentExerciseExcuse[]>;
+  /** The same over several assignments, in the same order within each. */
+  listExerciseExcusesForAssignments(
+    assignmentIds: readonly AppId[],
+  ): Promise<AssignmentExerciseExcuse[]>;
   listForCourse(courseId: AppId): Promise<Assignment[]>;
+  /** Every late policy any of these assignments has. */
+  listLatePolicies(
+    assignmentIds: readonly AppId[],
+  ): Promise<AssignmentLatePolicy[]>;
+  /** Every override in a scoring scope: these assignments, one or all users. */
+  listOverridesForScoring(scope: ScoringScope): Promise<AssignmentOverride[]>;
   upsertLatePolicy(
     input: UpsertLatePolicyInput,
   ): Promise<AssignmentLatePolicy>;
@@ -660,6 +726,18 @@ export interface UpsertAssignmentScoreInput {
   readonly calculatedAt: Timestamp;
 }
 
+/**
+ * The grade-passback ledger — not the scores anyone is shown.
+ *
+ * Every displayed score is computed from the live rows at read time
+ * (`GradebookService`). This table records what each student's score last
+ * *evaluated to*, so that a change can be told from a repeat before an LMS
+ * is sent anything, and so that deliveries order by `calculatedAt`. It is
+ * written by the paths that change a score and read by grade passback; a
+ * page never writes it, and a write path that missed it would delay an LMS
+ * sync, not misreport a grade. See `docs/grading-model.md`, "Score
+ * projections".
+ */
 export interface ScoreStore {
   getAssignmentScore(
     assignmentId: AppId,
@@ -693,6 +771,28 @@ export interface AssessmentStore {
     assignmentId: AppId,
     userId: AppId,
   ): Promise<Attempt[]>;
+  /**
+   * The three bulk reads a score is summed from, over one {@link ScoringScope}:
+   * every attempt in it (voided ones included — the arithmetic drops them,
+   * and it is the arithmetic that says what a void means), every submission
+   * of those attempts, and every evaluation of those submissions. Within an
+   * assignment each list is ordered as its per-row counterpart above orders
+   * — attempts by ordinal, submissions by (submittedAt, id), evaluations by
+   * (createdAt, id) — and across assignments it is not ordered at all, since
+   * a scope wider than one statement comes back a slice at a time.
+   */
+  listAttemptsForScoring(scope: ScoringScope): Promise<Attempt[]>;
+  listSubmissionsForScoring(
+    scope: ScoringScope,
+  ): Promise<SubmissionForScoring[]>;
+  listEvaluationsForScoring(
+    scope: ScoringScope,
+  ): Promise<EvaluationForScoring[]>;
+  /**
+   * Whether any live evaluation stands on any live attempt of the assignment
+   * — the cheapest true answer to "has anyone's work been graded yet".
+   */
+  hasEvaluatedWork(assignmentId: AppId): Promise<boolean>;
   resetAttempt(input: ResetAttemptInput): Promise<{
     readonly newAttempt: Attempt;
     readonly voidedAttempt: Attempt;

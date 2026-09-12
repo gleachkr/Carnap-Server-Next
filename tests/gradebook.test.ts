@@ -1,9 +1,14 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
+import {
+  contentArtifactFromRevision,
+  parseManifestPoints,
+} from "../src/worker/application/content/artifact";
 import { timestampNow } from "../src/worker/domain/time";
 import type { Env } from "../src/worker/env";
 import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
+import { SHOWCASE_DEMO_SOURCE } from "./helpers/showcase-demo";
 import { createTestStorage, type TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
@@ -254,7 +259,9 @@ async function createRevision(
   );
   const revision = (await revisionResponse.json()) as ContentRevisionResponse;
 
-  expect(revisionResponse.status).toBe(201);
+  if (revisionResponse.status !== 201) {
+    throw new Error(`Revision not created: ${JSON.stringify(revision)}`);
+  }
 
   return revision.revision.id;
 }
@@ -537,11 +544,16 @@ describe("gradebook", () => {
         courseGradebook.rows.map((row) => row.scores[0]?.status),
       ).toEqual(["complete", "partial", "not-started"]);
 
-      const refreshedScoreCount = await db
-        .prepare("SELECT COUNT(1) AS count FROM assignment_scores")
-        .first<{ count: number }>();
+      // The passback ledger holds a row per student who has submitted — the
+      // submission wrote it — and a gradebook view adds nothing: the student
+      // who never started has no row, and the pages just read did not make
+      // one. What the pages showed for that student came from the live rows.
+      const ledgerQuery =
+        "SELECT user_id, score, status, calculated_at FROM assignment_scores " +
+        "ORDER BY user_id";
+      const ledgerBefore = await db.prepare(ledgerQuery).all();
 
-      expect(refreshedScoreCount?.count).toBe(3);
+      expect(ledgerBefore.results).toHaveLength(2);
 
       const firstGradebookResponse = await appRequest(
         createTestApp(),
@@ -577,11 +589,10 @@ describe("gradebook", () => {
         env,
       );
 
-      const scoreCount = await db
-        .prepare("SELECT COUNT(1) AS count FROM assignment_scores")
-        .first<{ count: number }>();
-
-      expect(scoreCount?.count).toBe(3);
+      // Not even a re-stamp: reading is not writing.
+      await expect(db.prepare(ledgerQuery).all()).resolves.toMatchObject({
+        results: ledgerBefore.results,
+      });
 
       await db
         .prepare("UPDATE assignments SET grades_visible_at = ? WHERE id = ?")
@@ -1223,6 +1234,265 @@ Choose yes.
 
       expect(releasedResultsHtml).toContain("Attempt 1");
       expect(releasedResultsHtml).toContain("q1");
+    });
+  });
+
+  test("a student's page reads a fixed number of statements, however much work", async () => {
+    await withStorage(async ({ db, stores }, env) => {
+      const instructor = await login(env, "count-teacher@example.test");
+      const student = await login(env, "count-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Lesson\n\n${question("q1", 2)}\n\n${question("q2", 3)}`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      // The same database, counting every statement the page runs.
+      let statements = 0;
+      const counting = new Proxy(db, {
+        get(target, property) {
+          const value: unknown = Reflect.get(target, property, target);
+
+          if (property === "prepare") {
+            return (...args: unknown[]) => {
+              statements += 1;
+
+              return (value as (...args: unknown[]) => unknown).apply(
+                target,
+                args,
+              );
+            };
+          }
+
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }) as D1Database;
+      const countingEnv: Env = { CARNAP_ENV: "local", DB: counting };
+      const studentPage = async () => {
+        statements = 0;
+
+        const response = await appRequest(
+          createTestApp(),
+          `/courses/${courseId}`,
+          { headers: { Accept: "text/html", Cookie: student.cookieHeader } },
+          countingEnv,
+        );
+
+        expect(response.status).toBe(200);
+
+        return statements;
+      };
+      const ledger = () =>
+        db
+          .prepare(
+            "SELECT assignment_id, user_id, score, status, calculated_at " +
+              "FROM assignment_scores ORDER BY assignment_id, user_id",
+          )
+          .all();
+
+      const first = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const firstAttempt = await beginAttempt(env, student, courseId, first);
+
+      await submitAnswer(env, student, courseId, first, firstAttempt, [
+        "yes",
+      ]);
+
+      const baseline = await studentPage();
+      const ledgerBefore = await ledger();
+
+      // Two more submissions, and a second assignment with an attempt and a
+      // submission of its own. The walk this replaced cost a statement per
+      // attempt and three per submission.
+      await submitAnswer(env, student, courseId, first, firstAttempt, ["no"]);
+      await submitAnswer(
+        env,
+        student,
+        courseId,
+        first,
+        firstAttempt,
+        ["yes"],
+        "q2",
+      );
+
+      const second = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const attempt = await beginAttempt(env, student, courseId, second);
+
+      await submitAnswer(env, student, courseId, second, attempt, ["yes"]);
+
+      const ledgerAfterWork = await ledger();
+
+      expect(ledgerAfterWork.results).toHaveLength(2);
+      expect(ledgerAfterWork.results).not.toEqual(ledgerBefore.results);
+
+      // The count is the property; the exact figure is pinned so a query
+      // slipping back into a per-row loop shows up as a number, not a
+      // feeling. The page as a whole is a little over a dozen statements —
+      // session, user, course, membership, the assignment list, the
+      // student's adjustments, and the eight reads of the scorecard.
+      expect(await studentPage()).toBe(baseline);
+      expect(baseline).toBeLessThanOrEqual(24);
+
+      // And a page view is a read: the ledger is exactly as the submissions
+      // left it.
+      await expect(ledger()).resolves.toMatchObject({
+        results: ledgerAfterWork.results,
+      });
+
+      // The instructor's course gradebook, same property.
+      const gradebook = async () => {
+        statements = 0;
+
+        const response = await appRequest(
+          createTestApp(),
+          `/courses/${courseId}/instructor/gradebook`,
+          { headers: { Cookie: instructor.cookieHeader } },
+          countingEnv,
+        );
+
+        expect(response.status).toBe(200);
+
+        return statements;
+      };
+      const gradebookBaseline = await gradebook();
+
+      await submitAnswer(env, student, courseId, second, attempt, ["no"]);
+      await submitAnswer(env, student, courseId, first, firstAttempt, [
+        "yes",
+      ]);
+
+      expect(await gradebook()).toBe(gradebookBaseline);
+      expect(await stores.scores.listAssignmentScores(first)).toHaveLength(1);
+    });
+  });
+
+  test("the points projected out of an artifact are the points its parse reads", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const instructor = await login(env, "points-teacher@example.test");
+
+      await createCourse(env, instructor);
+
+      const revisionIds = [
+        await createRevision(env, instructor),
+        await createRevision(
+          env,
+          instructor,
+          `# Titled\n\n${question("q1", 1.5, "A comma, in the title")}`,
+        ),
+        await createRevision(env, instructor, SHOWCASE_DEMO_SOURCE),
+      ];
+      const projected = parseManifestPoints(
+        await stores.content.listManifestPoints(revisionIds),
+      );
+
+      for (const revisionId of revisionIds) {
+        const revision = await stores.content.getRevision(revisionId);
+
+        if (revision === null) {
+          throw new Error("Expected the revision to exist.");
+        }
+
+        const parsed = contentArtifactFromRevision(revision).manifest.map(
+          (item) => ({
+            id: item.id,
+            nominalPoints: item.nominalPoints,
+            title: item.title ?? null,
+          }),
+        );
+
+        expect(parsed.length).toBeGreaterThan(0);
+        expect(projected.get(revisionId)).toEqual(parsed);
+      }
+    });
+  });
+
+  test("an accommodation rewrites the ledger, like any other change to a score", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const instructor = await login(env, "extend-teacher@example.test");
+      const student = await login(env, "extend-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      // Due an hour ago, with a flat late penalty: the submission below
+      // lands late and scores half.
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+        { dueAt: new Date(Date.now() - 3_600_000).toISOString() },
+      );
+      const policyResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/late-policy`,
+        jsonRequest(
+          {
+            graceMinutes: 0,
+            kind: "percent_once_after_due",
+            maxPercentPenalty: 50,
+            percentPenalty: 50,
+          },
+          instructor,
+        ),
+        env,
+      );
+
+      expect(policyResponse.status).toBe(200);
+
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignmentId,
+      );
+
+      expect(
+        (
+          await submitAnswer(
+            env,
+            student,
+            courseId,
+            assignmentId,
+            attemptId,
+            ["yes"],
+          )
+        ).status,
+      ).toBe(201);
+      await expect(
+        stores.scores.getAssignmentScore(assignmentId, student.actorId),
+      ).resolves.toMatchObject({ maxScore: 2, score: 1 });
+
+      // A day's extension puts the submission back inside the due date. The
+      // ledger row is recomputed by the accommodation itself — the LMS is
+      // owed the corrected score now, not when someone next opens a page.
+      const accommodationResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/accommodations`,
+        jsonRequest(
+          { dueAtExtensionMinutes: 24 * 60, userId: student.actorId },
+          instructor,
+        ),
+        env,
+      );
+
+      expect(accommodationResponse.status).toBe(200);
+      await expect(
+        stores.scores.getAssignmentScore(assignmentId, student.actorId),
+      ).resolves.toMatchObject({ maxScore: 2, score: 2 });
     });
   });
 

@@ -1158,11 +1158,17 @@ async function upsertLatePolicy(
 
 /**
  * Instructor actions that change what a score *evaluates to* (excuses,
- * overrides, repoints, attempt resets) recompute the stored rows right away,
- * so the change reaches any linked LMS gradebook now — not whenever someone
- * next opens an Carnap gradebook view. `userId` narrows the recompute where
- * the action touched one student. Scoped to graded assignments: they are the
- * only ones with passback, and other modes keep their lazy refresh.
+ * overrides, repoints, attempt resets, late policies) recompute the
+ * grade-passback ledger right away, so the change reaches any linked LMS
+ * gradebook now. What Carnap itself shows needs no such step — every page
+ * computes from the live rows — so this is scoped to graded assignments, the
+ * only ones with passback. `userId` narrows the recompute where the action
+ * touched one student.
+ *
+ * Without one, the students refreshed are those with a ledger row: everyone
+ * who has ever submitted, since a submission writes its row. A student who
+ * has not is at "not started" or "missing" whatever the instructor changes,
+ * and neither is a score `planGradeJob` would send as a fresh value.
  */
 async function refreshScoresAfterInstructorChange(
   context: Context<AppBindings>,
@@ -1181,10 +1187,9 @@ async function refreshScoresAfterInstructorChange(
   if (userId === undefined) {
     const scores = await stores.scores.listAssignmentScores(assignment.id);
 
-    await Promise.all(
-      scores.map((score) =>
-        gradebook.refreshStudentAssignmentScore(assignment, score.userId),
-      ),
+    await gradebook.refreshAssignmentScoresForUsers(
+      assignment,
+      scores.map((score) => score.userId),
     );
   } else {
     await gradebook.refreshStudentAssignmentScore(assignment, userId);
@@ -1790,18 +1795,15 @@ async function instructorDetailPage(
   // earlier, and the sheet would claim there was no late penalty when there
   // was one.
   const latePolicy = await assignments.getLatePolicy(detail.assignment.id);
-  // Whether any recorded evaluation already counts toward a score: partial
-  // and complete are the two statuses summed from evaluations, and they are
-  // what the correction form's advisory is about. A draft has none.
+  // Whether any evaluation already stands on a student's work — what the
+  // correction form's advisory is about, read from the evaluations
+  // themselves rather than from the passback ledger, which records only
+  // what an LMS was last told. A draft has none.
   const gradedWorkExists =
     detail.assignment.state === "published" &&
-    (
-      await storesForContext(context).scores.listAssignmentScores(
-        detail.assignment.id,
-      )
-    ).some(
-      (score) => score.status === "partial" || score.status === "complete",
-    );
+    (await storesForContext(context).assessment.hasEvaluatedWork(
+      detail.assignment.id,
+    ));
 
   return renderInstructorAssignmentPage(context, {
     courseId,

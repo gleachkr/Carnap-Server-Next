@@ -2,11 +2,13 @@ import type {
   CompiledContentArtifact,
   ContentRevision,
 } from "../../domain/content";
+import type { AppId } from "../../domain/ids";
 import type { JsonValue } from "../../domain/json";
 import { withSystemSources } from "../../exercises/systems";
 import { deferred } from "../../i18n/deferred";
 import type { Translator } from "../../i18n/translator";
 import { AppHttpError } from "../errors";
+import type { ManifestPointsRow } from "../stores";
 import type { CompiledTheoryArtifact } from "./mm0";
 
 /**
@@ -52,6 +54,104 @@ function unreadable(revisionId: string, defect: string): never {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** What a score needs of a manifest item: its identity, its worth, its name. */
+export interface ManifestPoints {
+  readonly id: string;
+  readonly nominalPoints: number;
+  readonly title: string | null;
+}
+
+/**
+ * The checks on a manifest item that a score depends on, in one place so
+ * that the two ways of reading a manifest — the whole-artifact parse below
+ * and the SQL projection {@link parseManifestPoints} reads — cannot come to
+ * accept different items. `at` is the item's index, for the diagnosis.
+ */
+function manifestPoints(
+  revisionId: string,
+  at: number,
+  item: {
+    readonly id: unknown;
+    readonly nominalPoints: unknown;
+    readonly title: unknown;
+  },
+): ManifestPoints {
+  if (typeof item.id !== "string") {
+    unreadable(revisionId, `manifest item ${at} has no string \`id\``);
+  }
+
+  // Not decoration: this number is summed into the `scoreMaximum` of the
+  // gradebook column an LMS creates from a deep link, and into the
+  // denominator every score is reported against. A missing one read as zero
+  // for a while, which is indistinguishable from an ungraded exercise.
+  if (
+    typeof item.nominalPoints !== "number" ||
+    !Number.isFinite(item.nominalPoints)
+  ) {
+    unreadable(
+      revisionId,
+      `manifest item "${item.id}" has no numeric \`nominalPoints\``,
+    );
+  }
+
+  return {
+    id: item.id,
+    nominalPoints: item.nominalPoints,
+    title: typeof item.title === "string" ? item.title : null,
+  };
+}
+
+/**
+ * Each revision's manifest points, from the rows `ContentStore.listManifestPoints`
+ * projects out of the stored artifacts — keyed by revision id, in manifest
+ * order. A revision the store returned no rows for is absent, and it is the
+ * caller's to say whether that is a missing revision.
+ *
+ * This is the one read of `compiled_json` that does not go through
+ * {@link parseContentArtifact}, and it exists because a gradebook needs three
+ * fields of every lesson in a course and the artifacts run to a megabyte. It
+ * is held to the parse's standard the same way: the manifest must be an array
+ * and every item must pass {@link manifestPoints}, or the revision is reported
+ * unreadable by name, exactly as the parse would report it.
+ */
+export function parseManifestPoints(
+  rows: readonly ManifestPointsRow[],
+): Map<AppId, ManifestPoints[]> {
+  const byRevision = new Map<AppId, { at: number; item: ManifestPoints }[]>();
+
+  for (const row of rows) {
+    if (row.manifestType !== "array") {
+      unreadable(row.revisionId, "`manifest` is missing or is not an array");
+    }
+
+    const items = byRevision.get(row.revisionId) ?? [];
+
+    byRevision.set(row.revisionId, items);
+
+    // The placeholder row of an empty manifest: the revision exists and has
+    // no exercises, which is a lesson of prose and a legitimate thing to be.
+    if (row.position === null) {
+      continue;
+    }
+
+    items.push({
+      at: row.position,
+      item: manifestPoints(row.revisionId, row.position, {
+        id: row.exerciseId,
+        nominalPoints: row.nominalPoints,
+        title: row.title,
+      }),
+    });
+  }
+
+  return new Map(
+    [...byRevision].map(([revisionId, items]) => [
+      revisionId,
+      items.sort((left, right) => left.at - right.at).map(({ item }) => item),
+    ]),
+  );
 }
 
 function describe(value: unknown): string {
@@ -100,22 +200,17 @@ export function parseContentArtifact(
   const declared = new Set<string>();
 
   for (const [at, item] of manifest.entries()) {
-    if (!isObject(item) || typeof item.id !== "string") {
+    if (!isObject(item)) {
       unreadable(revisionId, `manifest item ${at} has no string \`id\``);
     }
 
-    // Not decoration: this number is summed into the `scoreMaximum` of the
-    // gradebook column an LMS creates from a deep link, and into the
-    // denominator every score is reported against. A missing one read as zero
-    // for a while, which is indistinguishable from an ungraded exercise.
-    if (!Number.isFinite(item.nominalPoints)) {
-      unreadable(
-        revisionId,
-        `manifest item "${item.id}" has no numeric \`nominalPoints\``,
-      );
-    }
-
-    declared.add(item.id);
+    declared.add(
+      manifestPoints(revisionId, at, {
+        id: item.id,
+        nominalPoints: item.nominalPoints,
+        title: item.title,
+      }).id,
+    );
   }
 
   for (const [at, node] of document.nodes.entries()) {

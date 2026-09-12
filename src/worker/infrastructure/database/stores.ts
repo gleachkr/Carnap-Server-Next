@@ -54,6 +54,7 @@ import type {
   FailLtiGradeJobInput,
   GrantPlatformCapabilityInput,
   LtiStore,
+  ManifestPointsRow,
   PlatformCapabilityStore,
   PublishAssignmentInput,
   RecordLoginRateLimitHitInput,
@@ -62,6 +63,7 @@ import type {
   RevokeEnrollmentLinkInput,
   RevokePlatformCapabilityInput,
   ScoreStore,
+  ScoringScope,
   SetContentItemArchivedInput,
   SetCourseArchivedInput,
   SetGradesVisibleAtInput,
@@ -88,7 +90,9 @@ import type {
 import type {
   Attempt,
   Evaluation,
+  EvaluationForScoring,
   Submission,
+  SubmissionForScoring,
 } from "../../domain/assessment";
 import type {
   Assignment,
@@ -166,6 +170,32 @@ function single<T>(rows: readonly T[]): T {
 
 function nullableSingle<T>(rows: readonly T[]): T | null {
   return rows[0] ?? null;
+}
+
+/**
+ * How many ids an `IN (...)` list may carry per statement. D1 caps a statement
+ * at 100 bound parameters; half that leaves room for the scope's other
+ * parameters and for any statement that binds the list twice.
+ */
+const IN_LIST_SLICE = 50;
+
+/**
+ * Run a statement once per slice of an id list and hand back one result, so
+ * a caller with a course's worth of assignment ids never has to know the
+ * cap exists. An empty list runs nothing — `inArray` over nothing is not a
+ * query either driver will take.
+ */
+async function overSlices<T>(
+  ids: readonly AppId[],
+  run: (slice: readonly AppId[]) => Promise<T[]>,
+): Promise<T[]> {
+  const rows: T[] = [];
+
+  for (let at = 0; at < ids.length; at += IN_LIST_SLICE) {
+    rows.push(...(await run(ids.slice(at, at + IN_LIST_SLICE))));
+  }
+
+  return rows;
 }
 
 function mapContentRevision(row: typeof contentRevisions.$inferSelect) {
@@ -1267,6 +1297,46 @@ class SqliteContentStore implements ContentStore {
     return row === null ? null : mapContentRevision(row);
   }
 
+  /**
+   * Hand-written because the query builder has no table-valued functions:
+   * `json_each` unrolls the manifest array inside the database, so what
+   * crosses the wire is three fields per exercise rather than the artifact.
+   * The LEFT JOIN is what keeps a revision with an empty manifest visible —
+   * an inner join would make it indistinguishable from one that does not
+   * exist — and `json_type` is what tells "empty" from "not an array".
+   */
+  async listManifestPoints(
+    revisionIds: readonly AppId[],
+  ): Promise<ManifestPointsRow[]> {
+    return overSlices(revisionIds, async (slice) => {
+      const rows = await this.db.all<Record<string, unknown>>(sql`
+        SELECT
+          r.id AS revision_id,
+          json_type(r.compiled_json, '$.manifest') AS manifest_type,
+          e.key AS position,
+          json_extract(e.value, '$.id') AS exercise_id,
+          json_extract(e.value, '$.nominalPoints') AS nominal_points,
+          json_extract(e.value, '$.title') AS title
+        FROM content_revisions r
+        LEFT JOIN json_each(r.compiled_json, '$.manifest') e
+        WHERE r.id IN (${sql.join(
+          slice.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+        ORDER BY r.id, e.key`);
+
+      return rows.map((row) => ({
+        revisionId: String(row.revision_id),
+        manifestType:
+          row.manifest_type === null ? null : String(row.manifest_type),
+        position: typeof row.position === "number" ? row.position : null,
+        exerciseId: row.exercise_id,
+        nominalPoints: row.nominal_points,
+        title: row.title,
+      }));
+    });
+  }
+
   async updateRevisionSharing(
     input: UpdateContentRevisionSharingInput,
   ): Promise<ContentRevision> {
@@ -1471,6 +1541,62 @@ class SqliteAssignmentStore implements AssignmentStore {
       );
 
     return rows.map(mapAssignmentExerciseExcuse);
+  }
+
+  async listExerciseExcusesForAssignments(
+    assignmentIds: readonly AppId[],
+  ): Promise<AssignmentExerciseExcuse[]> {
+    return overSlices(assignmentIds, async (slice) => {
+      const rows = await this.db
+        .select()
+        .from(assignmentExerciseExcuses)
+        .where(inArray(assignmentExerciseExcuses.assignmentId, slice))
+        .orderBy(
+          asc(assignmentExerciseExcuses.assignmentId),
+          asc(assignmentExerciseExcuses.createdAt),
+          asc(assignmentExerciseExcuses.id),
+        );
+
+      return rows.map(mapAssignmentExerciseExcuse);
+    });
+  }
+
+  async listLatePolicies(
+    assignmentIds: readonly AppId[],
+  ): Promise<AssignmentLatePolicy[]> {
+    return overSlices(assignmentIds, async (slice) => {
+      const rows = await this.db
+        .select()
+        .from(assignmentLatePolicies)
+        .where(inArray(assignmentLatePolicies.assignmentId, slice))
+        .orderBy(asc(assignmentLatePolicies.assignmentId));
+
+      return rows.map(mapAssignmentLatePolicy);
+    });
+  }
+
+  async listOverridesForScoring(
+    scope: ScoringScope,
+  ): Promise<AssignmentOverride[]> {
+    return overSlices(scope.assignmentIds, async (slice) => {
+      const rows = await this.db
+        .select()
+        .from(assignmentOverrides)
+        .where(
+          and(
+            inArray(assignmentOverrides.assignmentId, slice),
+            scope.userId === undefined
+              ? undefined
+              : eq(assignmentOverrides.userId, scope.userId),
+          ),
+        )
+        .orderBy(
+          asc(assignmentOverrides.assignmentId),
+          asc(assignmentOverrides.userId),
+        );
+
+      return rows.map(mapAssignmentOverride);
+    });
   }
 
   async listForCourse(courseId: AppId): Promise<Assignment[]> {
@@ -2018,6 +2144,102 @@ class SqliteAssessmentStore implements AssessmentStore {
       .orderBy(asc(evaluations.createdAt), asc(evaluations.id));
 
     return rows.map(mapEvaluation);
+  }
+
+  /**
+   * The scope's student filter, on the attempt: submissions and evaluations
+   * reach it through their attempt, which is the row that says whose work
+   * and for which assignment it is.
+   */
+  private scopeFilter(scope: ScoringScope, slice: readonly AppId[]) {
+    return and(
+      inArray(attempts.assignmentId, slice),
+      scope.userId === undefined
+        ? undefined
+        : eq(attempts.userId, scope.userId),
+    );
+  }
+
+  async listAttemptsForScoring(scope: ScoringScope): Promise<Attempt[]> {
+    return overSlices(scope.assignmentIds, async (slice) => {
+      const rows = await this.db
+        .select()
+        .from(attempts)
+        .where(this.scopeFilter(scope, slice))
+        .orderBy(
+          asc(attempts.assignmentId),
+          asc(attempts.userId),
+          asc(attempts.ordinal),
+        );
+
+      return rows.map(mapAttempt);
+    });
+  }
+
+  async listSubmissionsForScoring(
+    scope: ScoringScope,
+  ): Promise<SubmissionForScoring[]> {
+    return overSlices(scope.assignmentIds, (slice) =>
+      this.db
+        .select({
+          attemptId: submissions.attemptId,
+          exerciseId: submissions.exerciseId,
+          id: submissions.id,
+          submittedAt: submissions.submittedAt,
+          userId: submissions.userId,
+        })
+        .from(submissions)
+        .innerJoin(attempts, eq(attempts.id, submissions.attemptId))
+        .where(this.scopeFilter(scope, slice))
+        .orderBy(
+          asc(submissions.attemptId),
+          asc(submissions.submittedAt),
+          asc(submissions.id),
+        ),
+    );
+  }
+
+  async listEvaluationsForScoring(
+    scope: ScoringScope,
+  ): Promise<EvaluationForScoring[]> {
+    return overSlices(scope.assignmentIds, (slice) =>
+      this.db
+        .select({
+          createdAt: evaluations.createdAt,
+          evaluatorKind: evaluations.evaluatorKind,
+          id: evaluations.id,
+          score: evaluations.score,
+          submissionId: evaluations.submissionId,
+          voidedAt: evaluations.voidedAt,
+        })
+        .from(evaluations)
+        .innerJoin(submissions, eq(submissions.id, evaluations.submissionId))
+        .innerJoin(attempts, eq(attempts.id, submissions.attemptId))
+        .where(this.scopeFilter(scope, slice))
+        .orderBy(
+          asc(evaluations.submissionId),
+          asc(evaluations.createdAt),
+          asc(evaluations.id),
+        ),
+    );
+  }
+
+  async hasEvaluatedWork(assignmentId: AppId): Promise<boolean> {
+    const rows = await this.db
+      .select({ id: evaluations.id })
+      .from(evaluations)
+      .innerJoin(submissions, eq(submissions.id, evaluations.submissionId))
+      .innerJoin(attempts, eq(attempts.id, submissions.attemptId))
+      .where(
+        and(
+          eq(attempts.assignmentId, assignmentId),
+          ne(attempts.status, "voided"),
+          isNull(evaluations.voidedAt),
+        ),
+      )
+      .limit(1);
+
+    return rows.length > 0;
   }
 
   async appendSubmissionWithEvaluation(

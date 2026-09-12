@@ -60,6 +60,30 @@ export interface Evaluation {
   readonly voidedAt: Timestamp | null;
 }
 
+/**
+ * The columns of a submission that scoring reads.
+ *
+ * A gradebook sums every submission a class has made, and the one column it
+ * never looks at — `answer` — is the one that carries the weight: a proof
+ * certificate, a filled truth table, an essay. This is the same row without
+ * it, so a bulk read for scoring moves ids and timestamps and not the work.
+ */
+export type SubmissionForScoring = Pick<
+  Submission,
+  "attemptId" | "exerciseId" | "id" | "submittedAt" | "userId"
+>;
+
+/**
+ * The columns of an evaluation that scoring reads. `result` — the checker's
+ * whole payload — stays behind for the same reason `answer` does above, and
+ * `maxScore` because a total divides by the manifest's points, not by what
+ * the work was graded out of (see {@link Evaluation.maxScore}).
+ */
+export type EvaluationForScoring = Pick<
+  Evaluation,
+  "createdAt" | "evaluatorKind" | "id" | "score" | "submissionId" | "voidedAt"
+>;
+
 export type EvaluationVerdict = "correct" | "partial" | "incorrect";
 
 /**

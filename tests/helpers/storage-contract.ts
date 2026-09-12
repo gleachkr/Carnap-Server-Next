@@ -776,6 +776,406 @@ export function describeStorageContract(
       });
     });
 
+    test("scoring reads return a scope's rows in bulk, in their per-row order", async () => {
+      await withStorage(async ({ stores }) => {
+        const { attempt, student } = await createAttemptSlice(stores);
+        const other = await createUser(stores, "student-2");
+        // Two submissions to one attempt in reverse id order of their
+        // timestamps, and two evaluations on the first likewise, so the
+        // orderings below are visibly the columns' and not insertion order.
+        const late = await stores.assessment.appendSubmission({
+          id: "submission-a",
+          attemptId: attempt.id,
+          userId: student.id,
+          exerciseId: "cp",
+          idempotencyKey: "idem-a",
+          answer: answer(["Q"]),
+          submittedAt: LATER,
+        });
+        const early = await stores.assessment.appendSubmission({
+          id: "submission-b",
+          attemptId: attempt.id,
+          userId: student.id,
+          exerciseId: "cp",
+          idempotencyKey: "idem-b",
+          answer: answer(["P"]),
+          submittedAt: NOW,
+        });
+        const second = await stores.assessment.appendEvaluation({
+          id: "evaluation-a",
+          submissionId: early.id,
+          evaluatorKind: "manual",
+          checkerVersion: null,
+          result: { status: "partial" },
+          score: 0.5,
+          maxScore: 1,
+          createdAt: LATER,
+        });
+        const first = await stores.assessment.appendEvaluation({
+          id: "evaluation-b",
+          submissionId: early.id,
+          evaluatorKind: "automatic",
+          checkerVersion: "test",
+          result: { status: "incorrect" },
+          score: 0,
+          maxScore: 1,
+          createdAt: NOW,
+        });
+        // Another student's attempt on the same assignment: in scope when the
+        // scope is everyone, out of it when the scope is one student.
+        const otherAttempt = await stores.assessment.beginAttempt({
+          id: "attempt-2",
+          assignmentId: attempt.assignmentId,
+          userId: other.id,
+          openedAt: NOW,
+          expiresAt: null,
+          createdFrom: "student",
+          maxAttempts: 1,
+        });
+        const otherSubmission = await stores.assessment.appendSubmission({
+          id: "submission-c",
+          attemptId: otherAttempt?.id ?? "",
+          userId: other.id,
+          exerciseId: "cp",
+          idempotencyKey: "idem-c",
+          answer: answer(["R"]),
+          submittedAt: NOW,
+        });
+        const forScoring = ({
+          attemptId,
+          exerciseId,
+          id,
+          submittedAt,
+          userId,
+        }: typeof late) => ({
+          attemptId,
+          exerciseId,
+          id,
+          submittedAt,
+          userId,
+        });
+        const everyone = { assignmentIds: [attempt.assignmentId] };
+        const one = { ...everyone, userId: student.id };
+
+        if (otherAttempt === null) {
+          throw new Error("Expected the second attempt to be created.");
+        }
+
+        await expect(
+          stores.assessment.listAttemptsForScoring(everyone),
+        ).resolves.toEqual([attempt, otherAttempt]);
+        await expect(
+          stores.assessment.listAttemptsForScoring(one),
+        ).resolves.toEqual([attempt]);
+        await expect(
+          stores.assessment.listSubmissionsForScoring(everyone),
+        ).resolves.toEqual([early, late, otherSubmission].map(forScoring));
+        await expect(
+          stores.assessment.listSubmissionsForScoring(one),
+        ).resolves.toEqual([early, late].map(forScoring));
+        await expect(
+          stores.assessment.listEvaluationsForScoring(one),
+        ).resolves.toEqual(
+          [first, second].map(
+            ({
+              createdAt,
+              evaluatorKind,
+              id,
+              score,
+              submissionId,
+              voidedAt,
+            }) => ({
+              createdAt,
+              evaluatorKind,
+              id,
+              score,
+              submissionId,
+              voidedAt,
+            }),
+          ),
+        );
+        // An empty scope is no query at all, and an assignment with nothing
+        // in it is an empty list rather than a placeholder.
+        await expect(
+          stores.assessment.listAttemptsForScoring({ assignmentIds: [] }),
+        ).resolves.toEqual([]);
+        await expect(
+          stores.assessment.listEvaluationsForScoring({
+            assignmentIds: ["assignment-nowhere"],
+          }),
+        ).resolves.toEqual([]);
+      });
+    });
+
+    test("a scope wider than one statement's parameters still comes back whole", async () => {
+      await withStorage(async ({ stores }) => {
+        const { assignment, instructor, student } =
+          await createAssignmentSlice(stores);
+        const ids: string[] = [assignment.id];
+
+        // D1 allows 100 bound parameters per statement. A course of 120
+        // assignments is the case the slicing exists for, and it should be
+        // invisible from here: one list in, one list out, every row present.
+        for (let index = 2; index <= 120; index += 1) {
+          const extra = await stores.assignments.create({
+            id: `assignment-${index}`,
+            courseId: assignment.courseId,
+            contentRevisionId: assignment.contentRevisionId,
+            title: `Homework ${index}`,
+            description: "",
+            assessmentMode: "graded",
+            displayOrder: index,
+            availableFrom: null,
+            dueAt: null,
+            availableUntil: null,
+            gradesVisibleAt: null,
+            listed: true,
+            maxAttempts: 1,
+            timeLimitMinutes: null,
+            createdById: instructor.id,
+            createdAt: NOW,
+          });
+
+          ids.push(extra.id);
+        }
+
+        for (const [index, id] of ids.entries()) {
+          await stores.assessment.beginAttempt({
+            id: `attempt-${index}`,
+            assignmentId: id,
+            userId: student.id,
+            openedAt: NOW,
+            expiresAt: null,
+            createdFrom: "student",
+            maxAttempts: 1,
+          });
+          await stores.assignments.upsertLatePolicy({
+            assignmentId: id,
+            kind: "none",
+            percentPenalty: 0,
+            maxPercentPenalty: 0,
+            graceMinutes: 0,
+            createdById: instructor.id,
+            now: NOW,
+          });
+        }
+
+        const attempts = await stores.assessment.listAttemptsForScoring({
+          assignmentIds: ids,
+          userId: student.id,
+        });
+        const policies = await stores.assignments.listLatePolicies(ids);
+
+        // Each slice comes back in its own order, so the whole is compared
+        // as a set: the scoring arithmetic groups and sorts what it reads.
+        expect(
+          attempts.map((attempt) => attempt.assignmentId).sort(),
+        ).toEqual([...ids].sort());
+        expect(policies).toHaveLength(ids.length);
+      });
+    });
+
+    test("an assignment's policies, excuses and overrides read in bulk", async () => {
+      await withStorage(async ({ stores }) => {
+        const { assignment, instructor, student } =
+          await createAssignmentSlice(stores);
+        const policy = await stores.assignments.upsertLatePolicy({
+          assignmentId: assignment.id,
+          kind: "percent_per_day",
+          percentPenalty: 10,
+          maxPercentPenalty: 50,
+          graceMinutes: 15,
+          createdById: instructor.id,
+          now: NOW,
+        });
+        const excuse = await stores.assignments.excuseExercise({
+          id: "excuse-1",
+          assignmentId: assignment.id,
+          exerciseId: "cp",
+          actorId: instructor.id,
+          reason: "",
+          createdAt: NOW,
+        });
+        const override = await stores.assignments.upsertOverride({
+          id: "assignment-override-1",
+          assignmentId: assignment.id,
+          userId: student.id,
+          availableFrom: null,
+          dueAt: LATER,
+          availableUntil: null,
+          maxAttempts: null,
+          timeLimitMinutes: null,
+          createdById: instructor.id,
+          now: NOW,
+        });
+        const otherOverride = await stores.assignments.upsertOverride({
+          id: "assignment-override-2",
+          assignmentId: assignment.id,
+          userId: instructor.id,
+          availableFrom: null,
+          dueAt: null,
+          availableUntil: null,
+          maxAttempts: 2,
+          timeLimitMinutes: null,
+          createdById: instructor.id,
+          now: NOW,
+        });
+
+        await expect(
+          stores.assignments.listLatePolicies([assignment.id, "nowhere"]),
+        ).resolves.toEqual([policy]);
+        await expect(
+          stores.assignments.listExerciseExcusesForAssignments([
+            assignment.id,
+          ]),
+        ).resolves.toEqual([excuse]);
+        // Everyone's, in user order — the instructor's own sorts first.
+        await expect(
+          stores.assignments.listOverridesForScoring({
+            assignmentIds: [assignment.id],
+          }),
+        ).resolves.toEqual([otherOverride, override]);
+        await expect(
+          stores.assignments.listOverridesForScoring({
+            assignmentIds: [assignment.id],
+            userId: student.id,
+          }),
+        ).resolves.toEqual([override]);
+      });
+    });
+
+    test("evaluated work is known by its live evaluations, not by any ledger", async () => {
+      await withStorage(async ({ stores }) => {
+        const { attempt, student } = await createAttemptSlice(stores);
+
+        await expect(
+          stores.assessment.hasEvaluatedWork(attempt.assignmentId),
+        ).resolves.toBe(false);
+
+        const submission = await stores.assessment.appendSubmission({
+          id: "submission-1",
+          attemptId: attempt.id,
+          userId: student.id,
+          exerciseId: "cp",
+          idempotencyKey: "idem-1",
+          answer: answer(["P"]),
+          submittedAt: NOW,
+        });
+
+        await expect(
+          stores.assessment.hasEvaluatedWork(attempt.assignmentId),
+        ).resolves.toBe(false);
+
+        await stores.assessment.appendEvaluation({
+          id: "evaluation-1",
+          submissionId: submission.id,
+          evaluatorKind: "automatic",
+          checkerVersion: "test",
+          result: { status: "correct" },
+          score: 1,
+          maxScore: 1,
+          createdAt: NOW,
+        });
+
+        await expect(
+          stores.assessment.hasEvaluatedWork(attempt.assignmentId),
+        ).resolves.toBe(true);
+
+        // A reset voids the attempt, and with it everything under it.
+        await stores.assessment.resetAttempt({
+          oldAttemptId: attempt.id,
+          newAttemptId: "attempt-2",
+          assignmentId: attempt.assignmentId,
+          userId: student.id,
+          openedAt: LATER,
+          expiresAt: null,
+          voidedAt: LATER,
+          voidedById: student.id,
+        });
+
+        await expect(
+          stores.assessment.hasEvaluatedWork(attempt.assignmentId),
+        ).resolves.toBe(false);
+      });
+    });
+
+    test("a manifest's points project out of the artifact without the rest of it", async () => {
+      await withStorage(async ({ stores }) => {
+        const { instructor, item } = await createContentRevision(stores);
+        const store = async (id: string, compiled: JsonValue) =>
+          stores.content.createRevision({
+            id,
+            itemId: item.id,
+            revisionNumber: Number(id.slice(-1)),
+            details: "",
+            sourceFormat: "markdown",
+            sourceText: id,
+            contentHash: `sha256:${id}`,
+            compiled,
+            createdById: instructor.id,
+            createdAt: NOW,
+          });
+
+        await store("content-revision-2", {
+          document: { nodes: [] },
+          manifest: [
+            { id: "q1", nominalPoints: 2, title: "First", render: {} },
+            { id: "q2", nominalPoints: 0.5, render: {} },
+          ],
+        });
+        await store("content-revision-3", {
+          document: { nodes: [] },
+          manifest: [],
+        });
+        await store("content-revision-4", { document: { nodes: [] } });
+
+        await expect(
+          stores.content.listManifestPoints([
+            "content-revision-2",
+            "content-revision-3",
+            "content-revision-4",
+            "content-revision-nowhere",
+          ]),
+        ).resolves.toEqual([
+          {
+            revisionId: "content-revision-2",
+            manifestType: "array",
+            position: 0,
+            exerciseId: "q1",
+            nominalPoints: 2,
+            title: "First",
+          },
+          {
+            revisionId: "content-revision-2",
+            manifestType: "array",
+            position: 1,
+            exerciseId: "q2",
+            nominalPoints: 0.5,
+            title: null,
+          },
+          {
+            revisionId: "content-revision-3",
+            manifestType: "array",
+            position: null,
+            exerciseId: null,
+            nominalPoints: null,
+            title: null,
+          },
+          {
+            revisionId: "content-revision-4",
+            manifestType: null,
+            position: null,
+            exerciseId: null,
+            nominalPoints: null,
+            title: null,
+          },
+        ]);
+        await expect(stores.content.listManifestPoints([])).resolves.toEqual(
+          [],
+        );
+      });
+    });
+
     test("submissions and evaluations append to attempts", async () => {
       await withStorage(async ({ stores }) => {
         const { attempt, student } = await createAttemptSlice(stores);

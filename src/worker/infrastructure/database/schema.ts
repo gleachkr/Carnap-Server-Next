@@ -523,6 +523,13 @@ export const evaluations = sqliteTable(
   (table) => [index("evaluations_submission_id_idx").on(table.submissionId)],
 );
 
+/**
+ * The grade-passback ledger: what each (assignment, student) score last
+ * evaluated to, so a change can be told from a repeat before an LMS is sent
+ * anything. Nothing a person sees reads it — every displayed score is
+ * computed from attempts, submissions and evaluations at read time — and
+ * only the paths that change a score write it. See `ScoreStore`.
+ */
 export const assignmentScores = sqliteTable(
   "assignment_scores",
   {

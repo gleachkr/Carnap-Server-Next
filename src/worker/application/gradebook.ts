@@ -1,9 +1,15 @@
-import type { Attempt, Evaluation, Submission } from "../domain/assessment";
+import type {
+  Attempt,
+  EvaluationForScoring,
+  SubmissionForScoring,
+} from "../domain/assessment";
 import {
   type Assignment,
   type AssignmentLatePolicy,
+  type AssignmentOverride,
   gradesReleased,
 } from "../domain/assignments";
+import type { CourseAccommodation } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
 import type { AppId } from "../domain/ids";
 import type { LtiResourceLink } from "../domain/lti";
@@ -12,7 +18,7 @@ import type { User } from "../domain/users";
 import { deferred } from "../i18n/deferred";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
-import { contentArtifactFromRevision } from "./content/artifact";
+import { parseManifestPoints } from "./content/artifact";
 import { AppHttpError } from "./errors";
 import { planGradeJob } from "./grade-passback";
 import { effectivePolicyAssignment } from "./policies";
@@ -127,9 +133,9 @@ function gradeUnreleased(): AppHttpError {
 }
 
 function bestEvaluation(
-  current: Evaluation | undefined,
-  candidate: Evaluation,
-): Evaluation {
+  current: EvaluationForScoring | undefined,
+  candidate: EvaluationForScoring,
+): EvaluationForScoring {
   if (current === undefined) {
     return candidate;
   }
@@ -149,8 +155,8 @@ function bestEvaluation(
 }
 
 function latestManualEvaluation(
-  evaluations: readonly Evaluation[],
-): Evaluation | null {
+  evaluations: readonly EvaluationForScoring[],
+): EvaluationForScoring | null {
   return (
     evaluations
       .filter((evaluation) => evaluation.evaluatorKind === "manual")
@@ -163,26 +169,32 @@ function latestManualEvaluation(
 }
 
 function effectiveEvaluationForSubmission(
-  evaluations: readonly Evaluation[],
-): Evaluation | null {
+  evaluations: readonly EvaluationForScoring[],
+): EvaluationForScoring | null {
   const manual = latestManualEvaluation(evaluations);
 
   if (manual !== null) {
     return manual;
   }
 
-  return evaluations.reduce<Evaluation | null>(
+  return evaluations.reduce<EvaluationForScoring | null>(
     (current, evaluation) => bestEvaluation(current ?? undefined, evaluation),
     null,
   );
 }
 
+/**
+ * The evaluation with the late penalty taken off its score. Only the score
+ * changes: the penalty is a fact about the assignment's policy and the
+ * submission's timing, both of which stay readable where they live, and no
+ * reader of a total ever asked for the workings.
+ */
 function applyLatePolicy(input: {
   readonly dueAt: string | null;
-  readonly evaluation: Evaluation;
+  readonly evaluation: EvaluationForScoring;
   readonly latePolicy: AssignmentLatePolicy | null;
   readonly submittedAt: string;
-}): Evaluation {
+}): EvaluationForScoring {
   const policy = input.latePolicy;
 
   if (policy === null || policy.kind === "none" || input.dueAt === null) {
@@ -210,15 +222,6 @@ function applyLatePolicy(input: {
 
   return {
     ...input.evaluation,
-    result: {
-      latePolicy: {
-        dueAt: input.dueAt,
-        kind: policy.kind,
-        penaltyPercent,
-        submittedAt: input.submittedAt,
-      },
-      rawEvaluation: input.evaluation.result,
-    },
     score: input.evaluation.score * multiplier,
   };
 }
@@ -416,12 +419,230 @@ interface CalculatedAssignmentScore {
   readonly score: AssignmentScore;
 }
 
+/**
+ * Everything a score is summed from, for some assignments and some students,
+ * read before any arithmetic starts.
+ *
+ * A score used to be computed by walking the rows one query at a time — the
+ * attempts, then each attempt's submissions, then each submission's
+ * evaluations, and the due date over again for every submission — which made
+ * a student's course page cost a query per row of their work and the course
+ * gradebook a query per row of everyone's. D1 runs statements one after
+ * another and counts each toward a per-request cap, so that was both slow and
+ * bounded. This reads the same rows in a fixed handful of statements
+ * ({@link GradebookService.scoringInputs}) and hands them to the arithmetic
+ * grouped the way the walk used to find them: each list in the order the
+ * per-row query returned it, which the tie-breaks in {@link bestEvaluation}
+ * depend on.
+ */
+interface ScoringInputs {
+  /** By {@link pairKey}(courseId, userId). */
+  readonly accommodations: ReadonlyMap<string, CourseAccommodation>;
+  /** By {@link pairKey}(assignmentId, userId), in ordinal order, voids included. */
+  readonly attempts: ReadonlyMap<string, readonly Attempt[]>;
+  /** By submission id, in (createdAt, id) order, voids included. */
+  readonly evaluations: ReadonlyMap<AppId, readonly EvaluationForScoring[]>;
+  /** By assignment id: the manifest's exercises less the excused ones. */
+  readonly exercises: ReadonlyMap<AppId, readonly GradebookExercise[]>;
+  /** By assignment id. */
+  readonly latePolicies: ReadonlyMap<AppId, AssignmentLatePolicy>;
+  /** By {@link pairKey}(assignmentId, userId). */
+  readonly overrides: ReadonlyMap<string, AssignmentOverride>;
+  /** By attempt id, in (submittedAt, id) order. */
+  readonly submissions: ReadonlyMap<AppId, readonly SubmissionForScoring[]>;
+}
+
+function pairKey(first: AppId, second: AppId): string {
+  return `${first} ${second}`;
+}
+
+/** Byte order — what the database sorts text by — not the locale's. */
+function compareText(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+
+  return left > right ? 1 : 0;
+}
+
+function groupBy<T>(
+  rows: readonly T[],
+  key: (row: T) => string,
+  compare: (left: T, right: T) => number,
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+
+  for (const row of rows) {
+    const group = groups.get(key(row));
+
+    if (group === undefined) {
+      groups.set(key(row), [row]);
+    } else {
+      group.push(row);
+    }
+  }
+
+  for (const group of groups.values()) {
+    group.sort(compare);
+  }
+
+  return groups;
+}
+
+function exercisesFor(
+  inputs: ScoringInputs,
+  assignment: Assignment,
+): readonly GradebookExercise[] {
+  const exercises = inputs.exercises.get(assignment.id);
+
+  if (exercises === undefined) {
+    // Not a user-facing condition: the inputs were read for a different set
+    // of assignments than they are being used for, which is a bug here.
+    throw new Error(
+      `Scoring inputs were not read for assignment ${assignment.id}.`,
+    );
+  }
+
+  return exercises;
+}
+
+function effectiveDueAt(
+  assignment: Assignment,
+  userId: AppId,
+  inputs: ScoringInputs,
+): string | null {
+  return effectivePolicyAssignment(assignment, {
+    accommodation:
+      inputs.accommodations.get(pairKey(assignment.courseId, userId)) ?? null,
+    override: inputs.overrides.get(pairKey(assignment.id, userId)) ?? null,
+  }).dueAt;
+}
+
+function collectEvaluations(
+  assignment: Assignment,
+  submissions: readonly SubmissionForScoring[],
+  pointByExercise: ReadonlyMap<string, number>,
+  bestByExercise: Map<string, EvaluationForScoring>,
+  latePolicy: AssignmentLatePolicy | null,
+  inputs: ScoringInputs,
+): void {
+  for (const submission of submissions) {
+    if (
+      submission.exerciseId === null ||
+      !pointByExercise.has(submission.exerciseId)
+    ) {
+      continue;
+    }
+
+    const evaluations = (inputs.evaluations.get(submission.id) ?? []).filter(
+      (evaluation) => evaluation.voidedAt === null,
+    );
+    const effective = effectiveEvaluationForSubmission(evaluations);
+
+    if (effective === null) {
+      continue;
+    }
+
+    const dueAt = effectiveDueAt(assignment, submission.userId, inputs);
+    const adjusted = applyLatePolicy({
+      dueAt,
+      evaluation: effective,
+      latePolicy,
+      submittedAt: submission.submittedAt,
+    });
+
+    bestByExercise.set(
+      submission.exerciseId,
+      bestEvaluation(bestByExercise.get(submission.exerciseId), adjusted),
+    );
+  }
+}
+
+/**
+ * One student's score on one assignment, from rows already in hand. Pure:
+ * everything it reads is in `inputs`, so the same inputs give the same score
+ * whether a page is showing it or the ledger is recording it.
+ */
+function calculateAssignmentScore(
+  assignment: Assignment,
+  userId: AppId,
+  inputs: ScoringInputs,
+  calculatedAt: string,
+): CalculatedAssignmentScore {
+  const exercises = exercisesFor(inputs, assignment);
+  const latePolicy = inputs.latePolicies.get(assignment.id) ?? null;
+  const pointByExercise = new Map(
+    exercises.map((exercise) => [exercise.id, exercise.points]),
+  );
+  const maxScore = exercises.reduce(
+    (sum, exercise) => sum + exercise.points,
+    0,
+  );
+  const attempts = (
+    inputs.attempts.get(pairKey(assignment.id, userId)) ?? []
+  ).filter((attempt) => attempt.status !== "voided");
+  const bestByExercise = new Map<string, EvaluationForScoring>();
+
+  for (const attempt of attempts) {
+    collectEvaluations(
+      assignment,
+      inputs.submissions.get(attempt.id) ?? [],
+      pointByExercise,
+      bestByExercise,
+      latePolicy,
+      inputs,
+    );
+  }
+
+  const score = [...bestByExercise.values()].reduce(
+    (sum, evaluation) => sum + evaluation.score,
+    0,
+  );
+
+  return {
+    exercises,
+    exerciseScores: new Map(
+      [...bestByExercise].map(([exerciseId, evaluation]) => [
+        exerciseId,
+        evaluation.score,
+      ]),
+    ),
+    score: {
+      assignmentId: assignment.id,
+      calculatedAt,
+      maxScore,
+      score,
+      status: scoreStatus({
+        attempts,
+        maxScore,
+        score,
+        submittedExerciseCount: bestByExercise.size,
+      }),
+      userId,
+    },
+  };
+}
+
+/**
+ * Scores, two ways.
+ *
+ * Everything a person is shown — a student's scorecard, the gradebooks, the
+ * CSVs — is computed from the live attempts, submissions and evaluations at
+ * the moment of reading, and nothing else. There is no cached number a page
+ * could show that the rows would not agree with.
+ *
+ * The `assignment_scores` table is the grade-passback ledger, and only that.
+ * It records what a score last evaluated to so that a change can be told
+ * from a repeat (an unchanged score must not re-send to an LMS) and so that
+ * deliveries can be ordered by data recency (`calculatedAt`). It is written
+ * by the `refresh*` methods here, which every path that changes what a score
+ * evaluates to calls — a submission, a hand-written grade, an instructor's
+ * excuse, override, repoint, reset, late policy or accommodation — and by
+ * nothing a reader does. A write path that misses it delays an LMS sync
+ * until the next one; it cannot show anyone a wrong number.
+ */
 export class GradebookService {
   private readonly contextPlatformMemo = new Map<AppId, AppId | null>();
-  private readonly exercisesMemo = new Map<
-    AppId,
-    readonly GradebookExercise[]
-  >();
   private readonly resourceLinksMemo = new Map<
     AppId,
     readonly LtiResourceLink[]
@@ -429,61 +650,93 @@ export class GradebookService {
 
   constructor(private readonly options: GradebookServiceOptions) {}
 
-  async refreshAssignmentScores(
-    actor: AuthenticatedActor,
-    courseId: AppId,
-    assignmentId: AppId,
-  ): Promise<AssignmentGradebook> {
-    await requireCourseStaff(this.options.stores, actor, courseId);
-
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
-    this.assertScored(assignment);
-
-    return {
-      assignment,
-      ...(await this.refreshRowsForAssignment(assignment)),
-    };
-  }
-
+  /**
+   * Recompute one student's ledger row for one assignment, queueing whatever
+   * an LMS is owed for the change.
+   */
   async refreshStudentAssignmentScore(
     assignment: Assignment,
     userId: AppId,
   ): Promise<AssignmentScore> {
-    return (await this.refreshStudentRow(assignment, userId)).score;
+    const inputs = await this.scoringInputs([assignment], userId);
+
+    return (await this.writeLedgerRow(assignment, userId, inputs)).score;
   }
 
   /**
-   * The same refresh, keeping the per-exercise points the total was summed
-   * from — which is what a gradebook needs to say *where* a student lost marks
-   * rather than only that they did.
+   * The same for several students at once, over one read of the assignment's
+   * work — what an instructor's change to the assignment itself calls for.
    */
-  private async refreshStudentRow(
+  async refreshAssignmentScoresForUsers(
+    assignment: Assignment,
+    userIds: readonly AppId[],
+  ): Promise<void> {
+    if (userIds.length === 0) {
+      return;
+    }
+
+    const inputs = await this.scoringInputs([assignment]);
+
+    for (const userId of userIds) {
+      await this.writeLedgerRow(assignment, userId, inputs);
+    }
+  }
+
+  /**
+   * One student's ledger rows across a course's graded assignments — what an
+   * accommodation changes, since its due-date extension reaches every one of
+   * them.
+   */
+  async refreshCourseScoresForUser(
+    courseId: AppId,
+    userId: AppId,
+  ): Promise<void> {
+    const assignments = (
+      await this.options.stores.assignments.listForCourse(courseId)
+    ).filter(
+      (assignment) =>
+        assignment.state === "published" &&
+        assignment.assessmentMode === "graded",
+    );
+
+    if (assignments.length === 0) {
+      return;
+    }
+
+    const inputs = await this.scoringInputs(assignments, userId);
+
+    for (const assignment of assignments) {
+      await this.writeLedgerRow(assignment, userId, inputs);
+    }
+  }
+
+  private async writeLedgerRow(
     assignment: Assignment,
     userId: AppId,
+    inputs: ScoringInputs,
   ): Promise<CalculatedAssignmentScore> {
-    // Scores are recorded for every mode — practice and reading work too, so an
-    // instructor and student both have a signal — but only graded scores count
-    // toward the course total (enforced by the callers that aggregate them).
-    const now = timestampNow(this.options.now?.() ?? new Date());
-    const computed = await this.calculateAssignmentScore(
+    // Scores are recorded for every mode — practice and reading work too, so
+    // the passback rules have one shape of row to read — but only graded
+    // scores are ever sent (planGradeJob) or counted toward the course total.
+    // Stamped after the reads, so `calculatedAt` orders projections by data
+    // recency: the upserts refuse to let an older stamp overwrite a newer one,
+    // and the LMS orders deliveries by the same value.
+    const computed = calculateAssignmentScore(
       assignment,
       userId,
-      now,
+      inputs,
+      timestampNow(this.options.now?.() ?? new Date()),
     );
-    // Re-stamped after the reads above so `calculatedAt` orders projections
-    // by data recency: the upserts refuse to let an older stamp overwrite a
-    // newer one, and the LMS orders deliveries by the same value.
-    const projection = {
-      ...computed.score,
-      calculatedAt: timestampNow(this.options.now?.() ?? new Date()),
-    };
-    const jobs = await this.gradeJobsForScoreChange(assignment, projection);
+    const jobs = await this.gradeJobsForScoreChange(
+      assignment,
+      computed.score,
+    );
 
     return {
       ...computed,
       score:
         await this.options.stores.scores.upsertAssignmentScoreWithGradeJobs(
-          projection,
+          computed.score,
           jobs,
         ),
     };
@@ -491,9 +744,9 @@ export class GradebookService {
 
   /**
    * The grade-passback outbox rows owed to LMSes for this score write, queued
-   * in the same transaction as the score itself (PLAN §11.4). Refreshes run
-   * on every gradebook read, so only a *changed* score queues a send; the
-   * publishability rules themselves live in planGradeJob.
+   * in the same transaction as the score itself (PLAN §11.4). Only a
+   * *changed* score queues a send; the publishability rules themselves live
+   * in planGradeJob.
    */
   private async gradeJobsForScoreChange(
     assignment: Assignment,
@@ -554,7 +807,7 @@ export class GradebookService {
   }
 
   /**
-   * Course gradebook refreshes call this once per student × assignment cell,
+   * A bulk refresh calls this once per student against the same assignment,
    * and the answer only depends on the assignment — memoized per service
    * instance (one request), like the context → platform hop below.
    */
@@ -578,9 +831,8 @@ export class GradebookService {
   }
 
   /**
-   * Course gradebook refreshes call this per student against the same few
-   * links, so the context → platform hop is memoized per service instance
-   * (one request).
+   * A bulk refresh calls this per student against the same few links, so the
+   * context → platform hop is memoized per service instance (one request).
    */
   private async platformIdForContext(
     contextRowId: AppId,
@@ -616,9 +868,36 @@ export class GradebookService {
     const assignment = await this.assignmentInCourse(courseId, assignmentId);
     this.assertScored(assignment);
 
+    const [students, inputs] = await Promise.all([
+      this.activeStudents(assignment.courseId),
+      this.scoringInputs([assignment]),
+    ]);
+    // Taken from the inputs rather than from a row, so an assignment with no
+    // students still names its exercises — an empty gradebook that also
+    // claimed the assignment had no problems in it would be two different
+    // emptinesses wearing one face.
+    const exercises = exercisesFor(inputs, assignment);
+    const now = timestampNow(this.options.now?.() ?? new Date());
+
     return {
       assignment,
-      ...(await this.refreshRowsForAssignment(assignment)),
+      exercises,
+      rows: students.map((user) => {
+        const computed = calculateAssignmentScore(
+          assignment,
+          user.id,
+          inputs,
+          now,
+        );
+
+        return {
+          exerciseScores: exercises.map(
+            (exercise) => computed.exerciseScores.get(exercise.id) ?? null,
+          ),
+          score: computed.score,
+          user,
+        };
+      }),
     };
   }
 
@@ -640,17 +919,18 @@ export class GradebookService {
         assignment.state === "published" &&
         assignment.assessmentMode === "graded",
     );
-    const students = await this.activeStudents(courseId);
-    const rows = await Promise.all(
-      students.map(async (user) => ({
-        user,
-        scores: await Promise.all(
-          assignments.map((assignment) =>
-            this.refreshStudentAssignmentScore(assignment, user.id),
-          ),
-        ),
-      })),
-    );
+    const [students, inputs] = await Promise.all([
+      this.activeStudents(courseId),
+      this.scoringInputs(assignments),
+    ]);
+    const now = timestampNow(this.options.now?.() ?? new Date());
+    const rows = students.map((user) => ({
+      user,
+      scores: assignments.map(
+        (assignment) =>
+          calculateAssignmentScore(assignment, user.id, inputs, now).score,
+      ),
+    }));
 
     return { assignments, rows };
   }
@@ -671,12 +951,12 @@ export class GradebookService {
       throw gradeUnreleased();
     }
 
+    const inputs = await this.scoringInputs([assignment], actor.user.id);
+
     return {
       released: true,
-      score: await this.refreshStudentAssignmentScore(
-        assignment,
-        actor.user.id,
-      ),
+      score: calculateAssignmentScore(assignment, actor.user.id, inputs, now)
+        .score,
     };
   }
 
@@ -690,45 +970,46 @@ export class GradebookService {
       await this.options.stores.assignments.listForCourse(courseId)
     ).filter((assignment) => assignment.state === "published");
     const now = timestampNow(this.options.now?.() ?? new Date());
+    const inputs = await this.scoringInputs(assignments, actor.user.id);
 
-    const entries = await Promise.all(
-      assignments.map(
-        async (assignment): Promise<StudentScorecardEntry | null> => {
-          const score = await this.refreshStudentAssignmentScore(
-            assignment,
-            actor.user.id,
-          );
+    const entries = assignments.map(
+      (assignment): StudentScorecardEntry | null => {
+        const score = calculateAssignmentScore(
+          assignment,
+          actor.user.id,
+          inputs,
+          now,
+        ).score;
 
-          if (assignment.assessmentMode === "graded") {
-            const isReleased = gradesReleased(assignment, now);
-
-            return {
-              assignmentId: assignment.id,
-              counts: true,
-              earned: isReleased ? score.score : null,
-              released: isReleased,
-              status: isReleased ? score.status : null,
-              worth: score.maxScore,
-            } satisfies StudentScorecardEntry;
-          }
-
-          // Practice and reading show their recorded score immediately, but only
-          // once the student has answered something — an untouched assignment
-          // reads as a dash rather than a misleading 0.
-          if (score.status !== "partial" && score.status !== "complete") {
-            return null;
-          }
+        if (assignment.assessmentMode === "graded") {
+          const isReleased = gradesReleased(assignment, now);
 
           return {
             assignmentId: assignment.id,
-            counts: false,
-            earned: score.score,
-            released: true,
-            status: score.status,
+            counts: true,
+            earned: isReleased ? score.score : null,
+            released: isReleased,
+            status: isReleased ? score.status : null,
             worth: score.maxScore,
           } satisfies StudentScorecardEntry;
-        },
-      ),
+        }
+
+        // Practice and reading show their recorded score immediately, but only
+        // once the student has answered something — an untouched assignment
+        // reads as a dash rather than a misleading 0.
+        if (score.status !== "partial" && score.status !== "complete") {
+          return null;
+        }
+
+        return {
+          assignmentId: assignment.id,
+          counts: false,
+          earned: score.score,
+          released: true,
+          status: score.status,
+          worth: score.maxScore,
+        } satisfies StudentScorecardEntry;
+      },
     );
 
     return entries.filter(
@@ -793,200 +1074,150 @@ export class GradebookService {
       );
   }
 
-  private async refreshRowsForAssignment(assignment: Assignment): Promise<{
-    readonly exercises: readonly GradebookExercise[];
-    readonly rows: GradebookStudentRow[];
-  }> {
-    const students = await this.activeStudents(assignment.courseId);
-    // Read once here rather than taken from a row, so an assignment with no
-    // students still names its exercises — an empty gradebook that also claimed
-    // the assignment had no problems in it would be two different emptinesses
-    // wearing one face.
-    const exercises = await this.countedExercises(assignment);
-    const rows = await Promise.all(
-      students.map(async (user) => {
-        const refreshed = await this.refreshStudentRow(assignment, user.id);
-
-        return {
-          exerciseScores: exercises.map(
-            (exercise) => refreshed.exerciseScores.get(exercise.id) ?? null,
-          ),
-          score: refreshed.score,
-          user,
-        };
-      }),
-    );
-
-    return { exercises, rows };
-  }
-
   /**
-   * The exercises this assignment's score is out of, in the order the content
-   * declares them. Memoized per service instance (one request), since a course
-   * gradebook otherwise re-reads one revision per student.
+   * Read everything {@link calculateAssignmentScore} needs for these
+   * assignments, for one student or for all of them, in eight statements
+   * however much work there is: the manifests' points and the excuses (the
+   * exercises that count), the late policies, the attempts, their
+   * submissions, those submissions' evaluations, the overrides, and the
+   * accommodations. See {@link ScoringInputs} for why it is done this way.
    */
-  private async countedExercises(
-    assignment: Assignment,
-  ): Promise<readonly GradebookExercise[]> {
-    const memoized = this.exercisesMemo.get(assignment.id);
-
-    if (memoized !== undefined) {
-      return memoized;
-    }
-
-    const revision = await this.options.stores.content.getRevision(
-      assignment.contentRevisionId,
-    );
-
-    if (revision === null) {
-      throw contentRevisionNotFound();
-    }
-
-    const artifact = contentArtifactFromRevision(revision);
-    const excuses = await this.options.stores.assignments.listExerciseExcuses(
-      assignment.id,
-    );
-    const excusedIds = new Set(excuses.map((excuse) => excuse.exerciseId));
-    const exercises = artifact.manifest
-      .filter((item) => !excusedIds.has(item.id))
-      .map((item) => ({
-        id: item.id,
-        points: item.nominalPoints,
-        title: item.title ?? null,
-      }));
-
-    this.exercisesMemo.set(assignment.id, exercises);
-
-    return exercises;
-  }
-
-  private async calculateAssignmentScore(
-    assignment: Assignment,
-    userId: AppId,
-    calculatedAt: string,
-  ): Promise<CalculatedAssignmentScore> {
-    const exercises = await this.countedExercises(assignment);
-    const latePolicy = await this.options.stores.assignments.getLatePolicy(
-      assignment.id,
-    );
-    const pointByExercise = new Map(
-      exercises.map((exercise) => [exercise.id, exercise.points]),
-    );
-    const maxScore = exercises.reduce(
-      (sum, exercise) => sum + exercise.points,
-      0,
-    );
-    const attempts = (
-      await this.options.stores.assessment.listAttemptsForAssignmentUser(
-        assignment.id,
-        userId,
-      )
-    ).filter((attempt) => attempt.status !== "voided");
-    const bestByExercise = new Map<string, Evaluation>();
-
-    for (const attempt of attempts) {
-      const submissions =
-        await this.options.stores.assessment.listSubmissionsForAttempt(
-          attempt.id,
-        );
-
-      await this.collectEvaluations(
-        assignment,
-        submissions,
-        pointByExercise,
-        bestByExercise,
-        latePolicy,
-      );
-    }
-
-    const score = [...bestByExercise.values()].reduce(
-      (sum, evaluation) => sum + evaluation.score,
-      0,
-    );
-
-    return {
+  private async scoringInputs(
+    assignments: readonly Assignment[],
+    userId?: AppId,
+  ): Promise<ScoringInputs> {
+    const stores = this.options.stores;
+    const assignmentIds = assignments.map((assignment) => assignment.id);
+    const scope = { assignmentIds, userId };
+    const [
       exercises,
-      exerciseScores: new Map(
-        [...bestByExercise].map(([exerciseId, evaluation]) => [
-          exerciseId,
-          evaluation.score,
-        ]),
-      ),
-      score: {
-        assignmentId: assignment.id,
-        calculatedAt,
-        maxScore,
-        score,
-        status: scoreStatus({
-          attempts,
-          maxScore,
-          score,
-          submittedExerciseCount: bestByExercise.size,
-        }),
-        userId,
-      },
-    };
-  }
-
-  private async effectiveDueAt(
-    assignment: Assignment,
-    userId: AppId,
-  ): Promise<string | null> {
-    const [accommodation, override] = await Promise.all([
-      this.options.stores.courses.getAccommodation(
-        assignment.courseId,
-        userId,
-      ),
-      this.options.stores.assignments.getOverrideForAssignmentUser(
-        assignment.id,
+      latePolicies,
+      attempts,
+      submissions,
+      evaluations,
+      overrides,
+      accommodations,
+    ] = await Promise.all([
+      this.countedExercises(assignments),
+      stores.assignments.listLatePolicies(assignmentIds),
+      stores.assessment.listAttemptsForScoring(scope),
+      stores.assessment.listSubmissionsForScoring(scope),
+      stores.assessment.listEvaluationsForScoring(scope),
+      stores.assignments.listOverridesForScoring(scope),
+      this.accommodations(
+        [...new Set(assignments.map((assignment) => assignment.courseId))],
         userId,
       ),
     ]);
 
-    return effectivePolicyAssignment(assignment, {
-      accommodation,
-      override,
-    }).dueAt;
+    return {
+      accommodations: new Map(
+        accommodations.map((accommodation) => [
+          pairKey(accommodation.courseId, accommodation.userId),
+          accommodation,
+        ]),
+      ),
+      attempts: groupBy(
+        attempts,
+        (attempt) => pairKey(attempt.assignmentId, attempt.userId),
+        (left, right) => left.ordinal - right.ordinal,
+      ),
+      evaluations: groupBy(
+        evaluations,
+        (evaluation) => evaluation.submissionId,
+        (left, right) =>
+          compareText(left.createdAt, right.createdAt) ||
+          compareText(left.id, right.id),
+      ),
+      exercises,
+      latePolicies: new Map(
+        latePolicies.map((policy) => [policy.assignmentId, policy]),
+      ),
+      overrides: new Map(
+        overrides.map((override) => [
+          pairKey(override.assignmentId, override.userId),
+          override,
+        ]),
+      ),
+      submissions: groupBy(
+        submissions,
+        (submission) => submission.attemptId,
+        (left, right) =>
+          compareText(left.submittedAt, right.submittedAt) ||
+          compareText(left.id, right.id),
+      ),
+    };
   }
 
-  private async collectEvaluations(
-    assignment: Assignment,
-    submissions: readonly Submission[],
-    pointByExercise: ReadonlyMap<string, number>,
-    bestByExercise: Map<string, Evaluation>,
-    latePolicy: AssignmentLatePolicy | null,
-  ): Promise<void> {
-    for (const submission of submissions) {
-      if (
-        submission.exerciseId === null ||
-        !pointByExercise.has(submission.exerciseId)
-      ) {
-        continue;
-      }
+  private async accommodations(
+    courseIds: readonly AppId[],
+    userId: AppId | undefined,
+  ): Promise<CourseAccommodation[]> {
+    const perCourse = await Promise.all(
+      courseIds.map((courseId) =>
+        userId === undefined
+          ? this.options.stores.courses.listAccommodationsForCourse(courseId)
+          : this.options.stores.courses
+              .getAccommodation(courseId, userId)
+              .then((accommodation) =>
+                accommodation === null ? [] : [accommodation],
+              ),
+      ),
+    );
 
-      const evaluations = (
-        await this.options.stores.assessment.listEvaluationsForSubmission(
-          submission.id,
-        )
-      ).filter((evaluation) => evaluation.voidedAt === null);
-      const effective = effectiveEvaluationForSubmission(evaluations);
+    return perCourse.flat();
+  }
 
-      if (effective === null) {
-        continue;
-      }
+  /**
+   * The exercises each assignment's score is out of, in the order the content
+   * declares them: the manifest's items, read by projection rather than by
+   * loading the artifacts (see `parseManifestPoints`), less the excused ones.
+   */
+  private async countedExercises(
+    assignments: readonly Assignment[],
+  ): Promise<Map<AppId, readonly GradebookExercise[]>> {
+    const [manifests, excuses] = await Promise.all([
+      this.options.stores.content
+        .listManifestPoints([
+          ...new Set(
+            assignments.map((assignment) => assignment.contentRevisionId),
+          ),
+        ])
+        .then(parseManifestPoints),
+      this.options.stores.assignments.listExerciseExcusesForAssignments(
+        assignments.map((assignment) => assignment.id),
+      ),
+    ]);
+    const excusedIds = new Map<AppId, Set<string>>();
 
-      const dueAt = await this.effectiveDueAt(assignment, submission.userId);
-      const adjusted = applyLatePolicy({
-        dueAt,
-        evaluation: effective,
-        latePolicy,
-        submittedAt: submission.submittedAt,
-      });
+    for (const excuse of excuses) {
+      const ids = excusedIds.get(excuse.assignmentId) ?? new Set<string>();
 
-      bestByExercise.set(
-        submission.exerciseId,
-        bestEvaluation(bestByExercise.get(submission.exerciseId), adjusted),
-      );
+      ids.add(excuse.exerciseId);
+      excusedIds.set(excuse.assignmentId, ids);
     }
+
+    return new Map(
+      assignments.map((assignment) => {
+        const manifest = manifests.get(assignment.contentRevisionId);
+
+        if (manifest === undefined) {
+          throw contentRevisionNotFound();
+        }
+
+        const excused = excusedIds.get(assignment.id);
+
+        return [
+          assignment.id,
+          manifest
+            .filter((item) => excused === undefined || !excused.has(item.id))
+            .map((item) => ({
+              id: item.id,
+              points: item.nominalPoints,
+              title: item.title,
+            })),
+        ];
+      }),
+    );
   }
 }
