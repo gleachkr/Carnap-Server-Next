@@ -1755,6 +1755,27 @@ export function describeStorageContract(
         await expect(
           stores.users.getLtiSubject(user.id, "lti-platform-other"),
         ).resolves.toBeNull();
+
+        // The bulk read is the same answer per user: an entry for each who
+        // has an identity on the platform, none for those who do not.
+        const native = await createUser(stores, "user-native");
+
+        await stores.users.createExternalIdentity({
+          id: "identity-native-1",
+          userId: native.id,
+          provider: "native",
+          providerSubject: "user-native@example.test",
+          createdAt: NOW,
+        });
+        await expect(
+          stores.users.listLtiSubjects(
+            [user.id, native.id, "user-missing"],
+            "lti-platform-1",
+          ),
+        ).resolves.toEqual(new Map([[user.id, "sub-abc"]]));
+        await expect(
+          stores.users.listLtiSubjects([user.id], "lti-platform-other"),
+        ).resolves.toEqual(new Map());
       });
     });
 
@@ -1961,6 +1982,145 @@ export function describeStorageContract(
             NOW,
           ),
         ).resolves.toBeNull();
+      });
+    });
+
+    test("a class's ledger rows write in bulk, each with its own jobs", async () => {
+      await withStorage(async ({ stores }) => {
+        const { assignment, instructor, student } =
+          await createAssignmentSlice(stores);
+        const platform = await stores.lti.createPlatform({
+          id: "lti-platform-1",
+          name: "Local Moodle",
+          issuer: "https://lms.example.test",
+          clientId: "client-1",
+          authorizationEndpoint: "https://lms.example.test/auth",
+          tokenEndpoint: "https://lms.example.test/token",
+          jwksUri: "https://lms.example.test/jwks",
+          createdAt: NOW,
+        });
+        const deployment = await stores.lti.createDeployment({
+          id: "lti-deployment-1",
+          platformId: platform.id,
+          deploymentId: "deployment-1",
+          name: "",
+          createdAt: NOW,
+        });
+        const context = await stores.lti.createContext({
+          id: "lti-context-1",
+          deploymentId: deployment.id,
+          contextId: "course-context-1",
+          courseId: assignment.courseId,
+          createdAt: NOW,
+        });
+        const link = await stores.lti.upsertResourceLink({
+          id: "lti-resource-link-1",
+          contextId: context.id,
+          resourceLinkId: "resource-link-1",
+          title: "Homework 1",
+          agsLineItemUrl: "https://lms.example.test/line-items/1",
+          now: NOW,
+        });
+        // Enough students that the scores span several statements and the
+        // jobs several more — D1 caps a statement at 100 bound parameters,
+        // and a row of either table binds a good few.
+        const students = [student];
+
+        for (let index = 2; index <= 40; index += 1) {
+          students.push(await createUser(stores, `student-${index}`));
+        }
+
+        const score = (userId: string, points: number, at = NOW) => ({
+          assignmentId: assignment.id,
+          userId,
+          score: points,
+          maxScore: 5,
+          status: "partial" as const,
+          calculatedAt: at,
+        });
+
+        await stores.scores.upsertAssignmentScoresWithGradeJobs(
+          students.map((member, index) => ({
+            jobs: [
+              {
+                id: `grade-job-${index}`,
+                resourceLinkId: link.id,
+                userId: member.id,
+                score: index,
+                maxScore: 5,
+                scoreTimestamp: NOW,
+                now: NOW,
+              },
+            ],
+            score: score(member.id, index),
+          })),
+        );
+
+        const ledger = await stores.scores.listAssignmentScoresInScope({
+          assignmentIds: [assignment.id],
+        });
+
+        expect(ledger).toHaveLength(students.length);
+        expect(ledger.find((row) => row.userId === "student-33")?.score).toBe(
+          32,
+        );
+        await expect(
+          stores.scores.listAssignmentScoresInScope({
+            assignmentIds: [assignment.id],
+            userId: "student-7",
+          }),
+        ).resolves.toMatchObject([{ score: 6, userId: "student-7" }]);
+        await expect(
+          stores.lti.getGradeJob(link.id, "student-33"),
+        ).resolves.toMatchObject({ score: 32, status: "pending" });
+
+        // The race guard holds row by row: within one write, a stale stamp
+        // leaves its row alone while a fresh one beside it lands.
+        await stores.scores.upsertAssignmentScoresWithGradeJobs([
+          { jobs: [], score: score(student.id, 4, LATER) },
+          {
+            jobs: [],
+            score: score("student-2", 4, "2026-01-01T00:00:00.000Z"),
+          },
+        ]);
+        await expect(
+          stores.scores.getAssignmentScore(assignment.id, student.id),
+        ).resolves.toMatchObject({ calculatedAt: LATER, score: 4 });
+        await expect(
+          stores.scores.getAssignmentScore(assignment.id, "student-2"),
+        ).resolves.toMatchObject({ calculatedAt: NOW, score: 1 });
+
+        // A score never commits apart from its jobs: a job the database
+        // refuses takes the scores written with it down too.
+        await expect(
+          stores.scores.upsertAssignmentScoresWithGradeJobs([
+            { jobs: [], score: score("student-3", 5, LATER) },
+            {
+              jobs: [
+                {
+                  id: "grade-job-orphan",
+                  resourceLinkId: "lti-resource-link-missing",
+                  userId: "student-4",
+                  score: 5,
+                  maxScore: 5,
+                  scoreTimestamp: LATER,
+                  now: LATER,
+                },
+              ],
+              score: score("student-4", 5, LATER),
+            },
+          ]),
+        ).rejects.toThrow();
+        await expect(
+          stores.scores.getAssignmentScore(assignment.id, "student-3"),
+        ).resolves.toMatchObject({ calculatedAt: NOW, score: 2 });
+
+        // And nothing to write is no statement at all.
+        await expect(
+          stores.scores.upsertAssignmentScoresWithGradeJobs([]),
+        ).resolves.toBeUndefined();
+
+        expect(instructor.id).toBe("instructor-1");
       });
     });
 

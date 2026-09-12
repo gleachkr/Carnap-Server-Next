@@ -1390,6 +1390,106 @@ Choose yes.
     });
   });
 
+  test("an instructor's change rewrites the ledger in a bounded number of statements", async () => {
+    await withStorage(async ({ db, stores }, env) => {
+      const instructor = await login(env, "bulk-teacher@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const enrollAndSubmit = async (email: string) => {
+        const student = await login(env, email);
+
+        await enrollStudent(env, instructor, student, courseId);
+
+        const attemptId = await beginAttempt(
+          env,
+          student,
+          courseId,
+          assignmentId,
+        );
+
+        expect(
+          (
+            await submitAnswer(
+              env,
+              student,
+              courseId,
+              assignmentId,
+              attemptId,
+              ["yes"],
+            )
+          ).status,
+        ).toBe(201);
+      };
+
+      let statements = 0;
+      const counting = new Proxy(db, {
+        get(target, property) {
+          const value: unknown = Reflect.get(target, property, target);
+
+          if (property === "prepare") {
+            return (...args: unknown[]) => {
+              statements += 1;
+
+              return (value as (...args: unknown[]) => unknown).apply(
+                target,
+                args,
+              );
+            };
+          }
+
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }) as D1Database;
+      const countingEnv: Env = { CARNAP_ENV: "local", DB: counting };
+      const setLatePolicy = async (percentPenalty: number) => {
+        statements = 0;
+
+        const response = await appRequest(
+          createTestApp(),
+          `/courses/${courseId}/instructor/assignments/${assignmentId}/late-policy`,
+          jsonRequest(
+            {
+              graceMinutes: 0,
+              kind: "percent_once_after_due",
+              maxPercentPenalty: 50,
+              percentPenalty,
+            },
+            instructor,
+          ),
+          countingEnv,
+        );
+
+        expect(response.status).toBe(200);
+
+        return statements;
+      };
+
+      await enrollAndSubmit("bulk-student-1@example.test");
+      await enrollAndSubmit("bulk-student-2@example.test");
+
+      const baseline = await setLatePolicy(10);
+
+      // Three more students with ledger rows. The refresh this replaced cost
+      // three statements per student; now the class's rows are read once and
+      // written a dozen to a statement, so five students cost what two did.
+      await enrollAndSubmit("bulk-student-3@example.test");
+      await enrollAndSubmit("bulk-student-4@example.test");
+      await enrollAndSubmit("bulk-student-5@example.test");
+
+      expect(await setLatePolicy(20)).toBe(baseline);
+      expect(baseline).toBeLessThanOrEqual(24);
+      await expect(
+        stores.scores.listAssignmentScores(assignmentId),
+      ).resolves.toHaveLength(5);
+    });
+  });
+
   test("the points projected out of an artifact are the points its parse reads", async () => {
     await withStorage(async ({ stores }, env) => {
       const instructor = await login(env, "points-teacher@example.test");

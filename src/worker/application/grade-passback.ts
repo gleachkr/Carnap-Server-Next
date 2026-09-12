@@ -74,6 +74,47 @@ export async function planGradeJob(
   stores: AppStores,
   input: PlanGradeJobInput,
 ): Promise<EnqueueLtiGradeJobInput | null> {
+  if (!scoreIsPublishable(input)) {
+    return null;
+  }
+
+  return planGradeJobForSubject(
+    input,
+    await stores.users.getLtiSubject(input.score.userId, input.platformId),
+  );
+}
+
+/**
+ * {@link planGradeJob} with the student's LTI subject on the platform already
+ * in hand (or known to be absent) — what a change that writes a whole class's
+ * rows uses, having read every subject in one statement rather than one per
+ * student.
+ */
+export function planGradeJobForSubject(
+  input: PlanGradeJobInput,
+  subject: string | null,
+): EnqueueLtiGradeJobInput | null {
+  // A student with no LTI identity on this platform (native-only, or linked
+  // elsewhere) has no gradebook row the LMS could accept.
+  if (!scoreIsPublishable(input) || subject === null) {
+    return null;
+  }
+
+  const { link, score } = input;
+
+  return {
+    id: createAppId(),
+    resourceLinkId: link.id,
+    userId: score.userId,
+    score: score.score,
+    maxScore: score.maxScore,
+    scoreTimestamp: score.calculatedAt,
+    now: input.now,
+  };
+}
+
+/** The rules that hold before anyone asks who the student is on the platform. */
+function scoreIsPublishable(input: PlanGradeJobInput): boolean {
   const { assignment, link, score } = input;
 
   if (
@@ -81,7 +122,7 @@ export async function planGradeJob(
     link.agsLineItemUrl === null ||
     score.status === "not-started"
   ) {
-    return null;
+    return false;
   }
 
   // "missing" is a student who opened an attempt and submitted nothing.
@@ -93,7 +134,7 @@ export async function planGradeJob(
     input.previousStatus !== "partial" &&
     input.previousStatus !== "complete"
   ) {
-    return null;
+    return false;
   }
 
   // AGS requires a positive scoreMaximum, so a zeroed assignment (every
@@ -104,30 +145,7 @@ export async function planGradeJob(
   // repoint. The same section says a platform re-scales against its line
   // item's own maximum, so sending our current denominator with every score
   // is how the column stays proportionate after the points change.
-  if (score.maxScore <= 0) {
-    return null;
-  }
-
-  const subject = await stores.users.getLtiSubject(
-    score.userId,
-    input.platformId,
-  );
-
-  // A student with no LTI identity on this platform (native-only, or linked
-  // elsewhere) has no gradebook row the LMS could accept.
-  if (subject === null) {
-    return null;
-  }
-
-  return {
-    id: createAppId(),
-    resourceLinkId: link.id,
-    userId: score.userId,
-    score: score.score,
-    maxScore: score.maxScore,
-    scoreTimestamp: score.calculatedAt,
-    now: input.now,
-  };
+  return score.maxScore > 0;
 }
 
 /**

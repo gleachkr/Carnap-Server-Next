@@ -27,6 +27,7 @@ import type {
   AppendSubmissionInput,
   AppStores,
   AssessmentStore,
+  AssignmentScoreLedgerWrite,
   AssignmentStore,
   AuthStore,
   BeginAttemptInput,
@@ -191,11 +192,29 @@ async function overSlices<T>(
 ): Promise<T[]> {
   const rows: T[] = [];
 
-  for (let at = 0; at < ids.length; at += IN_LIST_SLICE) {
-    rows.push(...(await run(ids.slice(at, at + IN_LIST_SLICE))));
+  for (const slice of chunked(ids, IN_LIST_SLICE)) {
+    rows.push(...(await run(slice)));
   }
 
   return rows;
+}
+
+/**
+ * How many bound parameters a multi-row write may spend per statement, under
+ * the same 100-parameter cap as the reads. A row's worth of parameters is its
+ * column count — Drizzle binds every value, constants and nulls included — so
+ * the rows per statement follow from the table.
+ */
+const WRITE_PARAMS_PER_STATEMENT = 90;
+
+function chunked<T>(items: readonly T[], size: number): T[][] {
+  const chunks: T[][] = [];
+
+  for (let at = 0; at < items.length; at += size) {
+    chunks.push(items.slice(at, at + size));
+  }
+
+  return chunks;
 }
 
 function mapContentRevision(row: typeof contentRevisions.$inferSelect) {
@@ -290,39 +309,51 @@ function mapRawAttempt(row: Record<string, unknown>): Attempt {
  * protection: a refresh that raced a newer one and lost writes nothing, so a
  * fresher queued score is never re-pointed at a stale one.
  */
+/** Columns a grade-job row binds, and so how many rows fit one statement. */
+const GRADE_JOB_ROWS_PER_STATEMENT = Math.floor(
+  WRITE_PARAMS_PER_STATEMENT / 13,
+);
+
+/**
+ * One statement upserting up to {@link GRADE_JOB_ROWS_PER_STATEMENT} jobs.
+ * The conflict clause reads the row's own values back out of `excluded`, so
+ * it says the same thing for one row as for many.
+ */
 function gradeJobUpsertQuery(
   db: AppDatabase,
-  input: EnqueueLtiGradeJobInput,
+  inputs: readonly EnqueueLtiGradeJobInput[],
 ) {
   return db
     .insert(ltiGradeJobs)
-    .values({
-      id: input.id,
-      resourceLinkId: input.resourceLinkId,
-      userId: input.userId,
-      score: input.score,
-      maxScore: input.maxScore,
-      scoreTimestamp: input.scoreTimestamp,
-      status: "pending",
-      attemptCount: 0,
-      nextAttemptAt: input.now,
-      lastFailureReason: null,
-      lastErrorDetail: null,
-      createdAt: input.now,
-      updatedAt: input.now,
-    })
-    .onConflictDoUpdate({
-      target: [ltiGradeJobs.resourceLinkId, ltiGradeJobs.userId],
-      set: {
+    .values(
+      inputs.map((input) => ({
+        id: input.id,
+        resourceLinkId: input.resourceLinkId,
+        userId: input.userId,
         score: input.score,
         maxScore: input.maxScore,
         scoreTimestamp: input.scoreTimestamp,
-        status: "pending",
+        status: "pending" as const,
         attemptCount: 0,
         nextAttemptAt: input.now,
         lastFailureReason: null,
         lastErrorDetail: null,
+        createdAt: input.now,
         updatedAt: input.now,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [ltiGradeJobs.resourceLinkId, ltiGradeJobs.userId],
+      set: {
+        score: sql`excluded.score`,
+        maxScore: sql`excluded.max_score`,
+        scoreTimestamp: sql`excluded.score_timestamp`,
+        status: "pending",
+        attemptCount: 0,
+        nextAttemptAt: sql`excluded.next_attempt_at`,
+        lastFailureReason: null,
+        lastErrorDetail: null,
+        updatedAt: sql`excluded.updated_at`,
       },
       setWhere: sql`excluded.score_timestamp >= ${ltiGradeJobs.scoreTimestamp}`,
     })
@@ -732,6 +763,41 @@ class SqliteUserStore implements UserStore {
     );
 
     return row === null ? null : row.providerSubject.slice(prefix.length);
+  }
+
+  async listLtiSubjects(
+    userIds: readonly AppId[],
+    platformId: AppId,
+  ): Promise<Map<AppId, string>> {
+    const prefix = `${platformId}:`;
+    const rows = await overSlices([...new Set(userIds)], (slice) =>
+      this.db
+        .select({
+          providerSubject: externalIdentities.providerSubject,
+          userId: externalIdentities.userId,
+        })
+        .from(externalIdentities)
+        .where(
+          and(
+            inArray(externalIdentities.userId, slice),
+            eq(externalIdentities.provider, "lti"),
+            like(externalIdentities.providerSubject, `${prefix}%`),
+          ),
+        )
+        .orderBy(
+          asc(externalIdentities.createdAt),
+          asc(externalIdentities.id),
+        ),
+    );
+    const subjects = new Map<AppId, string>();
+
+    for (const row of rows) {
+      if (!subjects.has(row.userId)) {
+        subjects.set(row.userId, row.providerSubject.slice(prefix.length));
+      }
+    }
+
+    return subjects;
   }
 }
 
@@ -2438,6 +2504,16 @@ class SqliteAdminStatsStore implements AdminStatsStore {
   }
 }
 
+/** Columns a ledger row binds, and so how many rows fit one statement. */
+const SCORE_ROWS_PER_STATEMENT = Math.floor(WRITE_PARAMS_PER_STATEMENT / 6);
+
+/**
+ * Entries per transaction when a change writes many ledger rows at once:
+ * enough that a large course is a few batches, few enough that each batch
+ * stays a handful of statements.
+ */
+const LEDGER_ENTRIES_PER_BATCH = 60;
+
 class SqliteScoreStore implements ScoreStore {
   constructor(private readonly db: AppDatabase) {}
 
@@ -2473,10 +2549,30 @@ class SqliteScoreStore implements ScoreStore {
     return rows.map(mapAssignmentScore);
   }
 
+  async listAssignmentScoresInScope(
+    scope: ScoringScope,
+  ): Promise<AssignmentScore[]> {
+    const rows = await overSlices(scope.assignmentIds, (slice) =>
+      this.db
+        .select()
+        .from(assignmentScores)
+        .where(
+          and(
+            inArray(assignmentScores.assignmentId, slice),
+            scope.userId === undefined
+              ? undefined
+              : eq(assignmentScores.userId, scope.userId),
+          ),
+        ),
+    );
+
+    return rows.map(mapAssignmentScore);
+  }
+
   async upsertAssignmentScore(
     input: UpsertAssignmentScoreInput,
   ): Promise<AssignmentScore> {
-    const rows = await this.scoreUpsertQuery(input);
+    const rows = await this.scoreUpsertQuery([input]);
 
     return this.upsertedScore(rows, input);
   }
@@ -2490,29 +2586,58 @@ class SqliteScoreStore implements ScoreStore {
     }
 
     const [scoreRows] = await this.db.batch([
-      this.scoreUpsertQuery(input),
-      ...jobs.map((job) => gradeJobUpsertQuery(this.db, job)),
+      this.scoreUpsertQuery([input]),
+      ...chunked(jobs, GRADE_JOB_ROWS_PER_STATEMENT).map((chunk) =>
+        gradeJobUpsertQuery(this.db, chunk),
+      ),
     ]);
 
     return this.upsertedScore(scoreRows, input);
   }
 
+  async upsertAssignmentScoresWithGradeJobs(
+    entries: readonly AssignmentScoreLedgerWrite[],
+  ): Promise<void> {
+    // Each batch is one transaction holding whole entries — a score never
+    // commits apart from the jobs it owes — and a few statements at most, so
+    // a course's worth of entries is a handful of round trips whichever way
+    // the platform counts a batch.
+    for (const batch of chunked(entries, LEDGER_ENTRIES_PER_BATCH)) {
+      const scores = batch.map((entry) => entry.score);
+      const jobs = batch.flatMap((entry) => entry.jobs);
+      const [first, ...rest] = [
+        ...chunked(scores, SCORE_ROWS_PER_STATEMENT).map((chunk) =>
+          this.scoreUpsertQuery(chunk),
+        ),
+        ...chunked(jobs, GRADE_JOB_ROWS_PER_STATEMENT).map((chunk) =>
+          gradeJobUpsertQuery(this.db, chunk),
+        ),
+      ];
+
+      if (first !== undefined) {
+        await this.db.batch([first, ...rest]);
+      }
+    }
+  }
+
   /**
+   * One statement upserting up to {@link SCORE_ROWS_PER_STATEMENT} scores.
    * The `setWhere` guard keeps a refresh that lost a race from regressing
    * the stored score: projections are stamped after their reads, so an
-   * older `calculatedAt` means older data.
+   * older `calculatedAt` means older data. The clause reads each row's own
+   * values from `excluded`, so it holds row by row however many there are.
    */
-  private scoreUpsertQuery(input: UpsertAssignmentScoreInput) {
+  private scoreUpsertQuery(inputs: readonly UpsertAssignmentScoreInput[]) {
     return this.db
       .insert(assignmentScores)
-      .values(input)
+      .values([...inputs])
       .onConflictDoUpdate({
         target: [assignmentScores.assignmentId, assignmentScores.userId],
         set: {
-          calculatedAt: input.calculatedAt,
-          maxScore: input.maxScore,
-          score: input.score,
-          status: input.status,
+          calculatedAt: sql`excluded.calculated_at`,
+          maxScore: sql`excluded.max_score`,
+          score: sql`excluded.score`,
+          status: sql`excluded.status`,
         },
         setWhere: sql`excluded.calculated_at >= ${assignmentScores.calculatedAt}`,
       })
@@ -2997,7 +3122,7 @@ class SqliteLtiStore implements LtiStore {
   async enqueueGradeJob(
     input: EnqueueLtiGradeJobInput,
   ): Promise<LtiGradeJob | null> {
-    return nullableSingle(await gradeJobUpsertQuery(this.db, input));
+    return nullableSingle(await gradeJobUpsertQuery(this.db, [input]));
   }
 
   async getGradeJob(

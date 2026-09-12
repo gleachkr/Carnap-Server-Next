@@ -20,10 +20,11 @@ import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
 import { parseManifestPoints } from "./content/artifact";
 import { AppHttpError } from "./errors";
-import { planGradeJob } from "./grade-passback";
+import { planGradeJobForSubject } from "./grade-passback";
 import { effectivePolicyAssignment } from "./policies";
 import type {
   AppStores,
+  AssignmentScoreLedgerWrite,
   EnqueueLtiGradeJobInput,
   ScoringScope,
   UpsertAssignmentScoreInput,
@@ -469,6 +470,67 @@ interface ScoringWork {
   readonly submissions: ReadonlyMap<AppId, readonly SubmissionForScoring[]>;
 }
 
+/** An LMS gradebook column an assignment's scores are sent to. */
+interface PassbackTarget {
+  readonly link: LtiResourceLink;
+  readonly platformId: AppId;
+}
+
+/** By platform id, then by user id: each student's subject on that platform. */
+type LtiSubjects = ReadonlyMap<AppId, ReadonlyMap<AppId, string>>;
+
+/**
+ * The grade-passback outbox rows owed to LMSes for one ledger write. Only a
+ * *changed* score queues a send; the publishability rules themselves live in
+ * planGradeJob.
+ */
+function gradeJobsForScoreChange(
+  assignment: Assignment,
+  projection: UpsertAssignmentScoreInput,
+  previous: AssignmentScore | null,
+  targets: readonly PassbackTarget[],
+  subjects: LtiSubjects,
+): EnqueueLtiGradeJobInput[] {
+  if (
+    assignment.assessmentMode !== "graded" ||
+    projection.status === "not-started" ||
+    targets.length === 0
+  ) {
+    return [];
+  }
+
+  if (
+    previous !== null &&
+    previous.score === projection.score &&
+    previous.maxScore === projection.maxScore &&
+    previous.status === projection.status
+  ) {
+    return [];
+  }
+
+  const jobs: EnqueueLtiGradeJobInput[] = [];
+
+  for (const target of targets) {
+    const job = planGradeJobForSubject(
+      {
+        assignment,
+        link: target.link,
+        platformId: target.platformId,
+        score: projection,
+        previousStatus: previous?.status ?? null,
+        now: projection.calculatedAt,
+      },
+      subjects.get(target.platformId)?.get(projection.userId) ?? null,
+    );
+
+    if (job !== null) {
+      jobs.push(job);
+    }
+  }
+
+  return jobs;
+}
+
 function pairKey(first: AppId, second: AppId): string {
   return `${first} ${second}`;
 }
@@ -676,13 +738,23 @@ export class GradebookService {
     userId: AppId,
   ): Promise<AssignmentScore> {
     const inputs = await this.scoringInputs([assignment], userId);
+    const [entry] = await this.ledgerWrites([assignment], [userId], inputs);
 
-    return (await this.writeLedgerRow(assignment, userId, inputs)).score;
+    if (entry === undefined) {
+      throw new Error("A single-student refresh produced no ledger row.");
+    }
+
+    return this.options.stores.scores.upsertAssignmentScoreWithGradeJobs(
+      entry.score,
+      entry.jobs,
+    );
   }
 
   /**
    * The same for several students at once, over one read of the assignment's
    * work — what an instructor's change to the assignment itself calls for.
+   * Everything is read and written in bulk, so the statement count grows
+   * with the class in steps of a dozen rows, not one per student.
    */
   async refreshAssignmentScoresForUsers(
     assignment: Assignment,
@@ -694,9 +766,9 @@ export class GradebookService {
 
     const inputs = await this.scoringInputs([assignment]);
 
-    for (const userId of userIds) {
-      await this.writeLedgerRow(assignment, userId, inputs);
-    }
+    await this.options.stores.scores.upsertAssignmentScoresWithGradeJobs(
+      await this.ledgerWrites([assignment], userIds, inputs),
+    );
   }
 
   /**
@@ -722,105 +794,125 @@ export class GradebookService {
 
     const inputs = await this.scoringInputs(assignments, userId);
 
-    for (const assignment of assignments) {
-      await this.writeLedgerRow(assignment, userId, inputs);
-    }
-  }
-
-  private async writeLedgerRow(
-    assignment: Assignment,
-    userId: AppId,
-    inputs: ScoringInputs,
-  ): Promise<CalculatedAssignmentScore> {
-    // Scores are recorded for every mode — practice and reading work too, so
-    // the passback rules have one shape of row to read — but only graded
-    // scores are ever sent (planGradeJob) or counted toward the course total.
-    // Stamped after the reads, so `calculatedAt` orders projections by data
-    // recency: the upserts refuse to let an older stamp overwrite a newer one,
-    // and the LMS orders deliveries by the same value.
-    const computed = calculateAssignmentScore(
-      assignment,
-      userId,
-      inputs,
-      timestampNow(this.options.now?.() ?? new Date()),
+    await this.options.stores.scores.upsertAssignmentScoresWithGradeJobs(
+      await this.ledgerWrites(assignments, [userId], inputs),
     );
-    const jobs = await this.gradeJobsForScoreChange(
-      assignment,
-      computed.score,
-    );
-
-    return {
-      ...computed,
-      score:
-        await this.options.stores.scores.upsertAssignmentScoreWithGradeJobs(
-          computed.score,
-          jobs,
-        ),
-    };
   }
 
   /**
-   * The grade-passback outbox rows owed to LMSes for this score write, queued
-   * in the same transaction as the score itself (PLAN §11.4). Only a
-   * *changed* score queues a send; the publishability rules themselves live
-   * in planGradeJob.
+   * The ledger rows these students' scores on these assignments come to,
+   * each with the passback jobs its change owes, from rows already read.
+   *
+   * Scores are recorded for every mode — practice and reading work too, so
+   * the passback rules have one shape of row to read — but only graded
+   * scores are ever sent (planGradeJob) or counted toward the course total.
+   * Stamped after the reads, so `calculatedAt` orders projections by data
+   * recency: the upserts refuse to let an older stamp overwrite a newer one,
+   * and the LMS orders deliveries by the same value.
+   *
+   * What a job needs beyond the score — the row's previous value, the LMS
+   * columns the assignment feeds, each student's identity there — is read
+   * once for the whole set, so a class of any size costs the same handful of
+   * statements as one student.
    */
-  private async gradeJobsForScoreChange(
-    assignment: Assignment,
-    projection: UpsertAssignmentScoreInput,
-  ): Promise<EnqueueLtiGradeJobInput[]> {
-    if (
-      assignment.assessmentMode !== "graded" ||
-      projection.status === "not-started"
-    ) {
-      return [];
-    }
-
-    const links = await this.resourceLinksForAssignment(assignment.id);
-    const syncable = links.filter((link) => link.agsLineItemUrl !== null);
-
-    if (syncable.length === 0) {
-      return [];
-    }
-
-    const previous = await this.options.stores.scores.getAssignmentScore(
-      projection.assignmentId,
-      projection.userId,
+  private async ledgerWrites(
+    assignments: readonly Assignment[],
+    userIds: readonly AppId[],
+    inputs: ScoringInputs,
+  ): Promise<AssignmentScoreLedgerWrite[]> {
+    const stores = this.options.stores;
+    const calculatedAt = timestampNow(this.options.now?.() ?? new Date());
+    const previous = new Map(
+      (
+        await stores.scores.listAssignmentScoresInScope({
+          assignmentIds: assignments.map((assignment) => assignment.id),
+          userId: userIds.length === 1 ? userIds[0] : undefined,
+        })
+      ).map((score) => [pairKey(score.assignmentId, score.userId), score]),
     );
+    const targets = await this.passbackTargets(assignments);
+    const subjects = await this.ltiSubjects(userIds, [
+      ...new Set(
+        [...targets.values()].flat().map((target) => target.platformId),
+      ),
+    ]);
 
-    if (
-      previous !== null &&
-      previous.score === projection.score &&
-      previous.maxScore === projection.maxScore &&
-      previous.status === projection.status
-    ) {
-      return [];
-    }
+    return assignments.flatMap((assignment) =>
+      userIds.map((userId) => {
+        const score = calculateAssignmentScore(
+          assignment,
+          userId,
+          inputs,
+          calculatedAt,
+        ).score;
 
-    const jobs: EnqueueLtiGradeJobInput[] = [];
+        return {
+          jobs: gradeJobsForScoreChange(
+            assignment,
+            score,
+            previous.get(pairKey(assignment.id, userId)) ?? null,
+            targets.get(assignment.id) ?? [],
+            subjects,
+          ),
+          score,
+        };
+      }),
+    );
+  }
 
-    for (const link of syncable) {
-      const platformId = await this.platformIdForContext(link.contextId);
+  /**
+   * The LMS columns each graded assignment's scores are sent to: its linked
+   * resource links that carry a line item, with the platform behind each.
+   */
+  private async passbackTargets(
+    assignments: readonly Assignment[],
+  ): Promise<ReadonlyMap<AppId, readonly PassbackTarget[]>> {
+    const targets = new Map<AppId, PassbackTarget[]>();
 
-      if (platformId === null) {
-        continue;
+    for (const assignment of assignments) {
+      const found: PassbackTarget[] = [];
+
+      if (assignment.assessmentMode === "graded") {
+        for (const link of await this.resourceLinksForAssignment(
+          assignment.id,
+        )) {
+          if (link.agsLineItemUrl === null) {
+            continue;
+          }
+
+          const platformId = await this.platformIdForContext(link.contextId);
+
+          if (platformId !== null) {
+            found.push({ link, platformId });
+          }
+        }
       }
 
-      const job = await planGradeJob(this.options.stores, {
-        assignment,
-        link,
-        platformId,
-        score: projection,
-        previousStatus: previous?.status ?? null,
-        now: projection.calculatedAt,
-      });
-
-      if (job !== null) {
-        jobs.push(job);
-      }
+      targets.set(assignment.id, found);
     }
 
-    return jobs;
+    return targets;
+  }
+
+  /** These students' LTI subjects on each of these platforms, one read per platform. */
+  private async ltiSubjects(
+    userIds: readonly AppId[],
+    platformIds: readonly AppId[],
+  ): Promise<LtiSubjects> {
+    return new Map(
+      await Promise.all(
+        platformIds.map(
+          async (platformId) =>
+            [
+              platformId,
+              await this.options.stores.users.listLtiSubjects(
+                userIds,
+                platformId,
+              ),
+            ] as const,
+        ),
+      ),
+    );
   }
 
   /**

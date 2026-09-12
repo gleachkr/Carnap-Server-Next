@@ -158,6 +158,14 @@ export interface UserStore {
    * `{platformRowId}:{sub}`.
    */
   getLtiSubject(userId: AppId, platformId: AppId): Promise<string | null>;
+  /**
+   * {@link getLtiSubject} for many users on one platform at once, keyed by
+   * user id; a user with no identity there has no entry.
+   */
+  listLtiSubjects(
+    userIds: readonly AppId[],
+    platformId: AppId,
+  ): Promise<Map<AppId, string>>;
 }
 
 export interface CreateNativeLoginChallengeInput {
@@ -750,6 +758,10 @@ export interface ScoreStore {
     userId: AppId,
   ): Promise<AssignmentScore | null>;
   listAssignmentScores(assignmentId: AppId): Promise<AssignmentScore[]>;
+  /** The ledger rows in a {@link ScoringScope}, in no particular order. */
+  listAssignmentScoresInScope(
+    scope: ScoringScope,
+  ): Promise<AssignmentScore[]>;
   upsertAssignmentScore(
     input: UpsertAssignmentScoreInput,
   ): Promise<AssignmentScore>;
@@ -761,6 +773,23 @@ export interface ScoreStore {
     input: UpsertAssignmentScoreInput,
     jobs: readonly EnqueueLtiGradeJobInput[],
   ): Promise<AssignmentScore>;
+  /**
+   * The same for many rows at once — what an instructor's change to an
+   * assignment writes, one entry per student with a ledger row. Rows are
+   * written several to a statement and several statements to a transaction,
+   * so the statement count grows with the class in small steps rather than
+   * one per student; each entry's jobs commit with its score, never apart.
+   * The per-row race guard applies to every row exactly as it does to one.
+   */
+  upsertAssignmentScoresWithGradeJobs(
+    entries: readonly AssignmentScoreLedgerWrite[],
+  ): Promise<void>;
+}
+
+/** One ledger row to write, with the passback rows the change owes. */
+export interface AssignmentScoreLedgerWrite {
+  readonly jobs: readonly EnqueueLtiGradeJobInput[];
+  readonly score: UpsertAssignmentScoreInput;
 }
 
 export interface AssessmentStore {
