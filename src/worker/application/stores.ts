@@ -1059,6 +1059,14 @@ export interface LtiStore {
   enqueueGradeJob(
     input: EnqueueLtiGradeJobInput,
   ): Promise<LtiGradeJob | null>;
+  /**
+   * {@link enqueueGradeJob} for many (resource link, user) rows at once —
+   * what an association backfill uses, having planned a whole class's jobs
+   * without a statement per student. Each row is written under the same
+   * rule as a single enqueue, so one that already carries a newer score is
+   * left alone while the rows beside it land. An empty list writes nothing.
+   */
+  enqueueGradeJobs(inputs: readonly EnqueueLtiGradeJobInput[]): Promise<void>;
   getGradeJob(
     resourceLinkId: AppId,
     userId: AppId,

@@ -207,6 +207,13 @@ async function overSlices<T>(
  */
 const WRITE_PARAMS_PER_STATEMENT = 90;
 
+/**
+ * Rows per transaction when a change writes many at once: enough that a
+ * large course is a few batches, few enough that each batch stays a handful
+ * of statements.
+ */
+const WRITE_ROWS_PER_BATCH = 60;
+
 function chunked<T>(items: readonly T[], size: number): T[][] {
   const chunks: T[][] = [];
 
@@ -2507,13 +2514,6 @@ class SqliteAdminStatsStore implements AdminStatsStore {
 /** Columns a ledger row binds, and so how many rows fit one statement. */
 const SCORE_ROWS_PER_STATEMENT = Math.floor(WRITE_PARAMS_PER_STATEMENT / 6);
 
-/**
- * Entries per transaction when a change writes many ledger rows at once:
- * enough that a large course is a few batches, few enough that each batch
- * stays a handful of statements.
- */
-const LEDGER_ENTRIES_PER_BATCH = 60;
-
 class SqliteScoreStore implements ScoreStore {
   constructor(private readonly db: AppDatabase) {}
 
@@ -2602,7 +2602,7 @@ class SqliteScoreStore implements ScoreStore {
     // commits apart from the jobs it owes — and a few statements at most, so
     // a course's worth of entries is a handful of round trips whichever way
     // the platform counts a batch.
-    for (const batch of chunked(entries, LEDGER_ENTRIES_PER_BATCH)) {
+    for (const batch of chunked(entries, WRITE_ROWS_PER_BATCH)) {
       const scores = batch.map((entry) => entry.score);
       const jobs = batch.flatMap((entry) => entry.jobs);
       const [first, ...rest] = [
@@ -3123,6 +3123,21 @@ class SqliteLtiStore implements LtiStore {
     input: EnqueueLtiGradeJobInput,
   ): Promise<LtiGradeJob | null> {
     return nullableSingle(await gradeJobUpsertQuery(this.db, [input]));
+  }
+
+  async enqueueGradeJobs(
+    inputs: readonly EnqueueLtiGradeJobInput[],
+  ): Promise<void> {
+    for (const batch of chunked(inputs, WRITE_ROWS_PER_BATCH)) {
+      const [first, ...rest] = chunked(
+        batch,
+        GRADE_JOB_ROWS_PER_STATEMENT,
+      ).map((chunk) => gradeJobUpsertQuery(this.db, chunk));
+
+      if (first !== undefined) {
+        await this.db.batch([first, ...rest]);
+      }
+    }
   }
 
   async getGradeJob(

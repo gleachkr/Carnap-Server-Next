@@ -31,7 +31,7 @@ import type { AuthenticatedActor, AuthService, MintedSession } from "./auth";
 import { requireInstructor } from "./authorization";
 import { contentArtifactFromRevision } from "./content/artifact";
 import { badRequest, forbidden } from "./errors";
-import { planGradeJob } from "./grade-passback";
+import { planGradeJob, planGradeJobForSubject } from "./grade-passback";
 import type { AppStores } from "./stores";
 import { createAuthToken, hashAuthToken } from "./tokens";
 
@@ -930,22 +930,36 @@ export class LtiService {
       link.assignmentId,
     );
 
-    for (const score of scores) {
-      const job = await planGradeJob(this.options.stores, {
-        assignment,
-        link,
-        platformId: deploymentRow.platformId,
-        score,
-        // A backfill has no idea what the LMS column already shows, so
-        // fresh "missing" zeros stay unpublished.
-        previousStatus: null,
-        now,
-      });
-
-      if (job !== null) {
-        await this.options.stores.lti.enqueueGradeJob(job);
-      }
+    if (scores.length === 0) {
+      return;
     }
+
+    // The class's subjects in one read and its jobs in a few writes: this
+    // runs inside the association request, whose statement budget must not
+    // scale with the roster.
+    const subjects = await this.options.stores.users.listLtiSubjects(
+      scores.map((score) => score.userId),
+      deploymentRow.platformId,
+    );
+    const jobs = scores.flatMap((score) => {
+      const job = planGradeJobForSubject(
+        {
+          assignment,
+          link,
+          platformId: deploymentRow.platformId,
+          score,
+          // A backfill has no idea what the LMS column already shows, so
+          // fresh "missing" zeros stay unpublished.
+          previousStatus: null,
+          now,
+        },
+        subjects.get(score.userId) ?? null,
+      );
+
+      return job === null ? [] : [job];
+    });
+
+    await this.options.stores.lti.enqueueGradeJobs(jobs);
   }
 
   /**

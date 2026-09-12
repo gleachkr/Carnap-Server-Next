@@ -667,6 +667,122 @@ describe("LTI grade passback", () => {
     });
   });
 
+  test("association backfills a class in a bounded number of statements", async () => {
+    await withStorage(async ({ db, stores }, env) => {
+      const instructor = await login(env, "ags-teacher@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const { context, link, platform } = await ltiFixture(stores, courseId);
+      const enrollAndSubmit = async (index: number) => {
+        const student = await login(env, `ags-student-${index}@example.test`);
+
+        await enrollStudent(env, instructor, student, courseId);
+        await linkStudentToLms(
+          stores,
+          platform,
+          student.actorId,
+          `sub-${index}`,
+        );
+
+        const attemptId = await beginAttempt(
+          env,
+          student,
+          courseId,
+          assignmentId,
+        );
+
+        await submitCorrectAnswer(
+          env,
+          student,
+          courseId,
+          assignmentId,
+          attemptId,
+        );
+      };
+
+      let statements = 0;
+      const counting = new Proxy(db, {
+        get(target, property) {
+          const value: unknown = Reflect.get(target, property, target);
+
+          if (property === "prepare") {
+            return (...args: unknown[]) => {
+              statements += 1;
+
+              return (value as (...args: unknown[]) => unknown).apply(
+                target,
+                args,
+              );
+            };
+          }
+
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }) as D1Database;
+      const countingEnv: Env = { CARNAP_ENV: "local", DB: counting };
+      const associate = async (linkId: string) => {
+        statements = 0;
+
+        const response = await appRequest(
+          createTestApp(),
+          `/lti/resource-links/${linkId}/assignment`,
+          {
+            body: new URLSearchParams({ assignmentId, courseId }),
+            headers: {
+              ...authHeaders(instructor),
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            method: "POST",
+          },
+          countingEnv,
+        );
+
+        expect(response.status).toBe(303);
+
+        return statements;
+      };
+
+      await enrollAndSubmit(1);
+      await enrollAndSubmit(2);
+
+      const baseline = await associate(link.id);
+
+      await expect(
+        stores.lti.listGradeJobsForCourse(courseId, "pending"),
+      ).resolves.toHaveLength(2);
+
+      // Three more students with scores (each submission now also queues a
+      // delivery to the first activity), then a second activity attached to
+      // the same assignment. The backfill this replaced cost two statements
+      // per student; now the class's subjects are read once and its jobs
+      // written several to a statement, so five students cost what two did.
+      await enrollAndSubmit(3);
+      await enrollAndSubmit(4);
+      await enrollAndSubmit(5);
+
+      const second = await stores.lti.upsertResourceLink({
+        id: "lti-resource-link-2",
+        contextId: context.id,
+        resourceLinkId: "lms-activity-2",
+        title: "Homework again (LMS)",
+        agsLineItemUrl: `${TEST_ISSUER}/line-items/43`,
+        now: NOW,
+      });
+
+      expect(await associate(second.id)).toBe(baseline);
+      expect(baseline).toBeLessThanOrEqual(16);
+      await expect(
+        stores.lti.listGradeJobsForCourse(courseId, "pending"),
+      ).resolves.toHaveLength(10);
+    });
+  });
+
   test("transient failures back off and rejections park as failed until retried", async () => {
     await withStorage(async ({ stores }, env) => {
       const instructor = await login(env, "ags-teacher@example.test");

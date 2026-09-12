@@ -2124,6 +2124,121 @@ export function describeStorageContract(
       });
     });
 
+    test("a class's grade jobs enqueue in bulk, each row under its own guard", async () => {
+      await withStorage(async ({ stores }) => {
+        const { assignment, student } = await createAssignmentSlice(stores);
+        const platform = await stores.lti.createPlatform({
+          id: "lti-platform-1",
+          name: "Local Moodle",
+          issuer: "https://lms.example.test",
+          clientId: "client-1",
+          authorizationEndpoint: "https://lms.example.test/auth",
+          tokenEndpoint: "https://lms.example.test/token",
+          jwksUri: "https://lms.example.test/jwks",
+          createdAt: NOW,
+        });
+        const deployment = await stores.lti.createDeployment({
+          id: "lti-deployment-1",
+          platformId: platform.id,
+          deploymentId: "deployment-1",
+          name: "",
+          createdAt: NOW,
+        });
+        const context = await stores.lti.createContext({
+          id: "lti-context-1",
+          deploymentId: deployment.id,
+          contextId: "course-context-1",
+          courseId: assignment.courseId,
+          createdAt: NOW,
+        });
+        const link = await stores.lti.upsertResourceLink({
+          id: "lti-resource-link-1",
+          contextId: context.id,
+          resourceLinkId: "resource-link-1",
+          title: "Homework 1",
+          agsLineItemUrl: "https://lms.example.test/line-items/1",
+          now: NOW,
+        });
+        // Enough students that the jobs span several statements — D1 caps a
+        // statement at 100 bound parameters, and a job row binds thirteen.
+        const students = [student];
+
+        for (let index = 2; index <= 40; index += 1) {
+          students.push(await createUser(stores, `student-${index}`));
+        }
+
+        const job = (
+          id: string,
+          userId: string,
+          points: number,
+          at = NOW,
+        ) => ({
+          id,
+          resourceLinkId: link.id,
+          userId,
+          score: points,
+          maxScore: 5,
+          scoreTimestamp: at,
+          now: at,
+        });
+
+        await stores.lti.enqueueGradeJobs(
+          students.map((member, index) =>
+            job(`grade-job-${index}`, member.id, index),
+          ),
+        );
+
+        await expect(
+          stores.lti.listGradeJobsForCourse(assignment.courseId, "pending"),
+        ).resolves.toHaveLength(students.length);
+        await expect(
+          stores.lti.getGradeJob(link.id, "student-33"),
+        ).resolves.toMatchObject({
+          id: "grade-job-32",
+          score: 32,
+          status: "pending",
+        });
+
+        // The race guard holds row by row: within one write, a job carrying
+        // an older score than its row leaves the row alone while a fresher
+        // one beside it re-points its row.
+        await stores.lti.enqueueGradeJobs([
+          job("grade-job-fresh", student.id, 4, LATER),
+          job("grade-job-stale", "student-2", 4, "2026-01-01T00:00:00.000Z"),
+        ]);
+        await expect(
+          stores.lti.getGradeJob(link.id, student.id),
+        ).resolves.toMatchObject({
+          id: "grade-job-0",
+          score: 4,
+          scoreTimestamp: LATER,
+        });
+        await expect(
+          stores.lti.getGradeJob(link.id, "student-2"),
+        ).resolves.toMatchObject({ score: 1, scoreTimestamp: NOW });
+
+        // One write is one transaction: a job the database refuses takes the
+        // rows written with it down too.
+        await expect(
+          stores.lti.enqueueGradeJobs([
+            job("grade-job-lost", "student-3", 5, LATER),
+            {
+              ...job("grade-job-orphan", "student-4", 5, LATER),
+              resourceLinkId: "lti-resource-link-missing",
+            },
+          ]),
+        ).rejects.toThrow();
+        await expect(
+          stores.lti.getGradeJob(link.id, "student-3"),
+        ).resolves.toMatchObject({ score: 2, scoreTimestamp: NOW });
+
+        // And nothing to write is no statement at all.
+        await expect(
+          stores.lti.enqueueGradeJobs([]),
+        ).resolves.toBeUndefined();
+      });
+    });
+
     test("batched submission and evaluation failures roll back", async () => {
       await withStorage(async ({ stores }) => {
         const { attempt, student } = await createAttemptSlice(stores);

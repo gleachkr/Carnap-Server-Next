@@ -67,8 +67,9 @@ export interface PlanGradeJobInput {
 /**
  * The one place that decides whether a score is owed to an LMS gradebook
  * column, and what the outbox row looks like — every enqueue path (score
- * change, association backfill, launch self-heal) must go through it so the
- * publishability rules cannot drift apart.
+ * change, association backfill, launch self-heal) must go through it or
+ * {@link planGradeJobForSubject} so the publishability rules cannot drift
+ * apart.
  */
 export async function planGradeJob(
   stores: AppStores,
