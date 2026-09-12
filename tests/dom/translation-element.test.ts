@@ -349,6 +349,118 @@ describe("feedback", () => {
   });
 });
 
+/**
+ * The page runtime's half of the submit contract, in miniature: it runs after
+ * the widget's capturing gate, sends nothing if the gate cancelled, and
+ * otherwise takes the answer as the form holds it at that moment. (The real
+ * script is pinned against a gate in `submit-gate.test.ts`.)
+ */
+function recordSubmissions(mounted: Mounted): TranslationSubmission[] {
+  const sent: TranslationSubmission[] = [];
+
+  mounted.form.addEventListener("submit", (event) => {
+    if (event.defaultPrevented) {
+      return;
+    }
+    event.preventDefault();
+    sent.push(answerOf(mounted));
+  });
+
+  return sent;
+}
+
+describe("the submit hold", () => {
+  test("a submit during the typing pause runs the check first", async () => {
+    searchResult = async () => "expanded proof";
+    const mounted = mount(await publicDataFor(PROP));
+    const sent = recordSubmissions(mounted);
+
+    type(mounted, "Q/\\P");
+    // Inside the debounce: no check has run, the answer is text alone.
+    expect(answerOf(mounted)).toEqual({ text: "Q/\\P" });
+    mounted.form.requestSubmit();
+
+    expect(sent).toEqual([]);
+    expect(markState(mounted)).toBe("working");
+    await until(() => sent.length > 0);
+
+    expect(sent).toEqual([{ mmb: "AQID", solutionIndex: 0, text: "Q/\\P" }]);
+  });
+
+  test("a submit while the search runs waits for it, and a second click is the same request", async () => {
+    let release: (proof: string) => void = () => {};
+    searchResult = () =>
+      new Promise<string | null>((resolve) => {
+        release = resolve;
+      });
+    const mounted = mount(await publicDataFor(PROP));
+    const sent = recordSubmissions(mounted);
+
+    type(mounted, "Q/\\P");
+    pressEnter(mounted);
+    expect(markState(mounted)).toBe("working");
+
+    mounted.form.requestSubmit();
+    mounted.form.requestSubmit();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sent).toEqual([]);
+
+    release("expanded proof");
+    await until(() => sent.length > 0);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(sent).toEqual([{ mmb: "AQID", solutionIndex: 0, text: "Q/\\P" }]);
+  });
+
+  test("a settled check goes straight through", async () => {
+    searchResult = async () => "expanded proof";
+    const mounted = mount(await publicDataFor(PROP));
+    const sent = recordSubmissions(mounted);
+
+    type(mounted, "Q/\\P");
+    pressEnter(mounted);
+    await until(() => markState(mounted) === "ok");
+
+    mounted.form.requestSubmit();
+
+    expect(sent).toEqual([{ mmb: "AQID", solutionIndex: 0, text: "Q/\\P" }]);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sent).toHaveLength(1);
+  });
+
+  test("a verbatim answer settles at once and needs no wait", async () => {
+    searchResult = null;
+    const mounted = mount(await publicDataFor(PROP));
+    const sent = recordSubmissions(mounted);
+
+    type(mounted, "(P & Q)");
+    mounted.form.requestSubmit();
+
+    expect(sent).toEqual([{ text: "(P & Q)" }]);
+    expect(markState(mounted)).toBe("ok");
+  });
+
+  test("an edit during the wait abandons the held submit", async () => {
+    let release: (proof: string) => void = () => {};
+    searchResult = () =>
+      new Promise<string | null>((resolve) => {
+        release = resolve;
+      });
+    const mounted = mount(await publicDataFor(PROP));
+    const sent = recordSubmissions(mounted);
+
+    type(mounted, "Q/\\P");
+    pressEnter(mounted);
+    mounted.form.requestSubmit();
+    type(mounted, "Q/\\P/\\P");
+    release("expanded proof");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Nothing left: what was asked for is not what the field holds now.
+    expect(sent).toEqual([]);
+  });
+});
+
 describe("the checksyntax gate", () => {
   test("refuses to submit text that does not parse, and says why", async () => {
     const mounted = mount(
@@ -365,12 +477,18 @@ describe("the checksyntax gate", () => {
     );
   });
 
-  test("lets a parsed answer through", async () => {
+  test("lets a parsed answer through, right or wrong", async () => {
+    searchResult = async () => null;
     const mounted = mount(
       await publicDataFor(PROP, '#t1 options="checksyntax"'),
     );
 
     type(mounted, "P\\/Q");
+    // Checked and found wanting — the gate is about syntax, not the verdict.
+    pressEnter(mounted);
+    await until(
+      () => markState(mounted) === "idle" && statusText(mounted) !== "",
+    );
     const submit = new dom.window.Event("submit", { cancelable: true });
     mounted.form.dispatchEvent(submit);
 

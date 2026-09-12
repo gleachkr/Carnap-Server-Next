@@ -120,7 +120,10 @@ Everything is fine.
 ## The widget
 
 Checking is live, proof-type style: the correctness mark tracks on a pause in
-typing, **Enter** checks immediately, and there is no Check button. A preview
+typing, **Enter** checks immediately, and there is no Check button. A submit
+that lands before the check has settled waits for it — the certificate travels
+with the answer, so the form is held until a pending or running search finishes
+and then sent once (an edit meanwhile abandons the click). A preview
 line under the input reads the typed ASCII back in logical symbols, or words
 the parser's complaint — in the reader's language, from the same sentences the
 compile diagnostics use ([`strings.ts`](./strings.ts)). Verdict sentences

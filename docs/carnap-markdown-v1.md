@@ -714,7 +714,9 @@ on a pause, and **Enter** checks immediately (there is no Check button). Under
 the hood the check is the Aufbau engine's `auto?` proof search, run over a
 one-sided sequent calculus, producing an equivalence *certificate* which Submit
 sends and the server independently re-verifies — the same
-client-compiles/server-verifies boundary the proof directives use. The server
+client-compiles/server-verifies boundary the proof directives use. A click on
+Submit while a check is still pending or running waits for it, so a quick
+submit after typing never sends the text without its certificate. The server
 records the verdict and the typed answer, not the certificate.
 
 Two consequences of that design are worth knowing when setting assignments:

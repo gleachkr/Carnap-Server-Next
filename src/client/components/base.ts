@@ -742,6 +742,24 @@ export abstract class CarnapExerciseElement<
   }
 
   /**
+   * Register a gate on the form's submission: a listener that may
+   * `preventDefault()` to keep the answer from leaving — text a syntax gate
+   * refuses, a check that has not settled.
+   *
+   * It listens in the capture phase, and that is the whole point. The page's
+   * exercise runtime replaces native submission with a `fetch`, and it does so
+   * from a bubbling listener registered before any element upgrades (the
+   * component bundles load after the runtime script). At the event's target the
+   * capturing listeners run first regardless of registration order, so this is
+   * the one way a widget's refusal can be seen by the runtime, which checks
+   * `defaultPrevented` before it sends anything. A plain `addEventListener`
+   * here would run after the request had already gone.
+   */
+  protected gateSubmit(gate: (event: Event) => void): void {
+    this.form?.addEventListener("submit", gate, { capture: true });
+  }
+
+  /**
    * Reflect the current answer into the form's hidden `answerData` field, and
    * re-check whether it still matches what the server has.
    */

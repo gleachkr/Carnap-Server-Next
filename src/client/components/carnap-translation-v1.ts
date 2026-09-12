@@ -22,6 +22,13 @@
  * `terse` the sentences stay away, and under `none` the base clamps the mark
  * while the certificate still gets computed — grading needs it even when the
  * student is told nothing.
+ *
+ * A submit waits for the check. The certificate is what makes an equivalent
+ * answer count, and it arrives after a pause and a search; a click that lands
+ * inside that window would send the text alone, which the worker can only
+ * grade as incorrect. So the submit gate runs a pending check at once, waits
+ * out a search in flight, and only then lets the form go — resubmitting it
+ * itself, once, unless the text changed meanwhile.
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
@@ -67,6 +74,16 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
   private checkToken = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | null = null;
 
+  /** The equivalence search now running for the current text, if any. */
+  private inFlight: Promise<void> | null = null;
+
+  /**
+   * The search a submit is waiting on. A second click during the wait is the
+   * same request; an edit abandons it, since what the reader asked to submit is
+   * no longer what the field holds.
+   */
+  private held: Promise<void> | null = null;
+
   protected enhance(): void {
     const root = this.shadowRoot;
     const data = this.publicData;
@@ -111,22 +128,41 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
       }
     });
 
-    // The `checksyntax` gate: refuse to submit text that does not parse. The
-    // explanation is not a verdict — it is why the button did nothing — so it
-    // shows whatever the feedback setting says.
-    this.form?.addEventListener("submit", (event) => {
-      if (this.data?.checksyntax !== true) {
+    this.gateSubmit((event) => {
+      // The `checksyntax` gate: refuse to submit text that does not parse. The
+      // explanation is not a verdict — it is why the button did nothing — so it
+      // shows whatever the feedback setting says.
+      if (this.data?.checksyntax === true) {
+        const parsed = this.parseCurrent();
+        if (parsed === null || !parsed.ok) {
+          event.preventDefault();
+          this.setCheckStatus(
+            this.t(
+              "This answer does not parse, so it cannot be submitted on an exam.",
+            ),
+          );
+          return;
+        }
+      }
+
+      // The hold: a check still pending or running would leave this submission
+      // without its certificate. Settle it first, then send.
+      const settling = this.settleCheck();
+      if (settling === null) {
         return;
       }
-      const parsed = this.parseCurrent();
-      if (parsed === null || !parsed.ok) {
-        event.preventDefault();
-        this.setCheckStatus(
-          this.t(
-            "This answer does not parse, so it cannot be submitted on an exam.",
-          ),
-        );
+      event.preventDefault();
+      if (this.held === settling) {
+        return;
       }
+      this.held = settling;
+      void settling.then(() => {
+        if (this.held !== settling) {
+          return;
+        }
+        this.held = null;
+        this.form?.requestSubmit();
+      });
     });
 
     this.updatePreview();
@@ -159,8 +195,12 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
 
   private onEdit(): void {
     // The text changed under the certificate; drop it until a check remakes it.
+    // A search still running is for the old text (its token will discard the
+    // result), and a submit held for it was for the old text too.
     this.mmb = "";
     this.solutionIndex = null;
+    this.inFlight = null;
+    this.held = null;
     this.updatePreview();
     this.setCheckStatus("");
     this.syncAnswer();
@@ -170,6 +210,21 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     this.debounceHandle = setTimeout(() => {
       this.runCheck(false);
     }, DEBOUNCE_MS);
+  }
+
+  /**
+   * Bring the check up to date for a submit: run a pending one now, and hand
+   * back the search to wait on, or null when there is nothing to wait for — a
+   * verbatim or unparseable answer settles synchronously, and a search already
+   * finished has left its certificate (or not) in place.
+   */
+  private settleCheck(): Promise<void> | null {
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+      this.runCheck(false);
+    }
+    return this.inFlight;
   }
 
   private parseCurrent(): ReturnType<typeof parseFormula> | null {
@@ -222,6 +277,11 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
    */
   private runCheck(explicit: boolean): void {
     const token = ++this.checkToken;
+    // This check supersedes any the debounce was still holding.
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+    }
     const say = (sentence: string, correct = false): void => {
       if (explicit && this.showsDetail) {
         this.setCheckStatus(sentence, correct);
@@ -293,7 +353,21 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     }
 
     this.setMark("working");
-    void this.searchForCertificate(token, explicit, formula, data, language);
+    const search = this.searchForCertificate(
+      token,
+      explicit,
+      formula,
+      data,
+      language,
+    );
+    this.inFlight = search;
+    // The search never rejects (it reports its own failures), so this only
+    // ever clears — and only its own entry, never a newer search's.
+    void search.then(() => {
+      if (this.inFlight === search) {
+        this.inFlight = null;
+      }
+    });
   }
 
   /** The equivalence hunt: each solution in turn until a certificate lands. */

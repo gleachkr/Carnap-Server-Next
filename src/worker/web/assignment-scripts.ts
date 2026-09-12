@@ -306,6 +306,17 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
     });
 
     form.addEventListener("submit", async (event) => {
+      // A widget that will not submit yet — text its syntax gate refuses, a
+      // check still settling — cancels the event from a *capturing* listener
+      // (see CarnapExerciseElement.gateSubmit), which the target runs before
+      // this one whatever order the two were registered in; the component
+      // bundles load after this script, so registration order would have put
+      // the request first. Honour the cancel the way native submission would:
+      // no request.
+      if (event.defaultPrevented) {
+        return;
+      }
+
       event.preventDefault();
 
       // Read before the request, not after: an edit made while it is in flight
