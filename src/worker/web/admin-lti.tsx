@@ -120,29 +120,49 @@ const PlatformSheet: FC<{
   return (
     <Sheet
       // Being disabled is the one state worth announcing, so it leads the
-      // description line; an enabled platform is simply the normal case,
-      // and the footer's Enable/Disable button names the state either way.
+      // description line, in bold so it is not lost among the identifiers;
+      // an enabled platform is simply the normal case, and the footer's
+      // Enable/Disable button names the state either way.
       description={
-        disabled ? `${i18n.t("Disabled")} · ${identity}` : identity
+        disabled ? (
+          <>
+            <strong>{i18n.t("Disabled")}</strong> · {identity}
+          </>
+        ) : (
+          identity
+        )
       }
       footer={
-        <CreateBar
-          action={`/admin/lti/platforms/${platform.id}/deployments`}
-          context={context}
-          submitLabel={i18n.t("Add deployment")}
-        >
-          <input
-            aria-label={i18n.t("Deployment ID")}
-            name="deploymentId"
-            placeholder={i18n.t("Deployment ID from the LMS")}
-            required
-          />
-          <input
-            aria-label={i18n.t("Deployment name")}
-            name="name"
-            placeholder={i18n.t("Name, optional")}
-          />
-        </CreateBar>
+        <div class="footer-row">
+          <CreateBar
+            action={`/admin/lti/platforms/${platform.id}/deployments`}
+            context={context}
+            submitLabel={i18n.t("Add deployment")}
+          >
+            <input
+              aria-label={i18n.t("Deployment ID")}
+              name="deploymentId"
+              placeholder={i18n.t("Deployment ID from the LMS")}
+              required
+            />
+            <input
+              aria-label={i18n.t("Deployment name")}
+              name="name"
+              placeholder={i18n.t("Name, optional")}
+            />
+          </CreateBar>
+          <form
+            action={`/admin/lti/platforms/${platform.id}/${disabled ? "enable" : "disable"}`}
+            method="post"
+          >
+            <CsrfInput context={context} />
+            <button class={disabled ? "secondary" : "danger"} type="submit">
+              {disabled
+                ? i18n.t("Enable platform")
+                : i18n.t("Disable platform")}
+            </button>
+          </form>
+        </div>
       }
       title={platform.name}
     >
@@ -202,15 +222,6 @@ const PlatformSheet: FC<{
           </tbody>
         </TableScroll>
       )}
-      <form
-        action={`/admin/lti/platforms/${platform.id}/${disabled ? "enable" : "disable"}`}
-        method="post"
-      >
-        <CsrfInput context={context} />
-        <button class={disabled ? "secondary" : "danger"} type="submit">
-          {disabled ? i18n.t("Enable platform") : i18n.t("Disable platform")}
-        </button>
-      </form>
     </Sheet>
   );
 };

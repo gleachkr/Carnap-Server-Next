@@ -205,7 +205,7 @@ export const TableScroll: FC<{ readonly children?: Child }> = ({
 export const Sheet: FC<{
   readonly children?: Child;
   readonly className?: string;
-  readonly description?: string;
+  readonly description?: Child;
   readonly footer?: Child;
   readonly summary?: Child;
   readonly title?: string;
