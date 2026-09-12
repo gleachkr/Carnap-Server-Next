@@ -48,14 +48,22 @@ which is the next thing to do.
 
 `CARNAP_ENV=local` is what makes that first run possible without an email
 provider: the login page prints a sign-in link into the page instead of sending
-it. **It is not a mode to serve anyone else with** — it also drops `Secure` from
-the session cookie and returns the one-time login token in API responses. Read
+it. **It is not a mode to serve anyone else with**: that link is printed for
+whoever asked, so on a network anyone who can reach the port can sign in as
+anyone — and the API hands the one-time login token back the same way. Read
 [Configuration](#configuration) before putting this on a network.
 
 The database lives on the `/data` volume, not in the image, so `podman rm` and
 `podman run` again keeps every course. The image applies pending migrations at
 boot and says which ones it ran; on the second boot it says nothing, because
 there are none.
+
+This runs happily beside the original Carnap on the same host. The two share
+nothing: the old image's `--volume carnap_data:/data` and this one's
+`-v carnap-data:/data` are different volumes (a volume is keyed on its exact
+name, underscore and hyphen included), and each opens its own database inside
+its own. The only thing to change is the host port, since both images listen
+on 8787 inside the container — `-p 8788:8787`, say, for whichever one moves.
 
 Two notes for Podman specifically. `HEALTHCHECK` is dropped unless you build
 with `--format docker`, since the OCI image format has no such field. And if
@@ -105,14 +113,16 @@ places, so unsetting is the way to turn something off.
 | `RESEND_API_KEY` | — | Required for sign-in outside `local`. |
 | `AUTH_LOGIN_EMAIL_FROM` | — | The `From:` on login emails, e.g. `Carnap <login@example.edu>`. |
 | `AUTH_LOGIN_CONFIRM_URL` | the request's own origin, plus `/login/confirm` | Where login links point. |
+| `CARNAP_TRUST_PROXY` | — | Set to `1` behind a reverse proxy, so `X-Forwarded-Proto` and `X-Forwarded-Host` are believed. See [Behind a reverse proxy](#behind-a-reverse-proxy). |
 | `LTI_TOOL_PRIVATE_KEY` | — | The tool's signing key, as a JSON JWK. Only needed for LMS integration. |
 | `TURNSTILE_SITE_KEY` | — | Renders the human-verification widget on the login form. Set both keys or neither. |
 | `TURNSTILE_SECRET_KEY` | — | Enforces the widget: with it set, a login request without a passed challenge is refused. |
 
 `CARNAP_ENV` defaults to `production` rather than to the convenient value,
-because `local` weakens the session cookie and hands out login tokens over the
-API — an instance that quietly did that would be a security hole with no
-symptom. Set it to `local` only on a machine nobody else can reach.
+because `local` prints the sign-in link into the login page and hands out login
+tokens over the API — an instance that quietly did that would be a security
+hole with no symptom. Set it to `local` only on a machine nobody else can
+reach.
 
 ## Signing in
 
@@ -188,8 +198,24 @@ air-gapped instance should leave the keys unset and keep the tight throttle.
 
 ## Behind a reverse proxy
 
-Terminate TLS in front and pass everything through. Two headers matter:
+Terminate TLS in front, pass everything through, and set `CARNAP_TRUST_PROXY=1`.
+The variable is what lets the proxy's headers speak for the browser:
 
+- **`X-Forwarded-Proto`** and **`X-Forwarded-Host`** say what the browser is
+  actually on. Without them the server only ever sees the proxy's plain-http
+  hop, and everything that follows the request's own URL follows the wrong one:
+  cookies go out without `Secure` (so `SameSite=None`, which an embedded LTI
+  launch needs, is unavailable), HSTS is never sent, emailed login links point
+  at `http://`, and the `redirect_uri` an LMS is told to launch back to is not
+  the one you registered. Both headers are honoured only under
+  `CARNAP_TRUST_PROXY`, because on an unproxied instance they are text any
+  client can send — and one that could talk a plain-http server into `Secure`
+  cookies would break its own sign-in. Every common proxy sets
+  `X-Forwarded-Proto`; nginx does not set `X-Forwarded-Host` by default and
+  rewrites `Host` to the upstream's, so either `proxy_set_header Host $host`
+  or `proxy_set_header X-Forwarded-Host $host`. `AUTH_LOGIN_CONFIRM_URL`
+  remains the override for the login link alone, for an instance whose public
+  address is not the one it is proxied at.
 - **`X-Forwarded-For`** is read for the audit trail on sessions and logins, and
   is the per-IP half of [the login throttle](#the-login-throttle). On Cloudflare
   that job is done by `CF-Connecting-IP`, which is preferred when present; the
@@ -199,9 +225,16 @@ Terminate TLS in front and pass everything through. Two headers matter:
 - **`X-Request-Id`**, if you set one, is carried through logs and error
   responses. One is generated when it is absent.
 
-HTTPS is not optional. Outside `CARNAP_ENV=local` the session cookie is marked
-`Secure`, so over plain HTTP the browser accepts it and then never sends it
-back — sign-in appears to succeed and the next page is signed out again.
+Plain http works, and is not protected. Whether a cookie carries `Secure` is
+decided by the connection the browser is on, not by `CARNAP_ENV`, so an
+instance reached over http — on a LAN, or over a VPN by IP — signs people in
+and stays signed in; what it cannot do is keep a session token, or anything
+else, from whoever is on the wire between them. That is fine for trying the
+software out on a network you control and not for a term's grades. It also
+rules out embedded LTI launches, which need a `SameSite=None` cookie and so an
+https one; launches that open in a new window are unaffected. What is not fine
+on any shared network, http or https, is `CARNAP_ENV=local` — the sign-in link
+it prints into the page is printed for whoever asked.
 
 Over HTTPS, Carnap sends `Strict-Transport-Security: max-age=31536000` — a year,
 and nothing more. `includeSubDomains` and `preload` are yours to add at the
