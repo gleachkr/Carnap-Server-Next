@@ -201,6 +201,13 @@ export type CourseView = "staff" | "student";
  * member may open; what the switch adds is the way across, which no page
  * offered before. Students never see it: for them there is only one side.
  *
+ * Two presses bring a reader back where they started. That holds because
+ * the switch sits only on a page that is a tier's own page for the thing —
+ * the course page, an instructor's assignment record, an assistant's review
+ * queue — and the student page's staff half returns to that page for that
+ * tier. A page that merely hangs off one of those carries no switch: from
+ * there the trip across would come back to its parent.
+ *
  * Two links on one segmented track, like the review filter, rather than a
  * pair of buttons: each half is a page, and the one being looked at is
  * `aria-current`. A `nav`, as the filter is, since that is what two links

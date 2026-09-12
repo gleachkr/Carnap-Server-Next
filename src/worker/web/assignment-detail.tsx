@@ -3228,15 +3228,20 @@ export function renderInstructorSubmissions(
           { onReviewPage: true },
         ),
       ],
-      // The staff half is this page: pressed, and a link to itself, as the
-      // review filter's halves are.
-      headerAside: (
-        <CourseViewSwitch
-          current="staff"
-          staffHref={`${base}/instructor/assignments/${model.assignmentId}/submissions`}
-          studentHref={`${base}/assignments/${model.assignmentId}`}
-        />
-      ),
+      // For an assistant only. The switch is a round trip — the student
+      // page's staff half returns to the page a tier calls the assignment's
+      // own, and for an assistant that is this one. An instructor's is the
+      // record page, which carries the switch; a second one here would go
+      // across and come back somewhere else. The staff half is this page:
+      // pressed, and a link to itself, as the review filter's halves are.
+      headerAside:
+        model.staffTier === "assistant" ? (
+          <CourseViewSwitch
+            current="staff"
+            staffHref={`${base}/instructor/assignments/${model.assignmentId}/submissions`}
+            studentHref={`${base}/assignments/${model.assignmentId}`}
+          />
+        ) : null,
       title: i18n.t("Review submissions"),
     },
     <>

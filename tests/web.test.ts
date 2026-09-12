@@ -1667,6 +1667,17 @@ describe("course staff and student views", () => {
       );
       expect(review.html).not.toContain(`href="${staffPath}"`);
 
+      // An instructor's review queue hangs off the record page, which has
+      // the switch; a second one here would cross over and come back to the
+      // record page instead. So it carries none.
+      const instructorReview = await page(instructor, reviewPath);
+
+      expect(instructorReview.status).toBe(200);
+      expect(instructorReview.html).not.toContain("course-view-switch");
+      expect(instructorReview.html).toContain(
+        `<a class="breadcrumb-link" href="${staffPath}">Week one homework</a>`,
+      );
+
       const assistantAsStudent = await page(assistant, studentPath);
 
       expect(assistantAsStudent.status).toBe(200);
