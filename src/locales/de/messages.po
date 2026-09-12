@@ -381,7 +381,6 @@ msgstr "Aktion"
 msgid "Actions"
 msgstr "Aktionen"
 
-#: src/worker/web/admin-lti.tsx
 #: src/worker/web/admin.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/labels.ts

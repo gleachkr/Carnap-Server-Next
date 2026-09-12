@@ -10,7 +10,6 @@ import {
   CsrfInput,
   Notice,
   Sheet,
-  StatusBadge,
   TableScroll,
   Time,
 } from "./components";
@@ -113,20 +112,19 @@ const PlatformSheet: FC<{
   const i18n = useI18n();
   const { deployments, platform } = overview;
   const disabled = platform.disabledAt !== null;
+  const identity = i18n.t("Issuer {issuer} · client ID {clientId}", {
+    clientId: platform.clientId,
+    issuer: platform.issuer,
+  });
 
   return (
     <Sheet
-      badge={
-        disabled ? (
-          <StatusBadge label={i18n.t("Disabled")} tone="danger" />
-        ) : (
-          <StatusBadge label={i18n.t("Active")} tone="ok" />
-        )
+      // Being disabled is the one state worth announcing, so it leads the
+      // description line; an enabled platform is simply the normal case,
+      // and the footer's Enable/Disable button names the state either way.
+      description={
+        disabled ? `${i18n.t("Disabled")} · ${identity}` : identity
       }
-      description={i18n.t("Issuer {issuer} · client ID {clientId}", {
-        clientId: platform.clientId,
-        issuer: platform.issuer,
-      })}
       footer={
         <CreateBar
           action={`/admin/lti/platforms/${platform.id}/deployments`}

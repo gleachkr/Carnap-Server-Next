@@ -417,12 +417,8 @@ table button:not(:where(.modal-dialog button)) {
 }
 
 .sheet-header {
-  align-items: start;
   background: linear-gradient(180deg, var(--surface), var(--surface-soft));
   border-bottom: 1px solid var(--rule);
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
 }
 
 .sheet-header h2 {
@@ -439,12 +435,11 @@ table button:not(:where(.modal-dialog button)) {
 
 /* A sheet that is a disclosure: its header is the summary, so a closed
    drawer still reads as one of the page's cards rather than as a stray link.
-   The triangle is drawn rather than left to the UA marker, which a flex
-   summary suppresses anyway, and drawn with borders rather than a glyph
-   because generated text would join the summary's accessible name. */
+   The triangle is drawn rather than left to the UA marker, and drawn with
+   borders rather than a glyph because generated text would join the
+   summary's accessible name. */
 
 .archived-sheet > summary {
-  align-items: center;
   cursor: pointer;
   list-style: none;
 }
@@ -1896,7 +1891,6 @@ a.score-uncounted {
     flex-wrap: wrap;
   }
 
-  .sheet-header,
   .app-footer {
     align-items: flex-start;
     flex-direction: column;

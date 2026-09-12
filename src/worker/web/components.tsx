@@ -203,22 +203,13 @@ export const TableScroll: FC<{ readonly children?: Child }> = ({
 );
 
 export const Sheet: FC<{
-  readonly badge?: Child;
   readonly children?: Child;
   readonly className?: string;
   readonly description?: string;
   readonly footer?: Child;
   readonly summary?: Child;
   readonly title?: string;
-}> = ({
-  badge,
-  children,
-  className,
-  description,
-  footer,
-  summary,
-  title,
-}) => {
+}> = ({ children, className, description, footer, summary, title }) => {
   const hasBody =
     children !== undefined &&
     children !== null &&
@@ -229,13 +220,10 @@ export const Sheet: FC<{
     <section class={className === undefined ? "sheet" : `sheet ${className}`}>
       {title === undefined ? null : (
         <header class="sheet-header">
-          <div>
-            <h2>{title}</h2>
-            {description === undefined ? null : (
-              <p class="small">{description}</p>
-            )}
-          </div>
-          {badge}
+          <h2>{title}</h2>
+          {description === undefined ? null : (
+            <p class="small">{description}</p>
+          )}
         </header>
       )}
       {summary}
