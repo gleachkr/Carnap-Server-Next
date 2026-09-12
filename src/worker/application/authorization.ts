@@ -62,10 +62,7 @@ export async function requireInstructor(
   actor: NonNullable<AppBindings["Variables"]["actor"]>,
   courseId: AppId,
 ): Promise<CourseMembership> {
-  return requireCourseRole(stores, actor, courseId, [
-    "co_instructor",
-    "instructor",
-  ]);
+  return requireCourseRole(stores, actor, courseId, ["instructor"]);
 }
 
 export async function requireCourseStaff(
@@ -74,7 +71,6 @@ export async function requireCourseStaff(
   courseId: AppId,
 ): Promise<CourseMembership> {
   return requireCourseRole(stores, actor, courseId, [
-    "co_instructor",
     "instructor",
     "teacher_assistant",
   ]);

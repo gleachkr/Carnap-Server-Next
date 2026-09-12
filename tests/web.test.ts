@@ -549,7 +549,7 @@ describe("native web workflow", () => {
       expect(roster).toContain('<td data-sort-value="zoe@example.test">');
       // Roles and statuses carry their rank, not their words: sorting the
       // labels would order the roster differently in every language.
-      expect(roster).toContain('<td data-sort-value="3">Instructor</td>');
+      expect(roster).toContain('<td data-sort-value="2">Instructor</td>');
       expect(roster).toContain(
         '<td data-sort-value="1">Teaching assistant</td>',
       );

@@ -1112,7 +1112,6 @@ class SqliteCourseStore implements CourseStore {
           eq(courseMemberships.userId, userId),
           eq(courseMemberships.status, "active"),
           inArray(courseMemberships.role, [
-            "co_instructor",
             "instructor",
             "teacher_assistant",
           ]),

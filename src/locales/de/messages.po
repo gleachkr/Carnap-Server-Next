@@ -971,14 +971,6 @@ msgstr "Schließt"
 msgid "Closes {when}"
 msgstr "Schließt {when}"
 
-#: src/worker/web/labels.ts
-msgid "Co-instructor"
-msgstr "Mitlehrende Person"
-
-#: src/worker/web/courses.tsx
-msgid "Co-instructors can do anything an instructor can do."
-msgstr ""
-
 #: src/worker/web/content.tsx
 msgid "Compiled content"
 msgstr "Kompilierter Inhalt"

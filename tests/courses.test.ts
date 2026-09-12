@@ -527,10 +527,10 @@ describe("courses and enrollment", () => {
     });
   });
 
-  test("co-instructors can teach while TAs remain limited", async () => {
+  test("a second instructor can teach while TAs remain limited", async () => {
     await withStorage(async (_storage, env) => {
       const owner = await login(env, "owner@example.test");
-      const coInstructor = await login(env, "co@example.test");
+      const coInstructor = await login(env, "second@example.test");
       const assistant = await login(env, "ta@example.test");
       const created = await createCourse(env, owner);
       const coStaffResponse = await appRequest(
@@ -538,7 +538,7 @@ describe("courses and enrollment", () => {
         `/courses/${created.course.id}/staff`,
         {
           ...jsonRequest(
-            { role: "co_instructor", userId: coInstructor.body.actor.id },
+            { role: "instructor", userId: coInstructor.body.actor.id },
             owner.csrfToken,
           ),
           headers: {
@@ -595,7 +595,7 @@ describe("courses and enrollment", () => {
       const taBody = (await taEnrollmentLink.json()) as ErrorEnvelope;
 
       expect(coStaffResponse.status).toBe(201);
-      expect(coStaff.membership.role).toBe("co_instructor");
+      expect(coStaff.membership.role).toBe("instructor");
       expect(taStaffResponse.status).toBe(201);
       expect(coEnrollmentLink.status).toBe(201);
       expect(taEnrollmentLink.status).toBe(403);
@@ -1017,7 +1017,7 @@ describe("courses and enrollment", () => {
         {
           body: new URLSearchParams({
             email: "student@example.test",
-            role: "co_instructor",
+            role: "instructor",
           }),
           headers: {
             Cookie: instructor.cookieHeader,
@@ -1047,7 +1047,7 @@ describe("courses and enrollment", () => {
       expect(response.status).toBe(303);
       // Exactly one membership — promoted in place, not duplicated.
       expect(forStudent?.length).toBe(1);
-      expect(forStudent?.[0]?.role).toBe("co_instructor");
+      expect(forStudent?.[0]?.role).toBe("instructor");
     });
   });
 

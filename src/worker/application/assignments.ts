@@ -1148,8 +1148,7 @@ export class AssignmentService {
     const candidates = (
       await this.options.stores.assignments.listForCourse(courseId)
     ).filter((assignment) => revisionIds.has(assignment.contentRevisionId));
-    const staff =
-      membership.role === "instructor" || membership.role === "co_instructor";
+    const staff = membership.role === "instructor";
     const pool = staff
       ? candidates
       : candidates.filter((assignment) => assignment.state === "published");

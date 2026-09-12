@@ -1,17 +1,13 @@
 import type { AppId } from "./ids";
 import type { Timestamp } from "./time";
 
-export type CourseRole =
-  | "student"
-  | "teacher_assistant"
-  | "co_instructor"
-  | "instructor";
+export type CourseRole = "student" | "teacher_assistant" | "instructor";
 export type MembershipStatus = "active" | "invited" | "suspended" | "dropped";
 
 /**
- * The two tiers of course staff, as the pages tell them apart. Instructors and
- * co-instructors manage the course — settings, roster, assignments — and the
- * code never distinguishes the two. A teaching assistant grades: the review
+ * The two tiers of course staff, as the pages tell them apart. An instructor
+ * manages the course — settings, roster, assignments; there can be several,
+ * and the course's creator is one of them. A teaching assistant grades: the review
  * queue, the gradebooks, attempt resets, and nothing that changes what the
  * course is. Every "is this person staff?" question a page asks reduces to
  * which tier, or neither, so it is answered once here.
@@ -20,7 +16,6 @@ export type CourseStaffTier = "instructor" | "assistant";
 
 export function courseStaffTier(role: CourseRole): CourseStaffTier | null {
   switch (role) {
-    case "co_instructor":
     case "instructor":
       return "instructor";
     case "teacher_assistant":

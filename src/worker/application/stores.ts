@@ -345,7 +345,7 @@ export interface CourseStore {
   listForUser(userId: AppId): Promise<CourseListEntry[]>;
   /**
    * Whether the user actively staffs any course at all — instructor,
-   * co-instructor, or teaching assistant. Asked of every signed-in request, so
+   * or teaching assistant. Asked of every signed-in request, so
    * it answers with a boolean rather than making the caller sift a list of
    * memberships it does not otherwise want.
    */

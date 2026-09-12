@@ -405,8 +405,12 @@ export function mapLtiRolesToCourseRole(
     return "instructor";
   }
 
+  // A content developer designs the course in the LMS, which here is a
+  // teaching assistant's authoring without an instructor's run of the roster
+  // and the assignments. A later launch never rewrites a role set inside
+  // Carnap, so an instructor can promote them from the members table.
   if (names.has("ContentDeveloper")) {
-    return "co_instructor";
+    return "teacher_assistant";
   }
 
   return "student";
@@ -638,7 +642,7 @@ export class LtiService {
     nowDate: Date,
     frameAncestorOrigin: string | null,
   ): Promise<LtiLaunchOutcome> {
-    if (role !== "instructor" && role !== "co_instructor") {
+    if (role !== "instructor") {
       throw new LtiLaunchError(
         "lti_deep_linking_forbidden",
         deferred.i18n.t(
@@ -1617,7 +1621,7 @@ export class LtiService {
       return existing.courseId;
     }
 
-    if (launch.role !== "instructor" && launch.role !== "co_instructor") {
+    if (launch.role !== "instructor") {
       throw new LtiLaunchError(
         "lti_course_not_ready",
         deferred.i18n.t(
@@ -1846,7 +1850,7 @@ export class LtiService {
     // The instructor's launch keeps the assignment page: they are not there to
     // do the work but to look after it, and the settings, gradebook and content
     // links are the point of arriving.
-    return role === "instructor" || role === "co_instructor"
+    return role === "instructor"
       ? `/courses/${courseId}/instructor/assignments/${link.assignmentId}`
       : `/courses/${courseId}/assignments/${link.assignmentId}/content`;
   }

@@ -975,7 +975,7 @@ describe("LTI 1.3 core launches", () => {
         sub: "role-b",
       },
       {
-        expected: "co_instructor",
+        expected: "teacher_assistant",
         roles: [CONTENT_DEVELOPER_ROLE],
         sub: "role-c",
       },

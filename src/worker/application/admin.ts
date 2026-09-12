@@ -52,7 +52,6 @@ const CAPABILITIES: readonly PlatformCapability[] = [
 const COURSE_ROLES: readonly CourseMembership["role"][] = [
   "student",
   "teacher_assistant",
-  "co_instructor",
   "instructor",
 ];
 const MEMBERSHIP_STATUSES: readonly CourseMembership["status"][] = [

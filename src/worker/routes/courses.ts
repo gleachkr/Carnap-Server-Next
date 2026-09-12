@@ -523,7 +523,7 @@ function addStaffCommandFromJson(body: AddStaffBody) {
   }
 
   return {
-    role: body.role as "co_instructor" | "instructor" | "teacher_assistant",
+    role: body.role as "instructor" | "teacher_assistant",
     userId: body.userId,
   };
 }
@@ -810,7 +810,6 @@ async function addStaffFromForm(
     await courseService(context).addStaffByEmail(actor, courseId, {
       email: fieldValue(form.get("email")),
       role: fieldValue(form.get("role")) as
-        | "co_instructor"
         | "instructor"
         | "teacher_assistant",
     });

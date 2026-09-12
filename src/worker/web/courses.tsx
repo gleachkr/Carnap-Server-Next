@@ -438,7 +438,7 @@ const AccommodationBadge: FC<{
 
 /**
  * The membership editor: a modal letting an instructor set a member's role
- * (promoting a student to teaching assistant or co-instructor, or the reverse)
+ * (promoting a student to teaching assistant or instructor, or the reverse)
  * and their status (active, suspended, dropped). It posts to the course's
  * membership route, which applies both changes and redirects back.
  */
@@ -645,7 +645,7 @@ const MembersTable: FC<{
   );
 };
 
-type StaffRole = "co_instructor" | "instructor" | "teacher_assistant";
+type StaffRole = "instructor" | "teacher_assistant";
 
 /**
  * The staff roles, least to most privileged; a student is not staff. The
@@ -653,19 +653,14 @@ type StaffRole = "co_instructor" | "instructor" | "teacher_assistant";
  */
 const STAFF_ROLE_ORDER: readonly [StaffRole, ...StaffRole[]] = [
   "teacher_assistant",
-  "co_instructor",
   "instructor",
 ];
 
 /**
  * What each staff role may do, said under the select as the option changes.
- * An instructor and a co-instructor are the same role to every permission
- * check; the two names exist so a course can say who owns it.
  */
 function staffRoleHint(i18n: Translator, role: StaffRole): string {
   switch (role) {
-    case "co_instructor":
-      return i18n.t("Co-instructors can do anything an instructor can do.");
     case "instructor":
       return i18n.t(
         "Instructors run the course: its assignments, members, grades and settings.",
@@ -1125,9 +1120,7 @@ const CourseEditControl: FC<{
 };
 
 function canUnarchive(membership: CourseMembership): boolean {
-  return (
-    membership.role === "instructor" || membership.role === "co_instructor"
-  );
+  return membership.role === "instructor";
 }
 
 /**

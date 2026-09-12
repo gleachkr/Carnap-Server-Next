@@ -68,13 +68,13 @@ export interface UpdateMembershipRoleCommand {
 }
 
 export interface AddCourseStaffCommand {
-  readonly role: "co_instructor" | "instructor" | "teacher_assistant";
+  readonly role: "instructor" | "teacher_assistant";
   readonly userId: AppId;
 }
 
 export interface AddCourseStaffByEmailCommand {
   readonly email: string;
-  readonly role: "co_instructor" | "instructor" | "teacher_assistant";
+  readonly role: "instructor" | "teacher_assistant";
 }
 
 export interface UpsertAccommodationCommand {
@@ -178,11 +178,7 @@ function courseNotFound(): AppHttpError {
 function assertStaffRole(
   role: string,
 ): asserts role is AddCourseStaffCommand["role"] {
-  if (
-    role !== "co_instructor" &&
-    role !== "instructor" &&
-    role !== "teacher_assistant"
-  ) {
+  if (role !== "instructor" && role !== "teacher_assistant") {
     throw badRequest(
       "invalid_course_role",
       deferred.i18n.t("Course role is not supported."),
@@ -194,7 +190,6 @@ function assertMembershipRole(
   role: string,
 ): asserts role is CourseMembership["role"] {
   if (
-    role !== "co_instructor" &&
     role !== "instructor" &&
     role !== "student" &&
     role !== "teacher_assistant"
@@ -207,15 +202,12 @@ function assertMembershipRole(
 }
 
 /**
- * An active membership that can manage the course — an instructor or
- * co-instructor who has not been suspended or dropped. Used to guard against
+ * An active membership that can manage the course — an instructor who has
+ * not been suspended or dropped. Used to guard against
  * demoting or deactivating the last such member and orphaning the course.
  */
 function managesCourse(membership: CourseMembership): boolean {
-  return (
-    membership.status === "active" &&
-    (membership.role === "instructor" || membership.role === "co_instructor")
-  );
+  return membership.status === "active" && membership.role === "instructor";
 }
 
 function nonNegativeInteger(
@@ -379,8 +371,7 @@ export class CourseService {
       throw courseNotFound();
     }
 
-    const isInstructor =
-      membership.role === "instructor" || membership.role === "co_instructor";
+    const isInstructor = membership.role === "instructor";
     const [memberships, accommodations] = isInstructor
       ? await Promise.all([
           this.options.stores.courses.listMembershipsForCourse(courseId),
@@ -515,7 +506,7 @@ export class CourseService {
 
     if (
       existing.userId === actor.user.id &&
-      (existing.role === "instructor" || existing.role === "co_instructor") &&
+      existing.role === "instructor" &&
       command.status !== "active"
     ) {
       throw badRequest(
@@ -568,11 +559,7 @@ export class CourseService {
 
     // Demoting the last active instructor would leave the course unmanageable,
     // so refuse when this membership is the only one that still manages it.
-    if (
-      managesCourse(existing) &&
-      command.role !== "instructor" &&
-      command.role !== "co_instructor"
-    ) {
+    if (managesCourse(existing) && command.role !== "instructor") {
       const memberships =
         await this.options.stores.courses.listMembershipsForCourse(courseId);
       const otherManagers = memberships.filter(
@@ -640,7 +627,7 @@ export class CourseService {
   }
 
   /**
-   * Add a staff member (co-instructor, TA, or instructor) by their account
+   * Add a staff member (instructor or TA) by their account
    * email. When the person is already a member — e.g. a student who joined via
    * an enrollment link — this promotes them in place rather than creating a
    * duplicate membership, routing through the guarded role update so the last

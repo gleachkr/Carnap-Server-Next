@@ -1659,7 +1659,7 @@ async function contentItemRedirect(
       requiredParam(context, "itemId"),
     );
     const base =
-      resolved.role === "instructor" || resolved.role === "co_instructor"
+      resolved.role === "instructor"
         ? `/courses/${courseId}/instructor/assignments`
         : `/courses/${courseId}/assignments`;
     const suffix = fromStandaloneContentDocument(context) ? "/content" : "";

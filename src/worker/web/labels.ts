@@ -100,8 +100,6 @@ function gradesVisibilityLabel(
 
 export function courseRoleLabel(i18n: Translator, role: CourseRole): string {
   switch (role) {
-    case "co_instructor":
-      return i18n.t("Co-instructor");
     case "instructor":
       return i18n.t("Instructor");
     case "student":
@@ -254,7 +252,6 @@ export const GRADES_VISIBILITY_ORDER: readonly GradesVisibility[] = [
 export const COURSE_ROLE_ORDER: readonly CourseRole[] = [
   "student",
   "teacher_assistant",
-  "co_instructor",
   "instructor",
 ];
 

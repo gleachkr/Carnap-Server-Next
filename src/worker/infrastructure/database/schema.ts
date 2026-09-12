@@ -138,7 +138,7 @@ export const courseMemberships = sqliteTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     role: text("role", {
-      enum: ["student", "teacher_assistant", "co_instructor", "instructor"],
+      enum: ["student", "teacher_assistant", "instructor"],
     }).notNull(),
     status: text("status", {
       enum: ["active", "invited", "suspended", "dropped"],
