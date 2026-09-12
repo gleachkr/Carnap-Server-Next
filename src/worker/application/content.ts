@@ -2,6 +2,7 @@ import type {
   CompiledContentArtifact,
   ContentItem,
   ContentRevision,
+  ContentRevisionSummary,
   ContentSharing,
   ContentSourceFormat,
 } from "../domain/content";
@@ -487,9 +488,6 @@ export class ContentService {
       throw badRequest(first.code, first);
     }
 
-    const revisions =
-      await this.options.stores.content.listRevisionsForItem(itemId);
-    const nextRevisionNumber = revisions.length + 1;
     const nowDate = this.options.now?.() ?? new Date();
     const now = timestampNow(nowDate);
     // Namespaced by format, so that two items holding byte-identical text are
@@ -500,12 +498,21 @@ export class ContentService {
       `${item.sourceFormat === "mm0" ? "mm0-v1" : "carnap-markdown-v1"}\n${command.sourceText}`,
     );
 
+    // The next number and the hash check come as one aggregate, not as the
+    // item's revisions: a save used to read every one of them, artifacts and
+    // all, and an item that has been edited a few hundred times has a history
+    // far larger than anything a save needs to know about it.
+    const slot = await this.options.stores.content.nextRevisionSlot(
+      itemId,
+      contentHash,
+    );
+
     // (item_id, content_hash) is unique, so the same source cannot be saved
     // twice under one item. Saying so in words matters now that a revision
     // carries a note: "same text, new note" is a thing an author will try, and
     // the bare constraint violation reaches them as a 500. The index is still
     // the backstop for two saves racing each other.
-    if (revisions.some((revision) => revision.contentHash === contentHash)) {
+    if (slot.sourceAlreadySaved) {
       throw badRequest(
         "duplicate_content_revision",
         deferred.i18n.t(
@@ -527,7 +534,7 @@ export class ContentService {
       details,
       id: createAppId(nowDate.getTime()),
       itemId,
-      revisionNumber: nextRevisionNumber,
+      revisionNumber: slot.revisionNumber,
       // The item's, not the caller's: nothing on the way in gets to say what
       // kind of thing this revision is, so the two cannot come apart.
       sourceFormat: item.sourceFormat,
@@ -594,7 +601,7 @@ export class ContentService {
   async listRevisions(
     actor: AuthenticatedActor,
     itemId: AppId,
-  ): Promise<ContentRevision[]> {
+  ): Promise<ContentRevisionSummary[]> {
     await this.getItem(actor, itemId);
 
     return this.options.stores.content.listRevisionsForItem(itemId);

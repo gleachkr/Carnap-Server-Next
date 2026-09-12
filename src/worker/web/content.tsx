@@ -5,7 +5,7 @@ import type { DiagnosticMessageId } from "../application/content/diagnostic-stri
 import type { CompiledTheoryArtifact } from "../application/content/mm0";
 import type {
   ContentItem,
-  ContentRevision,
+  ContentRevisionSummary,
   ContentSharing,
   ContentSourceFormat,
 } from "../domain/content";
@@ -643,7 +643,7 @@ function sharingHint(i18n: Translator, sharing: ContentSharing): string {
 const RevisionSharingDialog: FC<{
   readonly context: Context<AppBindings>;
   readonly dialogId: string;
-  readonly revision: ContentRevision;
+  readonly revision: ContentRevisionSummary;
 }> = ({ context, dialogId, revision }) => {
   const i18n = useI18n();
   const theory = revision.sourceFormat === "mm0";
@@ -758,7 +758,7 @@ const RevisionSharingDialog: FC<{
  */
 const RevisionSharing: FC<{
   readonly context: Context<AppBindings>;
-  readonly revision: ContentRevision;
+  readonly revision: ContentRevisionSummary;
 }> = ({ context, revision }) => {
   const i18n = useI18n();
   const dialogId = `sharing-${revision.id}`;
@@ -792,7 +792,7 @@ const RevisionsTable: FC<{
    * under, and an author who has lost it should not be offered the dialog. */
   readonly canAuthor: boolean;
   readonly context: Context<AppBindings>;
-  readonly revisions: readonly ContentRevision[];
+  readonly revisions: readonly ContentRevisionSummary[];
 }> = ({ canAuthor, context, revisions }) => {
   const i18n = useI18n();
 
@@ -969,7 +969,7 @@ export function renderContentItem(
     readonly canAuthor: boolean;
     readonly item: ContentItem;
     readonly notices: readonly string[];
-    readonly revisions: readonly ContentRevision[];
+    readonly revisions: readonly ContentRevisionSummary[];
   },
 ): Response {
   const i18n = context.get("i18n");

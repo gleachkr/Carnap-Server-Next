@@ -101,23 +101,6 @@ function optionDetails(details: string): string {
 }
 
 /**
- * A picker option's text, saying so when the revision cannot be read.
- *
- * `<option disabled>` greys the option out but gives no reason, and "greyed
- * out" is indistinguishable from "already selected elsewhere" or "not yours".
- * The words are what make it actionable — and they are what was missing when a
- * known-unreadable revision sat in the correction picker looking like every
- * other one.
- */
-export function revisionPickerLabel(
-  i18n: Translator,
-  label: string,
-  unreadable: boolean,
-): string {
-  return unreadable ? i18n.t("{label} — cannot be read", { label }) : label;
-}
-
-/**
  * How a revision is named in a picker: when it was saved and the author's note.
  * Not the revision number — an ordinal orders revisions without describing any
  * of them, and it is no longer shown anywhere a reader looks. `itemTitle` is for

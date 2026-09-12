@@ -74,12 +74,13 @@ interface ContentRevisionResponse {
   };
 }
 
+/** An item's listing names its revisions; the text is behind each id. */
 interface ContentDetailResponse {
   readonly revisions: readonly {
     readonly details: string;
     readonly id: string;
     readonly revisionNumber: number;
-    readonly sourceText: string;
+    readonly sourceText?: undefined;
   }[];
 }
 
@@ -1563,7 +1564,19 @@ describe("content routes", () => {
         `/content/${item.item.id}?revisionCreated=1`,
       );
       expect(detail.revisions).toHaveLength(1);
-      expect(detail.revisions[0]?.sourceText).toContain("uploaded_q");
+
+      // The listing names the revision; the uploaded text is read at its own
+      // address, which is what keeps a listing from carrying every draft.
+      const uploaded = await appRequest(
+        createTestApp(),
+        `/content/revisions/${detail.revisions[0]?.id}`,
+        { headers: { Cookie: author.cookieHeader } },
+        env,
+      );
+      const uploadedBody = (await uploaded.json()) as ContentRevisionResponse;
+
+      expect(detail.revisions[0]?.sourceText).toBeUndefined();
+      expect(uploadedBody.revision.sourceText).toContain("uploaded_q");
     });
   });
 

@@ -638,9 +638,83 @@ export function describeStorageContract(
         ).rejects.toThrow();
         // Newest first: the second revision leads, and the order is the store's
         // promise rather than an accident of insertion.
+        const history = await stores.content.listRevisionsForItem(item.id);
+
+        expect(history.map((entry) => entry.id)).toEqual([
+          secondRevision.id,
+          revision.id,
+        ]);
+        // Every column but the two that grow: a strict equality, so a source
+        // or an artifact creeping back into the listing fails here.
+        expect(history[0]).toEqual({
+          id: secondRevision.id,
+          itemId: item.id,
+          revisionNumber: 2,
+          details: "Reworded the second step.",
+          sharing: "private",
+          shareSource: false,
+          sourceFormat: "markdown",
+          contentHash: "sha256:second",
+          createdById: instructor.id,
+          createdAt: NOW,
+        });
+      });
+    });
+
+    test("the next revision's slot is one aggregate, not the history", async () => {
+      await withStorage(async ({ stores }) => {
+        const { instructor } = await createCourseSlice(stores);
+        const item = await stores.content.createItem({
+          id: "content-item-1",
+          ownerUserId: instructor.id,
+          sourceFormat: "markdown",
+          title: "Modus Ponens",
+          createdAt: NOW,
+        });
+
+        // An item with no revisions yet: the first number, nothing saved.
         await expect(
-          stores.content.listRevisionsForItem(item.id),
-        ).resolves.toEqual([secondRevision, revision]);
+          stores.content.nextRevisionSlot(item.id, "sha256:first"),
+        ).resolves.toEqual({ revisionNumber: 1, sourceAlreadySaved: false });
+
+        for (const [revisionNumber, contentHash] of [
+          [1, "sha256:first"],
+          [2, "sha256:second"],
+        ] as const) {
+          await stores.content.createRevision({
+            id: `content-revision-${revisionNumber}`,
+            itemId: item.id,
+            revisionNumber,
+            details: "",
+            sourceFormat: "markdown",
+            sourceText: `# Draft ${revisionNumber}`,
+            contentHash,
+            compiled: { exercises: [] },
+            createdById: instructor.id,
+            createdAt: NOW,
+          });
+        }
+
+        // One past the highest, and the hash is found wherever in the history
+        // it sits — the first revision's, not only the latest one's.
+        await expect(
+          stores.content.nextRevisionSlot(item.id, "sha256:first"),
+        ).resolves.toEqual({ revisionNumber: 3, sourceAlreadySaved: true });
+        await expect(
+          stores.content.nextRevisionSlot(item.id, "sha256:third"),
+        ).resolves.toEqual({ revisionNumber: 3, sourceAlreadySaved: false });
+        // Another item's hash is another item's business.
+        const other = await stores.content.createItem({
+          id: "content-item-2",
+          ownerUserId: instructor.id,
+          sourceFormat: "markdown",
+          title: "Modus Tollens",
+          createdAt: NOW,
+        });
+
+        await expect(
+          stores.content.nextRevisionSlot(other.id, "sha256:first"),
+        ).resolves.toEqual({ revisionNumber: 1, sourceAlreadySaved: false });
       });
     });
 

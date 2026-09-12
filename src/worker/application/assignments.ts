@@ -566,7 +566,10 @@ export class AssignmentService {
       throw contentRevisionNotFound();
     }
 
-    const item = await this.requireAssignableLesson(actor, revision);
+    const { artifact, item } = await this.requireAssignableLesson(
+      actor,
+      revision,
+    );
 
     const assignment = await this.options.stores.assignments.create({
       assessmentMode,
@@ -588,7 +591,7 @@ export class AssignmentService {
     });
 
     return {
-      artifact: contentArtifactFromRevision(revision),
+      artifact,
       assignment,
       contentItem: item,
       contentRevision: revision,
@@ -658,7 +661,10 @@ export class AssignmentService {
       throw contentRevisionNotFound();
     }
 
-    const item = await this.requireAssignableLesson(actor, revision);
+    const { artifact, item } = await this.requireAssignableLesson(
+      actor,
+      revision,
+    );
 
     const updated = await this.options.stores.assignments.updateDraft({
       assessmentMode,
@@ -685,7 +691,7 @@ export class AssignmentService {
     }
 
     return {
-      artifact: contentArtifactFromRevision(revision),
+      artifact,
       assignment: updated,
       contentItem: item,
       contentRevision: revision,
@@ -1314,11 +1320,18 @@ export class AssignmentService {
    * on the attempt page, or as a gradebook column whose denominator is zero.
    * The pickers do not offer one, but the JSON API takes whatever id it is
    * given, so the refusal belongs where the id is resolved.
+   *
+   * The artifact is read here too, before anything is written, so a revision
+   * whose stored form will not parse is refused rather than pointed at. The
+   * pickers used to grey such a revision out, at the price of loading every
+   * artifact in the author's library to draw a select; this is the same
+   * promise — a working assignment is never handed a lesson nobody can open —
+   * kept at the one place every path goes through, over one artifact.
    */
   private async requireAssignableLesson(
     actor: AuthenticatedActor,
     revision: ContentRevision,
-  ): Promise<ContentItem> {
+  ): Promise<{ artifact: CompiledContentArtifact; item: ContentItem }> {
     const item = await this.options.stores.content.getItem(revision.itemId);
 
     // Somebody else's item is a miss here for the reason it is one in
@@ -1338,7 +1351,7 @@ export class AssignmentService {
       );
     }
 
-    return item;
+    return { artifact: contentArtifactFromRevision(revision), item };
   }
 
   private async getAssignmentInCourse(

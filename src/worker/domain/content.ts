@@ -154,6 +154,19 @@ export interface ContentRevision {
   readonly createdAt: Timestamp;
 }
 
+/**
+ * A revision without the two columns that grow: the source and the artifact.
+ *
+ * This is what a history lists, a picker offers and a save compares against,
+ * none of which shows a word of the text — while a lesson's artifact runs to
+ * hundreds of kilobytes and an item keeps every revision it ever had. A
+ * reader who wants the text follows the id to the revision itself.
+ */
+export type ContentRevisionSummary = Omit<
+  ContentRevision,
+  "sourceText" | "compiled"
+>;
+
 export type ContentNode =
   | {
       readonly html: string;

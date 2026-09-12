@@ -23,6 +23,7 @@ import { AppHttpError, badRequest } from "../application/errors";
 import type {
   ContentItem,
   ContentRevision,
+  ContentRevisionSummary,
   ContentSourceFormat,
 } from "../domain/content";
 import type { AppBindings } from "../http";
@@ -195,9 +196,13 @@ function publicContentItem(item: ContentItem) {
   };
 }
 
-function publicRevision(revision: ContentRevision) {
+/**
+ * A revision as an item's listing shows it: everything but the text. The
+ * revision's own address carries the source and the artifact, and a listing
+ * that repeated them would be serving every draft of a lesson to name them.
+ */
+function publicRevisionSummary(revision: ContentRevisionSummary) {
   return {
-    compiled: revision.compiled,
     contentHash: revision.contentHash,
     createdAt: revision.createdAt,
     createdById: revision.createdById,
@@ -208,6 +213,13 @@ function publicRevision(revision: ContentRevision) {
     shareSource: revision.shareSource,
     sharing: revision.sharing,
     sourceFormat: revision.sourceFormat,
+  };
+}
+
+function publicRevision(revision: ContentRevision) {
+  return {
+    ...publicRevisionSummary(revision),
+    compiled: revision.compiled,
     sourceText: revision.sourceText,
   };
 }
@@ -532,17 +544,17 @@ async function revisionEditorPage(
     const item = await service.getItem(actor, itemId);
     // A new revision starts from where the item left off; the sample is
     // only for an item with no revisions yet, and is in the item's format.
-    // The list is newest first, so the head of it is where the item left off.
+    // The list is newest first, so the head of it is where the item left off
+    // — and the list has no text, so the head is then read on its own.
     const latest = (await service.listRevisions(actor, itemId))[0];
+    const sourceText =
+      latest === undefined
+        ? sampleSource(item.sourceFormat)
+        : (await service.readRevision(actor, latest.id)).revision.sourceText;
 
     // A fresh editor has no note yet: the field is for what this save changes,
     // not what the previous one did.
-    return renderEditor(
-      context,
-      item,
-      latest?.sourceText ?? sampleSource(item.sourceFormat),
-      "",
-    );
+    return renderEditor(context, item, sourceText, "");
   } catch (error) {
     if (error instanceof AppHttpError) {
       const i18n = context.get("i18n");
@@ -942,7 +954,7 @@ contentRoutes.get("/:itemId", async (context) => {
 
   return context.json({
     item: publicContentItem(item),
-    revisions: revisions.map(publicRevision),
+    revisions: revisions.map(publicRevisionSummary),
   });
 });
 

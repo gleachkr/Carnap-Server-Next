@@ -117,10 +117,6 @@ msgstr ""
 msgid "{id} — {status}"
 msgstr ""
 
-#: src/worker/web/revisions.ts
-msgid "{label} — cannot be read"
-msgstr ""
-
 #: src/worker/application/lti-admin.ts
 msgid "{label} is required."
 msgstr ""

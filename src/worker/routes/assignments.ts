@@ -9,10 +9,6 @@ import {
 } from "../application/authorization";
 import { ContentService } from "../application/content";
 import {
-  ContentArtifactError,
-  contentArtifactFromRevision,
-} from "../application/content/artifact";
-import {
   componentAssetsForArtifact,
   renderCompiledContent,
 } from "../application/content/renderer";
@@ -485,31 +481,15 @@ async function authorRevisionOptions(
     })),
   );
 
+  // Summaries, not revisions: a picker names every revision of every item the
+  // author has, and used to load every one of their artifacts to grey out
+  // the ones that would not parse. That was the whole library in memory to
+  // draw a select. The refusal now sits where the id is written —
+  // `AssignmentService.requireAssignableLesson` — which is what keeps a
+  // working assignment working when the correction it is offered is broken.
   return revisions.flatMap(({ item, revisions }) =>
-    revisions.map((revision) => ({
-      item,
-      revision,
-      // The artifact is already in hand, so this costs a walk over data we
-      // fetched anyway — and it is the difference between an instructor being
-      // told a revision is broken and an instructor selecting it, publishing a
-      // correction, and breaking the assignment that was working.
-      ...(readableArtifact(revision) ? {} : { unreadable: true }),
-    })),
+    revisions.map((revision) => ({ item, revision })),
   );
-}
-
-function readableArtifact(revision: ContentRevision): boolean {
-  try {
-    contentArtifactFromRevision(revision);
-
-    return true;
-  } catch (error) {
-    if (error instanceof ContentArtifactError) {
-      return false;
-    }
-
-    throw error;
-  }
 }
 
 function assignmentFormValues(form: FormData) {

@@ -2484,7 +2484,7 @@ describe("an assignment whose content cannot be read", () => {
     });
   });
 
-  test("the correction picker will not offer the revision that broke it", async () => {
+  test("a revision that cannot be read is refused before an assignment is pointed at it", async () => {
     await withStorage(async (storage, env) => {
       const instructor = await login(env, "unreadable-picker@example.test");
       const course = await createCourse(env, instructor);
@@ -2501,35 +2501,107 @@ describe("an assignment whose content cannot be read", () => {
         item.item.id,
         "The revision that will not.",
       );
-      const draft = await createDraft(
+      const published = await createDraft(
         env,
         instructor,
         course.course.id,
         good.revision.id,
       );
+      const draft = await createDraft(
+        env,
+        instructor,
+        course.course.id,
+        good.revision.id,
+        { title: "Homework 2" },
+      );
 
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(
+        env,
+        instructor,
+        course.course.id,
+        published.assignment.id,
+      );
       await corruptArtifact(storage, bad.revision.id);
 
+      const base = `/courses/${course.course.id}/instructor/assignments`;
+      const form = new FormData();
+
+      form.set("csrfToken", instructor.csrfToken);
+      form.set("contentRevisionId", bad.revision.id);
+      form.set("note", "Pointing at the broken one.");
+
+      // The correction form: refused, with the diagnosis on the error page
+      // rather than a 500 after the write.
+      const correction = await appRequest(
+        createTestApp(),
+        `${base}/${published.assignment.id}/content-revision`,
+        {
+          body: form,
+          headers: { Cookie: instructor.cookieHeader },
+          method: "POST",
+        },
+        env,
+      );
+      const correctionHtml = await correction.text();
+      // The draft editor, over JSON: the same refusal, in the envelope.
+      const update = await appRequest(
+        createTestApp(),
+        `${base}/${draft.assignment.id}`,
+        jsonRequest(
+          {
+            contentRevisionId: bad.revision.id,
+            description: "Read the lesson and answer the question.",
+            title: "Homework 2",
+          },
+          instructor,
+        ),
+        env,
+      );
+      const envelope = (await update.json()) as {
+        readonly error: { readonly code: string };
+      };
+      const readBack = async (detail: AssignmentResponse) => {
+        const response = await appRequest(
+          createTestApp(),
+          `${base}/${detail.assignment.id}`,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        );
+
+        return (await response.json()) as AssignmentResponse;
+      };
+      const publishedNow = await readBack(published);
+      const draftNow = await readBack(draft);
+
+      expect(correction.status).toBe(500);
+      expect(correctionHtml).toContain("Assignment not updated");
+      expect(correctionHtml).toContain("This content could not be read");
+      expect(update.status).toBe(500);
+      expect(envelope.error.code).toBe("invalid_content_artifact");
+      // Neither assignment moved: the refusal came before anything was written,
+      // which is what keeps a working assignment working.
+      expect(publishedNow.assignment.contentRevisionId).toBe(
+        good.revision.id,
+      );
+      expect(draftNow.assignment.contentRevisionId).toBe(good.revision.id);
+
+      // The picker still names the revision — a revision that vanishes from it
+      // reads as one that was never saved — and no longer reads its artifact
+      // to grey it out: that check cost every artifact in the author's
+      // library per form, and the refusal above is the one that holds.
       const page = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`,
+        `${base}/${published.assignment.id}`,
         { headers: { Accept: "text/html", Cookie: instructor.cookieHeader } },
         env,
       );
       const html = await page.text();
       const options = [...html.matchAll(/<option[^>]*>/g)].map((m) => m[0]);
       const badOption = options.find((tag) => tag.includes(bad.revision.id));
-      const goodOption = options.find((tag) =>
-        tag.includes(good.revision.id),
-      );
 
       expect(page.status).toBe(200);
-      // Still listed — a revision that vanishes from the picker reads as one
-      // that was never saved — but not selectable, and said in words.
-      expect(badOption).toContain("disabled");
-      expect(goodOption).not.toContain("disabled");
-      expect(html).toContain("cannot be read");
+      expect(badOption).toBeDefined();
+      expect(badOption).not.toContain("disabled");
     });
   });
 });

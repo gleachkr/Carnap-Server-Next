@@ -19,7 +19,11 @@ import type {
   AssignmentOverride,
 } from "../domain/assignments";
 import type { AuthSession, NativeLoginChallenge } from "../domain/auth";
-import type { ContentItem, ContentRevision } from "../domain/content";
+import type {
+  ContentItem,
+  ContentRevision,
+  ContentRevisionSummary,
+} from "../domain/content";
 import type {
   Course,
   CourseAccommodation,
@@ -411,6 +415,16 @@ export interface UpdateContentRevisionSharingInput {
 }
 
 /**
+ * Where an item's next revision goes: the number it takes, and whether the
+ * source about to be saved is already there under this item.
+ */
+export interface NextRevisionSlot {
+  readonly revisionNumber: number;
+  /** True when a revision of the item already carries the hash asked about. */
+  readonly sourceAlreadySaved: boolean;
+}
+
+/**
  * Which work a bulk scoring read covers: these assignments, for one student or
  * for every student. A student's scorecard is (their course's assignments,
  * them); a gradebook is (its assignments, everyone). Every scoring read takes
@@ -495,9 +509,23 @@ export interface ContentStore {
    * Newest first. A revision list is a history, and the revision anyone is
    * looking for is nearly always the last one saved — so it reads the way a
    * history reads, and every picker's default option is the current text
-   * rather than the first draft. Callers that want the latest take `[0]`.
+   * rather than the first draft. Callers that want the latest take `[0]`,
+   * and read it by id when they want its text: the list carries none, for
+   * the reason {@link ContentRevisionSummary} gives.
    */
-  listRevisionsForItem(itemId: AppId): Promise<ContentRevision[]>;
+  listRevisionsForItem(itemId: AppId): Promise<ContentRevisionSummary[]>;
+  /**
+   * The two facts a save needs, as one aggregate over the item's revisions
+   * rather than the revisions themselves — an item edited a few hundred times
+   * would otherwise load its whole history to be saved once more. The number
+   * is one past the highest so far (1 for an item with none); the hash check
+   * is what lets a resave be refused in words before the unique index refuses
+   * it as a 500.
+   */
+  nextRevisionSlot(
+    itemId: AppId,
+    contentHash: string,
+  ): Promise<NextRevisionSlot>;
   /**
    * The newest revision of each of the given items, as an item id → revision id
    * map. An item nobody has written a revision of is absent rather than mapped

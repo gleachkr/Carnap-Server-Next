@@ -56,6 +56,7 @@ import type {
   GrantPlatformCapabilityInput,
   LtiStore,
   ManifestPointsRow,
+  NextRevisionSlot,
   PlatformCapabilityStore,
   PublishAssignmentInput,
   RecordLoginRateLimitHitInput,
@@ -103,7 +104,11 @@ import type {
   AssignmentOverride,
 } from "../../domain/assignments";
 import type { AuthSession, NativeLoginChallenge } from "../../domain/auth";
-import type { ContentItem, ContentRevision } from "../../domain/content";
+import type {
+  ContentItem,
+  ContentRevision,
+  ContentRevisionSummary,
+} from "../../domain/content";
 import type {
   Course,
   CourseAccommodation,
@@ -1437,14 +1442,50 @@ class SqliteContentStore implements ContentStore {
     );
   }
 
-  async listRevisionsForItem(itemId: AppId): Promise<ContentRevision[]> {
-    const rows = await this.db
-      .select()
+  async listRevisionsForItem(
+    itemId: AppId,
+  ): Promise<ContentRevisionSummary[]> {
+    // Every column but the source and the artifact: a history is read on
+    // every save, every listing and every picker, and the text of a hundred
+    // drafts is not what any of them is asking for.
+    return this.db
+      .select({
+        id: contentRevisions.id,
+        itemId: contentRevisions.itemId,
+        revisionNumber: contentRevisions.revisionNumber,
+        details: contentRevisions.details,
+        sharing: contentRevisions.sharing,
+        shareSource: contentRevisions.shareSource,
+        sourceFormat: contentRevisions.sourceFormat,
+        contentHash: contentRevisions.contentHash,
+        createdById: contentRevisions.createdById,
+        createdAt: contentRevisions.createdAt,
+      })
       .from(contentRevisions)
       .where(eq(contentRevisions.itemId, itemId))
       .orderBy(desc(contentRevisions.revisionNumber));
+  }
 
-    return rows.map(mapContentRevision);
+  async nextRevisionSlot(
+    itemId: AppId,
+    contentHash: string,
+  ): Promise<NextRevisionSlot> {
+    // One statement, one row: an aggregate over the item's revisions is one
+    // row whether the item has none or hundreds, and `max` of none is null.
+    const row = single(
+      await this.db
+        .select({
+          latest: sql<number | null>`max(${contentRevisions.revisionNumber})`,
+          saved: sql<number>`exists(select 1 from ${contentRevisions} where ${contentRevisions.itemId} = ${itemId} and ${contentRevisions.contentHash} = ${contentHash})`,
+        })
+        .from(contentRevisions)
+        .where(eq(contentRevisions.itemId, itemId)),
+    );
+
+    return {
+      revisionNumber: (row.latest ?? 0) + 1,
+      sourceAlreadySaved: Number(row.saved) === 1,
+    };
   }
 
   async latestRevisionIdsForItems(

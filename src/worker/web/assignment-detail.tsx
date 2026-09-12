@@ -48,6 +48,7 @@ import type {
   ContentItem,
   ContentNode,
   ContentRevision,
+  ContentRevisionSummary,
   ExerciseAnswerReview,
 } from "../domain/content";
 import type { CourseMembership, CourseStaffTier } from "../domain/courses";
@@ -153,7 +154,6 @@ import {
   revisionDetailsText,
   revisionOptionLabel,
   revisionOptionTimeAttributes,
-  revisionPickerLabel,
 } from "./revisions";
 import { EXERCISE_SCRIPT_ASSET, REVIEW_SCRIPT_ASSET } from "./script-assets";
 import {
@@ -189,15 +189,8 @@ export interface AssignmentFormValues {
 
 export interface AssignmentRevisionOption {
   readonly item: ContentItem;
-  readonly revision: ContentRevision;
-  /**
-   * True when this revision's stored artifact will not parse. Such a revision
-   * stays in the picker — hiding it would leave an instructor wondering where
-   * the revision they just saved went — but it is shown as unselectable, since
-   * pointing an assignment at it is exactly how an assignment comes to hold an
-   * artifact nobody can read.
-   */
-  readonly unreadable?: boolean;
+  /** No text: an option is a date and a note, never the lesson itself. */
+  readonly revision: ContentRevisionSummary;
 }
 
 export interface AssignmentDetail {
@@ -415,24 +408,19 @@ const RevisionOption: FC<{
 }> = ({ context, option, selected, withItemTitle = false }) => {
   const i18n = useI18n();
   const locale = context.get("language");
-  const { item, revision, unreadable } = option;
+  const { item, revision } = option;
 
   return (
     <option
-      disabled={unreadable === true}
       selected={selected}
       value={revision.id}
       {...revisionOptionTimeAttributes(revision.createdAt, locale)}
     >
-      {revisionPickerLabel(
+      {revisionOptionLabel(
         i18n,
-        revisionOptionLabel(
-          i18n,
-          locale,
-          revision,
-          withItemTitle ? item.title : undefined,
-        ),
-        unreadable === true,
+        locale,
+        revision,
+        withItemTitle ? item.title : undefined,
       )}
     </option>
   );
