@@ -23,6 +23,7 @@ import {
 import { coursesCrumb } from "./breadcrumbs";
 import {
   BrowserTimezoneInput,
+  ChoiceNotes,
   ContentSplit,
   CopyField,
   type CourseView,
@@ -644,12 +645,37 @@ const MembersTable: FC<{
   );
 };
 
-/** The staff roles, least to most privileged; a student is not staff. */
-const STAFF_ROLE_ORDER: readonly (
-  | "co_instructor"
-  | "instructor"
-  | "teacher_assistant"
-)[] = ["teacher_assistant", "co_instructor", "instructor"];
+type StaffRole = "co_instructor" | "instructor" | "teacher_assistant";
+
+/**
+ * The staff roles, least to most privileged; a student is not staff. The
+ * first is what the add-staff select opens on.
+ */
+const STAFF_ROLE_ORDER: readonly [StaffRole, ...StaffRole[]] = [
+  "teacher_assistant",
+  "co_instructor",
+  "instructor",
+];
+
+/**
+ * What each staff role may do, said under the select as the option changes.
+ * An instructor and a co-instructor are the same role to every permission
+ * check; the two names exist so a course can say who owns it.
+ */
+function staffRoleHint(i18n: Translator, role: StaffRole): string {
+  switch (role) {
+    case "co_instructor":
+      return i18n.t("Co-instructors can do anything an instructor can do.");
+    case "instructor":
+      return i18n.t(
+        "Instructors run the course: its assignments, members, grades and settings.",
+      );
+    case "teacher_assistant":
+      return i18n.t(
+        "Teaching assistants can grade submissions and author content, but not change the course or its assignments.",
+      );
+  }
+}
 
 /**
  * Add course staff by account email. A person who is already a member (for
@@ -679,11 +705,23 @@ const AddStaffBar: FC<{
         required
         type="email"
       />
-      <select aria-label={i18n.t("Staff role")} name="role">
+      <select
+        aria-label={i18n.t("Staff role")}
+        data-choice-notes="role"
+        name="role"
+      >
         {STAFF_ROLE_ORDER.map((role) => (
           <option value={role}>{courseRoleLabel(i18n, role)}</option>
         ))}
       </select>
+      <ChoiceNotes
+        group="role"
+        notes={STAFF_ROLE_ORDER.map((role) => ({
+          note: staffRoleHint(i18n, role),
+          value: role,
+        }))}
+        selected={STAFF_ROLE_ORDER[0]}
+      />
     </CreateBar>
   );
 };

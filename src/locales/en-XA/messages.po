@@ -975,6 +975,10 @@ msgstr ""
 msgid "Co-instructor"
 msgstr ""
 
+#: src/worker/web/courses.tsx
+msgid "Co-instructors can do anything an instructor can do."
+msgstr ""
+
 #: src/worker/web/content.tsx
 msgid "Compiled content"
 msgstr ""
@@ -2036,6 +2040,10 @@ msgstr ""
 
 #: src/worker/application/courses.ts
 msgid "Instructors cannot deactivate their own instructor membership."
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Instructors run the course: its assignments, members, grades and settings."
 msgstr ""
 
 #: src/worker/web/labels.ts
@@ -3508,6 +3516,10 @@ msgstr ""
 
 #: src/worker/web/labels.ts
 msgid "Teaching assistant"
+msgstr ""
+
+#: src/worker/web/courses.tsx
+msgid "Teaching assistants can grade submissions and author content, but not change the course or its assignments."
 msgstr ""
 
 #: src/worker/web/content.tsx

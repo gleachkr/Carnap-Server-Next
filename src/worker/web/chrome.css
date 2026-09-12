@@ -815,6 +815,14 @@ a.score-uncounted {
   margin: 0;
 }
 
+/* A choice's note takes a row of its own under the fields and the submit
+   button, rather than queueing as one more item in the flow. */
+.create-bar .choice-note {
+  flex: 1 1 100%;
+  margin: 0;
+  order: 1;
+}
+
 /* A footer laying a standalone action button (course edit) on the same row as
    an add-bar (clone), to the right of the add-bar's submit button. The add-bar
    grows to fill the row; the button holds its natural width at the end. */

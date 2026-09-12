@@ -536,6 +536,38 @@ export const CreateBar: FC<{
   </form>
 );
 
+/**
+ * A line of prose under a select, saying what the chosen option means.
+ *
+ * Every option's line is rendered and all but the selected one are `hidden`;
+ * the shell's choice-note script swaps them as the select changes, and
+ * without script the reader sees the stored answer's line and nothing moves.
+ * The select carries `data-choice-notes={group}` (its own `name` is the
+ * natural group) and shares a form with these, since that is where the script
+ * looks — so a page with one such form per row needs no ids.
+ */
+export const ChoiceNotes: FC<{
+  readonly group: string;
+  readonly notes: readonly {
+    readonly note: string;
+    readonly value: string;
+  }[];
+  readonly selected: string;
+}> = ({ group, notes, selected }) => (
+  <>
+    {notes.map(({ note, value }) => (
+      <p
+        class="small choice-note"
+        data-choice-note={group}
+        data-choice-value={value}
+        hidden={value !== selected}
+      >
+        {note}
+      </p>
+    ))}
+  </>
+);
+
 export const CsrfInput: FC<{ readonly context: Context<AppBindings> }> = ({
   context,
 }) => {

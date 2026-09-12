@@ -21,6 +21,7 @@ import {
 import { hostedTheoryPath } from "../logic/theories";
 import { contentCrumb, contentItemCrumb } from "./breadcrumbs";
 import {
+  ChoiceNotes,
   ContentFrame,
   CopyField,
   CreateBar,
@@ -682,16 +683,14 @@ const RevisionSharingDialog: FC<{
             ))}
           </select>
         </label>
-        {CONTENT_SHARING_VALUES.map((sharing) => (
-          <p
-            class="small"
-            data-choice-note="sharing"
-            data-choice-value={sharing}
-            hidden={sharing !== revision.sharing}
-          >
-            {sharingHint(i18n, sharing)}
-          </p>
-        ))}
+        <ChoiceNotes
+          group="sharing"
+          notes={CONTENT_SHARING_VALUES.map((sharing) => ({
+            note: sharingHint(i18n, sharing),
+            value: sharing,
+          }))}
+          selected={revision.sharing}
+        />
         {/* A theory has no reading apart from its source, so there is nothing
             for this to withhold; for a lesson it is the difference between the
             compiled document and the Markdown behind it, answers and all. */}
