@@ -18,7 +18,7 @@ import type { User } from "../domain/users";
 import { deferred } from "../i18n/deferred";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
-import { parseManifestPoints } from "./content/artifact";
+import { type ManifestPoints, parseManifestPoints } from "./content/artifact";
 import { AppHttpError } from "./errors";
 import { planGradeJobForSubject } from "./grade-passback";
 import { effectivePolicyAssignment } from "./policies";
@@ -33,6 +33,23 @@ import type {
 export interface GradebookServiceOptions {
   readonly now?: (() => Date) | undefined;
   readonly stores: AppStores;
+}
+
+/**
+ * Rows a caller already holds, so a refresh need not read them again.
+ *
+ * Only the manifest is offered. A content revision is immutable, so a
+ * manifest read a moment ago is the manifest, and the submit path has just
+ * parsed the whole artifact to find the exercise it is grading — projecting
+ * the same column again was the most expensive statement on that path. The
+ * policy rows the submit path also read (the override, the accommodation)
+ * are deliberately *not* taken from the caller: those can change under a
+ * request, and the ledger's `calculatedAt` guard only means what it says if
+ * the rows behind a stamp were read just before it.
+ */
+export interface KnownScoringReads {
+  /** By content revision id: that revision's manifest, in manifest order. */
+  readonly manifests?: ReadonlyMap<AppId, readonly ManifestPoints[]>;
 }
 
 export interface StudentAssignmentScore {
@@ -736,8 +753,9 @@ export class GradebookService {
   async refreshStudentAssignmentScore(
     assignment: Assignment,
     userId: AppId,
+    known: KnownScoringReads = {},
   ): Promise<AssignmentScore> {
-    const inputs = await this.scoringInputs([assignment], userId);
+    const inputs = await this.scoringInputs([assignment], userId, known);
     const [entry] = await this.ledgerWrites([assignment], [userId], inputs);
 
     if (entry === undefined) {
@@ -1210,9 +1228,10 @@ export class GradebookService {
   private async scoringInputs(
     assignments: readonly Assignment[],
     userId?: AppId,
+    known: KnownScoringReads = {},
   ): Promise<ScoringInputs> {
     const [context, work] = await Promise.all([
-      this.scoringContext(assignments, userId),
+      this.scoringContext(assignments, userId, known),
       this.scoringWork({
         assignmentIds: assignments.map((assignment) => assignment.id),
         userId,
@@ -1226,12 +1245,13 @@ export class GradebookService {
   private async scoringContext(
     assignments: readonly Assignment[],
     userId?: AppId,
+    known: KnownScoringReads = {},
   ): Promise<ScoringContext> {
     const stores = this.options.stores;
     const assignmentIds = assignments.map((assignment) => assignment.id);
     const [exercises, latePolicies, overrides, accommodations] =
       await Promise.all([
-        this.countedExercises(assignments),
+        this.countedExercises(assignments, known),
         stores.assignments.listLatePolicies(assignmentIds),
         stores.assignments.listOverridesForScoring({ assignmentIds, userId }),
         this.accommodations(
@@ -1322,19 +1342,25 @@ export class GradebookService {
    */
   private async countedExercises(
     assignments: readonly Assignment[],
+    known: KnownScoringReads,
   ): Promise<Map<AppId, readonly GradebookExercise[]>> {
-    const [manifests, excuses] = await Promise.all([
-      this.options.stores.content
-        .listManifestPoints([
-          ...new Set(
-            assignments.map((assignment) => assignment.contentRevisionId),
-          ),
-        ])
-        .then(parseManifestPoints),
+    const inHand = known.manifests ?? new Map<AppId, ManifestPoints[]>();
+    const toProject = [
+      ...new Set(
+        assignments.map((assignment) => assignment.contentRevisionId),
+      ),
+    ].filter((revisionId) => !inHand.has(revisionId));
+    const [projected, excuses] = await Promise.all([
+      toProject.length === 0
+        ? new Map<AppId, ManifestPoints[]>()
+        : this.options.stores.content
+            .listManifestPoints(toProject)
+            .then(parseManifestPoints),
       this.options.stores.assignments.listExerciseExcusesForAssignments(
         assignments.map((assignment) => assignment.id),
       ),
     ]);
+    const manifests = new Map([...inHand, ...projected]);
     const excusedIds = new Map<AppId, Set<string>>();
 
     for (const excuse of excuses) {

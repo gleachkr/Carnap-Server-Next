@@ -104,6 +104,22 @@ function manifestPoints(
 }
 
 /**
+ * The manifest points of an artifact already in hand — what a caller that
+ * has just parsed the revision can give the gradebook instead of letting it
+ * project the same column again (`GradebookService.refreshStudentAssignmentScore`).
+ * The items passed {@link manifestPoints} in the parse, so this only reshapes.
+ */
+export function manifestPointsOf(
+  artifact: CompiledContentArtifact,
+): ManifestPoints[] {
+  return artifact.manifest.map((item) => ({
+    id: item.id,
+    nominalPoints: item.nominalPoints,
+    title: typeof item.title === "string" ? item.title : null,
+  }));
+}
+
+/**
  * Each revision's manifest points, from the rows `ContentStore.listManifestPoints`
  * projects out of the stored artifacts — keyed by revision id, in manifest
  * order. A revision the store returned no rows for is absent, and it is the

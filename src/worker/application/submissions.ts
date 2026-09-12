@@ -8,6 +8,7 @@ import type { Assignment } from "../domain/assignments";
 import type {
   AnswerEnvelope,
   AutomaticEvaluationStatus,
+  CompiledContentArtifact,
   ExerciseAnswerReview,
   ExerciseManifestItem,
   ExerciseReviewAudience,
@@ -29,7 +30,10 @@ import { deferred } from "../i18n/deferred";
 import type { Translator } from "../i18n/translator";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
-import { contentArtifactFromRevision } from "./content/artifact";
+import {
+  contentArtifactFromRevision,
+  manifestPointsOf,
+} from "./content/artifact";
 import {
   type AssessmentExerciseRegistry,
   createDefaultExerciseKindRegistry,
@@ -292,13 +296,16 @@ export class SubmissionService {
     );
 
     if (existing !== null) {
-      await this.refreshScore(assignment, actor.user.id);
+      const artifact = await this.artifactForAssignment(assignment);
 
-      const declarations = await this.declarationsForAssignment(assignment);
+      await this.refreshScore(assignment, actor.user.id, artifact);
+
       const replayedDeclaration =
-        existing.submission.exerciseId === null
+        existing.submission.exerciseId === null || artifact === null
           ? undefined
-          : declarations.get(existing.submission.exerciseId);
+          : artifact.manifest.find(
+              (item) => item.id === existing.submission.exerciseId,
+            );
 
       return {
         ...existing,
@@ -417,7 +424,7 @@ export class SubmissionService {
           submissionInput,
         );
 
-      await this.refreshScore(assignment, actor.user.id);
+      await this.refreshScore(assignment, actor.user.id, artifact);
 
       return {
         evaluation: null,
@@ -450,7 +457,7 @@ export class SubmissionService {
         },
       );
 
-    await this.refreshScore(assignment, actor.user.id);
+    await this.refreshScore(assignment, actor.user.id, artifact);
 
     return {
       ...created,
@@ -602,14 +609,30 @@ export class SubmissionService {
     });
   }
 
+  /**
+   * Re-derive the ledger row this submission may have changed. The artifact
+   * is the one just parsed for `assignment.contentRevisionId`; handing its
+   * manifest over saves the refresh projecting the same column again.
+   */
   private async refreshScore(
     assignment: Assignment,
     userId: AppId,
+    artifact: CompiledContentArtifact | null,
   ): Promise<void> {
     await new GradebookService({
       now: this.options.now,
       stores: this.options.stores,
-    }).refreshStudentAssignmentScore(assignment, userId);
+    }).refreshStudentAssignmentScore(
+      assignment,
+      userId,
+      artifact === null
+        ? {}
+        : {
+            manifests: new Map([
+              [assignment.contentRevisionId, manifestPointsOf(artifact)],
+            ]),
+          },
+    );
   }
 
   private async assignmentInCourse(
@@ -773,16 +796,19 @@ export class SubmissionService {
   private async declarationsForAssignment(
     assignment: Assignment,
   ): Promise<Map<string, ExerciseManifestItem>> {
+    const artifact = await this.artifactForAssignment(assignment);
+
+    return new Map((artifact?.manifest ?? []).map((item) => [item.id, item]));
+  }
+
+  /** The assignment's lesson as stored, or null when its revision is gone. */
+  private async artifactForAssignment(
+    assignment: Assignment,
+  ): Promise<CompiledContentArtifact | null> {
     const revision = await this.options.stores.content.getRevision(
       assignment.contentRevisionId,
     );
 
-    if (revision === null) {
-      return new Map();
-    }
-
-    const artifact = contentArtifactFromRevision(revision);
-
-    return new Map(artifact.manifest.map((item) => [item.id, item]));
+    return revision === null ? null : contentArtifactFromRevision(revision);
   }
 }

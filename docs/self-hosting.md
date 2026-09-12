@@ -272,6 +272,48 @@ out.db"` while the server runs, or a plain copy while it does not. Everything
 that matters is in there: users, courses, enrollments, content revisions,
 submissions, grades.
 
+### How much one database can take
+
+Everything queues through the one database. Self-hosted, that is a SQLite
+file under one process; on Cloudflare it is D1's single query stream per
+database. Workers scale out, the database does not, so the instance's write
+ceiling is the database's, whatever the class count.
+
+A recorded submission is **24 statements** (23 round trips: the two inserts
+are one batch), and a test pins that it stays 24 however much work a student
+has behind them. A student's course page is about eighteen, pinned the same
+way. Proof and translation checks add CPU on the request, not statements.
+
+Measured on 2026-09-12, on a laptop, with a multiple-choice exercise so the
+figure is the request path and the database rather than a proof check:
+
+| host | one submission | submissions per second |
+|---|---|---|
+| libsql, file on disk | 5 ms | about 190 (200 with eight students at once) |
+| libsql, in memory | 4 ms | about 230 |
+
+So one self-hosted instance takes a few hundred submissions a second, all
+courses together. Twenty classes of thirty with the same deadline is six
+hundred submissions in the last minute, which is three seconds of it.
+
+On D1 the number to know is the per-statement service time, which the D1
+dashboard reports as query duration: a submission is 24 of those queued, and
+its latency to the student is 23 of those round trips plus the Worker's own
+work. Measure before changing anything — `wrangler tail` shows the request
+timings — and then the levers are, in order:
+
+1. **Read replication** (D1's Sessions API) moves page loads off the primary.
+   The course page and the gradebooks are reads; only submissions and
+   instructors' changes write.
+2. **One database per institution.** The store is driver-neutral and the
+   schema is per instance, so a second Worker over a second D1 is a second
+   instance, and self-hosted, one process per file is the same thing.
+
+The one statement whose cost grows with the lessons' size rather than the
+work in them is the manifest projection on a course page, about 2 ms per
+megabyte of stored lesson; see `listManifestPoints` for the figures and the
+column that would replace it if it ever showed.
+
 ## Upgrading
 
 Rebuild and restart. Pending migrations apply themselves at boot and the log

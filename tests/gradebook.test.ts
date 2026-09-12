@@ -1390,6 +1390,100 @@ Choose yes.
     });
   });
 
+  test("a submission runs a fixed number of statements, however much work", async () => {
+    await withStorage(async ({ db }, env) => {
+      const instructor = await login(
+        env,
+        "submit-count-teacher@example.test",
+      );
+      const student = await login(env, "submit-count-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Lesson\n\n${question("q1", 2)}\n\n${question("q2", 3)}`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignmentId,
+      );
+      let statements = 0;
+      const counting = new Proxy(db, {
+        get(target, property) {
+          const value: unknown = Reflect.get(target, property, target);
+
+          if (property === "prepare") {
+            return (...args: unknown[]) => {
+              statements += 1;
+
+              return (value as (...args: unknown[]) => unknown).apply(
+                target,
+                args,
+              );
+            };
+          }
+
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      }) as D1Database;
+      const countingEnv: Env = { CARNAP_ENV: "local", DB: counting };
+      // As the exercise runtime sends it: with an idempotency key, which is
+      // one more read than the bare request.
+      const submit = async (exerciseId: string, choice: string) => {
+        statements = 0;
+
+        const response = await appRequest(
+          createTestApp(),
+          `/courses/${courseId}/assignments/${assignmentId}` +
+            `/attempts/${attemptId}/submissions`,
+          {
+            ...jsonRequest(answer([choice], exerciseId), student),
+            headers: {
+              ...authHeaders(student),
+              "Content-Type": "application/json",
+              "Idempotency-Key": crypto.randomUUID(),
+            },
+          },
+          countingEnv,
+        );
+
+        expect(response.status).toBe(201);
+
+        return statements;
+      };
+
+      const first = await submit("q1", "yes");
+
+      // The count is the property: a later submission, with more attempts
+      // and submissions behind it, costs what the first did. The figure is
+      // pinned because the database is the one thing that does not scale
+      // out — every submission on the instance queues through it — so a
+      // statement creeping in shows up here as a number. Today's two dozen
+      // are: the actor (session, user, capabilities, staff membership), the
+      // course membership, the assignment, the attempt expiry and read, the
+      // idempotency lookup, the accommodation and override, the revision,
+      // the two inserts (one batch), and the ledger refresh's eleven — its
+      // excuses, late policy, override and accommodation again, attempts,
+      // submissions, evaluations, the previous ledger row, the resource
+      // links, and the upsert. The manifest is not re-read: the submit path
+      // hands over the one it just parsed.
+      expect(await submit("q2", "yes")).toBe(first);
+      expect(await submit("q1", "no")).toBe(first);
+      expect(first).toBeLessThanOrEqual(24);
+    });
+  });
+
   test("an instructor's change rewrites the ledger in a bounded number of statements", async () => {
     await withStorage(async ({ db, stores }, env) => {
       const instructor = await login(env, "bulk-teacher@example.test");
