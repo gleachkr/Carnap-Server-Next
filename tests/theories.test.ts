@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createApp } from "../src/worker/app";
 import {
@@ -31,7 +31,39 @@ describe("built-in theories", () => {
 
     // Cheap proof this test is not vacuous.
     expect(files.length).toBeGreaterThan(0);
-    expect(files).toEqual(Object.keys(THEORY_SOURCES).sort());
+    expect(files).toEqual(
+      Object.keys(THEORY_SOURCES)
+        .filter((name) => !name.endsWith("-plus.mm0"))
+        .sort(),
+    );
+  });
+
+  test("every `-plus` registration is a file and its `derived/` fragment, and nothing else", async () => {
+    const fragments = (await readdir(resolve(THEORIES_DIR, "derived")))
+      .filter((name) => name.endsWith(".mm0"))
+      .sort();
+    const plus = Object.keys(THEORY_SOURCES)
+      .filter((name) => name.endsWith("-plus.mm0"))
+      .sort();
+
+    // One fragment per `-plus` system: a fragment nothing composes is
+    // invisible, a `-plus` with no fragment is the base under a second name.
+    expect(plus.map((name) => name.replace(/-plus\.mm0$/, ".mm0"))).toEqual(
+      fragments,
+    );
+
+    for (const fragment of fragments) {
+      const base = await readFile(resolve(THEORIES_DIR, fragment), "utf8");
+      const derived = await readFile(
+        resolve(THEORIES_DIR, "derived", fragment),
+        "utf8",
+      );
+
+      expect(
+        THEORY_SOURCES[fragment.replace(/\.mm0$/, "-plus.mm0")],
+        fragment,
+      ).toBe(`${base}\n${derived}`);
+    }
   });
 
   test("the listed paths are the registered files, under the prefix", () => {

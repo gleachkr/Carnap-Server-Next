@@ -105,7 +105,10 @@
 -- `φ`; from `φ ↔ ψ` and `φ`, `iff_elim_l` gives `ψ` — the left premise's
 -- partner. These are the basic rules only. Magnus's derived and replacement
 -- rules (MT, HS, DIL, DN, MC, Comm, DeM, ↔ex, QN) are provable from them and
--- are deliberately not axioms here, exactly as Calgary's DS and LEM are not.
+-- are deliberately not axioms here, exactly as Calgary's DS and LEM are not;
+-- they ship as `forallx-magnus-plus`, this file with
+-- `derived/forallx-magnus.mm0` appended, whose header says what a whole-line
+-- replacement rule does and does not cover.
 
 -- The surface delimiter set: where one chunk of student input ends and the next
 -- begins, fixed before anything is looked up. The lexicon letters are listed
@@ -532,15 +535,15 @@ axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 
 -- The rules of Magnus's system QL — the basic rules the textbook introduces as
 -- the proof system itself, not the derived and replacement rules of chapter 5,
--- which are provable from these. Beyond the textbook statement, every rule's
--- conclusion joins one extra *slack* context binder: implicit weakening, so a
--- line may state its conclusion in a larger ambient scope than its premises
--- inhabit. The Fitch translator's ambient contexts depend on it; the
--- dependency-context emitters (Prawitz, tree) simply bind it empty.
--- `role assumption` is how the Fitch and Prawitz editors know which lines
--- open a hypothesis rather than cite a rule; the book has two names for the
--- one rule (premises and assumptions), so the axiom takes the first and the
--- second is an alias of it.
+-- which are provable from these and live in the `-plus` artifact (see the
+-- header). Beyond the textbook statement, every rule's conclusion joins one
+-- extra *slack* context binder: implicit weakening, so a line may state its
+-- conclusion in a larger ambient scope than its premises inhabit. The Fitch
+-- translator's ambient contexts depend on it; the dependency-context emitters
+-- (Prawitz, tree) simply bind it empty. `role assumption` is how the Fitch and
+-- Prawitz editors know which lines open a hypothesis rather than cite a rule;
+-- the book has two names for the one rule (premises and assumptions), so the
+-- axiom takes the first and the second is an alias of it.
 --| @syntax role assumption
 --| @syntax alias PR
 axiom AS (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;

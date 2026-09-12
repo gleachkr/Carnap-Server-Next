@@ -48,6 +48,12 @@
  */
 
 import carnapProp from "./carnap-prop.mm0" with { type: "text" };
+import forallxCalgary2019Derived from "./derived/forallx-calgary-2019.mm0" with {
+  type: "text",
+};
+import forallxMagnusDerived from "./derived/forallx-magnus.mm0" with {
+  type: "text",
+};
 import forallxCalgary2019 from "./forallx-calgary-2019.mm0" with {
   type: "text",
 };
@@ -58,6 +64,25 @@ import gentzenLk from "./gentzen-lk.mm0" with { type: "text" };
 export const THEORY_ROUTE_PREFIX = "/theories/";
 
 /**
+ * A `-plus` system: a book's basic system with its derived rules after it.
+ *
+ * Both forallx editions ship twice, because a course wants both — the basic
+ * rules alone while those are what is being taught, the book's derived rules
+ * once it is past that chapter — and every derived rule is a theorem of the
+ * basic set, so the second is the first with axioms appended. The appended
+ * text lives in `derived/`, one fragment per base file, and is not a theory on
+ * its own: it names sorts and terms the base declares, so `derived/` is not
+ * registered and the route does not serve it. The composition is exactly how
+ * an `:::aufbau-mm0` block with a `src=` and a body composes, so what an author
+ * reads at the `-plus` address is one file, the base header first.
+ *
+ * Old Carnap draws the same line, as `…FOL2019` against `…FOLPlus2019`.
+ */
+function withDerivedRules(base: string, derived: string): string {
+  return `${base}\n${derived}`;
+}
+
+/**
  * Every theory that ships, by the file name its URL ends with. Keyed with the
  * extension because that is what both the route parameter and the tail of an
  * authored `src=` hand back — one string to compare, no stem to reconstruct.
@@ -65,7 +90,15 @@ export const THEORY_ROUTE_PREFIX = "/theories/";
 export const THEORY_SOURCES: Readonly<Record<string, string>> = {
   "carnap-prop.mm0": carnapProp,
   "forallx-calgary-2019.mm0": forallxCalgary2019,
+  "forallx-calgary-2019-plus.mm0": withDerivedRules(
+    forallxCalgary2019,
+    forallxCalgary2019Derived,
+  ),
   "forallx-magnus.mm0": forallxMagnus,
+  "forallx-magnus-plus.mm0": withDerivedRules(
+    forallxMagnus,
+    forallxMagnusDerived,
+  ),
   "gentzen-lk.mm0": gentzenLk,
 };
 

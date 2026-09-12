@@ -32,6 +32,7 @@ for (const testCase of MAGNUS_CASES) {
   const { citationShapes, mm0, readRule, readSentence } = magnusExercise(
     testCase.goalName,
     testCase.theoremDecl,
+    testCase.system,
   );
   const translation = fitchToAuf(
     testCase.fitch,

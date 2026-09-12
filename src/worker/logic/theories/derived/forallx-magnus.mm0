@@ -1,0 +1,124 @@
+
+-- ## The derived and replacement rules: `forallx-magnus-plus`
+--
+-- Everything above this line is `forallx-magnus.mm0`, verbatim. This
+-- artifact — served at `/theories/forallx-magnus-plus.mm0`, named by
+-- `system="forallx-magnus-plus"` — is that file with the rules the book's
+-- chapter on derived rules adds: dilemma, modus tollens and hypothetical
+-- syllogism, the five rules of replacement for SL, and quantifier negation
+-- for QL. Two systems on purpose, for the reason `forallx-calgary-2019-plus`
+-- gives: every rule here is a theorem of the basic set, and which set a
+-- proof may cite is the course's call. Old Carnap draws the same line
+-- (`magnusQL` against `magnusQLPlus`), and the citation names are its.
+--
+-- **The replacement rules apply to a whole line here.** The book lets `Comm`,
+-- `DN`, `MC`, `↔ex`, `DeM` and `QN` rewrite *inside* a sentence — `¬¬P → Q`
+-- to `P → Q` in one step — and old Carnap does too. This file states each as
+-- an inference from the line's sentence to its rewritten form, which is the
+-- whole-line case of the book's rule and no more: a student who wants the
+-- antecedent rewritten derives `P → Q` the long way. Saying the book's rule
+-- needs the engine to infer the surrounding context as well as the rewrite,
+-- which its `@abstract` cannot yet do; when it can, these axioms take a
+-- context binder and the citations do not change.
+--
+-- ## forallx rule → axiom name
+--
+--   DIL ... dil            MT ... mt            HS ... hs
+--   Comm .. and_comm / or_comm / iff_comm
+--   DN .... dn_elim / dn_intro
+--   MC .... mc_imp_or / mc_or_imp / mc_or_negimp / mc_negimp_or
+--   ↔ex ... iffex_split / iffex_join
+--   DeM ... dem_neg_or / dem_and_neg / dem_neg_and / dem_or_neg
+--   QN .... qn_neg_all / qn_ex_neg / qn_neg_ex / qn_all_neg
+--
+-- Where a name covers several rules — every replacement rule runs in both
+-- directions, and `Comm` over three connectives — the alias sits on the last
+-- axiom, which `@fallback`s onto the ones before it in turn, exactly as `&E`
+-- does above: a line citing `DeM` gets whichever form fits, and the
+-- certificate names the one that held.
+
+-- Dilemma: proof by cases with the cases already conditionalized.
+--| @syntax alias DIL
+axiom dil (ga de si ta: ctx) (ph ps ch: wff):
+  $ ga ⊢ ph ∨ ps $ > $ de ⊢ ph → ch $ > $ si ⊢ ps → ch $ >
+  $ ga ; de ; si ; ta ⊢ ch $;
+
+-- Modus tollens
+--| @syntax alias MT
+axiom mt (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph → ps $ > $ de ⊢ ¬ ps $ > $ ga ; de ; si ⊢ ¬ ph $;
+
+-- Hypothetical syllogism
+--| @syntax alias HS
+axiom hs (ga de si: ctx) (ph ps ch: wff):
+  $ ga ⊢ ph → ps $ > $ de ⊢ ps → ch $ > $ ga ; de ; si ⊢ ph → ch $;
+
+-- Commutativity, of each of the three commutative connectives.
+axiom and_comm (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps ∧ ph $;
+--| @fallback and_comm
+axiom or_comm (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∨ ps $ > $ ga ; de ⊢ ps ∨ ph $;
+--| @fallback or_comm
+--| @syntax alias Comm
+axiom iff_comm (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ph ↔ ps $ > $ ga ; de ⊢ ps ↔ ph $;
+
+-- Double negation, both ways.
+axiom dn_elim (ga de: ctx) (ph: wff): $ ga ⊢ ¬ ¬ ph $ > $ ga ; de ⊢ ph $;
+--| @fallback dn_elim
+--| @syntax alias DN
+axiom dn_intro (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ¬ ¬ ph $;
+
+-- Material conditional: a conditional as a disjunction and a disjunction as
+-- a conditional, each both ways.
+axiom mc_imp_or (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ph → ps $ > $ ga ; de ⊢ ¬ ph ∨ ps $;
+--| @fallback mc_imp_or
+axiom mc_or_imp (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ ph ∨ ps $ > $ ga ; de ⊢ ph → ps $;
+--| @fallback mc_or_imp
+axiom mc_or_negimp (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∨ ps $ > $ ga ; de ⊢ ¬ ph → ps $;
+--| @fallback mc_or_negimp
+--| @syntax alias MC
+axiom mc_negimp_or (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ ph → ps $ > $ ga ; de ⊢ ph ∨ ps $;
+
+-- Biconditional exchange: a biconditional as the conjunction of its two
+-- conditionals, both ways.
+axiom iffex_split (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ph ↔ ps $ > $ ga ; de ⊢ (ph → ps) ∧ (ps → ph) $;
+--| @fallback iffex_split
+--| @syntax alias ↔ex <->ex
+axiom iffex_join (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ (ph → ps) ∧ (ps → ph) $ > $ ga ; de ⊢ ph ↔ ps $;
+
+-- De Morgan, the four forms.
+axiom dem_neg_or (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ (ph ∨ ps) $ > $ ga ; de ⊢ ¬ ph ∧ ¬ ps $;
+--| @fallback dem_neg_or
+axiom dem_and_neg (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ ph ∧ ¬ ps $ > $ ga ; de ⊢ ¬ (ph ∨ ps) $;
+--| @fallback dem_and_neg
+axiom dem_neg_and (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ (ph ∧ ps) $ > $ ga ; de ⊢ ¬ ph ∨ ¬ ps $;
+--| @fallback dem_neg_and
+--| @syntax alias DeM
+axiom dem_or_neg (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ ph ∨ ¬ ps $ > $ ga ; de ⊢ ¬ (ph ∧ ps) $;
+
+-- Quantifier negation, the four forms. The contexts may mention the bound
+-- variable, as the quantifier rules above allow.
+axiom qn_neg_all {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ¬ (∀ x ph) $ > $ ga ; de ⊢ ∃ x (¬ ph) $;
+--| @fallback qn_neg_all
+axiom qn_ex_neg {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ∃ x (¬ ph) $ > $ ga ; de ⊢ ¬ (∀ x ph) $;
+--| @fallback qn_ex_neg
+axiom qn_neg_ex {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ¬ (∃ x ph) $ > $ ga ; de ⊢ ∀ x (¬ ph) $;
+--| @fallback qn_neg_ex
+--| @syntax alias QN
+axiom qn_all_neg {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ∀ x (¬ ph) $ > $ ga ; de ⊢ ¬ (∃ x ph) $;

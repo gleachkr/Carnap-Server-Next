@@ -47,6 +47,7 @@ describe("forallx (Magnus) theory", () => {
       const { citationShapes, readSentence } = magnusExercise(
         testCase.goalName,
         testCase.theoremDecl,
+        testCase.system,
       );
       const { formulaProblems } = fitchToAuf(
         testCase.fitch,

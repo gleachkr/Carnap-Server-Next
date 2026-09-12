@@ -242,6 +242,23 @@ describe("system=", () => {
     expect(publicDataOf(artifact, "ex1").source).toContain("@syntax");
   });
 
+  test("a `-plus` id is the basic system with the book's derived rules after it", async () => {
+    // The composed artifact is what freezes, so the derived rules reach the
+    // engine and the alias table alike — and only under this id: the basic
+    // system's text carries no `DeM`.
+    const artifact = await compile(
+      fitch("ex1", "andcomm", "forallx-calgary-2019-plus"),
+    );
+    const source = String(publicDataOf(artifact, "ex1").source);
+
+    expect(Object.keys(artifact.systems ?? {})).toEqual([
+      "forallx-calgary-2019-plus",
+    ]);
+    expect(source.startsWith(FORALLX_SOURCE)).toBe(true);
+    expect(source).toContain("@syntax alias DeM");
+    expect(FORALLX_SOURCE).not.toContain("alias DeM");
+  });
+
   test("a block of the same name wins over the shipped id", async () => {
     // The point of the order. A course that extends forallx calls the result
     // whatever it likes — including `forallx-calgary-2019` — and every exercise

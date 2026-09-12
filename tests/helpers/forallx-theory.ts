@@ -57,10 +57,14 @@ export const FORALLX_THEORY_BLOCK = `:::aufbau-mm0{name="forallx"}\n${FORALLX_TH
  * here is the point: the engine text a certificate is verified against is
  * derived, not authored, so a test or a verify script cannot accidentally
  * exercise a path an author cannot reach.
+ *
+ * `system` is the built-in the exercise names; the default is the basic
+ * system, and a case over the book's derived rules names `forallx-calgary-2019-plus`.
  */
 export function forallxExercise(
   goalName: string,
   theoremDecl: string,
+  system: string = "forallx-calgary-2019",
 ): {
   readonly citationShapes: ReadonlyMap<string, RuleCitationShape>;
   readonly mm0: string;
@@ -71,10 +75,13 @@ export function forallxExercise(
   // for the readers and the student, and in engine text for the engine. A
   // goal the language refuses is thrown here, since the compiler would have
   // refused the exercise.
-  const goal = goalEngineDeclaration(
-    `${FORALLX_THEORY_SOURCE}\n${theoremDecl}`,
-    goalName,
-  );
+  const source = THEORY_SOURCES[`${system}.mm0`];
+
+  if (source === undefined) {
+    throw new Error(`no ${system} theory is registered`);
+  }
+
+  const goal = goalEngineDeclaration(`${source}\n${theoremDecl}`, goalName);
 
   if (goal !== null && !goal.ok) {
     throw new Error(
@@ -88,9 +95,9 @@ export function forallxExercise(
     {
       goalDecl: theoremDecl,
       ...(goal === null ? {} : { goalEngineDecl: goal.declaration }),
-      system: "forallx",
+      system,
     },
-    { forallx: FORALLX_THEORY_SOURCE },
+    { [system]: source },
   );
   const resolved = proofTheoryText(frozen as { readonly source?: string });
 

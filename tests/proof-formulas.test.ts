@@ -232,9 +232,15 @@ describe("goalBinderScope", () => {
 
   test("every worked forallx case names a goal the scope can find", () => {
     // The failure mode this guards is silent: a goal name that does not match
-    // yields an empty scope, which is exactly the pre-#253 behaviour. Every
-    // case in the corpus binds something, so an empty scope means a miss.
+    // yields an empty scope, which is exactly the pre-#253 behaviour. A case
+    // whose goal binds something must therefore yield a non-empty scope; the
+    // derived-rule cases are stated over the lexicon's own sentence letters
+    // and bind nothing, and for those an empty scope is the right answer.
     for (const testCase of FORALLX_CASES) {
+      if (/^theorem \w+: /.test(testCase.theoremDecl)) {
+        continue;
+      }
+
       expect(
         scopeOf(testCase.theoremDecl, testCase.goalName).size,
         testCase.name,

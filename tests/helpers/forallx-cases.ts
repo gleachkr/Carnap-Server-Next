@@ -31,6 +31,13 @@ export interface ForallxCase {
    * no `_sub` fallback exists to reach.
    */
   readonly shouldFail?: true;
+  /**
+   * The built-in the exercise names. Unset means the basic system; the cases
+   * over the book's derived rules name `forallx-calgary-2019-plus`, and one
+   * case cites a derived rule *without* naming it, to pin that the basic
+   * system refuses it.
+   */
+  readonly system?: string;
 }
 
 export const FORALLX_CASES: readonly ForallxCase[] = [
@@ -376,5 +383,91 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     shouldFail: true,
     theoremDecl:
       "theorem smuggle {x: var} {a: name}: $ ∃ x G(x) ; F(a) ⊢ ∃ x (G(x) ∧ F(x)) $;",
+  },
+  // The derived rules, which only `forallx-calgary-2019-plus` declares. Each
+  // is cited by the book's name, and every form a name covers is exercised —
+  // the fallback chain has to land on each of them.
+  {
+    name: "DS, both sides",
+    theoremDecl: "theorem ds: $ P ∨ Q ; ¬ P ; ¬ Q ⊢ Q ∧ P $;",
+    goalName: "ds",
+    system: "forallx-calgary-2019-plus",
+    fitch: [
+      "P ∨ Q   :PR",
+      "¬ P     :PR",
+      "¬ Q     :PR",
+      "Q       :DS 1 2",
+      "P       :DS 1 3",
+      "Q ∧ P   :∧I 4 5",
+    ].join("\n"),
+  },
+  {
+    name: "MT",
+    theoremDecl: "theorem mttest: $ P → Q ; ¬ Q ⊢ ¬ P $;",
+    goalName: "mttest",
+    system: "forallx-calgary-2019-plus",
+    fitch: ["P → Q   :PR", "¬ Q     :PR", "¬ P     :MT 1 2"].join("\n"),
+  },
+  {
+    name: "DNE",
+    theoremDecl: "theorem dnerule: $ ¬ ¬ P ⊢ P $;",
+    goalName: "dnerule",
+    system: "forallx-calgary-2019-plus",
+    fitch: ["¬ ¬ P   :PR", "P       :DNE 1"].join("\n"),
+  },
+  {
+    name: "LEM (two subproofs)",
+    theoremDecl: "theorem lemtest: $ _ ⊢ P ∨ ¬ P $;",
+    goalName: "lemtest",
+    system: "forallx-calgary-2019-plus",
+    fitch: [
+      "    P           :AS",
+      "    P ∨ ¬ P     :∨I 1",
+      "    ¬ P         :AS",
+      "    P ∨ ¬ P     :∨I 3",
+      "P ∨ ¬ P         :LEM 1-2 3-4",
+    ].join("\n"),
+  },
+  {
+    name: "DeM, all four forms",
+    theoremDecl:
+      "theorem dem: $ ¬ (P ∨ Q) ; ¬ (R ∧ S) ⊢ ¬ (P ∨ Q) ∧ ¬ (R ∧ S) $;",
+    goalName: "dem",
+    system: "forallx-calgary-2019-plus",
+    // Out and back again, so each premise goes through both of its forms.
+    fitch: [
+      "¬ (P ∨ Q)               :PR",
+      "¬ (R ∧ S)               :PR",
+      "¬ P ∧ ¬ Q               :DeM 1",
+      "¬ R ∨ ¬ S               :DeM 2",
+      "¬ (P ∨ Q)               :DeM 3",
+      "¬ (R ∧ S)               :DeM 4",
+      "¬ (P ∨ Q) ∧ ¬ (R ∧ S)   :∧I 5 6",
+    ].join("\n"),
+  },
+  {
+    name: "CQ, all four forms",
+    theoremDecl:
+      "theorem cq {x: var}: $ ¬ ∃ x F(x) ; ¬ ∀ x G(x) ⊢ ¬ ∃ x F(x) ∧ ¬ ∀ x G(x) $;",
+    goalName: "cq",
+    system: "forallx-calgary-2019-plus",
+    fitch: [
+      "¬ ∃x F(x)                 :PR",
+      "¬ ∀x G(x)                 :PR",
+      "∀x ¬ F(x)                 :CQ 1",
+      "∃x ¬ G(x)                 :CQ 2",
+      "¬ ∃x F(x)                 :CQ 3",
+      "¬ ∀x G(x)                 :CQ 4",
+      "¬ ∃x F(x) ∧ ¬ ∀x G(x)     :∧I 5 6",
+    ].join("\n"),
+  },
+  {
+    name: "DS cited in the basic system (must be refused)",
+    theoremDecl: "theorem dsbasic: $ P ∨ Q ; ¬ P ⊢ Q $;",
+    goalName: "dsbasic",
+    // No `system`: the basic system knows no `DS`, so the citation reaches
+    // the engine unresolved and the proof does not compile.
+    shouldFail: true,
+    fitch: ["P ∨ Q   :PR", "¬ P     :PR", "Q       :DS 1 2"].join("\n"),
   },
 ];

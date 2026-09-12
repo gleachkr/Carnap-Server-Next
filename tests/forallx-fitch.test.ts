@@ -49,6 +49,7 @@ describe("forallx: Calgary theory", () => {
       const { readSentence } = forallxExercise(
         testCase.goalName,
         testCase.theoremDecl,
+        testCase.system,
       );
       const { formulaProblems } = fitchToAuf(
         testCase.fitch,

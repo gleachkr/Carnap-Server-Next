@@ -1,0 +1,87 @@
+
+-- ## The derived rules: `forallx-calgary-2019-plus`
+--
+-- Everything above this line is `forallx-calgary-2019.mm0`, verbatim. This
+-- artifact — served at `/theories/forallx-calgary-2019-plus.mm0`, named by
+-- `system="forallx-calgary-2019-plus"` — is that file with the rules the
+-- textbook's chapters on additional rules add: disjunctive syllogism, modus
+-- tollens, double-negation elimination, excluded middle and De Morgan for TFL,
+-- and conversion of quantifiers for FOL. They are two systems on purpose.
+-- Every rule here is a theorem of the basic set, so allowing it changes what a
+-- proof *demonstrates* and not what is provable; a course that has just taught
+-- `¬I` and `IP` does not want `DNE` on the palette, and one that is past that
+-- chapter does not want to teach the book's own rules as derivations. Old
+-- Carnap draws the same line (`thomasBolducAndZachFOL2019` against
+-- `thomasBolducAndZachFOLPlus2019`), and the citation names are its.
+--
+-- The rules are stated as the book states them: as inferences on whole
+-- lines, each in the same slack-context shape as the basic rules above, so
+-- the Fitch, Prawitz and tree surfaces pick them up with no code change.
+-- Old Carnap lets `DeM` rewrite inside a sentence; the book does not, and
+-- neither does this file.
+--
+-- ## forallx rule → axiom name
+--
+--   DS ... ds_l / ds_r          MT ... mt          DNE ... dne
+--   LEM .. lem (two subproofs)  DeM .. dem_neg_or / dem_and_neg /
+--                                      dem_neg_and / dem_or_neg
+--   CQ ... cq_all_neg / cq_neg_ex / cq_ex_neg / cq_neg_all
+--
+-- Where a name covers several rules — the two sides of `DS`, the four forms
+-- of `DeM` and `CQ` — the alias sits on the last axiom, which `@fallback`s
+-- onto the ones before it in turn, exactly as `∧E` does above: a line citing
+-- `DeM` gets whichever form fits, and the certificate names the one that held.
+
+-- Disjunctive syllogism: from φ ∨ ψ and the negation of one disjunct, the
+-- other.
+axiom ds_l (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∨ ps $ > $ de ⊢ ¬ ps $ > $ ga ; de ; si ⊢ ph $;
+--| @fallback ds_l
+--| @syntax alias DS
+axiom ds_r (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph ∨ ps $ > $ de ⊢ ¬ ph $ > $ ga ; de ; si ⊢ ps $;
+
+-- Modus tollens
+--| @syntax alias MT
+axiom mt (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph → ps $ > $ de ⊢ ¬ ps $ > $ ga ; de ; si ⊢ ¬ ph $;
+
+-- Double-negation elimination
+--| @syntax alias DNE
+axiom dne (ga de: ctx) (ph: wff): $ ga ⊢ ¬ ¬ ph $ > $ ga ; de ⊢ ph $;
+
+-- Excluded middle: two subproofs, one assuming φ and one assuming ¬φ, both
+-- reaching ψ. Proof by cases without the disjunction to cite — which is
+-- why the citation is two ranges, `LEM i-j, k-l`.
+--| @syntax alias LEM
+axiom lem (ga de si: ctx) (ph ps: wff):
+  $ ga ; ph ⊢ ps $ > $ de ; ¬ ph ⊢ ps $ > $ ga ; de ; si ⊢ ps $;
+
+-- De Morgan, the four forms the book lists.
+axiom dem_neg_or (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ (ph ∨ ps) $ > $ ga ; de ⊢ ¬ ph ∧ ¬ ps $;
+--| @fallback dem_neg_or
+axiom dem_and_neg (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ ph ∧ ¬ ps $ > $ ga ; de ⊢ ¬ (ph ∨ ps) $;
+--| @fallback dem_and_neg
+axiom dem_neg_and (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ (ph ∧ ps) $ > $ ga ; de ⊢ ¬ ph ∨ ¬ ps $;
+--| @fallback dem_neg_and
+--| @syntax alias DeM
+axiom dem_or_neg (ga de: ctx) (ph ps: wff):
+  $ ga ⊢ ¬ ph ∨ ¬ ps $ > $ ga ; de ⊢ ¬ (ph ∧ ps) $;
+
+-- Conversion of quantifiers, the four forms the book lists. The contexts
+-- may mention the bound variable, as the quantifier rules above allow.
+axiom cq_all_neg {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ∀ x (¬ ph) $ > $ ga ; de ⊢ ¬ (∃ x ph) $;
+--| @fallback cq_all_neg
+axiom cq_neg_ex {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ¬ (∃ x ph) $ > $ ga ; de ⊢ ∀ x (¬ ph) $;
+--| @fallback cq_neg_ex
+axiom cq_ex_neg {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ∃ x (¬ ph) $ > $ ga ; de ⊢ ¬ (∀ x ph) $;
+--| @fallback cq_ex_neg
+--| @syntax alias CQ
+axiom cq_neg_all {x: var} (ga de: ctx x) (ph: wff x):
+  $ ga ⊢ ¬ (∀ x ph) $ > $ ga ; de ⊢ ∃ x (¬ ph) $;

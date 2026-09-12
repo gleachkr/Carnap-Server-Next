@@ -792,16 +792,18 @@ block is one line and no body:
 
 These paths are real. Open one in a browser and you get the theory itself — the
 axiom names your students will cite, and the commentary that ships with them.
-Four are available:
+Six are available:
 
 | Path | System |
 | --- | --- |
-| `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment. Sequents `Γ ; φ ⊢ ψ`; the Fitch and Prawitz surfaces are built for it. Also the language `system="forallx-calgary-2019"` names. |
-| `/theories/forallx-magnus.mm0` | *forallx* (P.D. Magnus, the original) — system QL: the same Fitch shape, but the book's own rules and notation. Also the language `system="forallx-magnus"` names. |
+| `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment, **basic rules only**. Sequents `Γ ; φ ⊢ ψ`; the Fitch and Prawitz surfaces are built for it. Also the language `system="forallx-calgary-2019"` names. |
+| `/theories/forallx-calgary-2019-plus.mm0` | The same, plus the book's derived rules — `DS`, `MT`, `DNE`, `LEM`, `DeM` and `CQ`. See "Basic and derived rules" below. |
+| `/theories/forallx-magnus.mm0` | *forallx* (P.D. Magnus, the original) — system QL: the same Fitch shape, but the book's own rules and notation, **basic rules only**. Also the language `system="forallx-magnus"` names. |
+| `/theories/forallx-magnus-plus.mm0` | The same, plus the book's derived and replacement rules — `DIL`, `MT`, `HS`, `Comm`, `DN`, `MC`, `↔ex`, `DeM` and `QN`. |
 | `/theories/gentzen-lk.mm0` | Classical LK, a multi-conclusion sequent calculus with both sides comma-separated. An LK derivation is a tree, so this is the tree surface's system. |
 | `/theories/carnap-prop.mm0` | Carnap's default `prop` — a propositional *signature* with no rules of its own, which is what the truth-table type reads. Name it here and add your own rules in the block body to build a system over its notation. |
 
-A `src` must be a path this site serves — one of the four above, or one of
+A `src` must be a path this site serves — one of the six above, or one of
 yours (below). A theory kept on another server is not supported: the text is
 frozen into the exercise when you save, and putting a third party's uptime
 inside that save — and inside the live preview, which compiles in your browser
@@ -811,7 +813,7 @@ into the block instead.
 
 ### Hosting a theory of your own
 
-A system nobody has published, or one of the three with your course's own
+A system nobody has published, or one of the six with your course's own
 vocabulary added, does not have to be pasted into every lesson that uses it.
 Create a content item and choose **Theory or language** for its kind: its
 revisions hold MM0 instead of Markdown, and saving one checks that the file
@@ -983,6 +985,11 @@ names any of them by id:
 | `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — predicates with parentheses, `∧` canonical. |
 | `forallx-magnus` | *forallx* (P.D. Magnus) first-order syntax — predicates juxtaposed (`Fa`, `Rab`), `&` canonical. |
 | `carnap-prop` | Carnap's default `prop` — the truth-table type's default, ASCII connectives and 52 sentence letters. |
+
+The two `-plus` systems (`forallx-calgary-2019-plus`, `forallx-magnus-plus`)
+are the same languages with more rules, so a model or translation exercise may
+name either spelling; a course that sets its proofs in a `-plus` system can
+name it everywhere and never think about it again.
 
 They live in `src/worker/logic/theories/` alongside the proof systems, and are
 served at `/theories/<id>.mm0` like them — a language and a proof system are the
@@ -1225,6 +1232,40 @@ declared anywhere. Citing the subproof once per premise — `neg_intro 2-4 2-5`
 two sibling subproofs, which satisfy the rule equally well. The rule names are
 otherwise the ones Calgary uses, and each theory's own header has the full
 table.
+
+### Basic and derived rules
+
+Each edition ships twice: the basic system under the book's name, and the same
+file with the book's derived rules appended under the name with `-plus`. Every
+derived rule is a theorem of the basic set, so allowing it changes what a proof
+*demonstrates* and not what is provable — which is exactly why the choice is
+the course's. A lesson on `¬I` and `IP` does not want `DNE` on the palette; a
+lesson two chapters later does not want to teach the book's own rules as
+derivations. Set `system="forallx-calgary-2019"` for the one and
+`system="forallx-calgary-2019-plus"` for the other, per exercise. Old Carnap
+draws the same line (`thomasBolducAndZachFOL2019` against
+`thomasBolducAndZachFOLPlus2019`, `magnusQL` against `magnusQLPlus`), and the
+citation names are its:
+
+|  | `forallx-calgary-2019-plus` | `forallx-magnus-plus` |
+| --- | --- | --- |
+| Derived rules | `DS`, `MT`, `DNE`, `LEM` (two subproofs, `LEM i-j k-l`) | `DIL`, `MT`, `HS` |
+| Replacement rules | `DeM` | `Comm`, `DN`, `MC`, `↔ex` (or `<->ex`), `DeM` |
+| Quantifier rules | `CQ` | `QN` |
+
+Where one name covers several forms — the two sides of `DS`, the four forms of
+`DeM`, both directions of every Magnus replacement rule — a line citing the
+name gets whichever form fits, as `∧E` already does.
+
+**Replacement rules apply to a whole line.** Calgary states `DeM` and `CQ` as
+inferences from one sentence to another, and that is what ships. Magnus lets
+`Comm`, `DN`, `MC`, `↔ex`, `DeM` and `QN` rewrite *inside* a sentence —
+`¬¬P → Q` to `P → Q` in one step — and old Carnap does too; here each is the
+inference from a line's sentence to its rewritten form, and no more. A student
+who wants the antecedent rewritten derives it the long way. Saying the book's
+rule needs the engine to infer the surrounding context along with the
+rewrite; when it can, the same citations will reach inside a sentence and no
+lesson changes.
 
 Magnus's `A` and `E` are **not** given back as quantifier spellings. Carnap
 reads `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, by

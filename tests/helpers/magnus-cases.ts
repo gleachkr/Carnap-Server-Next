@@ -44,6 +44,11 @@ export interface MagnusCase {
    * a = 1 — if it could.
    */
   readonly shouldFail?: true;
+  /**
+   * The built-in the exercise names. Unset means the basic system; the cases
+   * over the book's derived and replacement rules name `forallx-magnus-plus`.
+   */
+  readonly system?: string;
 }
 
 export const MAGNUS_CASES: readonly MagnusCase[] = [
@@ -333,5 +338,119 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
     shouldFail: true,
     theoremDecl:
       "theorem smuggle {x: var} {a: name}: $ ∃ x G(x) ; F(a) ⊢ ∃ x (G(x) & F(x)) $;",
+  },
+  // The derived and replacement rules, which only `forallx-magnus-plus`
+  // declares. Each is cited by the book's name, and every form a name covers
+  // is exercised — the fallback chain has to land on each of them. The
+  // replacement rules are applied to whole lines, which is all this file
+  // states of them; see its header.
+  {
+    name: "DIL",
+    theoremDecl: "theorem diltest: $ P ∨ Q ; P → R ; Q → R ⊢ R $;",
+    goalName: "diltest",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "P \\/ Q     :PR",
+      "P -> R    :PR",
+      "Q -> R    :PR",
+      "R         :DIL 1 2 3",
+    ].join("\n"),
+  },
+  {
+    name: "MT",
+    theoremDecl: "theorem mttest: $ P → Q ; ¬ Q ⊢ ¬ P $;",
+    goalName: "mttest",
+    system: "forallx-magnus-plus",
+    fitch: ["P -> Q    :PR", "~Q        :PR", "~P        :MT 1 2"].join("\n"),
+  },
+  {
+    name: "HS",
+    theoremDecl: "theorem hstest: $ P → Q ; Q → R ⊢ P → R $;",
+    goalName: "hstest",
+    system: "forallx-magnus-plus",
+    fitch: ["P -> Q    :PR", "Q -> R    :PR", "P -> R    :HS 1 2"].join("\n"),
+  },
+  {
+    name: "Comm, over each connective",
+    theoremDecl:
+      "theorem comm: $ P & Q ; P ∨ Q ; P ↔ Q ⊢ (Q & P) & ((Q ∨ P) & (Q ↔ P)) $;",
+    goalName: "comm",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "P & Q                         :PR",
+      "P \\/ Q                         :PR",
+      "P <-> Q                       :PR",
+      "Q & P                         :Comm 1",
+      "Q \\/ P                         :Comm 2",
+      "Q <-> P                       :Comm 3",
+      "(Q \\/ P) & (Q <-> P)           :and_intro 5 6",
+      "(Q & P) & ((Q \\/ P) & (Q <-> P)) :and_intro 4 7",
+    ].join("\n"),
+  },
+  {
+    name: "DN, both ways",
+    theoremDecl: "theorem dn: $ ¬ ¬ P ⊢ ¬ ¬ P $;",
+    goalName: "dn",
+    system: "forallx-magnus-plus",
+    fitch: ["~~P       :PR", "P         :DN 1", "~~P       :DN 2"].join("\n"),
+  },
+  {
+    name: "MC, all four forms",
+    theoremDecl: "theorem mc: $ P → Q ; P ∨ Q ⊢ (P → Q) & (P ∨ Q) $;",
+    goalName: "mc",
+    system: "forallx-magnus-plus",
+    // Out and back again, so each premise goes through both of its forms.
+    fitch: [
+      "P -> Q                :PR",
+      "P \\/ Q                 :PR",
+      "~P \\/ Q                :MC 1",
+      "~P -> Q               :MC 2",
+      "P -> Q                :MC 3",
+      "P \\/ Q                 :MC 4",
+      "(P -> Q) & (P \\/ Q)    :and_intro 5 6",
+    ].join("\n"),
+  },
+  {
+    name: "↔ex, both ways",
+    theoremDecl: "theorem iffex: $ P ↔ Q ⊢ P ↔ Q $;",
+    goalName: "iffex",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "P <-> Q                   :PR",
+      "(P -> Q) & (Q -> P)       :↔ex 1",
+      "P <-> Q                   :<->ex 2",
+    ].join("\n"),
+  },
+  {
+    name: "DeM, all four forms",
+    theoremDecl:
+      "theorem dem: $ ¬ (P ∨ Q) ; ¬ (R & S) ⊢ ¬ (P ∨ Q) & ¬ (R & S) $;",
+    goalName: "dem",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "~(P \\/ Q)                :PR",
+      "~(R & S)                :PR",
+      "~P & ~Q                 :DeM 1",
+      "~R \\/ ~S                 :DeM 2",
+      "~(P \\/ Q)                :DeM 3",
+      "~(R & S)                :DeM 4",
+      "~(P \\/ Q) & ~(R & S)     :and_intro 5 6",
+    ].join("\n"),
+  },
+  {
+    name: "QN, all four forms",
+    theoremDecl:
+      "theorem qn {x: var}: $ ¬ ∀ x F(x) ; ¬ ∃ x G(x) ⊢ ¬ ∀ x F(x) & ¬ ∃ x G(x) $;",
+    goalName: "qn",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "~@xFx                 :PR",
+      "~3xGx                 :PR",
+      "3x~Fx                 :QN 1",
+      "@x~Gx                 :QN 2",
+      "~@xFx                 :QN 3",
+      "~3xGx                 :QN 4",
+      "~@xFx & ~3xGx         :and_intro 5 6",
+    ].join("\n"),
   },
 ];

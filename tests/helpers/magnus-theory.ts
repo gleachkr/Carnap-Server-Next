@@ -48,10 +48,14 @@ export const MAGNUS_THEORY_BLOCK = `:::aufbau-mm0{name="magnus"}\n${MAGNUS_THEOR
 /**
  * What one exercise over this theory freezes, and how its lines are read —
  * exactly what the authoring compiler would have produced for that goal.
+ *
+ * `system` is the built-in the exercise names; the default is the basic
+ * system, and a case over the book's derived rules names `forallx-magnus-plus`.
  */
 export function magnusExercise(
   goalName: string,
   theoremDecl: string,
+  system: string = "forallx-magnus",
 ): {
   readonly citationShapes: ReadonlyMap<string, RuleCitationShape>;
   readonly mm0: string;
@@ -62,10 +66,13 @@ export function magnusExercise(
   // for the readers and the student, and in engine text for the engine. A
   // goal the language refuses is thrown here, since the compiler would have
   // refused the exercise.
-  const goal = goalEngineDeclaration(
-    `${MAGNUS_THEORY_SOURCE}\n${theoremDecl}`,
-    goalName,
-  );
+  const source = THEORY_SOURCES[`${system}.mm0`];
+
+  if (source === undefined) {
+    throw new Error(`no ${system} theory is registered`);
+  }
+
+  const goal = goalEngineDeclaration(`${source}\n${theoremDecl}`, goalName);
 
   if (goal !== null && !goal.ok) {
     throw new Error(
@@ -79,9 +86,9 @@ export function magnusExercise(
     {
       goalDecl: theoremDecl,
       ...(goal === null ? {} : { goalEngineDecl: goal.declaration }),
-      system: "magnus",
+      system,
     },
-    { magnus: MAGNUS_THEORY_SOURCE },
+    { [system]: source },
   );
   const resolved = proofTheoryText(frozen as { readonly source?: string });
 

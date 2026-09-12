@@ -32,6 +32,7 @@ for (const testCase of FORALLX_CASES) {
   const { citationShapes, mm0, readRule, readSentence } = forallxExercise(
     testCase.goalName,
     testCase.theoremDecl,
+    testCase.system,
   );
   const translation = fitchToAuf(
     testCase.fitch,
