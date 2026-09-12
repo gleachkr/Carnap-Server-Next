@@ -1395,6 +1395,18 @@ class SqliteContentStore implements ContentStore {
    * The LEFT JOIN is what keeps a revision with an empty manifest visible —
    * an inner join would make it indistinguishable from one that does not
    * exist — and `json_type` is what tells "empty" from "not an array".
+   *
+   * Its cost is the bytes of every artifact named, not the exercises in
+   * them: SQLite parses each `compiled_json` whole to find `$.manifest`.
+   * Measured in-process on the seed library (2026-09-12), that is about
+   * 2 ms per megabyte, half of it just reading the row, and `jsonb()` first
+   * saves 5%, not enough to be worth a version check. A course of thirty
+   * lessons at the library's largest (400 KB) is ~25 ms on a student's
+   * course page; the 2 MB row cap makes the worst case ~200 ms for fifty.
+   * If that ever shows in the request timings, the fix is a column of the
+   * manifest's points written at compile time — O(exercises), one
+   * migration and a backfill — read through `parseManifestPoints` with the
+   * same checks. Not before: it has not been seen on a real course.
    */
   async listManifestPoints(
     revisionIds: readonly AppId[],
