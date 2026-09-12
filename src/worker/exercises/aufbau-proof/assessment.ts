@@ -14,8 +14,8 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
-import { renderAufbauProofReview } from "./read-only-view";
 import { readCertificate } from "./certificate";
+import { renderAufbauProofReview } from "./read-only-view";
 import type { AufbauProofAnswerData } from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,

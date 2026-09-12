@@ -14,11 +14,11 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import { readCertificate } from "../aufbau-proof/certificate";
 // The certificate is the trust boundary, so the Prawitz type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's tree).
 import { proofTheoryText } from "../aufbau-proof/formulas";
-import { readCertificate } from "../aufbau-proof/certificate";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofPrawitzReview } from "./read-only-view";
 import type { AufbauProofPrawitzAnswerData } from "./types";

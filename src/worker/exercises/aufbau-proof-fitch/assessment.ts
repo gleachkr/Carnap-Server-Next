@@ -14,6 +14,7 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import { readCertificate } from "../aufbau-proof/certificate";
 // The certificate is the trust boundary, so the Fitch type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's Fitch text or the translated proof).
@@ -22,7 +23,6 @@ import {
   proofRuleSpellings,
   proofTheoryText,
 } from "../aufbau-proof/formulas";
-import { readCertificate } from "../aufbau-proof/certificate";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofFitchReview } from "./read-only-view";
 import type {
