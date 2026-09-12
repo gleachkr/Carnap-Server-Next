@@ -663,7 +663,7 @@ function staffRoleHint(i18n: Translator, role: StaffRole): string {
   switch (role) {
     case "instructor":
       return i18n.t(
-        "Instructors run the course: its assignments, members, grades and settings.",
+        "Instructors have full access to course controls, including assignments, members, grades and settings.",
       );
     case "teacher_assistant":
       return i18n.t(

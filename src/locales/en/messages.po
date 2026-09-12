@@ -2035,8 +2035,8 @@ msgid "Instructors cannot deactivate their own instructor membership."
 msgstr "Instructors cannot deactivate their own instructor membership."
 
 #: src/worker/web/courses.tsx
-msgid "Instructors run the course: its assignments, members, grades and settings."
-msgstr "Instructors run the course: its assignments, members, grades and settings."
+msgid "Instructors have full access to course controls, including assignments, members, grades and settings."
+msgstr "Instructors have full access to course controls, including assignments, members, grades and settings."
 
 #: src/worker/web/labels.ts
 msgid "Invited"
