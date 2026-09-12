@@ -25,6 +25,7 @@ import { effectivePolicyAssignment } from "./policies";
 import type {
   AppStores,
   EnqueueLtiGradeJobInput,
+  ScoringScope,
   UpsertAssignmentScoreInput,
 } from "./stores";
 
@@ -435,19 +436,35 @@ interface CalculatedAssignmentScore {
  * per-row query returned it, which the tie-breaks in {@link bestEvaluation}
  * depend on.
  */
-interface ScoringInputs {
+interface ScoringInputs extends ScoringContext, ScoringWork {}
+
+/**
+ * The small half of the inputs: what each assignment is out of, and each
+ * student's adjustments to it. A few rows per assignment or per student,
+ * read in five statements for any number of assignments.
+ */
+interface ScoringContext {
   /** By {@link pairKey}(courseId, userId). */
   readonly accommodations: ReadonlyMap<string, CourseAccommodation>;
-  /** By {@link pairKey}(assignmentId, userId), in ordinal order, voids included. */
-  readonly attempts: ReadonlyMap<string, readonly Attempt[]>;
-  /** By submission id, in (createdAt, id) order, voids included. */
-  readonly evaluations: ReadonlyMap<AppId, readonly EvaluationForScoring[]>;
   /** By assignment id: the manifest's exercises less the excused ones. */
   readonly exercises: ReadonlyMap<AppId, readonly GradebookExercise[]>;
   /** By assignment id. */
   readonly latePolicies: ReadonlyMap<AppId, AssignmentLatePolicy>;
   /** By {@link pairKey}(assignmentId, userId). */
   readonly overrides: ReadonlyMap<string, AssignmentOverride>;
+}
+
+/**
+ * The large half: the work itself, as many rows as there are attempts,
+ * submissions and evaluations in the scope, read in three statements. This
+ * is the part a course-wide read has to take in pieces — see
+ * {@link GradebookService.getCourseGradebook}.
+ */
+interface ScoringWork {
+  /** By {@link pairKey}(assignmentId, userId), in ordinal order, voids included. */
+  readonly attempts: ReadonlyMap<string, readonly Attempt[]>;
+  /** By submission id, in (createdAt, id) order, voids included. */
+  readonly evaluations: ReadonlyMap<AppId, readonly EvaluationForScoring[]>;
   /** By attempt id, in (submittedAt, id) order. */
   readonly submissions: ReadonlyMap<AppId, readonly SubmissionForScoring[]>;
 }
@@ -919,20 +936,40 @@ export class GradebookService {
         assignment.state === "published" &&
         assignment.assessmentMode === "graded",
     );
-    const [students, inputs] = await Promise.all([
+    const [students, context] = await Promise.all([
       this.activeStudents(courseId),
-      this.scoringInputs(assignments),
+      this.scoringContext(assignments),
     ]);
     const now = timestampNow(this.options.now?.() ?? new Date());
-    const rows = students.map((user) => ({
-      user,
-      scores: assignments.map(
-        (assignment) =>
-          calculateAssignmentScore(assignment, user.id, inputs, now).score,
-      ),
-    }));
+    // One assignment's work at a time, and only its scores kept: the rows a
+    // column is summed from are let go before the next column's are read, so
+    // what this holds at once is bounded by the largest assignment, not by
+    // every submission the course has ever taken. Three statements a column
+    // on top of the context read once above — a count that grows with the
+    // assignments and not with the class.
+    const columns: AssignmentScore[][] = [];
 
-    return { assignments, rows };
+    for (const assignment of assignments) {
+      const inputs = {
+        ...context,
+        ...(await this.scoringWork({ assignmentIds: [assignment.id] })),
+      };
+
+      columns.push(
+        students.map(
+          (user) =>
+            calculateAssignmentScore(assignment, user.id, inputs, now).score,
+        ),
+      );
+    }
+
+    return {
+      assignments,
+      rows: students.map((user, index) => ({
+        user,
+        scores: columns.map((column) => column[index] ?? null),
+      })),
+    };
   }
 
   async getStudentAssignmentScore(
@@ -1086,29 +1123,34 @@ export class GradebookService {
     assignments: readonly Assignment[],
     userId?: AppId,
   ): Promise<ScoringInputs> {
+    const [context, work] = await Promise.all([
+      this.scoringContext(assignments, userId),
+      this.scoringWork({
+        assignmentIds: assignments.map((assignment) => assignment.id),
+        userId,
+      }),
+    ]);
+
+    return { ...context, ...work };
+  }
+
+  /** The {@link ScoringContext} half of the inputs: five statements. */
+  private async scoringContext(
+    assignments: readonly Assignment[],
+    userId?: AppId,
+  ): Promise<ScoringContext> {
     const stores = this.options.stores;
     const assignmentIds = assignments.map((assignment) => assignment.id);
-    const scope = { assignmentIds, userId };
-    const [
-      exercises,
-      latePolicies,
-      attempts,
-      submissions,
-      evaluations,
-      overrides,
-      accommodations,
-    ] = await Promise.all([
-      this.countedExercises(assignments),
-      stores.assignments.listLatePolicies(assignmentIds),
-      stores.assessment.listAttemptsForScoring(scope),
-      stores.assessment.listSubmissionsForScoring(scope),
-      stores.assessment.listEvaluationsForScoring(scope),
-      stores.assignments.listOverridesForScoring(scope),
-      this.accommodations(
-        [...new Set(assignments.map((assignment) => assignment.courseId))],
-        userId,
-      ),
-    ]);
+    const [exercises, latePolicies, overrides, accommodations] =
+      await Promise.all([
+        this.countedExercises(assignments),
+        stores.assignments.listLatePolicies(assignmentIds),
+        stores.assignments.listOverridesForScoring({ assignmentIds, userId }),
+        this.accommodations(
+          [...new Set(assignments.map((assignment) => assignment.courseId))],
+          userId,
+        ),
+      ]);
 
     return {
       accommodations: new Map(
@@ -1117,6 +1159,33 @@ export class GradebookService {
           accommodation,
         ]),
       ),
+      exercises,
+      latePolicies: new Map(
+        latePolicies.map((policy) => [policy.assignmentId, policy]),
+      ),
+      overrides: new Map(
+        overrides.map((override) => [
+          pairKey(override.assignmentId, override.userId),
+          override,
+        ]),
+      ),
+    };
+  }
+
+  /**
+   * The {@link ScoringWork} half: three statements, grouped and sorted here
+   * the way the arithmetic's tie-breaks expect, in byte order like the
+   * per-row reads this replaced.
+   */
+  private async scoringWork(scope: ScoringScope): Promise<ScoringWork> {
+    const stores = this.options.stores;
+    const [attempts, submissions, evaluations] = await Promise.all([
+      stores.assessment.listAttemptsForScoring(scope),
+      stores.assessment.listSubmissionsForScoring(scope),
+      stores.assessment.listEvaluationsForScoring(scope),
+    ]);
+
+    return {
       attempts: groupBy(
         attempts,
         (attempt) => pairKey(attempt.assignmentId, attempt.userId),
@@ -1128,16 +1197,6 @@ export class GradebookService {
         (left, right) =>
           compareText(left.createdAt, right.createdAt) ||
           compareText(left.id, right.id),
-      ),
-      exercises,
-      latePolicies: new Map(
-        latePolicies.map((policy) => [policy.assignmentId, policy]),
-      ),
-      overrides: new Map(
-        overrides.map((override) => [
-          pairKey(override.assignmentId, override.userId),
-          override,
-        ]),
       ),
       submissions: groupBy(
         submissions,

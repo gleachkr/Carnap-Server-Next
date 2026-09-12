@@ -776,13 +776,14 @@ export function describeStorageContract(
       });
     });
 
-    test("scoring reads return a scope's rows in bulk, in their per-row order", async () => {
+    test("scoring reads return a scope's rows in bulk, as sets", async () => {
       await withStorage(async ({ stores }) => {
         const { attempt, student } = await createAttemptSlice(stores);
         const other = await createUser(stores, "student-2");
         // Two submissions to one attempt in reverse id order of their
-        // timestamps, and two evaluations on the first likewise, so the
-        // orderings below are visibly the columns' and not insertion order.
+        // timestamps, and two evaluations on the first likewise: the reads
+        // promise no order at all (the arithmetic sorts what it groups), so
+        // the rows are compared by id below whichever way they came back.
         const late = await stores.assessment.appendSubmission({
           id: "submission-a",
           attemptId: attempt.id,
@@ -856,27 +857,30 @@ export function describeStorageContract(
         });
         const everyone = { assignmentIds: [attempt.assignmentId] };
         const one = { ...everyone, userId: student.id };
+        const byId = <T extends { readonly id: string }>(
+          rows: readonly T[],
+        ) => [...rows].sort((left, right) => left.id.localeCompare(right.id));
 
         if (otherAttempt === null) {
           throw new Error("Expected the second attempt to be created.");
         }
 
-        await expect(
-          stores.assessment.listAttemptsForScoring(everyone),
-        ).resolves.toEqual([attempt, otherAttempt]);
+        expect(
+          byId(await stores.assessment.listAttemptsForScoring(everyone)),
+        ).toEqual(byId([attempt, otherAttempt]));
         await expect(
           stores.assessment.listAttemptsForScoring(one),
         ).resolves.toEqual([attempt]);
-        await expect(
-          stores.assessment.listSubmissionsForScoring(everyone),
-        ).resolves.toEqual([early, late, otherSubmission].map(forScoring));
-        await expect(
-          stores.assessment.listSubmissionsForScoring(one),
-        ).resolves.toEqual([early, late].map(forScoring));
-        await expect(
-          stores.assessment.listEvaluationsForScoring(one),
-        ).resolves.toEqual(
-          [first, second].map(
+        expect(
+          byId(await stores.assessment.listSubmissionsForScoring(everyone)),
+        ).toEqual(byId([early, late, otherSubmission].map(forScoring)));
+        expect(
+          byId(await stores.assessment.listSubmissionsForScoring(one)),
+        ).toEqual(byId([early, late].map(forScoring)));
+        expect(
+          byId(await stores.assessment.listEvaluationsForScoring(one)),
+        ).toEqual(
+          byId([first, second]).map(
             ({
               createdAt,
               evaluatorKind,

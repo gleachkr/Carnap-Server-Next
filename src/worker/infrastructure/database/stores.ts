@@ -2165,12 +2165,7 @@ class SqliteAssessmentStore implements AssessmentStore {
       const rows = await this.db
         .select()
         .from(attempts)
-        .where(this.scopeFilter(scope, slice))
-        .orderBy(
-          asc(attempts.assignmentId),
-          asc(attempts.userId),
-          asc(attempts.ordinal),
-        );
+        .where(this.scopeFilter(scope, slice));
 
       return rows.map(mapAttempt);
     });
@@ -2190,12 +2185,7 @@ class SqliteAssessmentStore implements AssessmentStore {
         })
         .from(submissions)
         .innerJoin(attempts, eq(attempts.id, submissions.attemptId))
-        .where(this.scopeFilter(scope, slice))
-        .orderBy(
-          asc(submissions.attemptId),
-          asc(submissions.submittedAt),
-          asc(submissions.id),
-        ),
+        .where(this.scopeFilter(scope, slice)),
     );
   }
 
@@ -2215,12 +2205,7 @@ class SqliteAssessmentStore implements AssessmentStore {
         .from(evaluations)
         .innerJoin(submissions, eq(submissions.id, evaluations.submissionId))
         .innerJoin(attempts, eq(attempts.id, submissions.attemptId))
-        .where(this.scopeFilter(scope, slice))
-        .orderBy(
-          asc(evaluations.submissionId),
-          asc(evaluations.createdAt),
-          asc(evaluations.id),
-        ),
+        .where(this.scopeFilter(scope, slice)),
     );
   }
 

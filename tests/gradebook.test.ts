@@ -1375,6 +1375,12 @@ Choose yes.
 
       expect(await gradebook()).toBe(gradebookBaseline);
       expect(await stores.scores.listAssignmentScores(first)).toHaveLength(1);
+
+      // The gradebook reads the course a column at a time, so its count moves
+      // with the assignments — three statements each.
+      await createPublishedAssignment(env, instructor, courseId, revisionId);
+
+      expect(await gradebook()).toBe(gradebookBaseline + 3);
     });
   });
 

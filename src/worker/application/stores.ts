@@ -775,11 +775,12 @@ export interface AssessmentStore {
    * The three bulk reads a score is summed from, over one {@link ScoringScope}:
    * every attempt in it (voided ones included — the arithmetic drops them,
    * and it is the arithmetic that says what a void means), every submission
-   * of those attempts, and every evaluation of those submissions. Within an
-   * assignment each list is ordered as its per-row counterpart above orders
-   * — attempts by ordinal, submissions by (submittedAt, id), evaluations by
-   * (createdAt, id) — and across assignments it is not ordered at all, since
-   * a scope wider than one statement comes back a slice at a time.
+   * of those attempts, and every evaluation of those submissions. None of
+   * the three is ordered: the arithmetic groups and sorts what it reads
+   * (attempts by ordinal, submissions by (submittedAt, id), evaluations by
+   * (createdAt, id)), a scope wider than one statement comes back a slice at
+   * a time anyway, and a sort the reader repeats is a temp b-tree the
+   * database can skip.
    */
   listAttemptsForScoring(scope: ScoringScope): Promise<Attempt[]>;
   listSubmissionsForScoring(
