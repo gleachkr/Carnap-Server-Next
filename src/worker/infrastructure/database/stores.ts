@@ -814,6 +814,13 @@ class SqliteAuthStore implements AuthStore {
   async createNativeLoginChallenge(
     input: CreateNativeLoginChallengeInput,
   ): Promise<NativeLoginChallenge> {
+    // One row per login email sent, and consuming one only marks it, so each
+    // new challenge sweeps the rows whose expiry has passed — consumed or not.
+    // The same bargain every other expiring table here makes on its `create`.
+    await this.db
+      .delete(nativeLoginChallenges)
+      .where(lte(nativeLoginChallenges.expiresAt, input.createdAt));
+
     return single(
       await this.db.insert(nativeLoginChallenges).values(input).returning(),
     );

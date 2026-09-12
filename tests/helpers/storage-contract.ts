@@ -428,6 +428,61 @@ export function describeStorageContract(
       });
     });
 
+    test("expired login challenges are swept when the next one is created", async () => {
+      await withStorage(async ({ stores }) => {
+        const challenge = (
+          id: string,
+          createdAt: string,
+          expiresAt: string,
+        ) =>
+          stores.auth.createNativeLoginChallenge({
+            id,
+            email: "ada@example.test",
+            name: null,
+            tokenHash: `${id}-hash`,
+            createdAt,
+            expiresAt,
+          });
+
+        await challenge("challenge-stale", NOW, LATER);
+        await challenge("challenge-live", NOW, "2026-01-02T05:04:05.000Z");
+        // Consumed rows expire like any other: marking one is not deleting it,
+        // and until this sweep nothing ever did.
+        await challenge("challenge-used", NOW, LATER);
+        await stores.auth.consumeNativeLoginChallenge(
+          "challenge-used-hash",
+          NOW,
+        );
+
+        // The sweep rides along with the next email sent, like the session
+        // sweep above: a challenge created at LATER deletes every row whose
+        // expiry has passed by then, consumed or not, and only those.
+        await challenge("challenge-next", LATER, "2026-01-02T05:04:05.000Z");
+
+        // Consuming at a backdated clock is the probe: a row that merely
+        // expired would still answer to a `consumedAt` before its expiry, so
+        // a null here is a row that is gone.
+        await expect(
+          stores.auth.consumeNativeLoginChallenge(
+            "challenge-stale-hash",
+            NOW,
+          ),
+        ).resolves.toBeNull();
+        await expect(
+          stores.auth.consumeNativeLoginChallenge(
+            "challenge-live-hash",
+            LATER,
+          ),
+        ).resolves.not.toBeNull();
+        await expect(
+          stores.auth.consumeNativeLoginChallenge(
+            "challenge-next-hash",
+            LATER,
+          ),
+        ).resolves.not.toBeNull();
+      });
+    });
+
     test("platform capabilities and audit events can be stored", async () => {
       await withStorage(async ({ stores }) => {
         const admin = await createUser(stores, "admin-1");
