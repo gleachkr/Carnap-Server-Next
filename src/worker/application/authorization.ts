@@ -1,6 +1,11 @@
 import type { Context } from "hono";
 import type { PlatformCapability } from "../domain/admin";
-import type { CourseMembership, CourseRole } from "../domain/courses";
+import {
+  type CourseMembership,
+  type CourseRole,
+  type CourseStaffTier,
+  courseStaffTier,
+} from "../domain/courses";
 import type { AppId } from "../domain/ids";
 import type { AppBindings } from "../http";
 import { forbidden, unauthorized } from "./errors";
@@ -73,6 +78,28 @@ export async function requireCourseStaff(
     "instructor",
     "teacher_assistant",
   ]);
+}
+
+/**
+ * Which side of a course the actor stands on, for the pages that draw the
+ * staff/student switch and pick a breadcrumb by it — after a service has
+ * already let them in, so this answers a question of presentation, never of
+ * permission. Null for a student and for a non-member alike, since neither
+ * gets a switch.
+ */
+export async function courseStaffTierFor(
+  stores: AppStores,
+  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  courseId: AppId,
+): Promise<CourseStaffTier | null> {
+  const membership = await stores.courses.getMembership(
+    courseId,
+    actor.user.id,
+  );
+
+  return membership === null || membership.status !== "active"
+    ? null
+    : courseStaffTier(membership.role);
 }
 
 export function hasPlatformCapability(

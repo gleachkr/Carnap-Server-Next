@@ -19,7 +19,11 @@ import { isTimestamp, timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
 import type { TranslatableMessage } from "../i18n/translator";
 import type { AuthenticatedActor } from "./auth";
-import { requireCourseRole, requireInstructor } from "./authorization";
+import {
+  requireCourseRole,
+  requireCourseStaff,
+  requireInstructor,
+} from "./authorization";
 import {
   ContentArtifactError,
   contentArtifactFromRevision,
@@ -1029,6 +1033,25 @@ export class AssignmentService {
     await requireInstructor(this.options.stores, actor, courseId);
 
     return this.options.stores.assignments.listForCourse(courseId);
+  }
+
+  /**
+   * The assignments a teaching assistant grades: everything published,
+   * unlisted included, since an unlisted assignment still collects work. Not
+   * the drafts — a draft has no submissions, and the settings page that
+   * would explain it is an instructor's. Not the student list either, which
+   * is the course as applied to one person: a grader's list carries the
+   * course's own dates, the way the gradebook does.
+   */
+  async listForAssistant(
+    actor: AuthenticatedActor,
+    courseId: AppId,
+  ): Promise<Assignment[]> {
+    await requireCourseStaff(this.options.stores, actor, courseId);
+
+    return (
+      await this.options.stores.assignments.listForCourse(courseId)
+    ).filter((assignment) => assignment.state === "published");
   }
 
   /**

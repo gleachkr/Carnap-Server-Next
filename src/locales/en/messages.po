@@ -1941,6 +1941,10 @@ msgstr "Grades visible"
 msgid "Grades visible at"
 msgstr "Grades visible at"
 
+#: src/worker/web/courses.tsx
+msgid "Grading"
+msgstr "Grading"
+
 #: src/worker/web/admin.tsx
 msgid "Grant capability"
 msgstr "Grant capability"
@@ -2404,6 +2408,10 @@ msgstr "No assignments are available."
 #: src/worker/web/assignments.tsx
 msgid "No assignments have been created yet."
 msgstr "No assignments have been created yet."
+
+#: src/worker/web/assignments.tsx
+msgid "No assignments have been published yet."
+msgstr "No assignments have been published yet."
 
 #: src/worker/web/assignment-detail.tsx
 msgid "No attempts have been opened."
@@ -2940,6 +2948,10 @@ msgstr "Published assignments available to you in this course."
 msgid "Published assignments can only be repointed to a revision of the same content item."
 msgstr "Published assignments can only be repointed to a revision of the same content item."
 
+#: src/worker/web/courses.tsx
+msgid "Published assignments in this course, with the submissions waiting for review and the scores recorded so far."
+msgstr "Published assignments in this course, with the submissions waiting for review and the scores recorded so far."
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Published settings"
 msgstr "Published settings"
@@ -3090,6 +3102,7 @@ msgid "Review attempts"
 msgstr "Review attempts"
 
 #: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Review submissions"
 msgstr "Review submissions"
@@ -3357,6 +3370,10 @@ msgstr "Source"
 msgid "Split"
 msgstr "Split"
 
+#: src/worker/web/components.tsx
+msgid "Staff"
+msgstr "Staff"
+
 #: src/worker/routes/courses.ts
 msgid "Staff member added."
 msgstr "Staff member added."
@@ -3403,6 +3420,11 @@ msgstr "Status"
 msgid "Student"
 msgstr "Student"
 
+#. Disambiguating id; only the word Student is shown. The half of the staff/student switch that shows the course as a student sees it — a view, not a person's role, so it may be worded more briefly than the role label.
+#: src/worker/web/components.tsx
+msgid "Student (course view)"
+msgstr "Student"
+
 #: src/worker/web/admin.tsx
 #: src/worker/web/profile.tsx
 msgid "Student ID"
@@ -3417,6 +3439,7 @@ msgid "Submission not approved"
 msgstr "Submission not approved"
 
 #: src/worker/web/admin.tsx
+#: src/worker/web/assignments.tsx
 msgid "Submissions"
 msgstr "Submissions"
 
@@ -4417,6 +4440,10 @@ msgstr "Verified {when}"
 #: src/worker/web/admin.tsx
 msgid "View full audit log"
 msgstr "View full audit log"
+
+#: src/worker/web/components.tsx
+msgid "View this course as"
+msgstr "View this course as"
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/labels.ts

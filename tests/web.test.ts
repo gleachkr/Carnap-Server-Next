@@ -1418,3 +1418,277 @@ describe("native web workflow", () => {
     expect(body.text).toContain("24 Stunden");
   });
 });
+
+describe("course staff and student views", () => {
+  /**
+   * An instructor, a teaching assistant and a student in one course with one
+   * published assignment, for the pages below: the three see three course
+   * pages, and the two staff members can cross to the student's.
+   */
+  async function staffedCourse(env: Env) {
+    const instructor = await webLogin(env, "lead@example.test");
+    const assistant = await webLogin(env, "ta@example.test");
+    const student = await webLogin(env, "pupil@example.test");
+
+    await grantTestCourseCreator(env, instructor.actorId);
+
+    const createCourse = await appRequest(
+      createTestApp(),
+      "/courses",
+      formRequest(
+        {
+          csrfToken: instructor.csrfToken,
+          timezone: "UTC",
+          title: "Modal Logic",
+        },
+        instructor.cookieHeader,
+      ),
+      env,
+    );
+    const coursePath = expectLocation(createCourse).split("?")[0] ?? "";
+    const courseId = coursePath.split("/").at(-1) ?? "";
+    const contentResponse = await appRequest(
+      createTestApp(),
+      "/content",
+      jsonRequest({ title: "Week one" }, instructor),
+      env,
+    );
+    const content = (await contentResponse.json()) as ContentItemResponse;
+    const revisionResponse = await appRequest(
+      createTestApp(),
+      `/content/${content.item.id}/revisions`,
+      jsonRequest(
+        {
+          sourceText:
+            '# Work\n\n::::multiple-choice{#q1 points="1"}\nQ?\n\n- [x] A | A\n- [ ] B | B\n::::',
+        },
+        instructor,
+      ),
+      env,
+    );
+    const revision =
+      (await revisionResponse.json()) as ContentRevisionResponse;
+    const assignmentResponse = await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments`,
+      jsonRequest(
+        {
+          contentRevisionId: revision.revision.id,
+          gradesVisibleAt: "2026-01-01T00:00:00.000Z",
+          title: "Week one homework",
+        },
+        instructor,
+      ),
+      env,
+    );
+    const assignment =
+      (await assignmentResponse.json()) as AssignmentResponse;
+    const assignmentId = assignment.assignment.id;
+    const publishResponse = await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments/${assignmentId}/publish`,
+      jsonRequest({}, instructor),
+      env,
+    );
+
+    expect(publishResponse.status).toBe(200);
+
+    const linkResponse = await appRequest(
+      createTestApp(),
+      `${coursePath}/enrollment-links`,
+      formRequest(
+        { csrfToken: instructor.csrfToken },
+        instructor.cookieHeader,
+      ),
+      env,
+    );
+    const enrollToken = new URL(
+      expectLocation(linkResponse),
+      "http://localhost",
+    ).searchParams.get("enrollToken");
+
+    for (const member of [assistant, student]) {
+      const accepted = await appRequest(
+        createTestApp(),
+        `/enrollments/${enrollToken}`,
+        formRequest({ csrfToken: member.csrfToken }, member.cookieHeader),
+        env,
+      );
+
+      expect(accepted.status).toBe(303);
+    }
+
+    const promoted = await appRequest(
+      createTestApp(),
+      `${coursePath}/staff`,
+      formRequest(
+        {
+          csrfToken: instructor.csrfToken,
+          email: "ta@example.test",
+          role: "teacher_assistant",
+        },
+        instructor.cookieHeader,
+      ),
+      env,
+    );
+
+    expect(promoted.status).toBe(303);
+
+    const page = async (
+      login: LoginCookies,
+      path: string,
+    ): Promise<{ html: string; status: number }> => {
+      const response = await appRequest(
+        createTestApp(),
+        path,
+        { headers: htmlHeaders(login.cookieHeader) },
+        env,
+      );
+
+      return { html: await response.text(), status: response.status };
+    };
+
+    return { assignmentId, assistant, coursePath, instructor, page, student };
+  }
+
+  const switchMarkup = (current: "staff" | "student", coursePath: string) =>
+    `<nav aria-label="View this course as" class="segmented course-view-switch">` +
+    `<a href="${coursePath}"${current === "staff" ? ' aria-current="page"' : ""}>Staff</a>` +
+    `<a href="${coursePath}?view=student"${current === "student" ? ' aria-current="page"' : ""}>Student</a></nav>`;
+
+  test("each role gets its own course page, and staff can cross to the student's", async () => {
+    await withStorage(async (_storage, env) => {
+      const {
+        assignmentId,
+        assistant,
+        coursePath,
+        instructor,
+        page,
+        student,
+      } = await staffedCourse(env);
+      const reviewPath = `${coursePath}/instructor/assignments/${assignmentId}/submissions`;
+
+      // The instructor's console, with the switch pressed to Staff.
+      const console_ = await page(instructor, coursePath);
+
+      expect(console_.status).toBe(200);
+      expect(console_.html).toContain("<h2>Members</h2>");
+      expect(console_.html).toContain("<h2>Assignment management</h2>");
+      expect(console_.html).toContain(switchMarkup("staff", coursePath));
+
+      // The assistant's grading page: the assignments as things to grade,
+      // and none of the instructor's controls.
+      const grading = await page(assistant, coursePath);
+
+      expect(grading.status).toBe(200);
+      expect(grading.html).toContain("<h2>Grading</h2>");
+      expect(grading.html).toContain(`<td>Week one homework</td>`);
+      expect(grading.html).toContain(
+        `<a href="${reviewPath}">Review submissions</a>`,
+      );
+      expect(grading.html).toContain(
+        `<a href="${coursePath}/instructor/assignments/${assignmentId}/gradebook">Grades</a>`,
+      );
+      expect(grading.html).toContain(
+        `href="${coursePath}/instructor/gradebook"`,
+      );
+      expect(grading.html).toContain(switchMarkup("staff", coursePath));
+      expect(grading.html).not.toContain("<h2>Members</h2>");
+      expect(grading.html).not.toContain("Create assignment");
+      expect(grading.html).not.toContain("<h2>Enrollment links</h2>");
+      expect(grading.html).not.toContain("Edit course");
+
+      // Through the switch, both see the student page as it is — the same
+      // sheet the student gets, with the switch now pressed to Student.
+      const studentPage = await page(student, coursePath);
+
+      expect(studentPage.status).toBe(200);
+      expect(studentPage.html).toContain(
+        "Published assignments available to you in this course.",
+      );
+      expect(studentPage.html).not.toContain("course-view-switch");
+
+      for (const staff of [instructor, assistant]) {
+        const asStudent = await page(staff, `${coursePath}?view=student`);
+
+        expect(asStudent.status).toBe(200);
+        expect(asStudent.html).toContain(
+          "Published assignments available to you in this course.",
+        );
+        expect(asStudent.html).toContain(
+          `<a href="${coursePath}/assignments/${assignmentId}">Week one homework</a>`,
+        );
+        expect(asStudent.html).toContain(switchMarkup("student", coursePath));
+        expect(asStudent.html).not.toContain("<h2>Grading</h2>");
+        expect(asStudent.html).not.toContain("<h2>Members</h2>");
+      }
+
+      // A student asking for the student view gets the page they always get.
+      const studentAsking = await page(student, `${coursePath}?view=student`);
+
+      expect(studentAsking.html).not.toContain("course-view-switch");
+    });
+  });
+
+  test("the assignment pages carry the switch, each tier to its own page", async () => {
+    await withStorage(async (_storage, env) => {
+      const { assignmentId, assistant, coursePath, instructor, page } =
+        await staffedCourse(env);
+      const studentPath = `${coursePath}/assignments/${assignmentId}`;
+      const staffPath = `${coursePath}/instructor/assignments/${assignmentId}`;
+      const reviewPath = `${staffPath}/submissions`;
+
+      // The instructor's record page and the student page, back to back.
+      const record = await page(instructor, staffPath);
+
+      expect(record.status).toBe(200);
+      expect(record.html).toContain(
+        `<a href="${staffPath}" aria-current="page">Staff</a><a href="${studentPath}">Student</a>`,
+      );
+
+      const instructorAsStudent = await page(instructor, studentPath);
+
+      expect(instructorAsStudent.status).toBe(200);
+      expect(instructorAsStudent.html).toContain(
+        `<a href="${staffPath}">Staff</a><a href="${studentPath}" aria-current="page">Student</a>`,
+      );
+
+      // An assistant's staff page for an assignment is the review queue,
+      // whose crumb names the assignment without linking to a page they
+      // cannot open.
+      const review = await page(assistant, reviewPath);
+
+      expect(review.status).toBe(200);
+      expect(review.html).toContain(
+        `<a href="${reviewPath}" aria-current="page">Staff</a><a href="${studentPath}">Student</a>`,
+      );
+      expect(review.html).toContain(
+        '<span class="breadcrumb-current">Week one homework</span>',
+      );
+      expect(review.html).not.toContain(`href="${staffPath}"`);
+
+      const assistantAsStudent = await page(assistant, studentPath);
+
+      expect(assistantAsStudent.status).toBe(200);
+      expect(assistantAsStudent.html).toContain(
+        `<a href="${reviewPath}">Staff</a><a href="${studentPath}" aria-current="page">Student</a>`,
+      );
+
+      // The grade table crumbs to the review queue for an assistant and to
+      // the record page for an instructor.
+      const assistantGrades = await page(assistant, `${staffPath}/gradebook`);
+      const instructorGrades = await page(
+        instructor,
+        `${staffPath}/gradebook`,
+      );
+
+      expect(assistantGrades.status).toBe(200);
+      expect(assistantGrades.html).toContain(
+        `<a class="breadcrumb-link" href="${reviewPath}">Week one homework</a>`,
+      );
+      expect(instructorGrades.html).toContain(
+        `<a class="breadcrumb-link" href="${staffPath}">Week one homework</a>`,
+      );
+    });
+  });
+});

@@ -8,6 +8,28 @@ export type CourseRole =
   | "instructor";
 export type MembershipStatus = "active" | "invited" | "suspended" | "dropped";
 
+/**
+ * The two tiers of course staff, as the pages tell them apart. Instructors and
+ * co-instructors manage the course — settings, roster, assignments — and the
+ * code never distinguishes the two. A teaching assistant grades: the review
+ * queue, the gradebooks, attempt resets, and nothing that changes what the
+ * course is. Every "is this person staff?" question a page asks reduces to
+ * which tier, or neither, so it is answered once here.
+ */
+export type CourseStaffTier = "instructor" | "assistant";
+
+export function courseStaffTier(role: CourseRole): CourseStaffTier | null {
+  switch (role) {
+    case "co_instructor":
+    case "instructor":
+      return "instructor";
+    case "teacher_assistant":
+      return "assistant";
+    case "student":
+      return null;
+  }
+}
+
 export interface Course {
   readonly id: AppId;
   readonly title: string;

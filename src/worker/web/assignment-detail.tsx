@@ -50,7 +50,7 @@ import type {
   ContentRevision,
   ExerciseAnswerReview,
 } from "../domain/content";
-import type { CourseMembership } from "../domain/courses";
+import type { CourseMembership, CourseStaffTier } from "../domain/courses";
 import type { ExerciseFeedback } from "../domain/exercises";
 import type { JsonValue } from "../domain/json";
 import type { User } from "../domain/users";
@@ -114,11 +114,13 @@ import {
   courseCrumb,
   coursesCrumb,
   instructorAssignmentCrumb,
+  staffAssignmentCrumb,
 } from "./breadcrumbs";
 import {
   AnswerReview,
   ContentFrame,
   ContentSplit,
+  CourseViewSwitch,
   CsrfInput,
   ErrorSummary,
   LinkStrip,
@@ -2822,6 +2824,8 @@ export function renderStudentAssignmentPage(
     readonly notRecorded: boolean;
     readonly policy: EffectiveAssignmentPolicy;
     readonly showWorkView: boolean;
+    /** The reader's staff tier, for the switch back; null for a student. */
+    readonly staffTier: CourseStaffTier | null;
     readonly started: boolean;
     readonly submissionContext: InlineSubmissionContext | null;
     readonly submitted: boolean;
@@ -2835,7 +2839,9 @@ export function renderStudentAssignmentPage(
   // students can't preview the questions before committing); only render the
   // content sheet when it is actually released.
   const showContent = !isGraded || showWorkView;
-  const studentContentUrl = `/courses/${model.courseId}/assignments/${model.assignmentId}/content`;
+  const studentBase = `/courses/${model.courseId}/assignments/${model.assignmentId}`;
+  const studentContentUrl = `${studentBase}/content`;
+  const staffBase = `/courses/${model.courseId}/instructor/assignments/${model.assignmentId}`;
 
   return renderShell(
     context,
@@ -2844,6 +2850,21 @@ export function renderStudentAssignmentPage(
         coursesCrumb(i18n),
         courseCrumb(model.courseId, model.courseTitle),
       ],
+      // The way back to the staff side, for a staff member trying the
+      // assignment: the record page for an instructor, the review queue for
+      // an assistant — each tier's own page for this assignment.
+      headerAside:
+        model.staffTier === null ? null : (
+          <CourseViewSwitch
+            current="student"
+            staffHref={
+              model.staffTier === "instructor"
+                ? staffBase
+                : `${staffBase}/submissions`
+            }
+            studentHref={studentBase}
+          />
+        ),
       title: detail.assignment.title,
     },
     <>
@@ -3132,6 +3153,15 @@ export function renderInstructorAssignmentPage(
         coursesCrumb(i18n),
         courseCrumb(courseId, model.courseTitle),
       ],
+      // A draft has no student side yet — the student page answers 404 until
+      // it is published — so the switch waits for one.
+      headerAside: isDraft ? null : (
+        <CourseViewSwitch
+          current="staff"
+          staffHref={gradingBase}
+          studentHref={`/courses/${courseId}/assignments/${assignment.id}`}
+        />
+      ),
       title: assignment.title,
     },
     <>
@@ -3178,9 +3208,11 @@ export function renderInstructorSubmissions(
     readonly entries: readonly InstructorSubmissionReviewEntry[];
     readonly filter: SubmissionReviewFilter;
     readonly manualEvaluation: boolean;
+    readonly staffTier: CourseStaffTier;
   },
 ): Response {
   const i18n = context.get("i18n");
+  const base = `/courses/${model.courseId}`;
 
   return renderShell(
     context,
@@ -3188,12 +3220,23 @@ export function renderInstructorSubmissions(
       breadcrumb: [
         coursesCrumb(i18n),
         courseCrumb(model.courseId, model.courseTitle),
-        instructorAssignmentCrumb(
+        staffAssignmentCrumb(
+          model.staffTier,
           model.courseId,
           model.assignmentId,
           model.assignmentTitle,
+          { onReviewPage: true },
         ),
       ],
+      // The staff half is this page: pressed, and a link to itself, as the
+      // review filter's halves are.
+      headerAside: (
+        <CourseViewSwitch
+          current="staff"
+          staffHref={`${base}/instructor/assignments/${model.assignmentId}/submissions`}
+          studentHref={`${base}/assignments/${model.assignmentId}`}
+        />
+      ),
       title: i18n.t("Review submissions"),
     },
     <>
@@ -3229,6 +3272,7 @@ export function renderInstructorAttempts(
     readonly courseId: string;
     readonly courseTitle: string;
     readonly directory: UserDirectory;
+    readonly staffTier: CourseStaffTier;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -3239,7 +3283,8 @@ export function renderInstructorAttempts(
       breadcrumb: [
         coursesCrumb(i18n),
         courseCrumb(model.courseId, model.courseTitle),
-        instructorAssignmentCrumb(
+        staffAssignmentCrumb(
+          model.staffTier,
           model.courseId,
           model.assignmentId,
           model.assignmentTitle,

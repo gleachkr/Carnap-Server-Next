@@ -74,6 +74,7 @@ interface SubmissionResponse {
     readonly declarationHash: string;
     readonly exerciseId: string;
     readonly id: string;
+    readonly userId: string;
   };
 }
 
@@ -2614,6 +2615,60 @@ theorem thm_top: $ top $
       expect(documentHtml).toContain("aufbau-proof-tree-answer@1");
       expect(documentHtml).toContain(`/attempts/${attemptId}/submissions`);
       expect(documentHtml).toContain("aufbau-theory");
+    });
+  });
+});
+
+describe("the review queue", () => {
+  test("lists students' work and not a staff member's own dry run", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "queue-teacher@example.test");
+      const student = await login(env, "queue-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+
+      // The student pages are any member's, so the instructor can try the
+      // assignment the way a student would — and does, before the student.
+      // The right answer, so that homework with feedback records it.
+      for (const member of [instructor, student]) {
+        const attemptId = await beginAttempt(
+          env,
+          member,
+          courseId,
+          assignment.id,
+        );
+        const submitted = await submitAnswer(
+          env,
+          member,
+          courseId,
+          assignment.id,
+          attemptId,
+          answer(["yes"]),
+        );
+
+        expect(submitted.status).toBe(201);
+      }
+
+      const list = (await (
+        await appRequest(
+          createTestApp(),
+          `/courses/${courseId}/instructor/assignments/${assignment.id}/submissions`,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).json()) as InstructorReviewSubmissionsResponse;
+
+      expect(list.submissions).toHaveLength(1);
+      expect(list.submissions[0]?.submission.userId).toBe(student.actorId);
     });
   });
 });

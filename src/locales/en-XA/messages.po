@@ -1941,6 +1941,10 @@ msgstr ""
 msgid "Grades visible at"
 msgstr ""
 
+#: src/worker/web/courses.tsx
+msgid "Grading"
+msgstr ""
+
 #: src/worker/web/admin.tsx
 msgid "Grant capability"
 msgstr ""
@@ -2403,6 +2407,10 @@ msgstr ""
 
 #: src/worker/web/assignments.tsx
 msgid "No assignments have been created yet."
+msgstr ""
+
+#: src/worker/web/assignments.tsx
+msgid "No assignments have been published yet."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -2940,6 +2948,10 @@ msgstr ""
 msgid "Published assignments can only be repointed to a revision of the same content item."
 msgstr ""
 
+#: src/worker/web/courses.tsx
+msgid "Published assignments in this course, with the submissions waiting for review and the scores recorded so far."
+msgstr ""
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Published settings"
 msgstr ""
@@ -3090,6 +3102,7 @@ msgid "Review attempts"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
+#: src/worker/web/assignments.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Review submissions"
 msgstr ""
@@ -3357,6 +3370,10 @@ msgstr ""
 msgid "Split"
 msgstr ""
 
+#: src/worker/web/components.tsx
+msgid "Staff"
+msgstr ""
+
 #: src/worker/routes/courses.ts
 msgid "Staff member added."
 msgstr ""
@@ -3403,6 +3420,11 @@ msgstr ""
 msgid "Student"
 msgstr ""
 
+#. Disambiguating id; only the word Student is shown. The half of the staff/student switch that shows the course as a student sees it — a view, not a person's role, so it may be worded more briefly than the role label.
+#: src/worker/web/components.tsx
+msgid "Student (course view)"
+msgstr ""
+
 #: src/worker/web/admin.tsx
 #: src/worker/web/profile.tsx
 msgid "Student ID"
@@ -3417,6 +3439,7 @@ msgid "Submission not approved"
 msgstr ""
 
 #: src/worker/web/admin.tsx
+#: src/worker/web/assignments.tsx
 msgid "Submissions"
 msgstr ""
 
@@ -4416,6 +4439,10 @@ msgstr ""
 
 #: src/worker/web/admin.tsx
 msgid "View full audit log"
+msgstr ""
+
+#: src/worker/web/components.tsx
+msgid "View this course as"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx

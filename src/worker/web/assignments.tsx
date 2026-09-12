@@ -403,6 +403,80 @@ export const AssignmentsTable: FC<{
   );
 };
 
+/**
+ * A teaching assistant's assignments: what there is to grade. One row per
+ * published assignment, and the two places a grader goes — the review queue
+ * and the assignment's grade table — as links in their own columns rather
+ * than behind the title, because the title's usual destination, the
+ * assignment's settings page, is an instructor's and would answer a
+ * forbidden. A reading collects nothing and so has neither link; the row
+ * still appears, since the list is the course's assignments and not only
+ * the ones with work in them.
+ */
+export const GradingTable: FC<{
+  readonly assignments: readonly Assignment[];
+  readonly courseId: string;
+}> = ({ assignments, courseId }) => {
+  const i18n = useI18n();
+
+  if (assignments.length === 0) {
+    return <p>{i18n.t("No assignments have been published yet.")}</p>;
+  }
+
+  return (
+    <TableScroll>
+      <thead>
+        <tr>
+          <SortHeader label={i18n.t("Title")} />
+          <SortHeader label={i18n.t("Type")} />
+          <SortHeader label={i18n.t("Due")} />
+          <th scope="col">{i18n.t("Submissions")}</th>
+          <th scope="col">{i18n.t("Scores")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {assignments.map((assignment) => {
+          const base = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+          const collects = assignment.assessmentMode !== "none";
+
+          return (
+            <tr>
+              <td>{assignment.title}</td>
+              <td
+                data-sort-value={sortRank(
+                  ASSESSMENT_MODE_ORDER,
+                  assignment.assessmentMode,
+                )}
+              >
+                {assessmentModeLabel(i18n, assignment.assessmentMode)}
+              </td>
+              <td data-sort-value={assignment.dueAt ?? ""}>
+                <Time fallback={i18n.t("None")} value={assignment.dueAt} />
+              </td>
+              <td>
+                {collects ? (
+                  <a href={`${base}/submissions`}>
+                    {i18n.t("Review submissions")}
+                  </a>
+                ) : null}
+              </td>
+              <td>
+                {collects ? (
+                  <a href={`${base}/gradebook`}>
+                    {assignment.assessmentMode === "graded"
+                      ? i18n.t("Grades")
+                      : i18n.t("Scores")}
+                  </a>
+                ) : null}
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </TableScroll>
+  );
+};
+
 export const AssignmentCreateBar: FC<{
   readonly context: Context<AppBindings>;
   readonly courseId: string;

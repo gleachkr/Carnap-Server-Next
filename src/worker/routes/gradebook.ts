@@ -1,6 +1,9 @@
 import { type Context, Hono } from "hono";
 
-import { requireAuthenticated } from "../application/authorization";
+import {
+  courseStaffTierFor,
+  requireAuthenticated,
+} from "../application/authorization";
 import {
   type AssignmentGradebook,
   assignmentGradebookCsv,
@@ -10,6 +13,7 @@ import {
 } from "../application/gradebook";
 import { SubmissionService } from "../application/submissions";
 import type { Assignment } from "../domain/assignments";
+import type { CourseStaffTier } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
 import type { AppBindings } from "../http";
 import { storesForContext } from "../stores";
@@ -65,6 +69,22 @@ async function courseTitleFor(
   courseId: string,
 ): Promise<string> {
   return (await courseNamingFor(context, courseId)).title;
+}
+
+/**
+ * The tier of a staff member the service has already admitted — so a null
+ * here is unreachable, and treated as an instructor rather than as a state
+ * the page could mean anything by.
+ */
+async function staffTierFor(
+  context: Context<AppBindings>,
+  actor: Parameters<typeof courseStaffTierFor>[1],
+  courseId: string,
+): Promise<CourseStaffTier> {
+  return (
+    (await courseStaffTierFor(storesForContext(context), actor, courseId)) ??
+    "instructor"
+  );
 }
 
 function publicAssignment(assignment: Assignment) {
@@ -178,6 +198,7 @@ async function assignmentGradebook(context: Context<AppBindings>) {
       courseId,
       await courseTitleFor(context, courseId),
       gradebook,
+      await staffTierFor(context, actor, courseId),
     );
   }
 

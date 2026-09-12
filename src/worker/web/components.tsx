@@ -187,6 +187,64 @@ export const LinkStrip: FC<{ readonly links: readonly StripLink[] }> = ({
   </nav>
 );
 
+/** Which side of a course a staff member is looking at. */
+export type CourseView = "staff" | "student";
+
+/**
+ * The switch between a course's two sides, for the shell's `headerAside`.
+ *
+ * Staff have two ways of looking at a course: the side they work on — the
+ * roster and assignment records for an instructor, the review queue and
+ * gradebooks for a teaching assistant — and the side the students see, which
+ * is the same page for everyone and is where a staff member goes to try an
+ * assignment themselves. The pages on each side are plain URLs that any
+ * member may open; what the switch adds is the way across, which no page
+ * offered before. Students never see it: for them there is only one side.
+ *
+ * Two links on one segmented track, like the review filter, rather than a
+ * pair of buttons: each half is a page, and the one being looked at is
+ * `aria-current`. A `nav`, as the filter is, since that is what two links
+ * are. Not a split-view switch, which flips columns client-side and stays
+ * hidden until its script arrives.
+ */
+export const CourseViewSwitch: FC<{
+  readonly current: CourseView;
+  readonly staffHref: string;
+  readonly studentHref: string;
+}> = ({ current, staffHref, studentHref }) => {
+  const i18n = useI18n();
+
+  return (
+    <nav
+      aria-label={i18n.t("View this course as")}
+      class="segmented course-view-switch"
+    >
+      <a
+        href={staffHref}
+        {...(current === "staff" ? { "aria-current": "page" as const } : {})}
+      >
+        {i18n.t("Staff")}
+      </a>
+      <a
+        href={studentHref}
+        {...(current === "student"
+          ? { "aria-current": "page" as const }
+          : {})}
+      >
+        {i18n.t(
+          "Student (course view)",
+          {},
+          {
+            comment:
+              "Disambiguating id; only the word Student is shown. The half of the staff/student switch that shows the course as a student sees it — a view, not a person's role, so it may be worded more briefly than the role label.",
+            message: "Student",
+          },
+        )}
+      </a>
+    </nav>
+  );
+};
+
 /**
  * Wraps a `<table>` so it scrolls sideways within its sheet instead of being
  * clipped by the sheet's `overflow: hidden` on narrow viewports. The table

@@ -543,18 +543,31 @@ export class SubmissionService {
     // empty. The graded-only rule that used to sit here made a practice set
     // read as "no submissions have been recorded" while its work sat in the
     // database.
-    const attempts =
-      await this.options.stores.assessment.listAttemptsForAssignment(
-        assignment.id,
-      );
+    // Students' attempts only. Staff can open an assignment and work through
+    // it — the student pages are any member's — and what that produces is a
+    // dry run, not work for the queue: the gradebook already leaves it out,
+    // and a queue that listed it would ask an instructor to grade their own
+    // rehearsal. By role and not by status, since a student who has since
+    // dropped may still have work waiting for a mark.
+    const [attempts, memberships] = await Promise.all([
+      this.options.stores.assessment.listAttemptsForAssignment(assignment.id),
+      this.options.stores.courses.listMembershipsForCourse(courseId),
+    ]);
+    const students = new Set(
+      memberships
+        .filter((membership) => membership.role === "student")
+        .map((membership) => membership.userId),
+    );
     // Instructor review shows the effective grade (latest manual, else best
     // automatic) so the review queue and the gradebook agree, and so an
     // approved or overridden score reads correctly rather than the raw
     // autograde it replaced.
     const histories = await Promise.all(
-      attempts.map((attempt) =>
-        this.historyForAttempt(attempt.id, "instructor", i18n, true),
-      ),
+      attempts
+        .filter((attempt) => students.has(attempt.userId))
+        .map((attempt) =>
+          this.historyForAttempt(attempt.id, "instructor", i18n, true),
+        ),
     );
 
     return histories.flat();

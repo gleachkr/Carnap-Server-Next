@@ -3,7 +3,10 @@ import { type Context, Hono } from "hono";
 import { AssignmentService } from "../application/assignments";
 import { AttemptService } from "../application/attempts";
 import type { AuthenticatedActor } from "../application/auth";
-import { requireAuthenticated } from "../application/authorization";
+import {
+  courseStaffTierFor,
+  requireAuthenticated,
+} from "../application/authorization";
 import { ContentService } from "../application/content";
 import {
   ContentArtifactError,
@@ -44,6 +47,7 @@ import type {
   ContentItem,
   ContentRevision,
 } from "../domain/content";
+import type { CourseStaffTier } from "../domain/courses";
 import {
   resolveExerciseFeedback,
   viewerEvaluation,
@@ -224,6 +228,22 @@ async function courseTitleFor(
   // stands in a breadcrumb beside chrome the reader is already seeing in their
   // language.
   return course?.title ?? i18n.t("Course");
+}
+
+/**
+ * The tier of a staff member a service has already admitted to a staff page —
+ * so a null here is unreachable, and read as an instructor rather than as a
+ * state the page could mean anything by.
+ */
+async function staffTierFor(
+  context: Context<AppBindings>,
+  actor: AuthenticatedActor,
+  courseId: string,
+): Promise<CourseStaffTier> {
+  return (
+    (await courseStaffTierFor(storesForContext(context), actor, courseId)) ??
+    "instructor"
+  );
 }
 
 async function assignmentTitleFor(
@@ -1440,6 +1460,11 @@ async function studentDetailPage(
     notRecorded: url.searchParams.has("notRecorded"),
     policy: view.policy,
     showWorkView: view.showWorkView,
+    staffTier: await courseStaffTierFor(
+      storesForContext(context),
+      actor,
+      courseId,
+    ),
     started: !view.showWorkView && url.searchParams.has("attemptStarted"),
     submissionContext: view.submissionContext,
     submitted: !view.showWorkView && url.searchParams.has("submitted"),
@@ -1866,6 +1891,7 @@ async function listInstructorSubmissions(
       filter:
         url.searchParams.get("review") === "all" ? "all" : "needs-review",
       manualEvaluation: url.searchParams.has("manualEvaluation"),
+      staffTier: await staffTierFor(context, actor, courseId),
     });
   }
 
@@ -1926,6 +1952,7 @@ async function listInstructorAttempts(
         context,
         attempts.map((attempt) => attempt.userId),
       ),
+      staffTier: await staffTierFor(context, actor, courseId),
     });
   }
 

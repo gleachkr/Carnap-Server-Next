@@ -6,17 +6,20 @@ import { CourseService } from "../application/courses";
 import { AppHttpError, badRequest } from "../application/errors";
 import { GradePassbackService } from "../application/grade-passback";
 import { GradebookService } from "../application/gradebook";
-import type {
-  Course,
-  CourseAccommodation,
-  CourseEnrollmentLink,
-  CourseMembership,
+import {
+  type Course,
+  type CourseAccommodation,
+  type CourseEnrollmentLink,
+  type CourseMembership,
+  courseStaffTier,
 } from "../domain/courses";
 import { timestampNow } from "../domain/time";
 import { type AppBindings, publicRequestUrl } from "../http";
 import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
+import type { CourseView } from "../web/components";
 import {
+  type CourseDetailPage,
   renderCourseDetail,
   renderCourseError,
   renderCourseList,
@@ -355,9 +358,17 @@ async function courseDetailPage(
       actor,
       requiredParam(context, "courseId"),
     );
-    const isInstructor =
-      detail.membership.role === "instructor" ||
-      detail.membership.role === "co_instructor";
+    // Staff see their own side of the course unless they asked for the
+    // students' (`?view=student`, the switch in the page header); a student
+    // has only the one side, and the parameter means nothing to them.
+    const staffTier = courseStaffTier(detail.membership.role);
+    const view: CourseView =
+      staffTier !== null && url.searchParams.get("view") === "student"
+        ? "student"
+        : "staff";
+    const page: CourseDetailPage =
+      staffTier === null || view === "student" ? "student" : staffTier;
+    const isInstructor = page === "instructor";
     const token = url.searchParams.get("enrollToken");
     const newEnrollmentLinkUrl =
       token === null
@@ -366,21 +377,28 @@ async function courseDetailPage(
     const enrollmentLinks = isInstructor
       ? await service.listEnrollmentLinks(actor, detail.course.id)
       : [];
-    const assignments = isInstructor
-      ? await assignmentService(context).listForInstructor(
-          actor,
-          detail.course.id,
-        )
-      : await assignmentService(context).listForStudent(
-          actor,
-          detail.course.id,
-        );
-    const scorecard = isInstructor
-      ? []
-      : await gradebookService(context).getStudentCourseScorecard(
-          actor,
-          detail.course.id,
-        );
+    const assignments =
+      page === "instructor"
+        ? await assignmentService(context).listForInstructor(
+            actor,
+            detail.course.id,
+          )
+        : page === "assistant"
+          ? await assignmentService(context).listForAssistant(
+              actor,
+              detail.course.id,
+            )
+          : await assignmentService(context).listForStudent(
+              actor,
+              detail.course.id,
+            );
+    const scorecard =
+      page === "student"
+        ? await gradebookService(context).getStudentCourseScorecard(
+            actor,
+            detail.course.id,
+          )
+        : [];
     const unmappedLtiLinks = isInstructor
       ? await ltiServiceForContext(context).listUnmappedResourceLinks(
           actor,
@@ -406,14 +424,16 @@ async function courseDetailPage(
       directory,
       enrollmentLinks,
       gradeSyncFailures,
-      isInstructor,
       membership: detail.membership,
       memberships: detail.memberships,
       newEnrollmentLinkUrl,
       notices: collectDetailNotices(url, context.get("i18n")),
       now: timestampNow(),
+      page,
       scorecard,
+      staffTier,
       unmappedLtiLinks,
+      view,
     });
   } catch (error) {
     if (error instanceof AppHttpError) {

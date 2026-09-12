@@ -13,12 +13,13 @@ import {
   storedPointsDrift,
   type ViewerEvaluation,
 } from "../domain/assessment";
+import type { CourseStaffTier } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
 import type { AppBindings } from "../http";
 import {
   courseCrumb,
   coursesCrumb,
-  instructorAssignmentCrumb,
+  staffAssignmentCrumb,
   studentAssignmentCrumb,
 } from "./breadcrumbs";
 import {
@@ -222,6 +223,7 @@ export function renderAssignmentGradebook(
   courseId: string,
   courseTitle: string,
   gradebook: AssignmentGradebook,
+  staffTier: CourseStaffTier,
 ): Response {
   const i18n = context.get("i18n");
   const graded = gradebook.assignment.assessmentMode === "graded";
@@ -239,7 +241,8 @@ export function renderAssignmentGradebook(
       breadcrumb: [
         coursesCrumb(i18n),
         courseCrumb(courseId, courseTitle),
-        instructorAssignmentCrumb(
+        staffAssignmentCrumb(
+          staffTier,
           courseId,
           gradebook.assignment.id,
           gradebook.assignment.title,

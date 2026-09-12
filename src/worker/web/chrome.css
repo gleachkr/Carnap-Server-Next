@@ -1571,6 +1571,18 @@ a.score-uncounted {
   min-width: 7rem;
 }
 
+/* The course's staff/student switch (see `CourseViewSwitch`): server-rendered
+   links, so it needs no enhancement and shows from the first paint. Equal
+   halves for the same reason as the split switch — the track should not
+   resize as the two words change under translation. */
+.course-view-switch {
+  grid-auto-columns: 1fr;
+}
+
+.course-view-switch a {
+  min-width: 7rem;
+}
+
 /* Whichever column is not being looked at is not on the page at all, at any
    width: wanting the document to have the page is not something that stops
    being wanted on a large screen. Only a split that has a switch carries

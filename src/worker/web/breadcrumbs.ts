@@ -1,10 +1,12 @@
+import type { CourseStaffTier } from "../domain/courses";
 import type { Translator } from "../i18n/translator";
-import type { LinkedCrumb } from "./layout";
+import type { Crumb, LinkedCrumb } from "./layout";
 
 /**
  * Shared breadcrumb-trail builders. Each page passes the ancestor trail to
  * `renderShell`; the current page itself is the shell `title`, so these helpers
- * only ever produce linked ancestor crumbs.
+ * produce ancestor crumbs — linked, bar the one case `staffAssignmentCrumb`
+ * explains.
  *
  * The three section crumbs take a translator rather than being constants: their
  * labels are the same words as the top-level nav — the trail reads as a
@@ -39,6 +41,33 @@ export function instructorAssignmentCrumb(
     href: `/courses/${courseId}/instructor/assignments/${assignmentId}`,
     label: title,
   };
+}
+
+/**
+ * The assignment crumb on a page both tiers of staff can open — the review
+ * queue, the attempt ledger, the grade table. An instructor's leads to the
+ * assignment's own page; a teaching assistant cannot open that page, so
+ * theirs leads to the review queue, which is where an assignment lives for a
+ * grader. On the review queue itself an assistant's crumb links nowhere: the
+ * page it would name is the one they are on.
+ */
+export function staffAssignmentCrumb(
+  tier: CourseStaffTier,
+  courseId: string,
+  assignmentId: string,
+  title: string,
+  options: { readonly onReviewPage?: boolean } = {},
+): Crumb {
+  if (tier === "instructor") {
+    return instructorAssignmentCrumb(courseId, assignmentId, title);
+  }
+
+  return options.onReviewPage
+    ? { label: title }
+    : {
+        href: `/courses/${courseId}/instructor/assignments/${assignmentId}/submissions`,
+        label: title,
+      };
 }
 
 export function studentAssignmentCrumb(

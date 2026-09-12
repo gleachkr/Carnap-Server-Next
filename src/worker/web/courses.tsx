@@ -9,17 +9,24 @@ import type {
   CourseAccommodation,
   CourseEnrollmentLink,
   CourseMembership,
+  CourseStaffTier,
 } from "../domain/courses";
 import type { LtiGradeFailureReason, LtiResourceLink } from "../domain/lti";
 import type { Timestamp } from "../domain/time";
 import type { AppBindings } from "../http";
 import type { Translator } from "../i18n/translator";
-import { AssignmentCreateBar, AssignmentsTable } from "./assignments";
+import {
+  AssignmentCreateBar,
+  AssignmentsTable,
+  GradingTable,
+} from "./assignments";
 import { coursesCrumb } from "./breadcrumbs";
 import {
   BrowserTimezoneInput,
   ContentSplit,
   CopyField,
+  type CourseView,
+  CourseViewSwitch,
   CreateBar,
   CsrfInput,
   ErrorSummary,
@@ -1186,16 +1193,31 @@ export interface CourseDetailViewModel {
   readonly course: Course;
   readonly directory: UserDirectory;
   readonly enrollmentLinks: readonly CourseEnrollmentLink[];
-  readonly isInstructor: boolean;
   readonly membership: CourseMembership;
   readonly memberships: readonly CourseMembership[];
   readonly newEnrollmentLinkUrl: string | null;
   readonly notices: readonly string[];
   readonly now: Timestamp;
+  /** Which of the three pages this is; see {@link CourseDetailPage}. */
+  readonly page: CourseDetailPage;
   readonly scorecard: readonly StudentScorecardEntry[];
+  /** The reader's staff tier, or null for a student — who gets no switch. */
+  readonly staffTier: CourseStaffTier | null;
   readonly unmappedLtiLinks: readonly LtiResourceLink[];
+  /** Which side of the switch is pressed; meaningless for a student. */
+  readonly view: CourseView;
   readonly gradeSyncFailures: readonly GradeSyncFailure[];
 }
+
+/**
+ * The three pages the course URL renders. Instructors get the management
+ * console; teaching assistants a grading page; students the assignment list
+ * as it applies to them. A staff member who flips the header switch to
+ * "Student" gets that last page exactly — the same rendering, with nothing
+ * added for their benefit, since the point of looking is to see what a
+ * student sees.
+ */
+export type CourseDetailPage = CourseStaffTier | "student";
 
 export function renderCourseList(
   context: Context<AppBindings>,
@@ -1304,11 +1326,27 @@ export function renderCourseDetail(
   model: CourseDetailViewModel,
 ): Response {
   const i18n = context.get("i18n");
+  const courseHref = `/courses/${model.course.id}`;
+  // The shell options every page shares. Staff get the switch beside the
+  // breadcrumb, whichever side they are on; a student's row holds the
+  // breadcrumb alone.
+  const shell = {
+    breadcrumb: [coursesCrumb(i18n)],
+    headerAside:
+      model.staffTier === null ? null : (
+        <CourseViewSwitch
+          current={model.view}
+          staffHref={courseHref}
+          studentHref={`${courseHref}?view=student`}
+        />
+      ),
+    title: model.course.title,
+  };
   const courseRecord = (
     <Sheet
       description={i18n.t("Course status, membership, and timezone.")}
       footer={
-        model.isInstructor ? (
+        model.page === "instructor" ? (
           <div class="footer-row">
             <CloneCourseBar context={context} course={model.course} />
             <CourseEditControl context={context} course={model.course} />
@@ -1348,10 +1386,10 @@ export function renderCourseDetail(
     />
   );
 
-  if (!model.isInstructor) {
+  if (model.page === "student") {
     return renderShell(
       context,
-      { breadcrumb: [coursesCrumb(i18n)], title: model.course.title },
+      shell,
       <>
         {model.notices.map((message) => (
           <Notice>{message}</Notice>
@@ -1375,12 +1413,54 @@ export function renderCourseDetail(
     );
   }
 
+  if (model.page === "assistant") {
+    // The grading page: what an assistant is here to do, and nothing they
+    // are not. No roster, no enrollment links, no course settings — every
+    // one of those is an instructor's, and a page of controls that answer
+    // forbidden is worse than a page without them.
+    return renderShell(
+      context,
+      shell,
+      <>
+        {model.notices.map((message) => (
+          <Notice>{message}</Notice>
+        ))}
+        {courseRecord}
+        <Sheet
+          description={i18n.t(
+            "Published assignments in this course, with the submissions waiting for review and the scores recorded so far.",
+          )}
+          title={i18n.t("Grading")}
+        >
+          <GradingTable
+            assignments={model.assignments}
+            courseId={model.course.id}
+          />
+          <LinkStrip
+            links={[
+              {
+                hint: i18n.t("Scores across every graded assignment"),
+                href: `/courses/${model.course.id}/instructor/gradebook`,
+                label: i18n.t("Course gradebook"),
+              },
+              {
+                hint: i18n.t("CSV of the whole course's grades"),
+                href: `/courses/${model.course.id}/instructor/grades.csv`,
+                label: i18n.t("Download CSV"),
+              },
+            ]}
+          />
+        </Sheet>
+      </>,
+    );
+  }
+
   // On wide screens the members roster moves into its own right-hand column
   // (the content split's "doc" slot), with every administrative sheet stacked
   // in the left rail beside it.
   return renderShell(
     context,
-    { breadcrumb: [coursesCrumb(i18n)], title: model.course.title },
+    shell,
     <>
       {model.notices.map((message) => (
         <Notice>{message}</Notice>
