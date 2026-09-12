@@ -26,8 +26,12 @@ CodeMirror text editor.
   loads `@aufbau/compiler` lazily (its ~5 MB wasm) once for the whole page and in
   the reader's language — all four proof types share that one instance.
 - The **worker** ([`assessment.ts`](./assessment.ts) → [`verifier.ts`](./verifier.ts))
-  decodes the MMB and `verifyPair`s it against the *frozen* mm0 — never the
-  student's proofText. `ok` ⇔ the declared goal is proved. All-or-nothing.
+  decodes the MMB ([`certificate.ts`](./certificate.ts)) and `verifyPair`s it
+  against the *frozen* mm0 — never the student's proofText. `ok` ⇔ the declared
+  goal is proved. All-or-nothing. The verdict is what gets stored; the
+  certificate is not. A submission row keeps `{ proofText }`, which is enough
+  to compile the certificate again should a verdict ever be questioned, and
+  is a tenth of the size (a Fitch certificate runs to ~45 KB).
 
 Because verification is bound to the mm0 we hold, a certificate for a different
 statement will not verify, and a valid certificate *is* a valid proof however it
@@ -117,12 +121,17 @@ check per proof (`editor-preview.ts`).
 
 ### Answer shape
 
+What the widget submits:
+
 ```jsonc
 {
   "proofText": "thm_k\n----\nl1: $ a -> b -> a $ by ax_1 []", // display/review only
   "mmb": "<base64 MMB certificate>"                            // the graded input
 }
 ```
+
+What is stored is `{ proofText }` beside the evaluation: the certificate is
+verified on the way in and not kept.
 
 ## Roadmap
 

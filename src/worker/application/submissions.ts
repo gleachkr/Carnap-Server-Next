@@ -347,10 +347,18 @@ export class SubmissionService {
       );
     }
 
+    // The certificate a proof or translation answer carries is verified here
+    // and not stored: what the row keeps is the answer and the verdict.
     const automatic = await this.exerciseRegistry.evaluateAutomatic(
       declaration,
       normalized.answer,
-      { actorId: actor.user.id, now },
+      {
+        actorId: actor.user.id,
+        now,
+        ...(normalized.certificate === undefined
+          ? {}
+          : { certificate: normalized.certificate }),
+      },
     );
 
     // Outside exam exercises, autograded work only counts once it is fully

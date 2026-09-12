@@ -31,7 +31,9 @@ back to its node, used to attribute a compiler diagnostic to the offending node.
   `answerData`.
 - The **worker** ([`assessment.ts`](./assessment.ts)) decodes the MMB and verifies
   it against the *frozen* mm0 — never the student's tree or proofText. `ok` ⇔ the
-  declared goal is proved.
+  declared goal is proved. The verdict, the tree and its text are stored; the
+  certificate is not (see the linear type's
+  [`certificate.ts`](../aufbau-proof/certificate.ts)).
 
 ## Authoring syntax
 

@@ -67,16 +67,26 @@ export interface TranslationPublicData {
 }
 
 /**
- * A submitted translation: the text as typed, plus — when the widget's check
- * found one — the equivalence certificate and which solution it certifies
- * against. The certificate is the graded input for the equivalence variants;
- * the text is what review pages show, and all `exact` needs.
+ * A translation as stored: the text as typed, plus — when the widget's check
+ * found an equivalence — which solution it matched. The text is what review
+ * pages show, and all `exact` needs. The envelope the client submits carries
+ * one more field beside the index, `mmb`, the base64 MMB certifying
+ * `text ↔ solutions[solutionIndex]`: the graded input for the equivalence
+ * variants, verified in `evaluate` and not kept; see
+ * {@link ../aufbau-proof/certificate readCertificate}.
  */
 export interface TranslationAnswerData {
-  /** Base64 MMB certifying `text ↔ solutions[solutionIndex]`. */
-  readonly mmb?: string;
   readonly solutionIndex?: number;
   readonly text: string;
+}
+
+/**
+ * What the widget submits: the answer plus, once its check has found an
+ * equivalence, the certificate for it. Only the answer is stored.
+ */
+export interface TranslationSubmission extends TranslationAnswerData {
+  /** Base64 MMB certifying `text ↔ solutions[solutionIndex]`. */
+  readonly mmb?: string;
 }
 
 export function isTranslationPublicData(
@@ -136,7 +146,6 @@ export function isTranslationAnswerData(
 
   return (
     typeof data.text === "string" &&
-    (data.mmb === undefined || typeof data.mmb === "string") &&
     (data.solutionIndex === undefined ||
       (typeof data.solutionIndex === "number" &&
         Number.isInteger(data.solutionIndex) &&

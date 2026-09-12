@@ -119,13 +119,14 @@ export interface AufbauProofPrawitzPublicData {
 }
 
 /**
- * The submitted answer. `mmb` is the base64 MMB certificate the client
- * compiled from the translated tree — the only thing graded. `proofText` (the
- * translated `.auf`) and `tree` (the structure) are retained for review and to
- * restore the editor; neither is trusted for grading.
+ * The answer as stored: `proofText` (the translated `.auf`) and `tree` (the
+ * structure) are shown on review and restored into the editor; neither is
+ * trusted for grading. The envelope the client submits carries one more field,
+ * `mmb`, the base64 MMB certificate it compiled from the translated text — the
+ * only thing graded, and not kept once `evaluate` has verified it; see
+ * {@link ../aufbau-proof/certificate readCertificate}.
  */
 export interface AufbauProofPrawitzAnswerData {
-  readonly mmb: string;
   readonly proofText: string;
   readonly tree: PrawitzProofNode;
 }
@@ -180,7 +181,6 @@ export function isAufbauProofPrawitzAnswerData(
 ): value is AufbauProofPrawitzAnswerData {
   return (
     isObject(value) &&
-    typeof value.mmb === "string" &&
     typeof value.proofText === "string" &&
     isPrawitzProofNode(value.tree)
   );

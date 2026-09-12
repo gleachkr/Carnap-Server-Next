@@ -83,13 +83,14 @@ export interface AufbauProofTreePublicData {
 }
 
 /**
- * The submitted answer. `mmb` is the base64 MMB certificate the client compiled
- * from the flattened tree — the only thing graded. `proofText` (the flattened
- * `.auf`) and `tree` (the structure) are retained for review and to restore the
- * editor; neither is trusted for grading.
+ * The answer as stored: `proofText` (the flattened `.auf`) and `tree` (the
+ * structure) are shown on review and restored into the editor; neither is
+ * trusted for grading. The envelope the client submits carries one more field,
+ * `mmb`, the base64 MMB certificate it compiled from the flattened text — the
+ * only thing graded, and not kept once `evaluate` has verified it; see
+ * {@link ../aufbau-proof/certificate readCertificate}.
  */
 export interface AufbauProofTreeAnswerData {
-  readonly mmb: string;
   readonly proofText: string;
   readonly tree: ProofTreeNode;
 }
@@ -133,7 +134,6 @@ export function isAufbauProofTreeAnswerData(
 ): value is AufbauProofTreeAnswerData {
   return (
     isObject(value) &&
-    typeof value.mmb === "string" &&
     typeof value.proofText === "string" &&
     isProofTreeNode(value.tree)
   );

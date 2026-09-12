@@ -713,8 +713,9 @@ ASCII back in logical symbols as the student types, the correctness mark tracks
 on a pause, and **Enter** checks immediately (there is no Check button). Under
 the hood the check is the Aufbau engine's `auto?` proof search, run over a
 one-sided sequent calculus, producing an equivalence *certificate* which Submit
-records and the server independently re-verifies — the same
-client-compiles/server-verifies boundary the proof directives use.
+sends and the server independently re-verifies — the same
+client-compiles/server-verifies boundary the proof directives use. The server
+records the verdict and the typed answer, not the certificate.
 
 Two consequences of that design are worth knowing when setting assignments:
 
@@ -1365,8 +1366,9 @@ the student adds the premises that justify each line and types the rule under
 each inference bar. A small toolbar adds a premise, adds a hypothesis reference
 (`#n`), or deletes the selected subtree. Feedback is live — a "verified ✓" mark
 once the tree compiles, and any engine diagnostic is shown inline on the node
-whose line caused it. The submitted answer carries `{ mmb, proofText, tree }`;
-review pages redraw the submitted tree.
+whose line caused it. The widget submits `{ mmb, proofText, tree }`; the worker
+verifies the certificate and stores the rest, and review pages redraw the
+submitted tree.
 
 It takes the same attributes as `aufbau-proof` (`system`, `id`, `title`,
 `points`, `exam`, `feedback`, `options`). v1 is plain tree editing (free-text rule names, no
@@ -1434,8 +1436,9 @@ formulas — both written into every sequent the translator emits. The student's
 Fitch source never spells either. A theory that declares none of the three
 does not compile a Fitch exercise; the diagnostic names the missing role. This
 is why forallx's `;` appears on no exercise anywhere: the theory says it once.
-The submitted answer carries `{ mmb, proofText, fitchText }`;
-review pages show the submitted Fitch source. Because the `:<rule>` justification
+The widget submits `{ mmb, proofText, fitchText }`; the worker verifies the
+certificate and stores the rest, and review pages show the submitted Fitch
+source. Because the `:<rule>` justification
 uses a colon, the Fitch body is treated as raw text (not Markdown), and formulas
 whose own notation uses a colon still parse — the justification is taken after the
 line's *last* colon. The full reference lives in
@@ -1465,9 +1468,9 @@ the forest joins into a single verified tree ending in the goal. Growing
 upward (adding a premise or assumption above a line) works too. To discharge,
 the student labels an assumption and repeats the label on the discharging
 rule. Feedback is live — a ✓ once the single tree verifies, and diagnostics
-shown on the node that caused them. The submitted answer carries
-`{ mmb, proofText, tree }`; review pages redraw the submitted tree in the
-bracket notation.
+shown on the node that caused them. The widget submits
+`{ mmb, proofText, tree }`; the worker verifies the certificate and stores the
+rest, and review pages redraw the submitted tree in the bracket notation.
 
 Its body is prose (the prompt) then a single `theorem <name>: $ … $` goal
 line, optionally followed by a `----` underline and a **starter** the editor

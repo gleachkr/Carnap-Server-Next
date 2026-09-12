@@ -14,6 +14,7 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import { readCertificate } from "../aufbau-proof/certificate";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import type { Formula } from "../first-order";
 import {
@@ -38,27 +39,13 @@ import {
 
 const TRANSLATION_EVALUATOR_VERSION = "translation-evaluator@1";
 
-/** Generous caps so a real answer passes but a submission can't be unbounded. */
+/** Generous cap so a real answer passes but a submission can't be unbounded. */
 const MAX_TEXT_LENGTH = 2_048;
-const MAX_MMB_BASE64_LENGTH = 262_144;
 
 function translationAnswerData(
   answer: NormalizedAnswer,
 ): TranslationAnswerData {
   return answer.data as unknown as TranslationAnswerData;
-}
-
-function decodeBase64(value: string): Uint8Array | null {
-  try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -149,13 +136,9 @@ export class TranslationExerciseType implements AssessmentExerciseType {
     }
 
     const data = envelope.data;
+    const certificate = readCertificate(data);
 
-    if (
-      data.text.length > MAX_TEXT_LENGTH ||
-      (data.mmb !== undefined &&
-        (data.mmb.length > MAX_MMB_BASE64_LENGTH ||
-          decodeBase64(data.mmb) === null))
-    ) {
+    if (data.text.length > MAX_TEXT_LENGTH || certificate === null) {
       return {
         diagnostics: [
           diagnostic(
@@ -171,20 +154,21 @@ export class TranslationExerciseType implements AssessmentExerciseType {
 
     // A certificate names the solution it certifies; one without the other is
     // noise the widget never produces, so drop the pair rather than the answer.
+    // The index is kept with the answer (it says which solution the check
+    // matched); the certificate goes to the evaluator and no further.
     const certified =
-      data.mmb !== undefined && data.solutionIndex !== undefined;
+      certificate !== undefined && data.solutionIndex !== undefined;
 
     return {
       answer: {
         data: {
           text: data.text,
-          ...(certified
-            ? { mmb: data.mmb, solutionIndex: data.solutionIndex }
-            : {}),
+          ...(certified ? { solutionIndex: data.solutionIndex } : {}),
         } as unknown as JsonValue,
         kind: this.answerKind,
         schemaVersion: this.schemaVersion,
       },
+      ...(certified ? { certificate } : {}),
       ok: true,
     };
   }
@@ -192,7 +176,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
   async evaluate(
     answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
-    _context: EvaluationContext,
+    context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
     const base = {
       declarationHash: declaration.declarationHash,
@@ -260,9 +244,9 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       data.solutionIndex === undefined
         ? undefined
         : publicData.solutions[data.solutionIndex];
-    const mmb = data.mmb === undefined ? null : decodeBase64(data.mmb);
+    const mmb = context.certificate;
 
-    if (solutionSource === undefined || mmb === null) {
+    if (solutionSource === undefined || mmb === undefined) {
       return incorrect("no-certificate");
     }
 

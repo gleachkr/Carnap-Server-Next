@@ -508,11 +508,19 @@ describe("the exercise type grades a searched certificate", () => {
     if (!normalized.ok) {
       throw new Error("normalization failed");
     }
-    const evaluation = await type.evaluate(
-      normalized.answer,
-      item,
-      {} as never,
-    );
+    // The stored answer names the solution the check matched and nothing of
+    // the certificate, which goes to the evaluator and no further.
+    expect(normalized.answer.data).toEqual({
+      text,
+      ...(mmb === null ? {} : { solutionIndex: 0 }),
+    });
+    expect(normalized.certificate).toEqual(mmb ?? undefined);
+    const evaluation = await type.evaluate(normalized.answer, item, {
+      now: "2026-07-18T00:00:00.000Z",
+      ...(normalized.certificate === undefined
+        ? {}
+        : { certificate: normalized.certificate }),
+    });
     return evaluation.status;
   }
 

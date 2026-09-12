@@ -18,6 +18,7 @@ import type { JsonValue } from "../../domain/json";
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's tree).
 import { proofTheoryText } from "../aufbau-proof/formulas";
+import { readCertificate } from "../aufbau-proof/certificate";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofPrawitzReview } from "./read-only-view";
 import type { AufbauProofPrawitzAnswerData } from "./types";
@@ -35,7 +36,6 @@ const AUFBAU_PROOF_PRAWITZ_EVALUATOR_VERSION =
   "aufbau-proof-prawitz-verifier@1";
 
 /** Generous caps so an intro proof passes but a submission can't be unbounded. */
-const MAX_MMB_BASE64_LENGTH = 262_144;
 const MAX_PROOF_TEXT_LENGTH = 65_536;
 const MAX_TREE_JSON_LENGTH = 131_072;
 
@@ -43,19 +43,6 @@ function prawitzAnswerData(
   answer: NormalizedAnswer,
 ): AufbauProofPrawitzAnswerData {
   return answer.data as unknown as AufbauProofPrawitzAnswerData;
-}
-
-function decodeBase64(value: string): Uint8Array | null {
-  try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  } catch {
-    return null;
-  }
 }
 
 export class AufbauProofPrawitzExerciseType
@@ -122,11 +109,13 @@ export class AufbauProofPrawitzExerciseType
       };
     }
 
+    const certificate = readCertificate(envelope.data);
+
     if (
-      envelope.data.mmb.length > MAX_MMB_BASE64_LENGTH ||
+      certificate === undefined ||
+      certificate === null ||
       envelope.data.proofText.length > MAX_PROOF_TEXT_LENGTH ||
-      JSON.stringify(envelope.data.tree).length > MAX_TREE_JSON_LENGTH ||
-      decodeBase64(envelope.data.mmb) === null
+      JSON.stringify(envelope.data.tree).length > MAX_TREE_JSON_LENGTH
     ) {
       return {
         diagnostics: [
@@ -144,21 +133,21 @@ export class AufbauProofPrawitzExerciseType
     return {
       answer: {
         data: {
-          mmb: envelope.data.mmb,
           proofText: envelope.data.proofText,
           tree: envelope.data.tree,
         } as unknown as JsonValue,
         kind: this.answerKind,
         schemaVersion: this.schemaVersion,
       },
+      certificate,
       ok: true,
     };
   }
 
   async evaluate(
-    answer: NormalizedAnswer,
+    _answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
-    _context: EvaluationContext,
+    context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
     const base = {
       declarationHash: declaration.declarationHash,
@@ -182,9 +171,11 @@ export class AufbauProofPrawitzExerciseType
       };
     }
 
-    const mmb = decodeBase64(prawitzAnswerData(answer).mmb);
+    // The certificate rides in the context, not the answer: it is verified
+    // here and then gone, while the answer (the tree and its text) is kept.
+    const mmb = context.certificate;
 
-    if (mmb === null) {
+    if (mmb === undefined) {
       return { ...base, awardedScore: 0, status: "invalid" };
     }
 

@@ -99,14 +99,15 @@ export interface AufbauProofFitchPublicData {
 }
 
 /**
- * The submitted answer. `mmb` is the base64 MMB certificate the client compiled
- * from the translated Fitch text — the only thing graded. `proofText` (the
- * translated `.auf`) and `fitchText` (the student's source) are retained for
- * review and to restore the editor; neither is trusted for grading.
+ * The answer as stored: `proofText` (the translated `.auf`) and `fitchText`
+ * (the student's source) are shown on review and restored into the editor;
+ * neither is trusted for grading. The envelope the client submits carries one
+ * more field, `mmb`, the base64 MMB certificate it compiled from the translated
+ * text — the only thing graded, and not kept once `evaluate` has verified it;
+ * see {@link ../aufbau-proof/certificate readCertificate}.
  */
 export interface AufbauProofFitchAnswerData {
   readonly fitchText: string;
-  readonly mmb: string;
   readonly proofText: string;
 }
 
@@ -142,7 +143,6 @@ export function isAufbauProofFitchAnswerData(
   return (
     isObject(value) &&
     typeof value.fitchText === "string" &&
-    typeof value.mmb === "string" &&
     typeof value.proofText === "string"
   );
 }

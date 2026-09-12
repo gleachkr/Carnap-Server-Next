@@ -15,6 +15,7 @@ import type {
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
 import { renderAufbauProofReview } from "./read-only-view";
+import { readCertificate } from "./certificate";
 import type { AufbauProofAnswerData } from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
@@ -28,25 +29,11 @@ import { verifyMmb } from "./verifier";
 
 const AUFBAU_PROOF_EVALUATOR_VERSION = "aufbau-proof-verifier@1";
 
-/** Generous caps so an intro proof passes but a submission can't be unbounded. */
-const MAX_MMB_BASE64_LENGTH = 262_144;
+/** Generous cap so an intro proof passes but a submission can't be unbounded. */
 const MAX_PROOF_TEXT_LENGTH = 65_536;
 
 function proofAnswerData(answer: NormalizedAnswer): AufbauProofAnswerData {
   return answer.data as unknown as AufbauProofAnswerData;
-}
-
-function decodeBase64(value: string): Uint8Array | null {
-  try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  } catch {
-    return null;
-  }
 }
 
 export class AufbauProofExerciseType implements AssessmentExerciseType {
@@ -108,10 +95,12 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
       };
     }
 
+    const certificate = readCertificate(envelope.data);
+
     if (
-      envelope.data.mmb.length > MAX_MMB_BASE64_LENGTH ||
-      envelope.data.proofText.length > MAX_PROOF_TEXT_LENGTH ||
-      decodeBase64(envelope.data.mmb) === null
+      certificate === undefined ||
+      certificate === null ||
+      envelope.data.proofText.length > MAX_PROOF_TEXT_LENGTH
     ) {
       return {
         diagnostics: [
@@ -129,20 +118,20 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
     return {
       answer: {
         data: {
-          mmb: envelope.data.mmb,
           proofText: envelope.data.proofText,
         } as unknown as JsonValue,
         kind: this.answerKind,
         schemaVersion: this.schemaVersion,
       },
+      certificate,
       ok: true,
     };
   }
 
   async evaluate(
-    answer: NormalizedAnswer,
+    _answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
-    _context: EvaluationContext,
+    context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
     const base = {
       declarationHash: declaration.declarationHash,
@@ -166,9 +155,11 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
       };
     }
 
-    const mmb = decodeBase64(proofAnswerData(answer).mmb);
+    // The certificate rides in the context, not the answer: it is verified
+    // here and then gone, while the answer (the proof text) is what is kept.
+    const mmb = context.certificate;
 
-    if (mmb === null) {
+    if (mmb === undefined) {
       return { ...base, awardedScore: 0, status: "invalid" };
     }
 

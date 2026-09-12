@@ -69,9 +69,9 @@ function answerEnvelope(
   };
 }
 
-function normalizedAnswer(mmbBase64: string): NormalizedAnswer {
+function normalizedAnswer(): NormalizedAnswer {
   return {
-    data: { mmb: mmbBase64, proofText: "l1: $ top $ by top_i []" },
+    data: { proofText: "l1: $ top $ by top_i []" },
     kind: AUFBAU_PROOF_ANSWER_KIND,
     schemaVersion: AUFBAU_PROOF_SCHEMA_VERSION,
   };
@@ -96,6 +96,15 @@ function tamperBase64(base64: string): string {
 const handler = new AufbauProofExerciseType();
 const context = { now: "2026-07-16T00:00:00.000Z" };
 
+/** The evaluator sees the certificate beside the answer, never inside it. */
+function certificateBytes(base64: string): Uint8Array {
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+}
+
+function contextFor(mmbBase64: string) {
+  return { ...context, certificate: certificateBytes(mmbBase64) };
+}
+
 describe("aufbau-proof verification", () => {
   test("a valid MMB proving the frozen goal grades correct", async () => {
     const item = await manifestItem(proofDirective("p1", "thm_top", 2));
@@ -108,18 +117,36 @@ describe("aufbau-proof verification", () => {
       return;
     }
 
-    const result = await handler.evaluate(normalized.answer, item, context);
+    // The stored answer is the text alone; the certificate travels beside it
+    // to the evaluator and no further.
+    expect(normalized.answer.data).toEqual({
+      proofText: "l1: $ top $ by top_i []",
+    });
+    expect(normalized.certificate).toEqual(certificateBytes(GOOD_MMB_BASE64));
+
+    const result = await handler.evaluate(
+      normalized.answer,
+      item,
+      contextFor(GOOD_MMB_BASE64),
+    );
     expect(result.status).toBe("correct");
     expect(result.awardedScore).toBe(2);
     expect(result.feedback).toEqual({ verified: true });
   });
 
+  test("an answer that arrives without its certificate is invalid, not wrong", async () => {
+    const item = await manifestItem(proofDirective("p1", "thm_top"));
+    const result = await handler.evaluate(normalizedAnswer(), item, context);
+    expect(result.status).toBe("invalid");
+    expect(result.awardedScore).toBe(0);
+  });
+
   test("a tampered certificate does not verify", async () => {
     const item = await manifestItem(proofDirective("p1", "thm_top"));
     const result = await handler.evaluate(
-      normalizedAnswer(tamperBase64(GOOD_MMB_BASE64)),
+      normalizedAnswer(),
       item,
-      context,
+      contextFor(tamperBase64(GOOD_MMB_BASE64)),
     );
     expect(result.status).not.toBe("correct");
     expect(result.awardedScore).toBe(0);
@@ -142,9 +169,9 @@ theorem g: $ top -> top $
 l1: $ top $ by top_i []
 :::`);
     const result = await handler.evaluate(
-      normalizedAnswer(GOOD_MMB_BASE64),
+      normalizedAnswer(),
       item,
-      context,
+      contextFor(GOOD_MMB_BASE64),
     );
     expect(result.status).not.toBe("correct");
     expect(result.awardedScore).toBe(0);
@@ -153,9 +180,9 @@ l1: $ top $ by top_i []
   test("well-formed base64 that is not an MMB does not crash grading", async () => {
     const item = await manifestItem(proofDirective("p1", "thm_top"));
     const result = await handler.evaluate(
-      normalizedAnswer(btoa("not a real mmb payload at all")),
+      normalizedAnswer(),
       item,
-      context,
+      contextFor(btoa("not a real mmb payload at all")),
     );
     expect(result.status).not.toBe("correct");
     expect(result.awardedScore).toBe(0);
@@ -198,7 +225,7 @@ l1: $ top $ by top_i []
   test("reviewAnswer surfaces the submitted proof source", async () => {
     const item = await manifestItem(proofDirective("p1", "thm_top"));
     const review = handler.reviewAnswer(
-      normalizedAnswer(GOOD_MMB_BASE64),
+      normalizedAnswer(),
       item,
       REVIEW_CONTEXT,
     );

@@ -9,7 +9,9 @@ surface (nodes, premises, postorder flatten) with the
 contexts are *inferred* from structure, not written by the student. Everything
 downstream is shared: the same `@aufbau/compiler`, the same MMB certificate as
 the trust boundary, the same worker-side
-[`verifyMmb`](../aufbau-proof/verifier.ts) against a frozen theory. It targets
+[`verifyMmb`](../aufbau-proof/verifier.ts) against a frozen theory, and the
+same rule that the certificate is verified and not stored
+([`certificate.ts`](../aufbau-proof/certificate.ts)). It targets
 the same sequent/ND theories as the Fitch type (`⊢`, ACUI comma-context, an
 assumption axiom named by `@syntax role assumption`), and a node's rule may be any alias the
 theory declares for an axiom, resolved by `prawitzToAuf`'s `readRule` at emission.

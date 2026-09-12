@@ -18,6 +18,7 @@ import type { JsonValue } from "../../domain/json";
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's tree).
 import { proofTheoryText } from "../aufbau-proof/formulas";
+import { readCertificate } from "../aufbau-proof/certificate";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofTreeReview } from "./read-only-view";
 import type { AufbauProofTreeAnswerData } from "./types";
@@ -33,25 +34,11 @@ import {
 const AUFBAU_PROOF_TREE_EVALUATOR_VERSION = "aufbau-proof-tree-verifier@1";
 
 /** Generous caps so an intro proof passes but a submission can't be unbounded. */
-const MAX_MMB_BASE64_LENGTH = 262_144;
 const MAX_PROOF_TEXT_LENGTH = 65_536;
 const MAX_TREE_JSON_LENGTH = 131_072;
 
 function treeAnswerData(answer: NormalizedAnswer): AufbauProofTreeAnswerData {
   return answer.data as unknown as AufbauProofTreeAnswerData;
-}
-
-function decodeBase64(value: string): Uint8Array | null {
-  try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-      bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-  } catch {
-    return null;
-  }
 }
 
 export class AufbauProofTreeExerciseType implements AssessmentExerciseType {
@@ -116,11 +103,13 @@ export class AufbauProofTreeExerciseType implements AssessmentExerciseType {
       };
     }
 
+    const certificate = readCertificate(envelope.data);
+
     if (
-      envelope.data.mmb.length > MAX_MMB_BASE64_LENGTH ||
+      certificate === undefined ||
+      certificate === null ||
       envelope.data.proofText.length > MAX_PROOF_TEXT_LENGTH ||
-      JSON.stringify(envelope.data.tree).length > MAX_TREE_JSON_LENGTH ||
-      decodeBase64(envelope.data.mmb) === null
+      JSON.stringify(envelope.data.tree).length > MAX_TREE_JSON_LENGTH
     ) {
       return {
         diagnostics: [
@@ -138,21 +127,21 @@ export class AufbauProofTreeExerciseType implements AssessmentExerciseType {
     return {
       answer: {
         data: {
-          mmb: envelope.data.mmb,
           proofText: envelope.data.proofText,
           tree: envelope.data.tree,
         } as unknown as JsonValue,
         kind: this.answerKind,
         schemaVersion: this.schemaVersion,
       },
+      certificate,
       ok: true,
     };
   }
 
   async evaluate(
-    answer: NormalizedAnswer,
+    _answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
-    _context: EvaluationContext,
+    context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
     const base = {
       declarationHash: declaration.declarationHash,
@@ -176,9 +165,11 @@ export class AufbauProofTreeExerciseType implements AssessmentExerciseType {
       };
     }
 
-    const mmb = decodeBase64(treeAnswerData(answer).mmb);
+    // The certificate rides in the context, not the answer: it is verified
+    // here and then gone, while the answer (the tree and its text) is kept.
+    const mmb = context.certificate;
 
-    if (mmb === null) {
+    if (mmb === undefined) {
       return { ...base, awardedScore: 0, status: "invalid" };
     }
 

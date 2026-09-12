@@ -84,16 +84,20 @@ async function declarationFor(): Promise<ExerciseManifestItem> {
   return item;
 }
 
-function normalizedAnswer(mmb: string): NormalizedAnswer {
+function normalizedAnswer(): NormalizedAnswer {
   return {
     data: {
       fitchText: FITCH_TEXT,
-      mmb,
       proofText: "",
     } as unknown as NormalizedAnswer["data"],
     kind: AUFBAU_PROOF_FITCH_ANSWER_KIND,
     schemaVersion: AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
   };
+}
+
+/** The evaluator sees the certificate beside the answer, never inside it. */
+function certificateBytes(base64: string): Uint8Array {
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
 }
 
 function envelope(data: unknown): AnswerEnvelope {
@@ -107,23 +111,42 @@ function envelope(data: unknown): AnswerEnvelope {
 describe("aufbau-proof-fitch assessment", () => {
   test("a verifying certificate for the translated proof scores full marks", async () => {
     const declaration = await declarationFor();
-    const evaluation = await type.evaluate(
-      normalizedAnswer(GOOD_MMB_BASE64),
-      declaration,
-      { now: "1970-01-01T00:00:00.000Z" },
-    );
+    const evaluation = await type.evaluate(normalizedAnswer(), declaration, {
+      certificate: certificateBytes(GOOD_MMB_BASE64),
+      now: "1970-01-01T00:00:00.000Z",
+    });
     expect(evaluation.status).toBe("correct");
     expect(evaluation.awardedScore).toBe(2);
+  });
+
+  test("the stored answer is the two texts; the certificate is read beside them", async () => {
+    const declaration = await declarationFor();
+    const result = type.normalizeAnswer(
+      envelope({
+        fitchText: FITCH_TEXT,
+        mmb: GOOD_MMB_BASE64,
+        proofText: "",
+      }),
+      declaration,
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      return;
+    }
+    expect(result.answer.data).toEqual({
+      fitchText: FITCH_TEXT,
+      proofText: "",
+    });
+    expect(result.certificate).toEqual(certificateBytes(GOOD_MMB_BASE64));
   });
 
   test("a certificate that does not verify scores zero", async () => {
     const declaration = await declarationFor();
     // Valid base64 but not a real MMB — the verifier errors, no credit.
-    const evaluation = await type.evaluate(
-      normalizedAnswer(btoa("not an mmb")),
-      declaration,
-      { now: "1970-01-01T00:00:00.000Z" },
-    );
+    const evaluation = await type.evaluate(normalizedAnswer(), declaration, {
+      certificate: certificateBytes(btoa("not an mmb")),
+      now: "1970-01-01T00:00:00.000Z",
+    });
     expect(evaluation.awardedScore).toBe(0);
     expect(
       evaluation.status === "incorrect" || evaluation.status === "error",
@@ -155,7 +178,7 @@ describe("aufbau-proof-fitch assessment", () => {
   test("review renders the submitted Fitch source read-only", async () => {
     const declaration = await declarationFor();
     const review = type.reviewAnswer(
-      normalizedAnswer(GOOD_MMB_BASE64),
+      normalizedAnswer(),
       declaration,
       REVIEW_CONTEXT,
     );
@@ -192,7 +215,7 @@ describe("aufbau-proof-fitch assessment", () => {
     }
 
     const review = type.reviewAnswer(
-      normalizedAnswer(GOOD_MMB_BASE64),
+      normalizedAnswer(),
       item,
       REVIEW_CONTEXT,
     );

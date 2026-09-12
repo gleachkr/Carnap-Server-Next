@@ -13,7 +13,7 @@ import type {
   ExerciseManifestItem,
 } from "../src/worker/domain/content";
 import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
-import type { TranslationAnswerData } from "../src/worker/exercises/translation/types";
+import type { TranslationSubmission } from "../src/worker/exercises/translation/types";
 import {
   isTranslationPublicData,
   TRANSLATION_ANSWER_KIND,
@@ -45,7 +45,7 @@ async function diagnosticCodes(source: string): Promise<string[]> {
   return compiled.ok ? [] : compiled.diagnostics.map((d) => d.code);
 }
 
-function envelope(data: TranslationAnswerData): AnswerEnvelope {
+function envelope(data: TranslationSubmission): AnswerEnvelope {
   return {
     data: data as never,
     kind: TRANSLATION_ANSWER_KIND,
@@ -55,18 +55,19 @@ function envelope(data: TranslationAnswerData): AnswerEnvelope {
 
 async function statusFor(
   item: ExerciseManifestItem,
-  data: TranslationAnswerData,
+  data: TranslationSubmission,
 ): Promise<string> {
   const type = new TranslationExerciseType();
   const normalized = type.normalizeAnswer(envelope(data), item);
   if (!normalized.ok) {
     throw new Error("normalization failed");
   }
-  const evaluation = await type.evaluate(
-    normalized.answer,
-    item,
-    {} as never,
-  );
+  const evaluation = await type.evaluate(normalized.answer, item, {
+    now: "2026-07-18T00:00:00.000Z",
+    ...(normalized.certificate === undefined
+      ? {}
+      : { certificate: normalized.certificate }),
+  });
   return evaluation.status;
 }
 

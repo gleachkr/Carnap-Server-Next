@@ -153,6 +153,15 @@ export type AnswerNormalizationFailureReason =
 export type AnswerNormalizationResult =
   | {
       readonly answer: NormalizedAnswer;
+      /**
+       * Evidence the envelope carried beside the answer and the evaluator
+       * consumes — the MMB certificate of the proof and translation types.
+       * It reaches `evaluate` as {@link EvaluationContext.certificate} and is
+       * never stored: the verdict is what is recorded, and the answer keeps
+       * the text the certificate was compiled from, which is enough to
+       * compile it again should a verdict ever be questioned.
+       */
+      readonly certificate?: Uint8Array;
       readonly ok: true;
     }
   | {
@@ -163,6 +172,12 @@ export type AnswerNormalizationResult =
 
 export interface EvaluationContext {
   readonly actorId?: AppId;
+  /**
+   * The certificate the answer's normalization read from the envelope, for the
+   * types whose grading is its verification. Absent for every other type, and
+   * for a translation typed but never checked.
+   */
+  readonly certificate?: Uint8Array;
   readonly now: string;
 }
 

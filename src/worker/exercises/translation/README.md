@@ -26,7 +26,8 @@ core in [`../first-order/`](../first-order/).
   ([`logic/mm0.ts`](./logic/mm0.ts)), and `verifyPair`s the certificate
   against it via the proof types' [`verifier`](../aufbau-proof/verifier.ts).
   A certificate for any other statement fails verification; search and
-  compilation stay untrusted conveniences.
+  compilation stay untrusted conveniences. The verdict is stored; the
+  certificate is not ([`certificate.ts`](../aufbau-proof/certificate.ts)).
 - **The solutions ship in `publicData`.** The client cannot prove equivalence
   to a target it does not hold — the same exposure the original Carnap
   accepted. `feedback`/`exam` are display and recording controls, not a wall
@@ -81,15 +82,14 @@ exhaust to a refusal in about a second, and adversarial pairs (`F(a)`/`F(b)`,
 outside the catalogue can time out and be graded wrong; the authoring escape
 hatch is the solutions list.
 
-**Changing the calculus re-grades the past.** Nothing stores a verdict: a
-submission keeps `{ text, mmb, solutionIndex }`, and every read re-emits the
-mm0 from *this* file and re-verifies the recorded certificate against it. So a
-rule that comes or goes changes the theory an old certificate is checked
-against, and a certificate that no longer verifies reads as a wrong answer —
-a correct one, silently downgraded. Adding a rule is safe (old proofs still
-check); removing or restating one is not. Before dropping a rule from a
-deployed instance, check whether any recorded translation answer carries an
-`mmb`.
+**A verdict is made once, under the calculus in force when the answer was
+checked.** The evaluation row records it, and the certificate it was made from
+is verified on the way in and not stored: a submission keeps
+`{ text, solutionIndex }`. Nothing re-verifies an old answer, so a rule that
+comes or goes changes no grade already given. What a change does alter is
+what an old answer would do if it were checked again by hand — after a rule
+is removed or restated, a once-certified equivalence may not certify — so the
+regression battery, not the database, is where a calculus change is judged.
 
 ## Authoring syntax
 
@@ -130,6 +130,8 @@ it even when the student is told nothing.
 
 ### Answer shape
 
+What the widget submits:
+
 ```jsonc
 {
   "text": "~Ex~F(x)",        // as typed; review shows it, exact grades it
@@ -137,6 +139,9 @@ it even when the student is told nothing.
   "solutionIndex": 0          // which solution the certificate targets
 }
 ```
+
+What is stored is `{ text, solutionIndex }` beside the evaluation: the
+certificate is verified on the way in and not kept.
 
 `evaluation.ok` ⇔ parse ∧ variant restriction ∧ every `tests=` check ∧
 (canonically equal to a solution | verified certificate). The review page

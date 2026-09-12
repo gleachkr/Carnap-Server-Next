@@ -99,7 +99,9 @@ subproofs of ∨E / ↔I read apart rather than as one continuous bar.
   the scope-lines, and writes `{ mmb, proofText, fitchText }` into `answerData`.
 - The **worker** ([`assessment.ts`](./assessment.ts)) decodes the MMB and verifies
   it against the *frozen* mm0 — never the student's Fitch text or the translated
-  proof. `ok` ⇔ the declared goal is proved.
+  proof. `ok` ⇔ the declared goal is proved. The verdict and the two texts are
+  stored; the certificate is not (see the linear type's
+  [`certificate.ts`](../aufbau-proof/certificate.ts)).
 
 ## Authoring syntax
 

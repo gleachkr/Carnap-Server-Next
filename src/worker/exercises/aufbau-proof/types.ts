@@ -73,12 +73,15 @@ export type CompiledAufbauProofPublicData = Omit<
 >;
 
 /**
- * The submitted answer. `mmb` is the base64 MMB certificate the client compiled
- * — the only thing graded. `proofText` is the full `.auf` the student wrote
- * (header + body), retained for review display; it is never trusted for grading.
+ * The answer as stored: `proofText` is the full `.auf` the student wrote
+ * (header + body), shown on review and restored into the editor; it is never
+ * trusted for grading. The envelope the client submits carries one more field,
+ * `mmb`, the base64 MMB certificate the client compiled from that text — the
+ * only thing graded, read by `readCertificate` and verified in `evaluate`, and
+ * not kept: the verdict is what the record holds, and the text is enough to
+ * compile the certificate again.
  */
 export interface AufbauProofAnswerData {
-  readonly mmb: string;
   readonly proofText: string;
 }
 
@@ -112,9 +115,5 @@ export function isAufbauProofPublicData(
 export function isAufbauProofAnswerData(
   value: unknown,
 ): value is AufbauProofAnswerData {
-  return (
-    isObject(value) &&
-    typeof value.mmb === "string" &&
-    typeof value.proofText === "string"
-  );
+  return isObject(value) && typeof value.proofText === "string";
 }

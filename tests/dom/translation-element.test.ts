@@ -7,8 +7,8 @@ import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration
 import { renderTranslationElement } from "../../src/worker/exercises/translation/read-only-view";
 import { buildTranslationStrings } from "../../src/worker/exercises/translation/strings";
 import type {
-  TranslationAnswerData,
   TranslationPublicData,
+  TranslationSubmission,
 } from "../../src/worker/exercises/translation/types";
 import { i18nFor } from "../../src/worker/i18n";
 import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
@@ -78,7 +78,7 @@ interface Mounted {
 /** Render an exercise server-side, then upgrade it the way a browser would. */
 function mount(
   publicData: TranslationPublicData,
-  priorAnswer: TranslationAnswerData | null = null,
+  priorAnswer: TranslationSubmission | null = null,
   options: { readonly feedback?: string } = {},
 ): Mounted {
   const i18n = i18nFor("en");
@@ -141,8 +141,8 @@ function pressEnter(mounted: Mounted): void {
   );
 }
 
-function answerOf(mounted: Mounted): TranslationAnswerData {
-  return JSON.parse(mounted.answerData.value) as TranslationAnswerData;
+function answerOf(mounted: Mounted): TranslationSubmission {
+  return JSON.parse(mounted.answerData.value) as TranslationSubmission;
 }
 
 function previewText(mounted: Mounted): string {

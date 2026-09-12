@@ -66,28 +66,25 @@ async function manifestItem(source: string): Promise<ExerciseManifestItem> {
   return item;
 }
 
-function answerData(
-  mmbBase64: string,
-  tree: ProofTreeNode = GOAL_TREE,
-): JsonValue {
-  return {
-    mmb: mmbBase64,
-    proofText: flattenProofTree(tree, "thm_top").proofText,
-    tree,
-  } as unknown as JsonValue;
+/** The answer as stored: the tree and its flattening, no certificate. */
+function answerData(tree: ProofTreeNode = GOAL_TREE): {
+  proofText: string;
+  tree: ProofTreeNode;
+} {
+  return { proofText: flattenProofTree(tree, "thm_top").proofText, tree };
 }
 
 function answerEnvelope(mmbBase64: string): AnswerEnvelope {
   return {
-    data: answerData(mmbBase64),
+    data: { ...answerData(), mmb: mmbBase64 } as unknown as JsonValue,
     kind: AUFBAU_PROOF_TREE_ANSWER_KIND,
     schemaVersion: AUFBAU_PROOF_TREE_SCHEMA_VERSION,
   };
 }
 
-function normalizedAnswer(mmbBase64: string): NormalizedAnswer {
+function normalizedAnswer(): NormalizedAnswer {
   return {
-    data: answerData(mmbBase64),
+    data: answerData() as unknown as JsonValue,
     kind: AUFBAU_PROOF_TREE_ANSWER_KIND,
     schemaVersion: AUFBAU_PROOF_TREE_SCHEMA_VERSION,
   };
@@ -95,6 +92,15 @@ function normalizedAnswer(mmbBase64: string): NormalizedAnswer {
 
 const handler = new AufbauProofTreeExerciseType();
 const context = { now: "2026-07-18T00:00:00.000Z" };
+
+/** The evaluator sees the certificate beside the answer, never inside it. */
+function certificateBytes(base64: string): Uint8Array {
+  return Uint8Array.from(atob(base64), (char) => char.charCodeAt(0));
+}
+
+function contextFor(mmbBase64: string) {
+  return { ...context, certificate: certificateBytes(mmbBase64) };
+}
 
 describe("aufbau-proof-tree verification", () => {
   test("a valid MMB from a flattened tree grades correct", async () => {
@@ -108,7 +114,18 @@ describe("aufbau-proof-tree verification", () => {
       return;
     }
 
-    const result = await handler.evaluate(normalized.answer, item, context);
+    // The stored answer is the tree and its text; the certificate travels
+    // beside it to the evaluator and no further.
+    expect(normalized.answer.data).toEqual(
+      answerData() as unknown as JsonValue,
+    );
+    expect(normalized.certificate).toEqual(certificateBytes(GOOD_MMB_BASE64));
+
+    const result = await handler.evaluate(
+      normalized.answer,
+      item,
+      contextFor(GOOD_MMB_BASE64),
+    );
     expect(result.status).toBe("correct");
     expect(result.awardedScore).toBe(2);
     expect(result.feedback).toEqual({ verified: true });
@@ -117,9 +134,9 @@ describe("aufbau-proof-tree verification", () => {
   test("well-formed base64 that is not an MMB does not verify", async () => {
     const item = await manifestItem(treeDirective("t1", "thm_top"));
     const result = await handler.evaluate(
-      normalizedAnswer(btoa("not a real mmb payload at all")),
+      normalizedAnswer(),
       item,
-      context,
+      contextFor(btoa("not a real mmb payload at all")),
     );
     expect(result.status).not.toBe("correct");
     expect(result.awardedScore).toBe(0);
@@ -153,7 +170,7 @@ describe("aufbau-proof-tree verification", () => {
   test("reviewAnswer draws the submitted tree via ProofML", async () => {
     const item = await manifestItem(treeDirective("t1", "thm_top"));
     const review = handler.reviewAnswer(
-      normalizedAnswer(GOOD_MMB_BASE64),
+      normalizedAnswer(),
       item,
       REVIEW_CONTEXT,
     );
