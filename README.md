@@ -121,9 +121,11 @@ curl -i http://localhost:8787/auth/login/confirm \
 
 The confirm route sets `carnap_session` and `carnap_csrf` cookies. Unsafe
 requests made with the session cookie must send `X-CSRF-Token` with the value
-from the `carnap_csrf` cookie. Local cookies use `SameSite=Lax`, `HttpOnly` on
-the session cookie, and no `Secure` flag so they work over local HTTP. Preview
-and production cookies are marked `Secure`.
+from the `carnap_csrf` cookie. Both are `HttpOnly`; whether they carry `Secure`
+follows the request's protocol, not `CARNAP_ENV`, so over local http they are
+`SameSite=Lax` without `Secure`, and over https (`wrangler dev --local-protocol
+https`, preview, production, or a self-hosted instance behind a trusted proxy —
+see `docs/self-hosting.md`) they are marked `Secure`.
 
 ## Browser course workflow
 

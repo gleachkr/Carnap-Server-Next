@@ -14,7 +14,7 @@ import {
   setLocaleCookie,
   setProfilePromptDismissedCookie,
 } from "../cookies";
-import { type AppBindings, clientIpAddress } from "../http";
+import { type AppBindings, clientIpAddress, publicRequestUrl } from "../http";
 // The catalogs come in with `i18nFor`, so the locale predicates come from the
 // same module rather than half from here and half from the leaf.
 import { i18nFor, isSelectableLocale, isSupportedLocale } from "../i18n";
@@ -89,7 +89,10 @@ function loginConfirmUrl(
   next: string | null,
 ): string {
   const configured = context.env.AUTH_LOGIN_CONFIRM_URL;
-  const base = configured ?? new URL("/login/confirm", context.req.url).href;
+  // The public URL, not the request's: behind a proxy the request says http
+  // and the browser will not.
+  const base =
+    configured ?? new URL("/login/confirm", publicRequestUrl(context)).href;
   const url = new URL(base);
 
   url.searchParams.set("token", loginToken);

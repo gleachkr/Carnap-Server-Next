@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 
-import type { AppBindings } from "./http";
+import { type AppBindings, requestIsSecure } from "./http";
 
 export const LOCALE_COOKIE_NAME = "carnap_locale";
 
@@ -24,10 +24,12 @@ const LOCALE_COOKIE_MAX_AGE_SECONDS = 365 * 24 * 60 * 60;
  * --local-protocol https`, which is how an embedded LTI launch is tested
  * locally (see `design/LTI_TESTING.md`), gets the same cookies production
  * does, and a misconfigured plain-http deployment degrades to `Lax` instead of
- * setting a cookie the browser throws away.
+ * setting a cookie the browser throws away. Behind a proxy that terminates TLS
+ * the connection we see is not the one the browser is on; `requestIsSecure`
+ * reads the proxy's word for it, once the operator has said to trust it.
  */
 export function cookieSecure(context: Context<AppBindings>): boolean {
-  return new URL(context.req.url).protocol === "https:";
+  return requestIsSecure(context);
 }
 
 /** Whether the request already carries a chosen locale. */

@@ -4,7 +4,7 @@ import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
 import { LtiAdminService } from "../application/lti-admin";
 import type { LtiDeployment, LtiPlatform } from "../domain/lti";
-import type { AppBindings } from "../http";
+import { type AppBindings, publicRequestUrl } from "../http";
 import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
 import { renderAdminLtiPlatforms } from "../web/admin-lti";
@@ -180,7 +180,7 @@ adminLtiRoutes.get("/", async (context) => {
     });
   }
 
-  const url = new URL(context.req.url);
+  const url = publicRequestUrl(context);
 
   return renderAdminLtiPlatforms(context, {
     notices: platformNotices(context.get("i18n"))

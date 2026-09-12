@@ -55,6 +55,7 @@ function readEnv(): Env {
     ...present("ADMIN_BOOTSTRAP_TOKEN", process.env.ADMIN_BOOTSTRAP_TOKEN),
     ...present("AUTH_LOGIN_CONFIRM_URL", process.env.AUTH_LOGIN_CONFIRM_URL),
     ...present("AUTH_LOGIN_EMAIL_FROM", process.env.AUTH_LOGIN_EMAIL_FROM),
+    ...present("CARNAP_TRUST_PROXY", process.env.CARNAP_TRUST_PROXY),
     ...present("LTI_TOOL_PRIVATE_KEY", process.env.LTI_TOOL_PRIVATE_KEY),
     ...present("RESEND_API_KEY", process.env.RESEND_API_KEY),
     ...present("TURNSTILE_SECRET_KEY", process.env.TURNSTILE_SECRET_KEY),

@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 
-import type { AppBindings } from "../http";
+import { type AppBindings, requestIsSecure } from "../http";
 
 /**
  * `nosniff`, named rather than spelled inline because it is the one of the
@@ -337,7 +337,7 @@ export function securityHeadersMiddleware() {
     // by the time the policy is assembled.
     context.res.headers.set(CSP_HEADER_NAME, cspForResponse(context));
 
-    if (new URL(context.req.url).protocol === "https:") {
+    if (requestIsSecure(context)) {
       context.res.headers.set(HSTS_HEADER.name, HSTS_HEADER.value);
     }
   });

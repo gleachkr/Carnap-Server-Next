@@ -13,7 +13,7 @@ import {
   LtiService,
 } from "../application/lti";
 import { hasLocaleCookie, setLocaleCookie } from "../cookies";
-import type { AppBindings } from "../http";
+import { type AppBindings, publicRequestUrl } from "../http";
 import { i18nFor, isSupportedLocale } from "../i18n";
 import { deferred } from "../i18n/deferred";
 import { ltiLinkEmailSenderFromEnv } from "../infrastructure/email/resend";
@@ -168,7 +168,7 @@ async function handleLoginInitiation(
     const begun = await ltiServiceForContext(context).beginLogin({
       clientId: initiation.clientId,
       issuer: initiation.issuer,
-      launchUrl: new URL("/lti/launch", context.req.url).href,
+      launchUrl: new URL("/lti/launch", publicRequestUrl(context)).href,
       loginHint: initiation.loginHint,
       ltiMessageHint: initiation.ltiMessageHint,
     });
@@ -392,7 +392,7 @@ ltiRoutes.post("/deep-link/respond", async (context) => {
       actor,
       token,
       assignmentId.length === 0 ? null : assignmentId,
-      new URL("/lti/launch", context.req.url).href,
+      new URL("/lti/launch", publicRequestUrl(context)).href,
     );
     const header: { alg: string; kid?: string } = { alg: toolKey.alg };
 

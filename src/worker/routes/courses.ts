@@ -13,7 +13,7 @@ import type {
   CourseMembership,
 } from "../domain/courses";
 import { timestampNow } from "../domain/time";
-import type { AppBindings } from "../http";
+import { type AppBindings, publicRequestUrl } from "../http";
 import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
 import {
@@ -362,7 +362,7 @@ async function courseDetailPage(
     const newEnrollmentLinkUrl =
       token === null
         ? null
-        : new URL(`/enrollments/${token}`, context.req.url).href;
+        : new URL(`/enrollments/${token}`, publicRequestUrl(context)).href;
     const enrollmentLinks = isInstructor
       ? await service.listEnrollmentLinks(actor, detail.course.id)
       : [];

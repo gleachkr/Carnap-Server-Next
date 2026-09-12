@@ -10,7 +10,7 @@ import type {
   ContentSourceFormat,
 } from "../domain/content";
 import { CONTENT_SHARING_VALUES } from "../domain/content";
-import type { AppBindings } from "../http";
+import { type AppBindings, publicRequestUrl } from "../http";
 import {
   splitAtValue,
   type TranslatableMessage,
@@ -647,7 +647,7 @@ const RevisionSharingDialog: FC<{
 }> = ({ context, dialogId, revision }) => {
   const i18n = useI18n();
   const theory = revision.sourceFormat === "mm0";
-  const { origin } = new URL(context.req.url);
+  const { origin } = publicRequestUrl(context);
 
   return (
     <dialog class="modal-dialog" id={dialogId}>

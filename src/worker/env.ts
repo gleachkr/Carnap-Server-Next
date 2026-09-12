@@ -6,6 +6,13 @@ export interface Env {
   readonly AUTH_LOGIN_CONFIRM_URL?: string;
   readonly AUTH_LOGIN_EMAIL_FROM?: string;
   /**
+   * `1` when a reverse proxy terminates TLS in front of a self-hosted
+   * instance, which makes `X-Forwarded-Proto` and `X-Forwarded-Host` the
+   * truth about what the browser sees. Read only through `publicRequestUrl`
+   * in `http.ts`. Unset on Cloudflare, where the edge hands over a real URL.
+   */
+  readonly CARNAP_TRUST_PROXY?: string;
+  /**
    * Cloudflare's D1 binding, and optional because a self-hosted instance has
    * no such thing: it opens its own database and hands the stores straight to
    * each request (see `src/server/main.ts`), so nothing here is bound. Every

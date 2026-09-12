@@ -109,3 +109,77 @@ export function clientIpAddress(
 
   return forwarded === undefined || forwarded.length === 0 ? null : forwarded;
 }
+
+/**
+ * Whether `CARNAP_TRUST_PROXY` is on: the operator has put a reverse proxy in
+ * front of this instance and vouches that `X-Forwarded-*` reach us from it
+ * alone. `1` or `true`; anything else, including unset, is off.
+ *
+ * Tolerates a missing environment altogether — `app.request(path)` in a test
+ * binds none — since this runs on every response, from the security-headers
+ * middleware, and a missing binding must read as "off", not as a 500.
+ */
+function trustsProxy(env: Env | undefined): boolean {
+  const value = env?.CARNAP_TRUST_PROXY?.trim().toLowerCase();
+
+  return value === "1" || value === "true";
+}
+
+/**
+ * The URL the browser asked for, which behind a TLS-terminating proxy is not
+ * the one this server received: the proxy speaks https to the browser and
+ * plain http to us, so `context.req.url` says `http://` for every request an
+ * instance behind nginx or Caddy will ever see. Read the request's protocol
+ * (and host) from here, not from `context.req.url`, wherever the answer
+ * reaches the browser — a cookie's `Secure`, HSTS, an emailed login link, the
+ * `redirect_uri` an LMS is told to send its launch back to.
+ *
+ * Honours `X-Forwarded-Proto` and `X-Forwarded-Host` (first entry of each)
+ * only under `CARNAP_TRUST_PROXY`. Without the opt-in the headers are what any
+ * client can type, and an unproxied plain-http instance told it was https
+ * would mint `Secure` cookies the browser then throws away — the exact failure
+ * the protocol-based rule in `cookieSecure` exists to avoid. On Cloudflare the
+ * edge hands the Worker a real https URL and the flag stays unset.
+ */
+export function publicRequestUrl(context: Context<AppBindings>): URL {
+  const url = new URL(context.req.url);
+
+  if (!trustsProxy(context.env)) {
+    return url;
+  }
+
+  const protocol = forwardedEntry(
+    context,
+    "X-Forwarded-Proto",
+  )?.toLowerCase();
+  const host = forwardedEntry(context, "X-Forwarded-Host");
+
+  if (protocol === "https" || protocol === "http") {
+    url.protocol = `${protocol}:`;
+  }
+
+  if (host !== undefined) {
+    url.host = host;
+  }
+
+  return url;
+}
+
+/** Whether the browser is talking to us over https; see `publicRequestUrl`. */
+export function requestIsSecure(context: Context<AppBindings>): boolean {
+  return publicRequestUrl(context).protocol === "https:";
+}
+
+/**
+ * The first entry of a comma-separated forwarding header, or undefined when
+ * it is absent or empty. Proxies chain by appending, so the first entry is
+ * the one nearest the browser.
+ */
+function forwardedEntry(
+  context: Context<AppBindings>,
+  name: string,
+): string | undefined {
+  const first = context.req.header(name)?.split(",")[0]?.trim();
+
+  return first === undefined || first.length === 0 ? undefined : first;
+}
