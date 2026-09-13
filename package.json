@@ -32,10 +32,10 @@
     "validate": "bun run build:client && bun test && bun run check && bun run lint:check"
   },
   "dependencies": {
-    "@aufbau/compiler": "0.0.9",
-    "@aufbau/lsp": "0.0.9",
+    "@aufbau/compiler": "0.0.10",
+    "@aufbau/lsp": "0.0.10",
     "@aufbau/syntax": "0.0.5-canary.20260908T015426Z.16.gf0358d0874b8",
-    "@aufbau/verifier": "0.0.9",
+    "@aufbau/verifier": "0.0.10",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.12.4",
     "@codemirror/lint": "^6.9.7",
