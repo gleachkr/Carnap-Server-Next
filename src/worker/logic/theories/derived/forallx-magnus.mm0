@@ -1,4 +1,3 @@
-
 -- ## The derived and replacement rules: `forallx-magnus-plus`
 --
 -- Everything above this line is `forallx-magnus.mm0`, verbatim. This
@@ -11,17 +10,30 @@
 -- proof may cite is the course's call. Old Carnap draws the same line
 -- (`magnusQL` against `magnusQLPlus`), and the citation names are its.
 --
--- **The replacement rules apply to a whole line here.** The book lets `Comm`,
--- `DN`, `MC`, `↔ex`, `DeM` and `QN` rewrite *inside* a sentence — `¬¬P → Q`
--- to `P → Q` in one step — and old Carnap does too. This file states each as
--- an inference from the line's sentence to its rewritten form, which is the
--- whole-line case of the book's rule and no more: a student who wants the
--- antecedent rewritten derives `P → Q` the long way. Saying the book's rule
--- means finding the rewritten pair inside the sentence as well as the
--- context around it; the engine's `@abstract` recovers the context once it is
--- handed the pair, and finding the pair from a bare citation is the part still
--- to be built, on the engine side. When it is, these axioms become equations
--- over a context binder and the citations do not change.
+-- **The replacement rules rewrite inside a sentence**, as the book's do:
+-- `Comm`, `DN`, `MC`, `↔ex`, `DeM` and `QN` take a line to the same line with
+-- one subsentence exchanged for its equivalent, wherever that subsentence
+-- sits — `¬¬P → Q` to `P → Q` in one step. Each is an axiom over a *context*:
+-- `r` is the line's sentence with a hole `h` where the exchange happens, and
+-- `sbw φ h r` plugs φ into the hole. The `@abstract` line finds the hole. It
+-- walks the cited sentence and the new one together, and at the outermost
+-- position where they differ tries the two patterns — the rule's left and
+-- right sides — solving their variables from what it finds; the rest of the
+-- sentence, identical on both sides, becomes `r`. The `@rewrite` equations
+-- push `sbw` back through the connectives so the normalizer can check that
+-- the plugged context is the line as written. The sites the line changes
+-- are rewritten at once, one substitution serving all of them; two sites
+-- that would need different substitutions are refused, and so is a line
+-- that changes anything outside the exchange.
+--
+-- The hole `h` is a bound `wff` variable the engine invents (`@fresh h`
+-- draws on `wff`'s `@vars` pool, the single token `_0` declared above). A
+-- pool token is a name the surface language reads, so it is spelled so
+-- that a student cannot use it by accident: letter-free, because every
+-- letter is a delimiter here and would split anything else, and refused
+-- in a proof line by the closed-sentences lint, which sees a free
+-- variable. `_0` is the only token, and one is enough — a hole is bound
+-- per rule application, not consumed.
 --
 -- ## forallx rule → axiom name
 --
@@ -33,11 +45,12 @@
 --   DeM ... dem_neg_or / dem_and_neg / dem_neg_and / dem_or_neg
 --   QN .... qn_neg_all / qn_ex_neg / qn_neg_ex / qn_all_neg
 --
--- Where a name covers several rules — every replacement rule runs in both
--- directions, and `Comm` over three connectives — the alias sits on the last
--- axiom, which `@fallback`s onto the ones before it in turn, exactly as `&E`
--- does above: a line citing `DeM` gets whichever form fits, and the
--- certificate names the one that held.
+-- Where a name covers several rules — every replacement rule but `Comm` runs
+-- in both directions, and `Comm` over three connectives — the alias sits on
+-- the last axiom, which `@fallback`s onto the ones before it in turn, exactly
+-- as `&E` does above: a line citing `DeM` gets whichever form fits, and the
+-- certificate names the one that held. `Comm` needs no second direction: its
+-- two sides are each other's instances.
 
 -- Dilemma: proof by cases with the cases already conditionalized.
 --| @syntax alias DIL
@@ -55,72 +68,163 @@ axiom mt (ga de si: ctx) (ph ps: wff):
 axiom hs (ga de si: ctx) (ph ps ch: wff):
   $ ga ⊢ ph → ps $ > $ de ⊢ ps → ch $ > $ ga ; de ; si ⊢ ph → ch $;
 
+-- The hole, and substitution into it. `sbw th h r` is r with th at every
+-- occurrence of h; the equations push it through the syntax to the hole
+-- (`sbw_var`) or to a subsentence with no hole in it (`sbw_vac`). Atomic
+-- sentences contain no sentence, so `sbw_vac` is all they need.
+term sbw (th: wff) {h: wff} (ph: wff h): wff;
+--| @rewrite
+axiom sbw_var (th: wff) {h: wff}: $ sbw th h h ⟺ th $;
+--| @rewrite
+axiom sbw_vac (th: wff) {h: wff} (ph: wff): $ sbw th h ph ⟺ ph $;
+--| @rewrite
+axiom sbw_not (th: wff) {h: wff} (ph: wff h):
+  $ sbw th h (¬ ph) ⟺ ¬ (sbw th h ph) $;
+--| @rewrite
+axiom sbw_and (th: wff) {h: wff} (ph ps: wff h):
+  $ sbw th h (ph ∧ ps) ⟺ (sbw th h ph ∧ sbw th h ps) $;
+--| @rewrite
+axiom sbw_or (th: wff) {h: wff} (ph ps: wff h):
+  $ sbw th h (ph ∨ ps) ⟺ (sbw th h ph ∨ sbw th h ps) $;
+--| @rewrite
+axiom sbw_imp (th: wff) {h: wff} (ph ps: wff h):
+  $ sbw th h (ph → ps) ⟺ (sbw th h ph → sbw th h ps) $;
+--| @rewrite
+axiom sbw_iff (th: wff) {h: wff} (ph ps: wff h):
+  $ sbw th h (ph ↔ ps) ⟺ (sbw th h ph ↔ sbw th h ps) $;
+--| @rewrite
+axiom sbw_all {h: wff} {x: var} (th: wff x) (ph: wff h x):
+  $ sbw th h (∀ x ph) ⟺ ∀ x (sbw th h ph) $;
+--| @rewrite
+axiom sbw_ex {h: wff} {x: var} (th: wff x) (ph: wff h x):
+  $ sbw th h (∃ x ph) ⟺ ∃ x (sbw th h ph) $;
+
 -- Commutativity, of each of the three commutative connectives.
-axiom and_comm (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps ∧ ph $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph ∧ ps $ $ ps ∧ ph $
+--| @fresh h
+axiom and_comm (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (ph ∧ ps) h r $ > $ ga ; de ⊢ sbw (ps ∧ ph) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph ∨ ps $ $ ps ∨ ph $
+--| @fresh h
 --| @fallback and_comm
-axiom or_comm (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ph ∨ ps $ > $ ga ; de ⊢ ps ∨ ph $;
+axiom or_comm (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (ph ∨ ps) h r $ > $ ga ; de ⊢ sbw (ps ∨ ph) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph ↔ ps $ $ ps ↔ ph $
+--| @fresh h
 --| @fallback or_comm
 --| @syntax alias Comm
-axiom iff_comm (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ph ↔ ps $ > $ ga ; de ⊢ ps ↔ ph $;
+axiom iff_comm (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (ph ↔ ps) h r $ > $ ga ; de ⊢ sbw (ps ↔ ph) h r $;
 
 -- Double negation, both ways.
-axiom dn_elim (ga de: ctx) (ph: wff): $ ga ⊢ ¬ ¬ ph $ > $ ga ; de ⊢ ph $;
+--| @view (ga de: ctx) {h: wff} (ph: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ ¬ ph $ $ ph $
+--| @fresh h
+axiom dn_elim (ga de: ctx) {h: wff} (ph: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ ¬ ph) h r $ > $ ga ; de ⊢ sbw ph h r $;
+--| @view (ga de: ctx) {h: wff} (ph: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph $ $ ¬ ¬ ph $
+--| @fresh h
 --| @fallback dn_elim
 --| @syntax alias DN
-axiom dn_intro (ga de: ctx) (ph: wff): $ ga ⊢ ph $ > $ ga ; de ⊢ ¬ ¬ ph $;
+axiom dn_intro (ga de: ctx) {h: wff} (ph: wff) (r: wff h):
+  $ ga ⊢ sbw ph h r $ > $ ga ; de ⊢ sbw (¬ ¬ ph) h r $;
 
 -- Material conditional: a conditional as a disjunction and a disjunction as
 -- a conditional, each both ways.
-axiom mc_imp_or (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ph → ps $ > $ ga ; de ⊢ ¬ ph ∨ ps $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph → ps $ $ ¬ ph ∨ ps $
+--| @fresh h
+axiom mc_imp_or (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (ph → ps) h r $ > $ ga ; de ⊢ sbw (¬ ph ∨ ps) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ ph ∨ ps $ $ ph → ps $
+--| @fresh h
 --| @fallback mc_imp_or
-axiom mc_or_imp (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ¬ ph ∨ ps $ > $ ga ; de ⊢ ph → ps $;
+axiom mc_or_imp (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ ph ∨ ps) h r $ > $ ga ; de ⊢ sbw (ph → ps) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph ∨ ps $ $ ¬ ph → ps $
+--| @fresh h
 --| @fallback mc_or_imp
-axiom mc_or_negimp (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ph ∨ ps $ > $ ga ; de ⊢ ¬ ph → ps $;
+axiom mc_or_negimp (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (ph ∨ ps) h r $ > $ ga ; de ⊢ sbw (¬ ph → ps) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ ph → ps $ $ ph ∨ ps $
+--| @fresh h
 --| @fallback mc_or_negimp
 --| @syntax alias MC
-axiom mc_negimp_or (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ¬ ph → ps $ > $ ga ; de ⊢ ph ∨ ps $;
+axiom mc_negimp_or (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ ph → ps) h r $ > $ ga ; de ⊢ sbw (ph ∨ ps) h r $;
 
 -- Biconditional exchange: a biconditional as the conjunction of its two
 -- conditionals, both ways.
-axiom iffex_split (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ph ↔ ps $ > $ ga ; de ⊢ (ph → ps) ∧ (ps → ph) $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ph ↔ ps $ $ (ph → ps) ∧ (ps → ph) $
+--| @fresh h
+axiom iffex_split (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (ph ↔ ps) h r $ > $ ga ; de ⊢ sbw ((ph → ps) ∧ (ps → ph)) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ (ph → ps) ∧ (ps → ph) $ $ ph ↔ ps $
+--| @fresh h
 --| @fallback iffex_split
 --| @syntax alias ↔ex <->ex
-axiom iffex_join (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ (ph → ps) ∧ (ps → ph) $ > $ ga ; de ⊢ ph ↔ ps $;
+axiom iffex_join (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw ((ph → ps) ∧ (ps → ph)) h r $ > $ ga ; de ⊢ sbw (ph ↔ ps) h r $;
 
 -- De Morgan, the four forms.
-axiom dem_neg_or (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ¬ (ph ∨ ps) $ > $ ga ; de ⊢ ¬ ph ∧ ¬ ps $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ (ph ∨ ps) $ $ ¬ ph ∧ ¬ ps $
+--| @fresh h
+axiom dem_neg_or (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ (ph ∨ ps)) h r $ > $ ga ; de ⊢ sbw (¬ ph ∧ ¬ ps) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ ph ∧ ¬ ps $ $ ¬ (ph ∨ ps) $
+--| @fresh h
 --| @fallback dem_neg_or
-axiom dem_and_neg (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ¬ ph ∧ ¬ ps $ > $ ga ; de ⊢ ¬ (ph ∨ ps) $;
+axiom dem_and_neg (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ ph ∧ ¬ ps) h r $ > $ ga ; de ⊢ sbw (¬ (ph ∨ ps)) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ (ph ∧ ps) $ $ ¬ ph ∨ ¬ ps $
+--| @fresh h
 --| @fallback dem_and_neg
-axiom dem_neg_and (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ¬ (ph ∧ ps) $ > $ ga ; de ⊢ ¬ ph ∨ ¬ ps $;
+axiom dem_neg_and (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ (ph ∧ ps)) h r $ > $ ga ; de ⊢ sbw (¬ ph ∨ ¬ ps) h r $;
+--| @view (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h) (p q: wff): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ ph ∨ ¬ ps $ $ ¬ (ph ∧ ps) $
+--| @fresh h
 --| @fallback dem_neg_and
 --| @syntax alias DeM
-axiom dem_or_neg (ga de: ctx) (ph ps: wff):
-  $ ga ⊢ ¬ ph ∨ ¬ ps $ > $ ga ; de ⊢ ¬ (ph ∧ ps) $;
+axiom dem_or_neg (ga de: ctx) {h: wff} (ph ps: wff) (r: wff h):
+  $ ga ⊢ sbw (¬ ph ∨ ¬ ps) h r $ > $ ga ; de ⊢ sbw (¬ (ph ∧ ps)) h r $;
 
--- Quantifier negation, the four forms. The contexts may mention the bound
--- variable, as the quantifier rules above allow.
-axiom qn_neg_all {x: var} (ga de: ctx x) (ph: wff x):
-  $ ga ⊢ ¬ (∀ x ph) $ > $ ga ; de ⊢ ∃ x (¬ ph) $;
+-- Quantifier negation, the four forms. The exchanged subsentence binds a
+-- variable, so the pattern does too, and the context and the line may
+-- mention it outside the site, as the quantifier rules above allow.
+--| @view {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x) (p q: wff x): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ (∀ x ph) $ $ ∃ x (¬ ph) $
+--| @fresh h
+axiom qn_neg_all {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x):
+  $ ga ⊢ sbw (¬ (∀ x ph)) h r $ > $ ga ; de ⊢ sbw (∃ x (¬ ph)) h r $;
+--| @view {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x) (p q: wff x): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ∃ x (¬ ph) $ $ ¬ (∀ x ph) $
+--| @fresh h
 --| @fallback qn_neg_all
-axiom qn_ex_neg {x: var} (ga de: ctx x) (ph: wff x):
-  $ ga ⊢ ∃ x (¬ ph) $ > $ ga ; de ⊢ ¬ (∀ x ph) $;
+axiom qn_ex_neg {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x):
+  $ ga ⊢ sbw (∃ x (¬ ph)) h r $ > $ ga ; de ⊢ sbw (¬ (∀ x ph)) h r $;
+--| @view {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x) (p q: wff x): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ¬ (∃ x ph) $ $ ∀ x (¬ ph) $
+--| @fresh h
 --| @fallback qn_ex_neg
-axiom qn_neg_ex {x: var} (ga de: ctx x) (ph: wff x):
-  $ ga ⊢ ¬ (∃ x ph) $ > $ ga ; de ⊢ ∀ x (¬ ph) $;
+axiom qn_neg_ex {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x):
+  $ ga ⊢ sbw (¬ (∃ x ph)) h r $ > $ ga ; de ⊢ sbw (∀ x (¬ ph)) h r $;
+--| @view {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x) (p q: wff x): $ ga ⊢ p $ > $ ga ; de ⊢ q $
+--| @abstract r p q h $ ∀ x (¬ ph) $ $ ¬ (∃ x ph) $
+--| @fresh h
 --| @fallback qn_neg_ex
 --| @syntax alias QN
-axiom qn_all_neg {x: var} (ga de: ctx x) (ph: wff x):
-  $ ga ⊢ ∀ x (¬ ph) $ > $ ga ; de ⊢ ¬ (∃ x ph) $;
+axiom qn_all_neg {h: wff} {x: var} (ga de: ctx x) (ph: wff x) (r: wff h x):
+  $ ga ⊢ sbw (∀ x (¬ ph)) h r $ > $ ga ; de ⊢ sbw (¬ (∃ x ph)) h r $;

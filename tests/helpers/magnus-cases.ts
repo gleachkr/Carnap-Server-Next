@@ -342,8 +342,8 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
   // The derived and replacement rules, which only `forallx-magnus-plus`
   // declares. Each is cited by the book's name, and every form a name covers
   // is exercised — the fallback chain has to land on each of them. The
-  // replacement rules are applied to whole lines, which is all this file
-  // states of them; see its header.
+  // replacement rules are applied to whole lines first, then inside a
+  // sentence, as the book applies them.
   {
     name: "DIL",
     theoremDecl: "theorem diltest: $ P ∨ Q ; P → R ; Q → R ⊢ R $;",
@@ -452,5 +452,82 @@ export const MAGNUS_CASES: readonly MagnusCase[] = [
       "~3xGx                 :QN 4",
       "~@xFx & ~3xGx         :and_intro 5 6",
     ].join("\n"),
+  },
+  // ── Replacement inside a sentence ───────────────────────────────────────
+  // The exchange sits under a connective, under a quantifier, or inside a
+  // subproof, whose assumption joins the line's context — the shape the
+  // engine's ACUI split of the context has to survive.
+  {
+    name: "DN inside a conditional, and inside a subproof",
+    theoremDecl: "theorem dnin: $ ¬ ¬ P → Q ⊢ P → ¬ ¬ Q $;",
+    goalName: "dnin",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "~~P -> Q              :PR",
+      "P -> Q                :DN 1",
+      "    P                 :AS",
+      "    Q                 :->E 2 3",
+      "    ~~Q               :DN 4",
+      "P -> ~~Q              :->I 3-5",
+    ].join("\n"),
+  },
+  {
+    name: "Comm on a subsentence, then on the whole",
+    theoremDecl: "theorem commin: $ (P ↔ Q) & S ⊢ S & (Q ↔ P) $;",
+    goalName: "commin",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "(P <-> Q) & S         :PR",
+      "(Q <-> P) & S         :Comm 1",
+      "S & (Q <-> P)         :Comm 2",
+    ].join("\n"),
+  },
+  {
+    name: "MC and DeM under a conditional",
+    theoremDecl: "theorem mcdemin: $ S → ¬ (P & Q) ⊢ S → (P → ¬ Q) $;",
+    goalName: "mcdemin",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "S -> ~(P & Q)         :PR",
+      "S -> (~P \\/ ~Q)       :DeM 1",
+      "S -> (P -> ~Q)        :MC 2",
+    ].join("\n"),
+  },
+  {
+    name: "↔ex under a negation",
+    theoremDecl: "theorem iffexin: $ ¬ (P ↔ Q) ⊢ ¬ ((P → Q) & (Q → P)) $;",
+    goalName: "iffexin",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "~(P <-> Q)                :PR",
+      "~((P -> Q) & (Q -> P))    :↔ex 1",
+    ].join("\n"),
+  },
+  {
+    name: "QN under a quantifier, and beside an unrelated conjunct",
+    theoremDecl:
+      "theorem qnin {x y: var} (a: name): $ ∀ y (G(y) → ¬ ∃ x F(x, y)) ; G(a) & ¬ ∀ x F(x, a) ⊢ ∀ y (G(y) → ∀ x ¬ F(x, y)) & (G(a) & ∃ x ¬ F(x, a)) $;",
+    goalName: "qnin",
+    system: "forallx-magnus-plus",
+    fitch: [
+      "@y(Gy -> ~3xFxy)                          :PR",
+      "Ga & ~@xFxa                               :PR",
+      "@y(Gy -> @x~Fxy)                          :QN 1",
+      "Ga & 3x~Fxa                               :QN 2",
+      "@y(Gy -> @x~Fxy) & (Ga & 3x~Fxa)          :and_intro 3 4",
+    ].join("\n"),
+  },
+  {
+    // Two sites that would need different exchanges are refused, as is a
+    // line that changes anything beyond the one exchange: this is one DN step
+    // claiming two.
+    name: "DN at two sites with different instances (must be refused)",
+    theoremDecl: "theorem dntwice: $ P & Q ⊢ ¬ ¬ P & ¬ ¬ Q $;",
+    goalName: "dntwice",
+    system: "forallx-magnus-plus",
+    shouldFail: true,
+    fitch: ["P & Q                 :PR", "~~P & ~~Q             :DN 1"].join(
+      "\n",
+    ),
   },
 ];

@@ -974,10 +974,13 @@ additional rules:
 A shared citation name can select whichever rule form fits, such as either
 side of disjunctive syllogism or either direction of a replacement rule.
 
-Replacement rules currently apply to whole lines. Magnus's textbook also
-allows replacement inside a larger sentence, but this implementation does
-not yet infer that from a bare citation. Derive the intermediate result
-explicitly instead.
+Magnus's replacement rules (`Comm`, `DN`, `MC`, `↔ex`, `DeM`, `QN`) apply
+inside a larger sentence, as in the textbook: `~~P -> Q` becomes `P -> Q`
+by `DN` in one step, under a connective, under a quantifier, or inside a
+subproof. One step makes one exchange, at one site or at several sites of
+the same subsentence; a line that changes anything else, or would need two
+different exchanges, is refused. Calgary's `DeM` and `CQ` still apply to
+whole lines only.
 
 ### Rule aliases and structural roles
 

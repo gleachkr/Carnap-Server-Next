@@ -134,6 +134,12 @@ delimiter $ ( ) [ ] , ; { } $;
 -- `sentence` is uninterpreted metadata to @aufbau/syntax — it records which sort
 -- *this application* reads student input at. See Calgary's note on `provable`.
 --| @syntax role sentence
+-- `_0` is for `forallx-magnus-plus`: the hole its replacement rules bind is
+-- a `wff` variable the engine invents (`@fresh`), and this is the pool it
+-- draws on. Letter-free so the delimiters above leave it whole; a student
+-- who types it writes a free variable, which the closed-sentences lint
+-- refuses.
+--| @vars _0
 provable sort wff;
 sort ctx;
 provable sort judgement;
