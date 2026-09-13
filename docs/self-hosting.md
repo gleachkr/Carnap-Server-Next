@@ -350,9 +350,38 @@ failed upgrade may require restoring the pre-upgrade backup.
 
 ## LTI
 
-Set `LTI_TOOL_PRIVATE_KEY` to a signing JWK with `kid` and `alg`. The public
-key is served at `/lti/jwks`. The instance must be reachable from the LMS
-server as well as from students' browsers.
+Set `LTI_TOOL_PRIVATE_KEY` to a signing JWK with `kid` and `alg`. The value
+is the private key itself as one line of JSON, not a path to a file. The
+public key is computed from the private key and served at `/lti/jwks`.
+
+This command, run from the repository root after `bun install`, prints a 
+suitable RSA key:
+
+```sh
+bun -e '
+const { generateKeyPair, exportJWK } = await import("jose");
+const { privateKey } = await generateKeyPair("RS256", { extractable: true });
+const jwk = await exportJWK(privateKey);
+console.log(JSON.stringify({ ...jwk, alg: "RS256", use: "sig",
+  kid: "carnap-" + Date.now().toString(36) }));
+'
+```
+
+Copy the whole line into the environment file, unquoted:
+
+```sh
+LTI_TOOL_PRIVATE_KEY={"kty":"RSA","n":"…","e":"AQAB","d":"…","alg":"RS256","use":"sig","kid":"carnap-…"}
+```
+
+Keep the key with the other secrets and out of version control. The `kid`
+is what an LMS uses to select the key from `/lti/jwks`, so give a
+replacement key a different `kid`; platforms registered against the old one
+will need to refetch the keyset.
+
+Registration is manual on both sides. `/admin/lti` shows the three tool
+URLs the LMS asks for (initiate login, launch, and public keyset) and takes
+the platform's issuer, client ID, authentication and token URLs, keyset
+URL, and deployment ID in return.
 
 Without a tool key, LTI reports itself unconfigured and the passback sweep
 returns without querying for jobs. With LTI configured, the server runs the
