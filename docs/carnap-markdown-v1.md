@@ -1263,9 +1263,9 @@ inferences from one sentence to another, and that is what ships. Magnus lets
 `¬¬P → Q` to `P → Q` in one step — and old Carnap does too; here each is the
 inference from a line's sentence to its rewritten form, and no more. A student
 who wants the antecedent rewritten derives it the long way. Saying the book's
-rule needs the engine to infer the surrounding context along with the
-rewrite; when it can, the same citations will reach inside a sentence and no
-lesson changes.
+rule means the engine finding the rewritten pair inside the sentence from a
+bare citation, which it does not yet do; when it does, the same citations will
+reach inside a sentence and no lesson changes.
 
 Magnus's `A` and `E` are **not** given back as quantifier spellings. Carnap
 reads `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, by

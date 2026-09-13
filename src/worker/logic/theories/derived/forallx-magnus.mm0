@@ -17,9 +17,11 @@
 -- an inference from the line's sentence to its rewritten form, which is the
 -- whole-line case of the book's rule and no more: a student who wants the
 -- antecedent rewritten derives `P → Q` the long way. Saying the book's rule
--- needs the engine to infer the surrounding context as well as the rewrite,
--- which its `@abstract` cannot yet do; when it can, these axioms take a
--- context binder and the citations do not change.
+-- means finding the rewritten pair inside the sentence as well as the
+-- context around it; the engine's `@abstract` recovers the context once it is
+-- handed the pair, and finding the pair from a bare citation is the part still
+-- to be built, on the engine side. When it is, these axioms become equations
+-- over a context binder and the citations do not change.
 --
 -- ## forallx rule → axiom name
 --
