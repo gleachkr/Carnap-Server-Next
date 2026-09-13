@@ -651,6 +651,11 @@ a proof with `@aufbau/compiler` into an MMB certificate. The server verifies
 that certificate with `@aufbau/verifier` against the saved theory and goal.
 Browser success state and submitted proof text are not trusted for grading.
 
+The engine's `sorry!` justification, which admits a line without a rule, is
+not available in an exercise: a line justified that way is shown as a
+problem, the widget sends no certificate, and the server would refuse the
+certificate if one arrived.
+
 `aufbau-proof` is the linear proof-script editor. Its body contains a prompt,
 a `theorem` declaration, a `----` separator, and a starter proof body. The
 goal is fixed; students edit only the proof body.

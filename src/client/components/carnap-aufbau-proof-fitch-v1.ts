@@ -64,7 +64,11 @@ import {
   type RuleCitationShape,
 } from "../../worker/exercises/aufbau-proof-fitch/translate";
 import type { AufbauProofFitchPublicData } from "../../worker/exercises/aufbau-proof-fitch/types";
-import { loadProofCompiler } from "../proof-compiler";
+import {
+  type CompileDiagnostic,
+  loadProofCompiler,
+  readCompileResult,
+} from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-fitch-v1.css" with {
   type: "text",
@@ -678,8 +682,9 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
 
     this.fitchText = fitchText;
     this.proofText = translation.proofText;
-    if (result.ok === true && result.mmbBytes !== undefined) {
-      this.mmb = bytesToBase64(result.mmbBytes);
+    const verdict = readCompileResult(result);
+    if (verdict.certificate !== null) {
+      this.mmb = bytesToBase64(verdict.certificate);
       this.setMark("ok");
     } else {
       this.mmb = "";
@@ -688,7 +693,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
 
     // The verdict lives on the "Prove" mark; specific problems surface inline as
     // editor squiggles with hover detail (empty on success — this clears them).
-    this.applyCompilerDiagnostics(result, translation);
+    this.applyCompilerDiagnostics(verdict.problems, translation);
     this.syncAnswer();
   }
 
@@ -788,7 +793,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
    * `lineSpans`). Spans that land outside any line fall back to line 0.
    */
   private applyCompilerDiagnostics(
-    result: CompileResult,
+    problems: readonly CompileDiagnostic[],
     translation: ReturnType<typeof fitchToAuf>,
   ): void {
     const editor = this.editor;
@@ -801,51 +806,31 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       return;
     }
 
-    const raw = result.diagnostics;
     const diagnostics: Diagnostic[] = [];
 
-    if (Array.isArray(raw)) {
-      for (const item of raw) {
-        if (typeof item !== "object" || item === null) {
-          continue;
-        }
-        const record = item as {
-          message?: unknown;
-          severity?: unknown;
-          spanStart?: unknown;
-        };
-        const message =
-          typeof record.message === "string"
-            ? record.message
-            : this.t("Problem in the proof.");
-        const severity =
-          record.severity === "warning"
-            ? "warning"
-            : record.severity === "info"
-              ? "info"
-              : "error";
+    for (const problem of problems) {
+      const message = problem.message ?? this.t("Problem in the proof.");
 
-        let sourceLine = 0;
-        if (typeof record.spanStart === "number") {
-          const charStart = byteToCharIndex(
-            translation.proofText,
-            record.spanStart,
-          );
-          const span = translation.lineSpans.find(
-            (candidate) =>
-              charStart >= candidate.from && charStart <= candidate.to,
-          );
-          sourceLine = span?.sourceLine ?? 0;
-        }
-
-        const range = this.lineRange(sourceLine);
-        diagnostics.push({
-          from: range.from,
-          message,
-          severity,
-          to: Math.max(range.to, range.from + 1),
-        });
+      let sourceLine = 0;
+      if (problem.spanStart !== undefined) {
+        const charStart = byteToCharIndex(
+          translation.proofText,
+          problem.spanStart,
+        );
+        const span = translation.lineSpans.find(
+          (candidate) =>
+            charStart >= candidate.from && charStart <= candidate.to,
+        );
+        sourceLine = span?.sourceLine ?? 0;
       }
+
+      const range = this.lineRange(sourceLine);
+      diagnostics.push({
+        from: range.from,
+        message,
+        severity: problem.severity,
+        to: Math.max(range.to, range.from + 1),
+      });
     }
 
     editor.dispatch(setDiagnostics(editor.state, diagnostics));

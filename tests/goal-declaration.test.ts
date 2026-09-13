@@ -22,6 +22,12 @@ import { isAufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-pro
 
 let compiler: LoadedCompiler;
 
+function errorsIn(result: { readonly diagnostics?: unknown }): unknown[] {
+  return (Array.isArray(result.diagnostics) ? result.diagnostics : []).filter(
+    (one) => (one as { severity?: unknown }).severity === "error",
+  );
+}
+
 beforeAll(async () => {
   compiler = await loadCompiler({
     wasmBytes: readFileSync(
@@ -82,7 +88,10 @@ S     :or_elim 1 4-5 6-7
     expect(translated.diagnostics).toEqual([]);
 
     const result = compiler.compile(theory.mm0, translated.proofText);
-    expect(result.diagnostics).toEqual([]);
+    // A clean compile carries the engine's warnings since 0.0.9 — here, that
+    // ∨E's hidden context binders admit more than one split. Errors are what
+    // would mean the goal did not declare.
+    expect(errorsIn(result)).toEqual([]);
     expect(result.ok).toBe(true);
   });
 

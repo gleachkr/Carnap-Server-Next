@@ -62,7 +62,11 @@ import type {
   PrawitzProofNode,
 } from "../../worker/exercises/aufbau-proof-prawitz/types";
 import type { CorrectnessMarkState } from "../../worker/exercises/correctness-mark";
-import { loadProofCompiler } from "../proof-compiler";
+import {
+  type CompileDiagnostic,
+  loadProofCompiler,
+  readCompileResult,
+} from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-prawitz-v1.css" with {
   type: "text",
@@ -1648,17 +1652,17 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       return;
     }
 
+    const verdict = readCompileResult(result);
     const nodeErrors = {
-      ...this.collectNodeErrors(result, proof),
+      ...this.collectNodeErrors(verdict.problems, proof),
       ...this.structuralErrors(),
     };
     if (
-      result.ok === true &&
-      result.mmbBytes !== undefined &&
+      verdict.certificate !== null &&
       this.structural.length === 0 &&
       this.formulaProblems.length === 0
     ) {
-      this.mmb = bytesToBase64(result.mmbBytes);
+      this.mmb = bytesToBase64(verdict.certificate);
       this.setStatus({ mark: "ok", markTitle: "", nodeErrors });
     } else {
       this.mmb = "";
@@ -1698,7 +1702,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
    * translator's line map.
    */
   private collectNodeErrors(
-    result: CompileResult,
+    problems: readonly CompileDiagnostic[],
     proof: string,
   ): Record<string, string> {
     // Every node error is a reason, and `terse` and `none` withhold reasons.
@@ -1708,25 +1712,13 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       return {};
     }
 
-    const raw = result.diagnostics;
-    if (!Array.isArray(raw)) {
-      return {};
-    }
-
     const fallbackId = this.doc.trees[0]?.id ?? "";
     const messages = new Map<string, string[]>();
-    for (const item of raw) {
-      if (typeof item !== "object" || item === null) {
-        continue;
-      }
-      const record = item as { message?: unknown; spanStart?: unknown };
-      const message =
-        typeof record.message === "string"
-          ? record.message
-          : this.t("Problem here.");
+    for (const problem of problems) {
+      const message = problem.message ?? this.t("Problem here.");
       const charIndex =
-        typeof record.spanStart === "number"
-          ? byteToCharIndex(proof, record.spanStart)
+        problem.spanStart !== undefined
+          ? byteToCharIndex(proof, problem.spanStart)
           : -1;
       const span =
         charIndex >= 0

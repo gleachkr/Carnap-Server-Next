@@ -1,4 +1,4 @@
-import type { LoadedCompiler } from "@aufbau/compiler";
+import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 
 /**
  * The one Aufbau compiler a page gets, and the one place its language is chosen.
@@ -73,4 +73,94 @@ export function loadProofCompiler(): Promise<LoadedCompiler> {
   }
 
   return compilerPromise;
+}
+
+/**
+ * One diagnostic of a compile, as the widgets read it: the engine's record
+ * with the fields they use typed, and everything else left where it was.
+ */
+export interface CompileDiagnostic {
+  /** The engine's own code for the diagnostic (`SorryLine`, `MissingBinder`…). */
+  readonly error?: string;
+  readonly message?: string;
+  readonly severity: "error" | "info" | "warning";
+  /** UTF-8 byte offsets into the proof text the engine was handed. */
+  readonly spanEnd?: number;
+  readonly spanStart?: number;
+}
+
+/**
+ * What a compile established, read the way a proof exercise needs to read it.
+ *
+ * `certificate` is the MMB when — and only when — it proves the goal: a
+ * compile that admits a line with `sorry!` still returns `ok` and an MMB, but
+ * that MMB carries a `Sorry` instruction the verifier refuses, so handing it to
+ * the server would only turn a green mark here into a red one there. A student
+ * proof never admits a line; an admitted line is a problem at that line, and
+ * the engine's warning is promoted to say so.
+ *
+ * Every other warning is dropped. Since `@aufbau/compiler@0.0.9` a clean
+ * compile carries its warnings, and the ones the engine has are not about the
+ * student's proof: `AmbiguousAcuiMatch` says the hidden context binders of a
+ * slack sequent rule could be split more than one way (they can; any split
+ * proves the line), and the `Unused…`/`Unknown…` family is about the theory
+ * and goal, which the instructor wrote. Underlining a correct line for either
+ * is noise the student cannot act on.
+ */
+export interface CompileVerdict {
+  readonly certificate: Uint8Array | null;
+  /** The diagnostics a student should see, errors first as the engine lists them. */
+  readonly problems: readonly CompileDiagnostic[];
+}
+
+const ADMITTED_LINE = "SorryLine";
+
+export function readCompileResult(result: CompileResult): CompileVerdict {
+  const problems: CompileDiagnostic[] = [];
+  let admitted = false;
+
+  if (Array.isArray(result.diagnostics)) {
+    for (const item of result.diagnostics) {
+      if (typeof item !== "object" || item === null) {
+        continue;
+      }
+      const record = item as {
+        readonly error?: unknown;
+        readonly message?: unknown;
+        readonly severity?: unknown;
+        readonly spanEnd?: unknown;
+        readonly spanStart?: unknown;
+      };
+      const isAdmission = record.error === ADMITTED_LINE;
+
+      if (record.severity === "warning" && !isAdmission) {
+        continue;
+      }
+      if (isAdmission) {
+        admitted = true;
+      }
+
+      problems.push({
+        ...(typeof record.error === "string" ? { error: record.error } : {}),
+        ...(typeof record.message === "string"
+          ? { message: record.message }
+          : {}),
+        severity:
+          record.severity === "info" && !isAdmission ? "info" : "error",
+        ...(typeof record.spanEnd === "number"
+          ? { spanEnd: record.spanEnd }
+          : {}),
+        ...(typeof record.spanStart === "number"
+          ? { spanStart: record.spanStart }
+          : {}),
+      });
+    }
+  }
+
+  const certificate =
+    result.ok === true && result.mmbBytes !== undefined && !admitted
+      ? result.mmbBytes
+      : null;
+
+  return { certificate, problems };
 }

@@ -28,7 +28,11 @@ import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/strings";
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
-import { loadProofCompiler } from "../proof-compiler";
+import {
+  type CompileDiagnostic,
+  loadProofCompiler,
+  readCompileResult,
+} from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-v1.css" with { type: "text" };
 
@@ -279,8 +283,9 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
       return;
     }
 
-    if (result.ok === true && result.mmbBytes !== undefined) {
-      this.mmb = bytesToBase64(result.mmbBytes);
+    const verdict = readCompileResult(result);
+    if (verdict.certificate !== null) {
+      this.mmb = bytesToBase64(verdict.certificate);
       this.proofText = proof;
       this.setMark("ok");
     } else {
@@ -292,7 +297,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     // The verdict lives on the action bar's correctness mark; specific problems
     // surface inline as editor squiggles with hover detail (empty on success —
     // this clears them).
-    this.applyDiagnostics(result, proof);
+    this.applyDiagnostics(verdict.problems, proof);
     this.syncAnswer();
   }
 
@@ -327,7 +332,10 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
    * renders the underlines and hover tooltips. A span that lands in the frozen
    * header (e.g. "proof block is empty") is clamped to the start of the body.
    */
-  private applyDiagnostics(result: CompileResult, proof: string): void {
+  private applyDiagnostics(
+    problems: readonly CompileDiagnostic[],
+    proof: string,
+  ): void {
     const editor = this.editor;
     if (editor === null) {
       return;
@@ -338,56 +346,32 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
       return;
     }
 
-    const raw = result.diagnostics;
     const docLength = editor.state.doc.length;
     const headerLength = this.goalName.length + PROOF_HEADER_SEPARATOR.length;
     const diagnostics: Diagnostic[] = [];
 
-    if (Array.isArray(raw)) {
-      for (const item of raw) {
-        if (typeof item !== "object" || item === null) {
-          continue;
-        }
-        const record = item as {
-          message?: unknown;
-          severity?: unknown;
-          spanStart?: unknown;
-          spanEnd?: unknown;
-        };
-        const message =
-          typeof record.message === "string"
-            ? record.message
-            : this.t("Problem in the proof.");
-        const severity =
-          record.severity === "warning"
-            ? "warning"
-            : record.severity === "info"
-              ? "info"
-              : "error";
+    for (const problem of problems) {
+      const message = problem.message ?? this.t("Problem in the proof.");
 
-        let from = 0;
-        let to = docLength;
-        if (
-          typeof record.spanStart === "number" &&
-          typeof record.spanEnd === "number"
-        ) {
-          from = byteToCharIndex(proof, record.spanStart) - headerLength;
-          to = byteToCharIndex(proof, record.spanEnd) - headerLength;
-        }
-        from = clamp(from, 0, docLength);
-        to = clamp(to, from, docLength);
-        // A zero-width span underlines nothing; nudge it to cover one character
-        // so the squiggle is visible (unless the body is genuinely empty).
-        if (from === to && docLength > 0) {
-          if (to < docLength) {
-            to += 1;
-          } else {
-            from -= 1;
-          }
-        }
-
-        diagnostics.push({ from, message, severity, to });
+      let from = 0;
+      let to = docLength;
+      if (problem.spanStart !== undefined && problem.spanEnd !== undefined) {
+        from = byteToCharIndex(proof, problem.spanStart) - headerLength;
+        to = byteToCharIndex(proof, problem.spanEnd) - headerLength;
       }
+      from = clamp(from, 0, docLength);
+      to = clamp(to, from, docLength);
+      // A zero-width span underlines nothing; nudge it to cover one character
+      // so the squiggle is visible (unless the body is genuinely empty).
+      if (from === to && docLength > 0) {
+        if (to < docLength) {
+          to += 1;
+        } else {
+          from -= 1;
+        }
+      }
+
+      diagnostics.push({ from, message, severity: problem.severity, to });
     }
 
     editor.dispatch(setDiagnostics(editor.state, diagnostics));

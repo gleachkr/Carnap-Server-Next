@@ -10,6 +10,7 @@
  * the bundle the editor loads) is what moves between them.
  */
 
+import type { CompileResult } from "@aufbau/compiler";
 import type { EditorView } from "@codemirror/view";
 import { raw } from "hono/html";
 import type { CompilerDiagnostic } from "../worker/application/content/authoring-toolkit";
@@ -52,7 +53,7 @@ import {
   payloadTranslator,
 } from "../worker/web/ui-strings";
 import { createMarkdownEditor, showDiagnostics } from "./markdown-editor";
-import { loadProofCompiler } from "./proof-compiler";
+import { loadProofCompiler, readCompileResult } from "./proof-compiler";
 import { setUpSplitView } from "./split-view";
 import { warnBeforeDiscarding } from "./unsaved-changes";
 
@@ -63,17 +64,15 @@ const DEBOUNCE_MS = 250;
 // whose only complaint is this counts as "declares cleanly".
 const EMPTY_PROOF_MESSAGE = "proof block is empty";
 
-function firstDiagnostic(result: { diagnostics?: unknown }): string | null {
-  const diagnostics = result.diagnostics;
-  if (!Array.isArray(diagnostics) || diagnostics.length === 0) {
-    return null;
-  }
-  const first = diagnostics[0];
-  if (typeof first === "string") {
-    return first;
-  }
-  const message = (first as { message?: unknown })?.message;
-  return typeof message === "string" ? message : null;
+/**
+ * The first problem a compile reports, read the way the widgets read it — so
+ * the engine's warnings, which a clean compile now carries too, cannot stand
+ * in for the error an author needs to see.
+ */
+function firstProblem(result: CompileResult): string | null {
+  const [first] = readCompileResult(result).problems;
+
+  return first?.message ?? null;
 }
 
 /**
@@ -138,10 +137,11 @@ async function proofChecksFor(
         mm0,
         `${goalName}\n----\n${starterBody}`,
       );
+      const verified = readCompileResult(result).certificate !== null;
       return {
         id: proof.id,
-        message: result.ok === true ? null : firstDiagnostic(result),
-        ok: result.ok === true,
+        message: verified ? null : firstProblem(result),
+        ok: verified,
         okLabel: strings.starterVerifies,
       };
     } catch {
@@ -185,7 +185,7 @@ async function treeChecksFor(
     const { mm0 } = proofTheoryText(tree.publicData);
     try {
       const result = compiler.compile(mm0, `${goalName}\n----\n`);
-      const message = firstDiagnostic(result);
+      const message = firstProblem(result);
       const declaresCleanly =
         result.ok === true ||
         message === null ||
