@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CONTENT_STYLES } from "../../src/worker/web/styles";
+import { rootBlocks, stripComments } from "./palette";
 
 /**
  * The palette's integrity, as two facts about `var()`.
@@ -31,49 +31,12 @@ import { CONTENT_STYLES } from "../../src/worker/web/styles";
 
 const SOURCE_ROOT = join(import.meta.dir, "..", "..", "src");
 
-/** Blank out comments, preserving offsets, so prose naming a token is not read
- *  as CSS. The doc comment above `:root` says `var(--token, <fallback>)`. */
-function stripComments(text: string): string {
-  const out = [...text];
-  let index = 0;
-
-  while (index < text.length - 1) {
-    const two = text.slice(index, index + 2);
-
-    if (two !== "/*" && two !== "//") {
-      index += 1;
-      continue;
-    }
-
-    const close =
-      two === "/*"
-        ? text.indexOf("*/", index + 2)
-        : text.indexOf("\n", index);
-    const end = close === -1 ? text.length : two === "/*" ? close + 2 : close;
-
-    for (let blank = index; blank < end; blank += 1) {
-      if (out[blank] !== "\n") {
-        out[blank] = " ";
-      }
-    }
-
-    index = end;
-  }
-
-  return out.join("");
-}
-
 /** The light palette, as `name -> value`. Values may wrap across lines. */
 function paletteTokens(): Map<string, string> {
-  const block = /:root \{(.*?)\n {2}\}/s.exec(stripComments(CONTENT_STYLES));
-
-  if (block?.[1] === undefined) {
-    throw new Error("no :root block in CONTENT_STYLES");
-  }
-
+  const block = rootBlocks().get("light") as string;
   const tokens = new Map<string, string>();
 
-  for (const match of block[1].matchAll(/(--[a-z0-9-]+):\s*([^;]+);/gs)) {
+  for (const match of block.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/gs)) {
     tokens.set(
       match[1] as string,
       (match[2] as string).split(/\s+/).join(" "),
@@ -146,7 +109,7 @@ function sourceFiles(directory: string): string[] {
 
     if (entry.isDirectory()) {
       found.push(...sourceFiles(path));
-    } else if (/\.tsx?$/.test(entry.name)) {
+    } else if (/\.(?:tsx?|css)$/.test(entry.name)) {
       found.push(path);
     }
   }
@@ -156,15 +119,32 @@ function sourceFiles(directory: string): string[] {
 
 const TOKENS = paletteTokens();
 const FILES = sourceFiles(SOURCE_ROOT);
+const SOURCES = new Map(
+  FILES.map((file) => [
+    file,
+    stripComments(readFileSync(file, "utf8"), !file.endsWith(".css")),
+  ]),
+);
+
+/**
+ * Custom properties a script sets on an element at runtime — the split
+ * view's rail position is one. They are not palette tokens and the palette
+ * does not declare them, but a `var()` reading one is not reading nothing.
+ */
+const SCRIPT_PROPERTIES = new Set(
+  [...SOURCES.values()].flatMap((text) =>
+    [...text.matchAll(/setProperty\(["'`](--[a-z0-9-]+)["'`]/g)].map(
+      (match) => match[1] as string,
+    ),
+  ),
+);
 
 test("the palette defines every token the source asks for", () => {
   const missing: string[] = [];
 
-  for (const file of FILES) {
-    const text = stripComments(readFileSync(file, "utf8"));
-
+  for (const [file, text] of SOURCES) {
     for (const use of varUses(text)) {
-      if (!TOKENS.has(use.name)) {
+      if (!TOKENS.has(use.name) && !SCRIPT_PROPERTIES.has(use.name)) {
         missing.push(
           `${file.slice(SOURCE_ROOT.length + 1)}:${use.line}: ${use.name}`,
         );
@@ -178,9 +158,7 @@ test("the palette defines every token the source asks for", () => {
 test("every var() fallback repeats its token's light value", () => {
   const drifted: string[] = [];
 
-  for (const file of FILES) {
-    const text = stripComments(readFileSync(file, "utf8"));
-
+  for (const [file, text] of SOURCES) {
     for (const use of varUses(text)) {
       const value = TOKENS.get(use.name);
 

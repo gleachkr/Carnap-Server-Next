@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { CONTENT_STYLES } from "../../src/worker/web/styles";
+import { rootBlocks } from "./palette";
 
 /**
  * The palette's contrast rules, as arithmetic rather than as prose.
@@ -85,22 +85,15 @@ function colorsIn(block: string): Map<string, string> {
  */
 function palettes(): Map<string, Palette> {
   const found = new Map<string, Palette>();
-  const base = /^ {2}:root \{(.*?)\n {2}\}/ms.exec(CONTENT_STYLES);
+  const blocks = rootBlocks();
+  const light = colorsIn(blocks.get("light") as string);
 
-  if (base?.[1] === undefined) {
-    throw new Error("no base :root block in CONTENT_STYLES");
-  }
-
-  const light = colorsIn(base[1]);
   found.set("light", light);
 
-  for (const media of CONTENT_STYLES.matchAll(
-    /@media \(([^)]+)\) \{\s*:root \{(.*?)\n {4}\}/gs,
-  )) {
-    found.set(
-      media[1] as string,
-      new Map([...light, ...colorsIn(media[2] as string)]),
-    );
+  for (const [name, block] of blocks) {
+    if (name !== "light") {
+      found.set(name, new Map([...light, ...colorsIn(block)]));
+    }
   }
 
   return found;
@@ -150,8 +143,23 @@ function check(
   }
 }
 
-test("the stylesheet defines at least the light palette", () => {
-  expect([...PALETTES.keys()]).toContain("light");
+test("the stylesheet defines the light palette and the dark one", () => {
+  // The dark block is the reason this file exists; a parser that stops
+  // finding it must fail here rather than quietly measure light twice.
+  expect([...PALETTES.keys()]).toEqual([
+    "light",
+    "prefers-color-scheme: dark",
+  ]);
+});
+
+test("dark is a palette of its own, not light under another name", () => {
+  const light = PALETTES.get("light") as Palette;
+  const dark = PALETTES.get("prefers-color-scheme: dark") as Palette;
+
+  expect(dark.get("--surface")).not.toBe(light.get("--surface"));
+  expect(luminance(dark.get("--surface") as string)).toBeLessThan(
+    luminance(light.get("--surface") as string),
+  );
 });
 
 for (const [name, palette] of PALETTES) {

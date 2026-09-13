@@ -152,7 +152,7 @@
  * ratios are tuned to sit near the light palette's rather than as far from
  * the ground as they will go — --ink-muted lands at 4.76:1 on the lightest
  * ground it may be drawn on, against 4.58:1 in light, because muted text
- * that clears AA comfortably stops reading as muted. tests/a11y/contrast.ts
+ * that clears AA comfortably stops reading as muted. tests/a11y/contrast.test.ts
  * holds every one of these pairings.
  *
  * Two tokens invert outright, which is the whole reason each has a name
