@@ -1,157 +1,140 @@
 # Carnap Markdown v1
 
-`carnap-markdown-v1` is the restricted authoring format used for content
-items and immutable content revisions. It is intentionally small. Authors
-write ordinary Markdown prose and embed exercises with fenced directives.
+`carnap-markdown-v1` is the authoring format for lessons and immutable content
+revisions. Write prose in Markdown and add exercises with directive blocks.
+This reference follows the compiler in
+`src/worker/application/content/compiler.ts`.
 
-This document is user-facing dialect documentation. Keep it in sync with the
-compiler in `src/worker/application/content/compiler.ts` whenever directive
-syntax or supported Markdown changes.
+## Contents
+
+- [Markdown](#supported-prose-markdown), [tables](#tables),
+  [footnotes](#footnotes), and [mathematics](#mathematics)
+- [Item links](#item-links) and [directive syntax](#directive-blocks)
+- [Recording and feedback](#recording-and-feedback)
+- [Multiple choice](#multiple-choice-directive),
+  [free response](#free-response-directive), and
+  [short answer](#short-answer-directive)
+- [Truth tables](#truth-table-directive), [models](#model-directive), and
+  [translation](#translation-directive)
+- [Linear proofs](#aufbau-proof-directive),
+  [languages and theories](#languages-and-theories),
+  [proof trees](#aufbau-proof-tree-directive),
+  [Fitch proofs](#aufbau-proof-fitch-directive), and
+  [Prawitz proofs](#aufbau-proof-prawitz-directive)
+- [Styles](#style-directive), [answer data](#normalized-answer-contract),
+  [diagnostics](#diagnostics), and [versioning](#versioning-notes)
 
 ## Profile guarantees
 
 - The source profile identifier is `carnap-markdown-v1`.
-- Compilation is deterministic for a given source string.
-- Exercise IDs are always explicit in source.
-- The compiler never infers exercise IDs from headings or ordering.
-- Reordering prose around an exercise does not change that exercise's ID.
-- Student render data does not include private answer keys.
-- Raw HTML is rejected.
-- Unsupported directives are rejected.
+- Compilation is deterministic for the same source and resolved theory text.
+- Every exercise needs an explicit ID. Headings and position do not assign
+  IDs, and reordering prose does not change them.
+- Private answer keys and rubrics are excluded from student render data.
+  Translation solutions are deliberately public; see its security note.
+- Raw HTML, unsupported directives, and unknown attributes are rejected.
+- Saved revisions retain their compiled artifacts. Editing source creates a
+  new revision rather than changing prior material.
 
 ## Supported prose Markdown
 
-The current prose subset is deliberately minimal:
+Supported blocks include headings, paragraphs, lists, fenced code blocks,
+pipe tables, footnotes, and mathematics. Blank lines separate prose blocks.
+Inline emphasis, strong emphasis, code, links, and images render normally.
 
-- blank lines separate blocks
-- headings with one to six `#` characters
-- paragraphs
-- unordered lists using `- item`
-- fenced code blocks — the place to put a listing whose layout matters (a proof,
-  or a directive quoted as documentation). A fence is opaque to the directive
-  parser, so a `:::` block inside one is shown, not compiled. Long lines scroll
-  sideways rather than wrapping.
-- pipe tables, footnotes, and mathematics between dollars (see below)
+Use code fences for listings whose spacing matters, or to quote a directive
+without compiling it. Long code lines scroll horizontally rather than wrap.
 
-Inline Markdown renders normally: emphasis, strong emphasis, inline code,
-links, and images are all active formatting constructs.
+Tables and footnotes are the supported GitHub-Flavored Markdown extensions.
+Strikethrough, task lists, and bare-URL autolinking are not enabled.
+The `[x]` notation inside a multiple-choice directive has its own meaning.
+
+Raw HTML is prohibited in prose and exercise prompts. For example,
+`<strong>x</strong>` produces `unsafe_raw_html`; write `**x**` instead.
 
 ## Tables
 
-A table is written with pipes, in the GitHub style: a header row, a row of
-dashes, then one row per line.
+Use a header row, a separator row, and one line per data row:
 
 ```md
-| symbol | ascii | reads          |
-| ------ | ----- | -------------- |
-| `∧`    | `/\`  | and            |
-| `→`    | `->`  | if … then      |
+| Symbol | Meaning |
+| --- | --- |
+| `∧` | and |
+| `→` | if … then |
 ```
 
-Colons in the dash row set a column's alignment: `:---` left, `:---:` centered,
-`---:` right. Cells hold inline Markdown — emphasis, code, links, item links —
-but nothing block-level: no lists, no paragraphs, no directives. A `|` that is
-part of the content must be escaped as `\|`.
+Colons in the separator set alignment: `:---` for left, `:---:` for center,
+and `---:` for right. Outer pipes and aligned source columns are optional.
 
-The outer pipes are optional and the columns need not line up in the source;
-what matters is that every row has the same number of cells. A row with too few
-is padded, a row with too many is truncated — so a stray unescaped `|` shows up
-as a lost cell rather than an error.
+Cells accept inline Markdown, including item links, but not block content
+such as lists or exercise directives. Escape a literal pipe as `\|`.
+Missing cells are padded and extra cells are truncated, so an unescaped pipe
+can silently change the row's contents.
 
-A table renders as a figure, not as a full-width grid: it is as wide as its
-content and scrolls sideways if that exceeds the page.
+Rendered tables size to their content and scroll horizontally if too wide.
 
 ## Footnotes
 
-A footnote is a `[^label]` marker in the text and a `[^label]:` definition
-somewhere in the same source:
+Write a reference marker and a definition in the same source:
 
 ```md
-Frege drew the distinction in 1892.[^sinn]
+Frege introduced the distinction in 1892.[^sinn]
 
 [^sinn]: *Über Sinn und Bedeutung*, page 25.
 ```
 
-The label is a name, not a number — `[^1]`, `[^sinn]`, and `[^why-not]` are all
-fine — and it never appears on the page: markers are numbered in the order they
-are read. Indent a definition's later lines by four spaces to give one note
-several paragraphs.
+Labels can be names or numbers. The displayed numbers follow reference order,
+not the labels. Indent subsequent definition paragraphs by four spaces.
+Definitions may appear anywhere in the source.
 
-Definitions may be written anywhere in the source, including all together at the
-foot of it. Each one is rendered where it is used: under a rule at the end of
-the run of prose that cites it, or inside the exercise whose prompt cites it —
-near the text it belongs to, rather than gathered at the end of the lesson.
-Numbering runs on through the document all the same, so the notes of a lesson
-read 1, 2, 3 down the page however many exercises they are spread across.
+A note appears near its reference: after the prose block that uses it or
+inside the exercise prompt that uses it. Numbering continues across the
+whole document.
 
-A marker with no definition is left as literal text, so a stray `[^` in prose
-stays what it is; so is a second marker for a note that has already been used
-somewhere else in the document. A definition nothing refers to is dropped.
+An undefined marker remains literal text. A later reference to a note
+already used elsewhere in the document also remains literal. Unreferenced
+definitions are omitted.
 
-The two chrome strings the footnote section carries — the hidden "Footnotes"
-heading that names it for a screen reader, and the "Back to reference *n*" label
-on each return arrow — are compiled into the stored document in English, because
-compilation has no reader and so no language. Everything a reader sees is the
-author's own text.
-
-Tables and footnotes are the only GFM constructs the dialect takes.
-Strikethrough, task lists, and bare-URL autolinking are all still off — so `~`,
-a leading `[x]` (which is how a `multiple-choice` option is written), and a URL
-in running text mean exactly what they meant before.
-
-Raw HTML is not allowed anywhere in the source. For example, `<strong>x</strong>`
-will fail with an `unsafe_raw_html` diagnostic.
+The stored footnote section uses English accessible labels for its hidden
+heading and return links. These are generated at compilation time, before a
+viewer locale is known. The note text itself is authored content.
 
 ## Mathematics
 
-TeX between dollars. `$…$` sets a formula inline, and `$$…$$` sets it as a
-displayed block of its own — on one line or fenced across several, both mean
-display:
+Use dollar delimiters for mathematical typesetting: single dollars for
+inline formulas and double dollars for display formulas. Display formulas
+can occupy one line or several.
 
 ```md
-A conditional $P \to Q$ is false only when $P$ is true and $Q$ false.
+The conditional $P → Q$ is false when $P$ is true and $Q$ is false.
 
-$$\forall x\,(Fx \to Gx) \leftrightarrow \neg\exists x\,(Fx \wedge \neg Gx)$$
-
-$$
-\sum_{i=1}^{n} i^2 = \frac{n(n+1)(2n+1)}{6}
-$$
+$$∀x(Fx → Gx) ↔ ¬∃x(Fx ∧ ¬Gx)$$
 ```
 
-Formulas work anywhere prose does, including exercise prompts, option labels,
-and a free-response rubric.
+The contents use the supported TeX input syntax; Unicode symbols also work.
+Formulas are allowed in prompts, option labels, and rubrics as well as prose.
 
 ### Dollars that are not mathematics
 
-A single `$` has to touch its formula on both sides, which is how a sentence
-like `it cost $5 and then $10` stays prose: the run `$5 and $` closes on a
-space, so it is not read as a formula. `\$` writes a dollar sign that is never
-mathematics, and inline code is untouched — `` `echo $HOME` `` is safe as it
-stands.
+Single-dollar math must have no whitespace next to its opening or closing
+delimiter. `$x$` is math; `$ x $` is literal text. This keeps common price
+text such as `it cost $5 and then $10` from becoming a formula.
 
-The cost of that rule is that `$ x $` is *also* literal. Do not pad a formula
-with spaces inside single dollars; write `$x$`.
+Escape a literal dollar with `\$`. Inline code is unaffected, so
+`` `echo $HOME` `` is safe.
 
 ### Macros
 
-`\newcommand` works and is scoped to the document that defines it:
+The TeX `newcommand` facility is enabled. Definitions are scoped to the
+document and can be used by later formulas. A formula containing only a
+macro definition produces no visible output or spacing, so definitions can
+be collected at the start of a lesson.
 
-```md
-$\newcommand{\Nec}{\Box}$
+### Rendering and limitations
 
-Then later: $\Nec(p \to q) \to (\Nec p \to \Nec q)$.
-```
-
-A formula that only makes a definition typesets to nothing and takes up no
-space, so a run of them can sit at the top of a source as a preamble.
-
-### What is available
-
-Formulas are typeset once, when the revision is saved, and stored as MathML —
-so a reader downloads no math engine and a page with a hundred formulas costs
-them nothing. The platform ships **STIX Two Math** for it, which is what makes
-fractions, radicals, stretchy braces and matrices come out right; a `:::style`
-block can name a different one:
+The compiler typesets math when a revision is saved and stores MathML.
+Readers do not download a math-rendering engine. STIX Two Math is served by
+the application; author CSS can select another available math font:
 
 ```md
 :::style
@@ -159,213 +142,189 @@ math { font-family: "Latin Modern Math", math; }
 :::
 ```
 
-The TeX packages enabled are `base`, `ams`, `boldsymbol`, `braket`, `cancel`,
-`mathtools`, `newcommand`, `textmacros`, `unicode` and `verb`. A formula that
-does not parse fails the save with an `invalid_math` diagnostic on its own
-line, rather than being stored as an error box for a student to find.
+Enabled TeX packages are `base`, `ams`, `boldsymbol`, `braket`, `cancel`,
+`mathtools`, `newcommand`, `textmacros`, `unicode`, and `verb`. Invalid math
+prevents saving and reports `invalid_math` at the source line.
 
-Browsers implement MathML Core, which drops several of the presentation
-attributes MathJax writes. The compiler draws the common ones back on with CSS
-instead, so `\hline`, a `|` in an `array` column template, `\boxed`, `\fbox`,
-`\cancel`, `\bcancel` and `\xcancel` all come out the same in every engine.
+The compiler adds CSS for common MathML features browsers do not implement
+directly: table rules, boxes, and cancellation marks. The supported commands
+include `hline`, array-column rules, `boxed`, `fbox`, `cancel`, `bcancel`, and
+`xcancel`.
 
-What is still not offered, because nothing draws it:
+Limitations:
 
-- `bussproofs` (`\begin{prooftree}`) — use the `:::aufbau-proof-tree` or
-  `:::aufbau-proof-prawitz` directives, which are better at it anyway
-- `\cancelto`, whose arrow no CSS draws; it fails the save rather than
-  typesetting as a plain crossing-out
-- `\enclose`, which takes notations far past the handful above
-- a long displayed formula does not break across lines; it scrolls sideways
-  inside its own box rather than widening the page
-
-Two more differ by browser, and no CSS reaches either. The first is the column
-alignment of `\begin{aligned}` and of an `array` column template's `r`/`l`:
-Firefox lines the columns up, Chromium centres them, because an `<mtd>`'s
-content is a math layout box rather than an inline one. A formula whose
-*meaning* depends on where its columns sit is best written as separate
-displayed lines.
-
-The second is the horizontal brace of `\underbrace` and `\overbrace`. A brace
-too wide for any single glyph the font carries is assembled from parts, and
-Chromium (152, measured) assembles it to a length that does not track the
-expression underneath: it may stop well short of the end or overshoot it,
-leaving a hook or the centre spike somewhere inside. Firefox is right at every
-width, and both engines are right for a brace short enough to be one glyph —
-two or three characters, in STIX Two Math. This is the browser's arithmetic
-rather than the font's; it reproduces just as badly with Noto Sans Math. Until
-it is fixed, a brace over more than a couple of terms is worth avoiding.
-
-Colour commands (`\textcolor`, `\color`) are not enabled: they work by writing
-a `style` attribute, which the sanitizer strips, so they would silently do
-nothing. `\href`, `\class`, `\style`, `\cssId` and `\require` are not defined
-at all.
+- `bussproofs` is unavailable. Use a proof-tree or Prawitz directive instead.
+- `cancelto` and `enclose` are unsupported.
+- Long display formulas scroll; they do not automatically break into lines.
+- Column alignment in `aligned` and left/right array columns differs between
+  Firefox and Chromium. Use separate display lines when alignment is
+essential.
+- Long `underbrace` and `overbrace` constructions can render at the wrong
+  width in Chromium. Check them in the browsers your students use.
+- Color commands are disabled because the sanitizer strips their style
+  attributes. HTML/link styling commands and dynamic package loading through
+  `href`, `class`, `style`, `cssId`, or `require` are not enabled.
 
 ## Item links
 
-A link may target another content item by ID instead of a URL:
+Link to another content item by its ID:
 
 ```md
 Continue with [Chapter 2](item:0197a2c4-89ab-7cde-8f01-23456789abcd).
 ```
 
-The ID is the content item's ID — the last path segment of its library page
-URL. The link resolves by context when a reader follows it: inside a course,
-it goes to the assignment in *that course* that publishes the item (so the
-same source works in every course it is published into); in the content
-library's previews, it goes to the item's library page. If the item is not
-published in the reader's course, a "content not available" page explains as
-much.
+The ID is the last segment of the item's library-page URL. Within a course,
+the link opens an assignment in that course publishing the item. In a library
+preview, it opens the library page. If no course publication is available,
+the reader gets a content-not-available page.
 
-When several assignments in one course publish the same item, listed
-assignments win, then course display order decides. A malformed target (the
-text after `item:` must look like an ID) fails with `invalid_item_link`.
-Item links work anywhere a link does, including exercise prompts and option
-labels. Links in content documents always open in the full window, not the
-content frame.
+If several assignments publish the item, listed assignments take precedence,
+then display order decides. A malformed ID produces `invalid_item_link`.
+
+Item links work in prompts and option labels too. Content links navigate the
+top-level window, not the content iframe.
 
 ## Directive blocks
 
-A directive block begins with a line containing four colons, followed by the
-directive name and, in braces, its attributes:
+Start a directive with at least three colons, its name, and optional
+attributes in braces. Close it with a matching colon fence. Four colons are
+used for exercise examples here:
 
-```md
+```text
 ::::directive-name{key="value" other=value}
 Directive body.
 ::::
 ```
 
-The block ends with a line containing exactly:
+Names start with a letter and may contain letters, numbers, underscores,
+and hyphens. Attribute values may be quoted or unquoted; quote values that
+contain spaces. `{#name}` abbreviates `id="name"`, and a bare attribute such
+as `{reset}` is a flag. Attributes outside braces are rejected.
 
-```md
-::::
-```
+The ID shorthand treats `.` as a class separator and a second `#` as another
+ID. Write `id="ex1.2"`, not `{#ex1.2}`, for an ID containing punctuation.
+Likewise, do not use repeated `#` shorthand to combine IDs.
 
-Directive and attribute names must start with a letter and may then use
-letters, numbers, underscores, or hyphens.
+Every directive validates its accepted attributes. An unknown attribute
+produces `unknown_attribute` with the accepted names; it is not ignored.
 
-Attributes go **inside the braces** as `key=value` or `key="value"`; quote
-values that contain spaces. `{#name}` is shorthand for `id="name"`, and a bare
-word (like `{reset}`) is a valueless flag. Attributes written outside the
-braces are not recognized and fail with `invalid_directive_attributes`.
+There are ten exercise directives:
 
-The `#` shorthand reads `.` and `#` the way the same shorthand does in HTML: in
-`{#ex1.2}` the ID is `ex1` and `.2` is a class, which then fails as an unknown
-attribute, and in `{#a#b}` the second ID silently replaces the first. An ID
-containing either character has to be written out as `id="ex1.2"`.
+- `multiple-choice`
+- `free-response`
+- `short-answer`
+- `truth-table`
+- `model`
+- `translation`
+- `aufbau-proof`
+- `aufbau-proof-tree`
+- `aufbau-proof-fitch`
+- `aufbau-proof-prawitz`
 
-Every directive declares the attributes it understands, and one it does not is
-a compile error (`unknown_attribute`) naming the set it accepts. This is
-deliberately strict: `exam` decides whether a wrong answer is recorded at all,
-so a silently ignored `exm="true"` would turn a summative exercise back into a
-practice one with nothing on the page to say so. A stored revision carrying a
-stray attribute will not save until it is removed.
+`aufbau-mm0` declares a theory or language, and `style` supplies CSS. Neither
+is an exercise.
+
+### Common exercise attributes
+
+- `id` is required and unique within the revision. It accepts 1–64
+  non-whitespace characters, including punctuation and Unicode. IDs are
+  compared exactly, without Unicode normalization.
+- `title` is optional and names the exercise in the interface.
+- `points` defaults to `1`. It must be greater than zero and at most `1000`.
+- `exam` and `feedback` control recording and displayed results, as below.
+
+Keep an exercise's ID stable when revising it so its recorded work can still
+be associated with that exercise.
 
 ## Recording and feedback
 
-Three questions face every exercise, and each has exactly one lever:
+Three settings control different parts of assessment:
 
-| Question | Lever |
-|---|---|
-| Is the work kept? | `exam` |
-| Is the student told whether it is right, and in how much detail? | `feedback` |
-| Do they see numbers? | the assignment's grade release |
+- `exam`: whether incorrect automatically evaluated answers are recorded.
+- `feedback`: how much checker feedback the interface displays.
+- Assignment grade release: when students can see numeric grades.
 
-**The assignment sets the tone and the attributes are deviations from it.** An
-assignment still holding its grades back is an exam: every submission is kept,
-nothing is said. One that has released them — along with every practice set,
-reading and preview — is homework: retry until correct, and say why. An author
-who writes neither attribute gets whichever of those the assignment is, and an
-author who writes one overrides it, in that place only, whether or not grades
-are out.
+If an exercise omits `exam` and `feedback`, the assignment supplies defaults:
+
+| Context | `exam` | `feedback` |
+| --- | --- | --- |
+| Graded assignment with grades withheld | `true` | `none` |
+| Graded assignment with grades released | `false` | `full` |
+| Practice, reading, or author preview | `false` | `full` |
+
+An explicit exercise attribute overrides its own default. These defaults
+are resolved per assignment, not saved into the compiled exercise, so the
+same content can be used as both an exam and a practice activity.
 
 ### `exam`
 
-Optional. `exam="true"` records every submission, right or wrong — summative
-work, where a student commits to an answer and partial or zero credit lands in
-the gradebook. `exam="false"` records only fully correct work: anything less is
-checked and refused, so the student keeps trying until the checker accepts it.
+`exam="true"` records every valid submission, including incorrect and partial
+answers. `exam="false"` records automatically evaluated work only when fully
+correct; other answers are checked and the student is asked to try again.
 
-Writing nothing takes the assignment's word for it, which is `true` while its
-grades are withheld and `false` once they are out. Note that `exam="false"` is
-therefore not the same as leaving it out — it used to be, and it used to be
-silently ignored.
+Free response always records because it has no automatic evaluator. Readings
+and previews never record answers, regardless of the attribute.
+
+Leaving `exam` out is not equivalent to explicitly setting it to `false`:
+on a graded assignment with unreleased grades, omission means `true`.
 
 ### `feedback`
 
-Optional. How much a student is told about whether their work is right:
+| Value | Local checking UI | Correctness mark | Detailed feedback |
+| --- | --- | --- | --- |
+| `full` | Available | Shown | Shown |
+| `terse` | Available | Shown | Hidden |
+| `none` | Hidden | Never green | Hidden |
 
-| Value | The local Check | The correctness mark | Detail |
-|---|---|---|---|
-| `full` | offered | shown | shown |
-| `terse` | offered | shown | withheld |
-| `none` | not offered | never green | withheld |
+Details include truth-table cell highlighting, proof diagnostics, and
+messages identifying which formula failed. `terse` supplies a verdict
+without these explanations. Some exercise types check automatically rather
+than through a Check button.
 
-*Detail* is what distinguishes `terse` from `full`: the truth table's per-cell
-green and red, the proof editors' inline compiler squiggles, the sentence naming
-which formula came out wrong. Under `terse` the student is told whether the work
-is right and goes hunting for the error themselves.
+Releasing grades changes the default, not an explicit setting.
+`feedback="none"` remains in effect after release.
 
-Writing nothing means `none` while the assignment's grades are withheld and
-`full` once they are out — resolved per assignment rather than at compile time,
-since one piece of content can be a graded exam in one course and a practice set
-in another.
+Legacy options remain supported for truth tables and models:
 
-**Releasing grades does not override an author.** It settles what they left
-unsaid and nothing more, so `feedback="none"` stays shut after the grades go
-out — which is what lets a question be set again next term.
+- `check="cells"` on a truth table or `check="on"` on a model means `full`.
+- Truth-table `check="terse"` means `terse`.
+- `check="off"` or the `nocheck` option means `none`.
 
-The truth table and the model each had their own spelling of this before there
-was a shared one, and both still work: `check="cells"` / `check="on"` means
-`full`, `check="terse"` means `terse`, and `check="off"` or the `nocheck` option
-flag means `none`. Writing `check` and `feedback` on the same exercise earns a
-diagnostic (`redundant_check_attribute`); `feedback` wins.
+If both `check` and `feedback` are specified, the compiler reports
+`redundant_check_attribute` and uses `feedback`.
 
 ### Numbers wait for the release date
 
-A per-exercise score needs two things: grades released, *and* an exercise
-willing to say anything at all. So `feedback="full"` on an assignment whose
-grades are still withheld shows a student every marked cell and every compiler
-message and no `0 of 2` — a score is a grade, and grades are the release date's
-business. And `feedback="none"` withholds the number after release too, because
-`0 of 2` says exactly what `none` refused to say.
+An exercise's numeric score is visible only when grades are released and
+its feedback is not `none`. For example, `feedback="full"` on an unreleased
+assignment can show checker detail but not the recorded point score.
 
-The assignment *total* is the release date's alone, and stays visible over a
-sealed exercise. One sealed exercise among many can therefore be worked out from
-the total by arithmetic; see below.
+The assignment total depends on grade release alone. Once released, it can
+reveal an individual hidden score by subtraction from the other scores.
 
 ### `exam="false" feedback="none"`
 
-A legal and useful pair, though it reads like a contradiction: nothing is said
-and wrong work is not kept. What the student learns is whether the submission
-stuck — the page says "nothing was recorded" and they try again. It asks them
-to commit before they learn anything, which is what suppressing the local Check
-is for, without holding a wrong try against them.
+This combination is allowed. The local verdict is hidden, but an incorrect
+submission is not recorded. The message saying that nothing was recorded
+therefore still tells the student to retry. Use `exam="true"` when students
+must commit to an answer without this accept/reject signal.
 
 ### What `feedback` is not
 
-It is not a security boundary. Six of the nine exercise types are checked in the
-student's own browser — the four proof types compile there, and the truth table
-and the model are computable from the formulas on screen — so a student with
-developer tools can run the same check the widget runs. `feedback` decides what
-the page *shows*; it cannot decide what a determined reader can work out from
-content they have been handed. The assignment total leaks a lone sealed
-exercise the same way, by subtraction.
+Feedback settings control the interface, not access to everything a browser
+can calculate. Proofs and translations are checked in the browser before
+server verification. Truth-table and model results can be computed from the
+public formulas. Translation solutions are included in browser data.
+Students with developer tools can inspect or run these checks themselves.
 
-The seal that does hold is the recorded score, which the server withholds on its
-own authority and which no client can reach. If it matters that a student cannot
-learn their score before you release it, that part is enforced.
+The server independently protects unreleased recorded scores and verifies
+submitted evidence. Hiding local feedback does not make public content or
+local computation secret.
 
 ## Multiple-choice directive
 
-The profile currently exposes nine exercise directives: `multiple-choice`,
-`free-response`, `short-answer`, `truth-table`, `model`, and the four
-engine-checked proof surfaces `aufbau-proof`, `aufbau-proof-tree`,
-`aufbau-proof-fitch`, and `aufbau-proof-prawitz` (plus the non-exercise
-`aufbau-mm0` and `style` blocks documented below).
-
 ```md
-::::multiple-choice{id="truth_table_1" title="Tautology" points="2"}
+::::multiple-choice{id="tautology" title="Tautology" points="2"}
 Which sentence is a tautology?
 
 - [x] excluded_middle | P or not P
@@ -373,94 +332,50 @@ Which sentence is a tautology?
 ::::
 ```
 
-### Attributes
+The common attributes apply. `mode` is `single` by default; use `multiple`
+for a question allowing several selected options.
 
-`id` is required. It is the stable exercise ID stored in the compiled document
-and manifest. Any 1 to 64 characters will do, so long as none of them is a
-space — the rule is HTML's own rule for an `id`, since that is what the ID
-becomes on the page. So `ex1.2`, `1.2`, and `σ1` are all IDs, but they have to
-be written `id="ex1.2"` rather than `{#ex1.2}` for the reason above. IDs must be
-unique within a content revision, and are compared exactly: two IDs that differ
-only in how an accent is encoded are two IDs.
+Write the prompt first, then options in this format:
 
-`title` is optional. It is stored in the manifest for instructor and later
-assignment views.
-
-`points` is optional. It defaults to `1`. When present, it must be a positive
-number no greater than `1000`.
-
-`mode` is optional. It defaults to `single`. Supported values are `single` and
-`multiple`.
-
-`exam` and `feedback` are optional and shared by every exercise directive; see
-[Recording and feedback](#recording-and-feedback). Note that outside exam mode
-the accept/reject response itself reveals whether an answer is correct, so
-anything summative should be marked `exam`.
-
-### Body
-
-The body starts with the prompt. The prompt may use the same prose Markdown
-subset listed above.
-
-Options begin with task-list style lines:
-
-```md
+```text
 - [x] option_id | Correct option text
 - [ ] other_id | Incorrect option text
 ```
 
-Use `[x]` or `[X]` to mark a correct option. Use `[ ]` to mark an incorrect
-option.
+`[x]` and `[X]` mark correct options. Option IDs must start with a letter,
+contain only letters, numbers, underscores, or hyphens, and be at most 64
+characters long. They must be unique within the exercise.
 
-Each option ID must start with a letter and may then use letters, numbers,
-underscores, or hyphens. It may be at most 64 characters long. Option IDs must
-be unique within the exercise.
+Labels support inline Markdown. After the first option, only option lines
+and blank lines are allowed.
 
-The text after the `|` is the student-facing option label. Inline Markdown
-renders in labels; raw HTML is still rejected.
-
-After the first option line, only option lines and blank lines are allowed.
-Additional prose after options is rejected.
-
-### Answer-key rules
-
-In `single` mode, exactly one option must be marked correct.
-
-In `multiple` mode, at least one option must be marked correct.
-
-The current grader uses exact-match scoring. A submitted answer receives full
-credit when the selected option IDs exactly match the correct option IDs. Any
-other valid selection receives zero credit.
+`single` requires exactly one correct option; `multiple` requires at least
+one. Automatic grading uses exact matching: the selected set must equal the
+correct set for full credit. Any other structurally valid selection earns
+zero. The answer key stays in private manifest data.
 
 ## Free-response directive
 
-Use free-response for manually graded text answers:
+Use free response for manually graded text:
 
 ```md
-::::free-response{id="explain_validity" title="Explain" points="5" rubric="Mention truth preservation."}
+::::free-response{id="explain" points="5" rubric="Truth preservation."}
 Explain why the argument is valid.
 ::::
 ```
 
-The common `id`, `title`, `points`, `exam`, and `feedback` attributes have
-the same meanings as for multiple choice (`exam` has no effect today because
-free-response answers always record; `feedback` only governs whether the
-recorded score comes back before release, since there is nothing to check in
-the browser). The whole
-body is rendered as the student prompt.
+The body is the prompt. Optional `rubric` text is private assessment data,
+shown to instructors during review but excluded from student render and
+review data.
 
-`rubric` is optional. It is private assessment data: it is stored in the
-manifest and shown to instructors during submission review, but it is not part
-of the compiled student document, the exercise island, or student answer
-review.
-
-Free-response answers use `free-response-answer@1`. They are normalized and
-recorded, but they do not produce automatic evaluations. Instructors can add
-manual evaluations later.
+Answers use `free-response-answer@1`. They are normalized and recorded
+without an automatic evaluation. An instructor can grade them later.
+`exam` has no effect on recording for this type. Numeric results still
+require grade release and a feedback setting other than `none`.
 
 ## Short-answer directive
 
-Use short-answer for automatically checked text answers:
+Use short answer for automatically matched text:
 
 ```md
 ::::short-answer{id="rule_name" answer="modus ponens" points="2"}
@@ -468,7 +383,7 @@ Name the rule used in this inference.
 ::::
 ```
 
-Use `answers` with `|` separators for several accepted answers:
+For alternatives, use `answers` with `|` separators:
 
 ```md
 ::::short-answer{id="rule_abbrev" answers="modus ponens|MP"}
@@ -476,37 +391,35 @@ Name the rule.
 ::::
 ```
 
-Short-answer matching trims the submitted answer. Matching is
-case-insensitive by default. Set `case-sensitive="true"` to require exact
-case. The accepted answers are private manifest data and are not included in
-the compiled student document.
+Matching trims the submitted text and is case-insensitive by default.
+`case-sensitive="true"` requires matching case. Accepted answers are private
+manifest data, not part of the student document.
 
-Short-answer exercises are automatically checked, so the `exam` attribute
-applies exactly as it does for multiple choice: without it, only correct
-answers are recorded.
+The resolved `exam` setting controls whether incorrect answers are recorded.
 
 ## Truth-table directive
 
-Use truth-table for an interactive truth table in Carnap `prop` notation. The
-student fills a grid; a local **Check** grades it in the browser, and Submit
-records an authoritative server grade. In the `simple` variant, formulas are
-markdown list items (a single bullet may hold several comma-separated formulas);
-prose before the first list item is the prompt.
+A truth table asks students to fill cells and optionally identify a
+counterexample row. Local checking and server grading use the same logic.
+
+### Variants
+
+`simple` takes formulas as Markdown list items. A bullet may contain several
+comma-separated formulas. Prose before the first item is the prompt.
 
 ```md
-::::truth-table{id="demorgan" variant="simple" check="terse" points="4"}
-Fill in both tables. If they agree on every row, the formulas are equivalent.
+::::truth-table{id="demorgan" variant="simple" feedback="terse" points="4"}
+Fill in both tables and compare their results.
 
 - ~(P /\ Q)
 - ~P \/ ~Q
 ::::
 ```
 
-The `validity` variant instead takes a single **sequent** line — comma-separated
-premises, `:|-:`, comma-separated conclusions — with any prose before it as the
-prompt. Its grid gains a `⊢` turnstile column the student marks `T`/`F` per row
-(`F` where every premise is true and every conclusion false — a counterexample
-to validity):
+`validity` takes one sequent line: comma-separated premises, `:|-:`, and
+comma-separated conclusions. Its turnstile column is false on a
+counterexample row: all premises true and all conclusions false under the
+default target.
 
 ```md
 ::::truth-table{id="modus-ponens" variant="validity"}
@@ -516,24 +429,34 @@ P, P -> Q :|-: Q
 ::::
 ```
 
-The `partial` variant asks the student to fill in a **single free row** — they
-choose the atom valuation and complete that one row. Formulas are list items, as
-in `simple`. Any-valuation rows are accepted by default.
+`partial` uses list items like `simple`, but asks for one row. The student
+chooses the atom values and completes the row. Any valuation is accepted
+unless givens restrict it.
 
-Any variant may **prepopulate cells** with a trailing positional **given grid**
-(Carnap's "bar" form): `refTokens | f1Tokens | … | fNTokens` per row, where `T`/`F`
-pin a value and `.` leaves the cell to the student. The reference segment has one
-token per atom; each formula segment has one token per cell of that formula. Rows
-may be sparse — a reference token is a pattern over the 2ⁿ rows (`.` is a
-wildcard). For `simple`/`validity` a seeded value must equal the computed key
-(else `given_conflicts_with_key`); `strictGivens` locks the seeded cells (inert,
-ungraded), otherwise they are editable and graded. For `partial` each grid row is
-one accepted alternative (`hiddenGivens` keeps it off the grid; `strictGivens`
-freezes a lone visible one):
+### Givens
+
+After the formulas, add a positional grid:
+
+```text
+referenceTokens | formula1Tokens | formula2Tokens
+```
+
+Use `T` or `F` to seed a cell and `.` to leave it open. The reference segment
+has one token per atom; each formula segment has one token per displayed
+cell. In full tables, a reference pattern can match several rows using `.`
+as a wildcard.
+
+For `simple` and `validity`, givens must agree with the computed answer or
+compilation reports `given_conflicts_with_key`. `strictGivens` locks seeded
+cells and excludes them from grading; otherwise they remain editable and
+are graded.
+
+For `partial`, each given row is an accepted alternative. `hiddenGivens`
+hides those alternatives; `strictGivens` locks a single visible alternative.
 
 ```md
 ::::truth-table{id="assume-q" variant="partial" options="hiddenGivens"}
-Make Q -> P true, assuming Q is true.
+Make Q → P true, assuming Q is true.
 
 - Q -> P
 
@@ -541,122 +464,84 @@ Make Q -> P true, assuming Q is true.
 ::::
 ```
 
-Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
-attributes, it accepts `variant` (`simple` | `validity` | `partial`), `fill` (`all` | `connectives` |
-`main` — which cells the student fills; not applicable to `partial`), `grading`
-(`all-or-nothing` | `partial`), `check` (`cells` | `terse` | `off` — this type's older
-spelling of `feedback`), `counterexample-to` (`tautology`/`validity` | `equivalence` |
-`inconsistency`/`contradiction` — the property a counterexample row must show;
-on a `validity` table the premises stay all-true and the property applies to the
-conclusions, which also defines the turnstile column), `trueMark` / `falseMark`
-(display glyphs for true/false cells; the recorded answer stays `T`/`F`),
-`system` (an `aufbau-mm0` block name or a language spec id, defaulting to
-`carnap-prop`; any language will do, and a formula using something a table has
-no column for is refused where it is written), and an
-`options` string of Carnap flags (`autoAtoms`, `nodash`, `nocheck`,
-`nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
-`negated-double-turnstile`; `immutable` — Carnap's whole-table display lock — is
-recognized but not yet effective).
-On the `simple` and `validity` variants a student may fill the table and then
-mark one row of it as a counterexample, submitting that row instead of the whole
-table (unless `nocounterexample`).
-Notation is whatever the system spells — `~ /\ \/ -> <->` with single-letter
-atoms in the default `carnap-prop`; the sequent turnstile is `:|-:`.
+### Attributes and options
 
-The full reference — every option, the notation and precedence rules, the answer
-shape, and the roadmap — lives next to the code in
-`src/worker/exercises/truth-table/README.md`.
+In addition to the common attributes:
+
+- `variant`: `simple`, `validity`, or `partial`.
+- `fill`: `all`, `connectives`, or `main`; chooses editable formula cells.
+  Not applicable to `partial`.
+- `grading`: `all-or-nothing` or `partial`.
+- `check`: legacy `cells`, `terse`, or `off`; prefer `feedback` in new source.
+- `counterexample-to`: `tautology`/`validity`, `equivalence`, or
+  `inconsistency`/`contradiction`. In a validity table, premises remain
+  all-true and the target applies to the conclusions and turnstile column.
+- `trueMark` and `falseMark`: displayed glyphs; answer data still uses
+  `T`/`F`.
+- `system`: a preceding `aufbau-mm0` block name or built-in system ID.
+  Defaults to `carnap-prop`.
+- `options`: space-separated flags: `autoAtoms`, `nodash`, `nocheck`,
+  `nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
+  and `negated-double-turnstile`. `immutable` is recognized but not effective.
+
+Unless `nocounterexample` is set, students in `simple` and `validity` can
+submit a chosen counterexample row instead of the whole table.
+
+The default notation uses `~`, `/\`, `\/`, `->`, and `<->`, with `:|-:` for
+the sequent separator. Other systems are allowed, but unsupported formula
+constructs, such as quantifiers, are rejected at their source location.
+
+For cell layouts, defaults, complete notation rules, and answer data, see
+[the truth-table reference](../src/worker/exercises/truth-table/README.md).
 
 ## Model directive
 
-Use `model` for a **finite-model** exercise in the tradition of Carnap's
-countermodel problems. The student describes a model — a domain, and an extension
-or a value for every symbol the sentences use — and the exercise says whether
-that model has the property asked for. The fields are not authored: they follow
-from the sentences. A local **Check** grades in the browser and Submit records a
-server grade; the two agree by construction, since a model exercise has no answer
-key and both run the same check.
+A model exercise asks for a finite domain and interpretations of the symbols
+used in its formulas. The widget generates fields from those formulas.
+Browser and server use the same model checker; there is no secret answer key.
 
-Sentences are markdown list items, and prose before the first one is the prompt.
-A single bullet may hold several comma-separated sentences.
+### Variants
+
+`simple` takes formulas as list items and normally asks for a model making
+all of them true. A bullet can contain comma-separated formulas.
 
 ```md
 ::::model{id="two_at_once" title="Two at once" points="3"}
-Build a model in which both of these come out true.
+Build a model in which both sentences are true.
 
 - ExF(x), Ex~F(x)
 ::::
 ```
 
-Notation is whatever `system=` names; the default, and everything described
-here, is **forallx: Calgary, 2019 and later**. A set written for the original
-*forallx* takes `system="forallx-magnus"` and is written in that book's
-notation instead — juxtaposed predicates (`Fa`, `Rab`), `&` for conjunction,
-`@x`/`3x` for the quantifiers. The differences are tabulated under "Which
-forallx" below. The Calgary notation: `Ax`/`Ex` (or `∀`/`∃`, `@`/`3`)
-immediately followed by a variable from `s`–`z`; predicates any uppercase letter
-with parentheses (`F(x)`, `R(x,y)`), a bare uppercase letter being a sentence
-letter; names `a`–`e`; function letters `f`–`r`, a bare one being a constant and
-`f(x)` an application; `=` and `!=`/`≠`; connectives `~ /\ \/ -> <->` plus the
-usual symbol aliases.
-
-The lowercase alphabet is cut three ways because the artifact declares it that
-way, and the cut is what lets the proof system state ∀I's eigenvariable proviso
-by typing rather than as a side condition. Carnap's own Calgary options drew
-constants from `a`–`r` and functions from `a`–`t`, overlapping and resolved by
-parser try-order; a declared lexicon cannot overlap. See the header of
-`/theories/forallx-calgary-2019.mm0`.
-
-Those are the spellings an author *types*. A formula is *shown* in logical
-symbols — `∀x∀yf(x,y)=f(y,x)` for what is written `AxAyf(x,y) = f(y,x)`, and
-`(P ∧ Q) ∨ R` for `P /\ Q \/ R` — every binary compound parenthesized except
-the outermost, as the original prints them.
-
-Three of its rules catch people out, and all three are Carnap's own behaviour: a
-quantifier's scope is the sentence **immediately** after it (`AxF(x) -> G(a)` is
-a conditional, not a quantified conditional); `/\` and `\/` share one
-precedence level left-associatively, while `->` and `<->` join nothing
-unbracketed at all — `P -> Q -> R`, `P -> Q <-> R` and `P /\ Q -> R` are each
-an error, and want their parentheses; and parentheses may only wrap a two-place compound,
-so `(P)`, `(~P)` and `(a = b)` are errors. Every sentence must be closed — an
-unbound variable is rejected. Not accepted, though Carnap takes them: the word
-operators `not`/`and`/`or`, `^n` arity annotations, and `v` for disjunction.
-
-The `validity` variant takes a single **sequent** line — comma-separated
-premises, `:|-:`, comma-separated conclusions — and asks for a model that makes
-every premise true and every conclusion false:
+`validity` takes a sequent and normally asks for every premise true and every
+conclusion false:
 
 ```md
 ::::model{id="someone" variant="validity" points="4"}
-Everyone likes someone; so there is someone everyone likes. Show that this does
-not follow.
+Show that everyone liking someone does not imply someone being liked by all.
 
 AxEyR(x,y) :|-: ExAyR(y,x)
 ::::
 ```
 
-The `constraint` variant takes one `- constraints : sentences` **list item**: the
-constraints have to come out true as well, which is how an author stops a
-universal sentence being satisfied by a domain of one. They are not shown to the
-student, so the prompt should say what they are if the student needs to know. (A
-list item rather than Carnap's bare `:` line, because a prompt ending "Find a
-model where:" would otherwise be read as the constraints.)
+`constraint` takes one list item of the form `constraints : sentences`.
+Constraints must also be true but are not displayed. State them in the prompt
+if students need to know them. Using a list item distinguishes the constraint
+line from ordinary prompt text ending in a colon.
 
 ```md
 ::::model{id="not_free" variant="constraint"}
-Make this true — and no cheating with a one-element domain.
+Use a domain with at least two elements and make the sentence true.
 
 - ExEy~x = y : AxAyF(x,y)
 ::::
 ```
 
-Any variant may **seed a field** with a trailing `| Field : value` line, keyed by
-the label the exercise shows (`Domain`, `F(_,_)`, `a`, `f(_)`). A given naming a
-field the exercise does not have, holding something that field could not contain,
-or repeating a field, is a compile error. `strictGivens` locks the givens, turning
-a hint into a requirement. A function's given is read row by row — `f(_) : [0;1]`
-fixes `f(0) = 1` and leaves every other argument to the student — so under
-`strictGivens` it locks those cells of the value table and no others.
+### Givens and fields
+
+Seed a field with `| Field : value` after the formulas. Field names match
+the interface labels, such as `Domain`, `F(_,_)`, `a`, and `f(_)`.
+Unknown fields, duplicate givens, and invalid values are compile errors.
 
 ```md
 ::::model{id="seeded" options="strictGivens"}
@@ -665,39 +550,37 @@ fixes `f(0) = 1` and leaves every other argument to the student — so under
 ::::
 ```
 
-Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
-attributes it accepts `variant` (`simple` | `validity` | `constraint`), `system` (an `aufbau-mm0` block name or a language spec id;
-`forallx-calgary-2019` or `forallx-magnus` today — see "Languages and theories" below), `counterexample-to` (`validity`/`tautology` |
-`equivalence` | `inconsistency`/`contradiction` — the property the targeted
-sentences must have, defaulting to all-true for `simple` and `constraint` and
-all-false for `validity`), `check` (`on` | `off` — this type's older spelling
-of `feedback`), and an `options` string of
-Carnap flags (`nocheck`, `strictGivens`, `double-turnstile`,
-`negated-double-turnstile`; `forallxStyle` is recognised but not yet effective).
+`strictGivens` locks supplied values. For a function, a given such as
+`f(_) : [0;1]` fixes the value at argument 0 to 1, not the whole table.
 
-A domain is up to 16 naturals. Extensions are tuples in `[…]`, `(…)` or `<…>`
-(`[0,0],[1,0]`, or bare numbers for a one-place predicate); a constant is a menu
-of the domain; a function gets a **generated value table** — a menu of the domain
-for every argument tuple, laid out as a grid with the last argument heading the
-columns — so it cannot be left partly undefined. The recorded answer is the raw text
-of each field, so review shows what the student typed.
+Domains contain at most 16 natural numbers. Predicate extensions use tuples
+in square, round, or angle brackets, or bare numbers for unary predicates.
+Constants use domain-value menus. Functions have a generated value table
+with a menu for every argument tuple, with the last argument across columns.
+Recorded field data is retained for review.
 
-The full reference — every option, the notation rules, the field languages, the
-answer shape, and the roadmap — lives next to the code in
-`src/worker/exercises/model/README.md`.
+### Attributes and options
+
+In addition to the common attributes:
+
+- `variant`: `simple`, `validity`, or `constraint`.
+- `system`: a block name or built-in language ID. Defaults to
+  `forallx-calgary-2019`; `forallx-magnus` uses the original book's notation.
+- `counterexample-to`: `validity`/`tautology`, `equivalence`, or
+  `inconsistency`/`contradiction`.
+- `check`: legacy `on` or `off`; prefer `feedback`.
+- `options`: `nocheck`, `strictGivens`, `double-turnstile`, or
+  `negated-double-turnstile`. `forallxStyle` is recognized but not effective.
+
+See [Languages and theories](#languages-and-theories) for formula notation,
+and [the model reference](../src/worker/exercises/model/README.md) for field
+syntax, defaults, and answer data.
 
 ## Translation directive
 
-Use `translation` for a **symbolization** exercise in the tradition of Carnap's
-`Translate`: the prose poses a natural-language sentence, and the student types
-a formula for it. The answer counts as correct when it is **logically
-equivalent** to one of the author's solutions (and, for `variant="exact"`, only
-when it *is* one of them). Notation is the same forallx: Calgary system the
-model directive documents above, typed and displayed the same way.
-
-Solutions are markdown list items — one admissible symbolization per bullet, or
-Carnap's comma-separated alternates within one — and prose before the first
-bullet is the prompt.
+A translation exercise asks students to symbolize natural-language text.
+List acceptable solutions after the prompt, one per bullet or separated by
+commas within a bullet:
 
 ```md
 ::::translation{id="fine" variant="first-order" points="2"}
@@ -707,44 +590,27 @@ Everything is fine.
 ::::
 ```
 
-An equivalent answer in different clothes — `~Ex~F(x)` here — checks and grades
-correct. Checking is live, as in the proof types: the widget reads the typed
-ASCII back in logical symbols as the student types, the correctness mark tracks
-on a pause, and **Enter** checks immediately (there is no Check button). Under
-the hood the check is the Aufbau engine's `auto?` proof search, run over a
-one-sided sequent calculus, producing an equivalence *certificate* which Submit
-sends and the server independently re-verifies — the same
-client-compiles/server-verifies boundary the proof directives use. A click on
-Submit while a check is still pending or running waits for it, so a quick
-submit after typing never sends the text without its certificate. The server
-records the verdict and the typed answer, not the certificate.
+Normally an answer is correct if it is logically equivalent to a solution.
+Here `~Ex~F(x)` is also accepted. The widget displays the parsed formula in
+canonical notation, checks after a typing pause, and checks immediately on
+Enter. There is no separate Check button. Submit waits for a pending check
+before sending its certificate.
 
-Two consequences of that design are worth knowing when setting assignments:
+### Variants and restrictions
 
-- **The solutions are visible to a determined student.** The browser proves
-  equivalence *to a solution*, so the solutions ship with the exercise — as
-  they did in the original Carnap. `feedback`/`exam` control what is said and
-  recorded, not what a devtools user can find.
-- **Equivalence is judged by proof search under a budget**, not by a decision
-  procedure. The search covers the textbook catalogue (commutations, De Morgan,
-  conditional and biconditional interchange, distribution, quantifier passage
-  and permutation, alpha-variants, prenexing in either direction) and refuses
-  genuine non-equivalences by exhausting its space; but search is bounded, so a
-  far-fetched equivalence can in principle time out and be marked wrong — the
-  same trade the original Carnap made. The escape hatch is the bullet list:
-  naming the shapes you will accept as separate solutions always works.
+- `variant="prop"` is the default. Only sentence letters and propositional
+  connectives are allowed.
+- `variant="first-order"` allows first-order formulas.
+- `variant="exact"` compares parsed syntax rather than logical equivalence.
 
-`variant` selects Carnap's three classes: `prop` (the default — sentence
-letters and connectives only, and a first-order solution or answer is
-rejected), `first-order`, and `exact` (syntactic comparison after parsing; for
-"what is the missing premise" exercises, where an equivalent formula is not an
-answer).
+`tests` adds requirements that every submitted answer must satisfy:
 
-`tests` imposes extra conditions on the submission, with Carnap's names:
-`CNF`, `DNF`, `PNF` (first-order only), and the counters `maxCon:N`,
-`maxNeg:N` (alias `maxNot:N`), `maxAnd:N`, `maxOr:N`, `maxIf:N`, `maxIff:N`,
-`maxFalse:N`, `maxAtom:N`. An answer must be equivalent **and** pass every
-test, so `tests="CNF"` with a non-CNF solution is a legitimate exercise.
+- `CNF`, `DNF`, or `PNF` (PNF is first-order only).
+- `maxCon:N`, `maxNeg:N` (also `maxNot:N`), `maxAnd:N`, `maxOr:N`,
+  `maxIf:N`, `maxIff:N`, `maxFalse:N`, or `maxAtom:N`.
+
+A solution need not itself satisfy the requested form. For example, students
+can be asked to find an equivalent prenex formula without negation:
 
 ```md
 ::::translation{id="prenex" variant="first-order" tests="PNF maxNeg:0"}
@@ -754,187 +620,54 @@ Nothing is not bananas.
 ::::
 ```
 
-`starter` prefills the input box (Carnap's partial solution — it may be prose),
-and `options` takes `nocheck` (this type's spelling of `feedback="none"`) and
-`checksyntax` (refuse to submit text that does not parse). The common `id`,
-`title`, `points`, `exam`, and `feedback` attributes apply as everywhere, and
-`system` names the language: an `aufbau-mm0` block declared earlier in the
-document, or one of the ids the server ships (see "Languages and theories"
-below).
+`starter` prefills the input and may contain incomplete text or prose.
+`options` accepts `nocheck` (equivalent to hiding feedback) and `checksyntax`
+(block submission of text that does not parse). Common attributes apply.
+`system` selects a preceding theory block or built-in language; the default
+is forallx: Calgary notation.
 
-The full reference — the check's architecture, the rewrite theory and its
-known gaps, the answer shape — lives next to the code in
-`src/worker/exercises/translation/README.md`.
+### Checking and security
+
+The browser uses Aufbau proof search to produce an equivalence certificate.
+The server verifies the certificate independently and records the verdict
+and answer text, not the certificate.
+
+**Solutions are public browser data.** Equivalence checking needs a solution
+to compare against, so students can inspect the supplied solutions with
+developer tools. Neither `exam` nor `feedback` hides them.
+
+Proof search has a time/resource budget. It handles common textbook
+equivalences but can fail to establish a valid, more difficult equivalence
+within that budget. Add the intended answer forms as separate solutions
+when necessary. Exact matching avoids the equivalence-search requirement.
+
+See [the translation reference](../src/worker/exercises/translation/README.md)
+for the proof-search design, restrictions, and answer format.
 
 ## Aufbau-proof directive
 
-Use `aufbau-proof` for a proof the student writes and the **Aufbau engine**
-checks. It pairs with an `aufbau-mm0` block that declares the theory (sorts,
-terms, axioms) the proof is built from. The student's browser compiles the proof
-to an MMB certificate as they type — showing "Verified ✓" or the engine's
-diagnostic live — and the worker independently re-verifies that certificate on
-submit. (The client compiler is an untrusted convenience; the server verifier is
-the arbiter.)
+The four proof directives share one grading mechanism. The browser compiles
+a proof with `@aufbau/compiler` into an MMB certificate. The server verifies
+that certificate with `@aufbau/verifier` against the saved theory and goal.
+Browser success state and submitted proof text are not trusted for grading.
 
-Declare a theory with `aufbau-mm0`. Give it a `name` other proof blocks
-reference. Its MM0 comes from a `src` naming a theory this site serves, from its
-body (raw MM0, not Markdown), or from both.
+`aufbau-proof` is the linear proof-script editor. Its body contains a prompt,
+a `theorem` declaration, a `----` separator, and a starter proof body. The
+goal is fixed; students edit only the proof body.
 
-### Naming a theory the site serves
-
-Most courses teach a system somebody has already written down, so the usual
-block is one line and no body:
-
-```md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
-:::
-```
-
-These paths are real. Open one in a browser and you get the theory itself — the
-axiom names your students will cite, and the commentary that ships with them.
-Six are available:
-
-| Path | System |
-| --- | --- |
-| `/theories/forallx-calgary-2019.mm0` | *forallx: Calgary* natural deduction, the full first-order fragment, **basic rules only**. Sequents `Γ ; φ ⊢ ψ`; the Fitch and Prawitz surfaces are built for it. Also the language `system="forallx-calgary-2019"` names. |
-| `/theories/forallx-calgary-2019-plus.mm0` | The same, plus the book's derived rules — `DS`, `MT`, `DNE`, `LEM`, `DeM` and `CQ`. See "Basic and derived rules" below. |
-| `/theories/forallx-magnus.mm0` | *forallx* (P.D. Magnus, the original) — system QL: the same Fitch shape, but the book's own rules and notation, **basic rules only**. Also the language `system="forallx-magnus"` names. |
-| `/theories/forallx-magnus-plus.mm0` | The same, plus the book's derived and replacement rules — `DIL`, `MT`, `HS`, `Comm`, `DN`, `MC`, `↔ex`, `DeM` and `QN`. |
-| `/theories/gentzen-lk.mm0` | Classical LK, a multi-conclusion sequent calculus with both sides comma-separated. An LK derivation is a tree, so this is the tree surface's system. |
-| `/theories/carnap-prop.mm0` | Carnap's default `prop` — a propositional *signature* with no rules of its own, which is what the truth-table type reads. Name it here and add your own rules in the block body to build a system over its notation. |
-
-A `src` must be a path this site serves — one of the six above, or one of
-yours (below). A theory kept on another server is not supported: the text is
-frozen into the exercise when you save, and putting a third party's uptime
-inside that save — and inside the live preview, which compiles in your browser
-under a policy that permits only same-origin requests — would make saving a
-lesson fail for reasons that have nothing to do with the lesson. Copy the MM0
-into the block instead.
-
-### Hosting a theory of your own
-
-A system nobody has published, or one of the six with your course's own
-vocabulary added, does not have to be pasted into every lesson that uses it.
-Create a content item and choose **Theory or language** for its kind: its
-revisions hold MM0 instead of Markdown, and saving one checks that the file
-reads. The revision page then shows its address, which is what a lesson's
-`src=` names:
-
-```md
-:::aufbau-mm0{name="ours" src="/content/revisions/01JD…/theory.mm0"}
-:::
-```
-
-Four things follow from that being a *revision's* address.
-
-**It is fixed.** There is no spelling that means "the latest". Revising your
-theory leaves every lesson that named an earlier revision exactly as it was —
-which is the point, because a proof that verified last week should not stop
-verifying because somebody widened a signature. To move a lesson onto a new
-revision, save a new revision of the lesson with the new address in it.
-
-**Your students never fetch it.** The MM0 is frozen into the exercise when the
-lesson is saved, so the address is resolved once, by you, at authoring time.
-A student's browser never asks for it, and nothing in an assignment depends on
-it still being there.
-
-**It is yours until you share it, one revision at a time.** A saved revision
-starts readable by its owner alone. Each row of the item's revision list
-carries a sharing control — keep it to yourself, open it to anyone on this site
-who writes content, or make it public — and whoever the scope admits can name
-*that* address from their own lessons. Sharing revision 7 shares revision 7:
-the drafts behind it stay yours, and so does the next one you save.
-
-Two things follow from the freeze, and the control says both. Sharing is
-checked when a colleague *saves* something that names your revision, so
-narrowing the scope afterwards leaves their saved lessons exactly as they are:
-nothing breaks, and nothing comes back. And what they saved carries the text —
-their students read your MM0 out of their lesson, because that is where it was
-frozen. There is no scope that lets a colleague name a theory without passing
-its text on.
-
-**A theory can be a language too.** If the file gives its sentence sort
-`@syntax role sentence`, the revision page says so, and formulas written
-against it read the way the section on languages below describes. To set a
-model or translation exercise in it, name it from an `aufbau-mm0` block —
-`src="/content/revisions/<id>/theory.mm0"` — and write that block's name in the
-exercise's `system=`. `system=` takes a name in scope, not an address.
-
-### Extending a theory, and writing one
-
-A course with its own vocabulary puts the extra declarations in the body of the
-same block. They arrive after everything the path brought, and the engine reads
-the result as one theory:
-
-```md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
---| @syntax delimiter $ Cube Loves $
-term Cube (x: tm): wff;
-term Loves (x y: tm): wff;
-
---| @congr
-axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
---| @congr
-axiom Loves_congr (a b c d: tm): $ a = b $ > $ c = d $ > $ Loves a c ↔ Loves b d $;
-:::
-```
-
-The shipped signature is deliberately small — unary `F`, `G` and binary `R` —
-so this is the ordinary way to teach with `Cube` or `Loves`. Congruence axioms
-are what let `=E` replace equals inside your new predicates; without them the
-predicate still parses and proves, it simply cannot be rewritten through.
-
-**A multi-character name needs that first line, and forallx is where.** Where a
-chunk of what a student types ends is decided by the *delimiters*, before
-anything is looked up, and forallx declares all 52 Roman letters as delimiters
-so that `AxF(x)` reads with no spaces in it. `Cube` therefore segments as `C u
-b e`, and the block is refused with the pieces named:
-
-> This MM0 does not read: the delimiters split “Cube” into C u b e, so nothing
-> anyone types can be read as it. Declare it whole by adding a line reading:
-> `--| @syntax delimiter $ Cube $`
-
-Declaring the name as a delimiter is what fixes it: the longest spelling wins,
-so `Cube` outranks the `C` beside it and reads as one name, while `C(a)` goes
-on meaning what it did. One line covers any number of names. `carnap-prop`
-declares no letters, so a propositional course adds `Rain` or `P1` with no such
-line — the requirement belongs to languages whose quantifier prefixes have to
-read tight, not to extension as such.
-
-A block with a body and no `src` is a theory written from scratch, which is what
-a system nobody has published yet needs:
+This complete example declares a small theory first:
 
 ```md
 :::aufbau-mm0{name="prop"}
 delimiter $ ( ) $;
 provable sort wff;
-term imp (a b: wff): wff; infixr imp: $->$ prec 25;
-axiom top_i: $ top $;
+term imp (a b: wff): wff;
+infixr imp: $->$ prec 25;
 axiom ax_1 (a b: wff): $ a -> b -> a $;
 :::
-```
 
-### Showing a theory to students
-
-A declared theory does not appear in the lesson. MM0 source is machinery, and a
-course that gives students its rules in a textbook rarely wants a slab of it
-above every exercise. Add `show` when you do want it readable — it renders a
-collapsed disclosure panel, labelled with the theory's name, that opens to the
-source, extension and all:
-
-```md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0" show}
-:::
-```
-
-An `aufbau-proof` block names the system it is set in and states the goal. The
-body reads: prose (the prompt), then a single `theorem <name>: $ … $` line (the
-goal, in MM0 declaration syntax), then a `----` underline, then the starter proof
-body the student edits:
-
-```md
-:::aufbau-proof{system="prop" id="identity"}
-Prove the law of identity.
+:::aufbau-proof{system="prop" id="implication"}
+Prove the stated implication.
 
 theorem thm_k (a b: wff): $ a -> b -> a $
 ----
@@ -942,185 +675,198 @@ l1: $ a -> b -> a $ by ax_1 []
 :::
 ```
 
-The compiler freezes the theory plus the goal declaration into the exercise's
-`publicData.mm0` — that frozen mm0 is the sole input the worker verifies against,
-so the certificate is bound to the exact goal you wrote (a proof of a different
-statement will not verify). The student edits only the body below the underline;
-the goal header stays fixed.
+The theory and theorem declaration are frozen in the revision. Consumers
+receive their combined engine text as `publicData.mm0`. In current artifacts,
+shared theory source is stored once in a systems table and joined with each
+exercise's goal, rather than duplicated per exercise.
 
-Alongside the common `id`, `title`, `points`, `exam`, and `feedback`
-attributes it takes the required `system` (an `aufbau-mm0` block declared
-earlier in the document, or one of the ids the server ships — see "Languages and
-theories" below) and an `options` string of editor toggles: `auto` exposes the
-compiler's `auto?` proof search, `complete` exposes rule-name completion (both
-off by default — appropriate for introductory work, worth enabling for a course
-where search is expected). The proof-script format (proof lines, `by`, rule
-applications, `auto?`) is documented in the engine repository's `docs/proof.md`.
+The common attributes apply. `system` is required and names a preceding
+`aufbau-mm0` block or a built-in system. `options` accepts `auto` and
+`complete`, both off by default. These flags are parsed, but the linear
+editor's proof-search and completion controls are not yet wired up.
 
-v1 is a plain text editor; richer GUIs on the same engine may follow. The
-`auto?`/completion wiring is not implemented yet. The full reference lives next
-to the code in `src/worker/exercises/aufbau-proof/README.md`.
+Linear proof lines are engine syntax, including axiom identifiers. Unlike the
+other proof interfaces, this editor does not translate surface-language rule
+aliases or student formula notation before compilation.
+
+See [the linear proof guide](../src/worker/exercises/aufbau-proof/README.md)
+and the Aufbau engine repository's `docs/proof.md` for proof-script syntax.
 
 ## Languages and theories
 
-**Every exercise that reads a formula takes `system=`, and they all mean the
-same thing by it: an MM0 file.** That is the whole of this section, and it is
-worth stating plainly because it used to be false — proofs took `theory=` and
-could only name a block, while a model or translation took `system=` and could
-only name a language the server shipped.
+`system` selects the MM0 artifact an exercise uses. A theory defines sorts,
+terms, axioms, and proof rules. A language adds `@syntax` annotations that
+define student spellings, canonical output, and parsing restrictions.
+One file can provide both, as the forallx systems do.
 
-A **theory** is what a proof is built from — sorts, terms, axioms, the rules a
-student cites by name. It is what `/theories/forallx-calgary-2019.mm0` serves,
-and what an `aufbau-mm0` block declares.
+Resolution checks a named `aufbau-mm0` block declared earlier in the document
+first, then a built-in ID. An unknown name reports both sets of available
+names. This lets a course extend a built-in and use the extension consistently
+in proofs, models, truth tables, and translations.
 
-A **language spec** is what a formula is written in — the same sorts and terms,
-plus `@syntax` annotations saying how a student *spells* them: which brackets
-group, which spellings of `∧` are accepted, which of them is canonical, and
-which conventions the book refuses (forallx: Calgary will not read `P → Q → R`
-or `P ∧ Q → R`, and will not let you write `(P)`). Three ship, and `system=`
-names any of them by id:
+### Naming a theory the site serves
 
-| Id | Language |
+Use `src` to load a built-in into a named block:
+
+```md
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+:::
+```
+
+The six built-in IDs are:
+
+- `forallx-calgary-2019`: Calgary natural deduction, first-order syntax,
+  basic rules.
+- `forallx-calgary-2019-plus`: the same language with derived rules.
+- `forallx-magnus`: the original Magnus forallx QL rules and notation.
+- `forallx-magnus-plus`: the same language with derived/replacement rules.
+- `gentzen-lk`: classical multi-conclusion sequent calculus, suitable for
+  proof trees. It has no student-language annotations.
+- `carnap-prop`: the default propositional signature, without proof rules.
+
+Each is served at `/theories/<id>.mm0`. Open that URL to inspect the source
+and rule names. Exercise `system` can name a built-in ID directly; an extra
+block is needed only for naming, extending, or displaying it.
+
+Built-ins are resolved from the application code, without a network fetch.
+Remote-origin theory URLs are not supported. Copy the source into a block or
+host an immutable theory revision on this site instead.
+
+### Hosting a theory of your own
+
+Create a content item of kind **Theory or language**. Its revisions contain
+MM0 rather than Markdown, and saving validates that the source can be read.
+The revision page gives its address:
+
+```text
+/content/revisions/<revision-id>/theory.mm0
+```
+
+Use that address as a block's `src`. Use the block's name, not the address,
+in exercise `system` attributes.
+
+Hosted theory references have these properties:
+
+- They name a revision, never “latest”. To adopt a newer theory, save a new
+  lesson revision using its new address.
+- The lesson compiler resolves the source at authoring time and freezes it
+  into the lesson. Students do not fetch the hosted revision.
+- Sharing is per revision: private, available to content authors on the site,
+  or public. Future revisions are not automatically shared.
+- Permission is checked when another author saves a lesson using the theory.
+  Narrowing sharing later cannot revoke text already copied into that lesson.
+- A colleague's lesson includes the theory text in its student data. Sharing
+  a theory for reuse also permits that distribution.
+
+The Worker resolves hosted theories through a store read; browser previews
+use the same-origin source route. An inaccessible revision is not
+identified separately from a missing or unsuitable one.
+
+A hosted theory with `@syntax role sentence` can also supply the language
+for semantic exercises.
+
+### Extending a theory, and writing one
+
+A block can combine `src` with a body. The body is raw MM0 appended after the
+referenced source:
+
+```md
+:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube Loves $
+term Cube (x: tm): wff;
+term Loves (x y: tm): wff;
+:::
+```
+
+Add congruence axioms if identity elimination must replace equals inside new
+predicates. For example, in the body above:
+
+```mm0
+--| @congr
+axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
+```
+
+Without a congruence declaration, the predicate can parse and occur in proofs,
+but identity rewriting cannot traverse it automatically.
+
+A body without `src` declares a theory from scratch, as in the linear-proof
+example. The built-in signatures already provide their documented letter
+vocabularies; extensions add names rather than replace those vocabularies.
+
+### Delimiters and multi-character names
+
+The parser segments input using delimiters before looking up names. Forallx
+Calgary declares Roman letters as delimiters so `AxF(x)` can be read without
+spaces. A new name such as `Cube` would be split into letters unless declared
+as a complete delimiter:
+
+```mm0
+--| @syntax delimiter $ Cube $
+```
+
+Longest matching spellings win, so `Cube` remains one name while `C(a)` still
+uses the predicate letter C. One delimiter annotation can list several names.
+The compiler diagnoses unreachable names and suggests this repair.
+
+`carnap-prop` does not split on letters, so a declaration such as `Rain` or
+`P1` needs no additional letter delimiter. New operator spellings still need
+the appropriate delimiters.
+
+### Showing a theory to students
+
+Theory blocks are hidden by default. Add `show` to render a collapsed source
+panel labeled with the theory name:
+
+```md
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0" show}
+:::
+```
+
+The panel shows the source including extensions and syntax annotations.
+Engine input strips `@syntax` annotations, since they belong to the surface
+parser rather than the verifier.
+
+### Language roles
+
+Semantic exercise types read constructor roles rather than hard-coded
+notation tables. For example, `@syntax role conjunction` tells a truth table
+how to interpret a connective regardless of its printed spelling.
+
+Any readable language may be selected, but individual formulas must use
+constructs the exercise understands. A truth table rejects a quantifier at
+that formula's location. It can treat a role-less sentence constructor such
+as `F(a)` as an atom. A constructor with an unsupported role is rejected,
+not silently treated as a new atom.
+
+For models and translations:
+
+- A role-less constructor returning the sentence sort is a predicate.
+- A suitable term constructor is a function.
+- `@syntax role individual` names the sort interpreted by the model's
+  domain; sorts coercing into it also count.
+- `@syntax role argument-list` identifies a structural list of arguments
+  for variadic predicate/function letters. Without it, binders are individual
+  arguments, suitable for fixed-arity symbols.
+
+Binders must be ordinary individual arguments. Constructors that bind
+variables or take sentences as arguments, such as description operators or
+formula-dependent functions, are not interpreted as ordinary model symbols.
+
+Meaning comes from the constructor tree; displayed field labels and stored
+formulas come from canonical notation. A function declared with infix `+`
+can appear as `a+b`, with `_+_` as its table label. Without notation, a
+predicate such as `Red` uses its name and brackets, as in `Red(_)`.
+
+### Truth-function roles
+
+All sixteen binary truth functions are available, along with negation and
+truth constants. A custom system can declare a constructor with one of these
+roles for use in truth tables, models, and translation checking:
+
+| Role | Meaning |
 | --- | --- |
-| `forallx-calgary-2019` | *forallx: Calgary* first-order syntax — predicates with parentheses, `∧` canonical. |
-| `forallx-magnus` | *forallx* (P.D. Magnus) first-order syntax — predicates juxtaposed (`Fa`, `Rab`), `&` canonical. |
-| `carnap-prop` | Carnap's default `prop` — the truth-table type's default, ASCII connectives and 52 sentence letters. |
-
-The two `-plus` systems (`forallx-calgary-2019-plus`, `forallx-magnus-plus`)
-are the same languages with more rules, so a model or translation exercise may
-name either spelling; a course that sets its proofs in a `-plus` system can
-name it everywhere and never think about it again.
-
-They live in `src/worker/logic/theories/` alongside the proof systems, and are
-served at `/theories/<id>.mm0` like them — a language and a proof system are the
-same kind of artifact, and each forallx edition is one file playing both parts.
-Being MM0 is not a formality: an exercise type reads one by asking what role
-each constructor plays (`@syntax role conjunction`), so nothing in the server
-knows that this book calls conjunction `/\` or that book calls it `∧`. Adding a
-textbook's notation is a file, not a code change — which is what has to be true
-before an instructor can bring their own, and it is now true for every type that
-reads a formula.
-
-The same channel names the **rules** the way the book does. MM0 identifiers are
-ASCII, so an axiom is `and_intro` and can never be `∧I`; an alias line on the
-rule says what a proof may cite it as, and the proof types resolve the citation
-before the engine sees it:
-
-```mm0
---| @syntax alias ∧I /\I &I
-axiom and_intro (ga de si: ctx) (ph ps: wff):
-  $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
-```
-
-Several spellings on one line, or several lines, both read; an alias is one
-whitespace-free token, and it must mean exactly one rule — a name any rule
-already has, or one another rule already claimed, is a compile error in the
-theory. The shipped forallx systems carry the book's name for every rule
-(`→E`, `∧I`, `¬I`, `X`, `IP`, `∀E`, …, and `AS` for the assumption rule). A
-name the book gives to *two* axioms, one per side — `∧E`, `∨I`, `↔E` — sits on
-the second of them, which carries the engine's `@fallback` onto the first: a
-line citing `∧E` lowers to `and_elim_r`, and when that side does not fit the
-engine retries with `and_elim_l`, so the student never says which. A theory of
-your own does the same with two annotation lines on the later axiom:
-
-```mm0
-axiom and_elim_l (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ph $;
---| @fallback and_elim_l
---| @syntax alias ∧E /\E &E
-axiom and_elim_r (ga de: ctx) (ph ps: wff): $ ga ⊢ ph ∧ ps $ > $ ga ; de ⊢ ps $;
-```
-
-An alias works wherever a rule is cited: a Fitch justification, a tree or
-Prawitz node, and a starter proof. The linear `aufbau-proof` type is the
-exception: its lines are engine text and go to the compiler as written, so
-there a rule is its identifier.
-
-An alias says how a rule is *written*; a role says what it *is*. The Fitch and
-Prawitz types have to know which axiom opens a hypothesis, and they read that
-off the theory too — `@syntax role assumption` on the axiom, beside its alias.
-Nothing on the exercise says it, since it is a fact about the calculus, not
-about any one proof:
-
-```mm0
---| @syntax role assumption
---| @syntax alias AS
-axiom ax (ga: ctx) (ph: wff): $ ga ; ph ⊢ ph $;
-```
-
-**`system=` resolves in one order: your document, then the server.** A name
-matches an `aufbau-mm0` block declared earlier in the same document first, and
-one of the ids above second — so a course that extends forallx with its own
-`Cube` and `Loves` can call the result `forallx` and set proofs, models and
-translations in it without any of them disagreeing about what `A` means. A name
-that is neither is a compile error naming both lists.
-
-**A type asks nothing of the language beyond its being one.** Any spec that
-reads may be named by any of the seven types: propositional translation in
-`carnap-prop` and a truth table over forallx's predicate letters are both
-ordinary, and both were refused while this was a property of the language. What
-a type cannot interpret is refused *per formula*, at the construct that caused
-it — write `Ax F(x)` in a truth table and the complaint names `∀` and points at
-it, because there is no column for a binder. A spec that does not read at all is
-still refused as a whole, since there is nothing to write formulas in.
-
-Which constructs a type reads is fixed by the `@syntax role` annotations it has
-a case for, and the list is closed: a role a type has no reading for is refused
-rather than treated as opaque, so an unfamiliar connective can never be quietly
-given a free truth value. A constructor with *no* role is the open half — a
-sentence letter, or a predicate letter applied to terms — and a truth table
-gives each distinct one (`F`, `F(a)`, `R(a,b)`) its own column.
-
-**A symbol is read from the tree, not from its notation.** The model and
-translation types take a role-less constructor as a predicate when it returns
-the sentence sort and a function otherwise, named by the constructor and applied
-to whatever its binders hold — so `term plus (x y: tm): tm;` with `infixl plus:
-$+$` reads `a + b` as `plus` of two arguments, and `term Red (x: tm): wff;`
-reads `Red(a)` with no notation at all. Two sort roles say what those
-arguments may be:
-
-```
---| @syntax role individual
-sort tm;
---| @syntax role argument-list
-sort seq;
-```
-
-`individual` names the sort a model's domain interprets; a sort that coerces
-into it (`var`, `name`) counts too. A symbol is interpreted only when every
-binder is a plain argument at such a sort — so a constructor that binds a
-variable (a description operator) or takes a sentence (`ite (p: wff) (x y:
-tm): tm`) is refused where it stands, since a finite model assigns it no value,
-and a spec that names no individual sort interprets no applied symbol at all.
-`argument-list` is how a textbook's *variadic* letters work, where `F`, `F(a)`
-and `R(a,b)` are one declaration with a single binder at a list sort: a node of
-that sort is flattened by structure — its own binders at the list sort recurse,
-any other is one argument — so an elided empty list, a comma, a juxtaposition,
-or a cons all read the same way and the reader is never told a constructor's
-name. Leave it off and every binder is one argument, which is right for a
-language whose symbols all have fixed arity.
-
-Reading is by constructor; *writing* is by notation. A stored formula, a
-verdict's quotation and a model's field labels all go back through the spec's
-canonical spelling, so `plus` set as `infixl +` is written `a+b` and its table
-is headed `_+_`, while a symbol with no notation keeps its constructor's name
-and brackets — `Red(_)`, and a textbook letter's `F(_,_)`. That is not only
-cosmetic: what is stored has to parse back, so a symbol written by name where
-the language expects `+` would be an exercise no grader could read.
-
-**Every truth function has a role, not just the five a textbook opens with.**
-Which connectives a course takes as primitive is the textbook's business:
-Quine's stroke, exclusive disjunction, NAND and NOR before anything else in a
-digital-logic course. So all sixteen binary truth functions are named, and a
-course that wants one declares the constructor in its own `aufbau-mm0` block and
-annotates it — no change to the server, and the truth table, the model and the
-translation all read it. A truth table gives it a column, a model evaluates it,
-and a translation's proof search is handed inference rules for it — so `P ↑ Q`
-is *proved* equivalent to `~(P /\ Q)` rather than quietly rewritten into it.
-
-| Role | Truth function |
-| --- | --- |
-| `negation` | ¬p (unary) |
-| `verum` / `falsum` | ⊤ / ⊥ (nullary) |
+| `negation` | ¬p |
+| `verum` / `falsum` | ⊤ / ⊥ |
 | `conjunction` | p ∧ q |
 | `disjunction` | p ∨ q |
 | `conditional` | p → q |
@@ -1133,443 +879,321 @@ is *proved* equivalent to `~(P /\ Q)` rather than quietly rewritten into it.
 | `converse-non-conditional` | ¬p ∧ q |
 | `left-projection` / `right-projection` | p / q |
 | `negated-left-projection` / `negated-right-projection` | ¬p / ¬q |
-| `binary-verum` / `binary-falsum` | ⊤ / ⊥ as two-place functions |
+| `binary-verum` / `binary-falsum` | Always true / always false |
 
-The last six are degenerate and nobody teaches them, but they are named for the
-same reason the other ten are: the list is a closed whitelist, and a hole in it
-is a construct refused for a reason no author can act on. Roles that are not
-truth functions — `forall`, `exists`, `identity`, `inequality`, `sentence`,
-`individual`, `argument-list`, `turnstile`, `context-join` — are read by the
-types that have a use for them,
-and refused by the ones that do not: a truth table has no column for `∀`.
+For example, add a NAND stroke to the propositional signature:
 
-Here is a course whose textbook uses the stroke, over `carnap-prop`:
-
-````markdown
-:::aufbau-mm0{name="ours" src="/theories/carnap-prop.mm0"}
+```md
+:::aufbau-mm0{name="stroke" src="/theories/carnap-prop.mm0"}
 --| @syntax delimiter $ | $
 --| @syntax role nand
 term nand (p q: wff): wff;
 infixl nand: $|$ prec 40;
 :::
 
-::::truth-table{system="ours"}
-Fill in the table.
+::::truth-table{id="nand-table" system="stroke"}
+Compare the columns.
 
 - P | Q
 - ~(P /\ Q)
 ::::
-````
+```
 
-Both formulas get their columns, and the widget's Check grades the stroke's
-column like any other. The `@syntax delimiter` line is not optional: input is
-segmented by declared delimiters before anything is looked up, so a spelling
-that is not a delimiter will not be found. See the notes on delimiters in
-`@aufbau/syntax`'s spec-authoring guide.
-
-**The vocabulary is finite**, because an MM0 signature is. forallx gives you 26
-predicate letters `A`–`Z`, five names `a`–`e`, thirteen function letters
-`f`–`r`, and eight variables `s`–`z`; `carnap-prop` gives you 52 sentence
-letters. Subscripted letters (`F_12`, `P0`) are *not* available: the
-hand-written parsers these replaced read an unbounded subscript, and that was
-given up in the move (2026-08-24) rather than hold the unification for it.
-
-**A name is not a variable and cannot be one.** They are separate sorts, which
-is what lets forallx's proof system state ∀I's eigenvariable proviso as MM0
-dependency typing rather than as a side condition nobody checks. The cost is
-that the pools cannot overlap the way Carnap's own dialect table let them:
-`a` takes no arguments, and `f` cannot be an eigenvariable.
-
-**One written form, not two.** A formula is stored in the spec's canonical
-spelling of each symbol — its last-declared notation — and that is also what a
-reader is shown. For forallx that is the glyphs (`∀x(F(x) → G(x))`); for
-`carnap-prop`, which declares nothing but ASCII, it is the ASCII you typed.
-Either way it is text the parser accepts back.
-
-**A language and a proof system can be one file, and for both forallx editions
-they are.** `system="forallx-calgary-2019"` on a model or translation exercise and
-`src="/theories/forallx-calgary-2019.mm0"` on an `aufbau-mm0` block resolve to
-the same bytes, so a course cannot set a model exercise and a Fitch proof that
-disagree about what `A` means. What made it possible is a sort: `⊢` yields a
-`judgement`, student input is read at `wff`, and so a sequent cannot be built
-where a sentence goes — checkable rather than merely intended.
-
-Two things follow for anyone writing goals against that theory. Its context
-separator is `;`, not `,`, because the comma is already the student's argument
-separator in `R(a,b)` and MM0 gives a math token one meaning — the theory says
-so itself (`@syntax role context-join`), so the proof types pick it up and no
-exercise has to repeat it. And the ASCII quantifiers `A`/`E` are student
-spellings only: `A` is also a predicate letter, one file cannot declare it as
-both, so the notation comes off and an elaboration rule puts the spelling back
-for input. `∀`, `∃`, `@` and `3` are unaffected.
+Non-truth-functional roles include `forall`, `exists`, `identity`,
+`inequality`, `sentence`, `individual`, `argument-list`, `turnstile`, and
+`context-join`. Each exercise uses only the roles relevant to its operation.
 
 ### Which forallx
 
-Two editions ship, and they are different books, not one book in two spellings.
-Pick by which one your course assigns; a lesson written for one does not compile
-against the other, which is the point — the rules really do differ.
+The two editions have different rules as well as notation. Select the one
+used by the course's textbook.
 
-|  | `forallx-calgary-2019` | `forallx-magnus` |
-| --- | --- | --- |
-| Atomic sentences | `F(x)`, `R(a,b)` | `Fx`, `Rab` — juxtaposed, no punctuation |
-| Conjunction, as shown | `∧` | `&` |
-| Names / variables / functions | `a`–`e` / `s`–`z` / `f`–`r` | `a`–`w` / `x`–`z` / none |
-| ASCII quantifiers | `A`/`E`, `@`/`3` | `@`/`3` only |
-| `⊥` | yes, with `X` (explosion) and `IP` | no — a contradiction is an explicit pair |
-| `∨E` | proof by cases, two subproofs | modus tollendo ponens: `φ ∨ ψ`, `¬φ` ⊢ `ψ` |
-| `¬I` / `¬E` | one subproof, ending in `⊥` | two premises, `ψ` and `¬ψ`, under the assumption |
-| `P ∧ Q → R` | refused; bracket it | reads — `∧`/`∨` bind tighter than `→`/`↔` |
-| `(P)` | refused; groups take binary compounds only | reads |
+**Calgary (`forallx-calgary-2019`)**
 
-Magnus's reductios take two premises because the system has no `⊥` to collapse
-them into one. In a Fitch proof both come out of the same subproof, and the
-citation is the book's: **one range whose subproof ends with the contradictory
-pair** — `neg_intro 2-5`, where line 4 is `ψ` and line 5 is `¬ψ`, in that
-order. How many premises a range supplies is inferred from the rule's own
-signature (premises assuming the same formula are one cited subproof), not
-declared anywhere. Citing the subproof once per premise — `neg_intro 2-4 2-5`
-— is the explicit spelling and works identically, and it is also the shape for
-two sibling subproofs, which satisfy the rule equally well. The rule names are
-otherwise the ones Calgary uses, and each theory's own header has the full
-table.
+- Predicates use parentheses: `F(x)`, `R(a,b)`. A bare uppercase letter is
+  a sentence letter.
+- Names are `a`–`e`, variables `s`–`z`, and function letters `f`–`r`.
+  A bare function letter is a constant; `f(x)` is an application.
+- Quantifiers accept `A`/`E`, `@`/`3`, and `∀`/`∃` before a variable.
+- Connectives accept `~`, `/\`, `\/`, `->`, `<->`, and symbol aliases.
+  Output uses logical symbols, with `∧` for conjunction.
+- Identity accepts `=` and inequality accepts `!=` or `≠`.
+- A quantifier scopes over the next sentence, not the rest of the line.
+  `AxF(x) -> G(a)` is a conditional.
+- Conjunction and disjunction share left-associative precedence. Conditionals
+  and biconditionals do not chain or mix unparenthesized with other binary
+  connectives: `P -> Q -> R` and `P /\ Q -> R` need parentheses.
+- Parentheses group binary compounds only. `(P)`, `(~P)`, and `(a = b)` are
+  rejected in student formulas.
+- The calculus has `⊥`, explosion (`X`), and indirect proof (`IP`).
+  Disjunction elimination uses two cases; negation rules use a contradiction
+  ending in `⊥`.
+
+**Magnus (`forallx-magnus`)**
+
+- Predicates use juxtaposition: `Fa`, `Rab`.
+- Names are `a`–`w`, variables `x`–`z`; there are no function letters.
+- Quantifiers use `@`/`3` or `∀`/`∃`, not `A`/`E`. Those remain predicate
+  letters in this language.
+- Canonical conjunction is `&`.
+- Conjunction/disjunction bind more tightly than conditional/biconditional.
+  Parentheses around an atom, such as `(P)`, are allowed.
+- There is no `⊥`. Reductio uses an explicit contradictory pair.
+  Disjunction elimination uses disjunction plus a negated disjunct rather
+  than Calgary's two-case rule.
+
+Model and translation sentences must be closed: unbound variables are
+rejected. The declared vocabularies are finite. Undeclared subscripted names
+such as `F_12` or `P0`, old arity annotations, and unsupported word operators
+are not supplied automatically. Extend the language if the course needs them.
+
+Names and variables have different sorts. In Calgary proofs, this also lets
+MM0 dependency typing enforce eigenvariable restrictions. Their roles cannot
+be interchanged merely because both use lowercase letters.
+
+Stored formulas use the language's canonical spelling and are reparsed when
+compared with saved translation solutions. There is no independent table of
+source spellings. `carnap-prop` has 52 sentence letters and canonical ASCII
+connectives; the forallx editions use their own canonical symbols.
 
 ### Basic and derived rules
 
-Each edition ships twice: the basic system under the book's name, and the same
-file with the book's derived rules appended under the name with `-plus`. Every
-derived rule is a theorem of the basic set, so allowing it changes what a proof
-*demonstrates* and not what is provable — which is exactly why the choice is
-the course's. A lesson on `¬I` and `IP` does not want `DNE` on the palette; a
-lesson two chapters later does not want to teach the book's own rules as
-derivations. Set `system="forallx-calgary-2019"` for the one and
-`system="forallx-calgary-2019-plus"` for the other, per exercise. Old Carnap
-draws the same line (`thomasBolducAndZachFOL2019` against
-`thomasBolducAndZachFOLPlus2019`, `magnusQL` against `magnusQLPlus`), and the
-citation names are its:
+Choose the base system for basic rules only, or its `-plus` version for these
+additional rules:
 
-|  | `forallx-calgary-2019-plus` | `forallx-magnus-plus` |
-| --- | --- | --- |
-| Derived rules | `DS`, `MT`, `DNE`, `LEM` (two subproofs, `LEM i-j k-l`) | `DIL`, `MT`, `HS` |
-| Replacement rules | `DeM` | `Comm`, `DN`, `MC`, `↔ex` (or `<->ex`), `DeM` |
-| Quantifier rules | `CQ` | `QN` |
+- **Calgary:** `DS`, `MT`, `DNE`, `LEM`, `DeM`, and `CQ`. `LEM` cites two
+  subproofs, as in `LEM i-j k-l`.
+- **Magnus:** `DIL`, `MT`, `HS`, `Comm`, `DN`, `MC`, `↔ex` (also `<->ex`),
+  `DeM`, and `QN`.
 
-Where one name covers several forms — the two sides of `DS`, the four forms of
-`DeM`, both directions of every Magnus replacement rule — a line citing the
-name gets whichever form fits, as `∧E` already does.
+A shared citation name can select whichever rule form fits, such as either
+side of disjunctive syllogism or either direction of a replacement rule.
 
-**Replacement rules apply to a whole line.** Calgary states `DeM` and `CQ` as
-inferences from one sentence to another, and that is what ships. Magnus lets
-`Comm`, `DN`, `MC`, `↔ex`, `DeM` and `QN` rewrite *inside* a sentence —
-`¬¬P → Q` to `P → Q` in one step — and old Carnap does too; here each is the
-inference from a line's sentence to its rewritten form, and no more. A student
-who wants the antecedent rewritten derives it the long way. Saying the book's
-rule means the engine finding the rewritten pair inside the sentence from a
-bare citation, which it does not yet do; when it does, the same citations will
-reach inside a sentence and no lesson changes.
+Replacement rules currently apply to whole lines. Magnus's textbook also
+allows replacement inside a larger sentence, but this implementation does
+not yet infer that from a bare citation. Derive the intermediate result
+explicitly instead.
 
-Magnus's `A` and `E` are **not** given back as quantifier spellings. Carnap
-reads `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, by
-trying one reading and backing out of it; under juxtaposition no rewrite can
-do that, so this edition spells the quantifiers `@x` and `3x` (or `∀x`, `∃x`)
-and `A` is only ever a predicate letter. It is the one habit that does not
-transfer.
+### Rule aliases and structural roles
+
+MM0 axiom identifiers are ASCII. `@syntax alias` supplies student-facing
+citations such as `∧I`, `/\I`, and `&I`:
+
+```mm0
+--| @syntax alias ∧I /\I &I
+axiom and_intro (ga de si: ctx) (ph ps: wff):
+  $ ga ⊢ ph $ > $ de ⊢ ps $ > $ ga ; de ; si ⊢ ph ∧ ps $;
+```
+
+An alias is one whitespace-free token and must identify exactly one rule.
+A duplicate alias or collision with another rule name is an error.
+For rules with several forms, the later axiom can use `@fallback` to try an
+earlier form. Built-in `∧E`, `∨I`, and `↔E` use this mechanism.
+
+Aliases work in Fitch, tree, and Prawitz rule citations and starters. The
+linear proof-script editor uses engine identifiers directly.
+
+The shaped proof interfaces also read structural roles from the theory:
+
+- `assumption`: the axiom that introduces an assumption.
+- `turnstile`: the sequent constructor and its notation.
+- `context-join`: the separator between context formulas.
+
+Fitch and Prawitz require all three. The forallx context separator is `;`,
+not `,`, because comma already separates predicate arguments. Do not add a
+per-exercise separator setting to compensate for missing theory roles.
 
 ### Formulas in a proof
 
-A Fitch, tree or Prawitz proof set in a theory that says which sort its
-formulas are in has them **read in that theory's language**, exactly as a model
-or translation exercise does. The student types `Ax(F(x) -> G(x))`; the widget reads it and hands the
-compiler `(∀ x ((F (x)) → (G (x))))`. Two things come with that:
+Fitch and Prawitz read formulas using `@syntax role sentence`. Tree nodes
+use the result sort of the `turnstile` role. If the relevant role is absent,
+input remains engine text. For example, `gentzen-lk` has no `@syntax`
+annotations, so its tree nodes use engine syntax.
 
-- A formula that will not read is caught in the widget, with the complaint
-  placed at the character that broke it, instead of arriving later as an engine
-  unification failure about a line nobody can connect to what they typed.
-- The book's refusals apply to proofs too. forallx admits parentheses only
-  around a two-place connective, so a line reading `∀ x (x = x)` is now an
-  error and must be written `∀ x x = x` — the identity is not a connective. The
-  same goes for `(∀ x F(x)) ∧ G(a)`, which is `∀ x F(x) ∧ G(a)`: a quantifier's
-  scope is the sentence immediately after it, so the parentheses were never
-  doing anything. Both spellings mean the same thing to the engine; only one is
-  the book's.
+With a surface language, the widget parses student input and converts it to
+engine notation. Parser errors point to the offending character. The book's
+restrictions apply: a Calgary line must write `∀x x = x`, not
+`∀x(x = x)`, because identity is not a binary connective that accepts
+grouping.
 
-**One condition, or the proof stays engine text: the theory must name the sort
-to read at** — `@syntax role sentence` for a Fitch or Prawitz line, and for a
-tree node the sort `@syntax role turnstile` yields. `gentzen-lk` declares no
-`@syntax` at all, so it names neither and proofs in it read as they always did.
-Its formulas are perfectly readable in the abstract — the file declares its own
-notations and Carnap can parse them — but nothing will guess which sort a
-student's line is written in, and guessing wrong is the kind of mistake that
-does not announce itself.
+Theorem binders are in scope while parsing the goal and proof. In
+`theorem mp (a b: wff): $ (a → b) ; a ⊢ b $`, `a` and `b` are formula
+metavariables rather than the language's ordinary names.
 
-A goal stated as a *rule schema* is read too, in its own binders. `theorem mp
-(a b: wff): $ (a → b) ; a ⊢ b $` binds `a` and `b` as stand-ins for any
-sentence, and for the length of that theorem they mean something the theory's
-lexicon — where `a`–`e` are names — knows nothing about. The parser is told the
-binders, so `a` in a line of that proof is the metavariable, not the name, and
-the student may write `~(a \/ b)` there as readily as in a goal about
-particular letters. This is what the binders always meant to the engine; before
-it was said out loud, schematic exercises had to stay in engine text.
+A binder that shadows a variable, term, or notation produces a warning but
+does not prevent saving. If it shadows notation, that spelling can become
+unavailable within the exercise; for example, binding `A` can remove its
+quantifier reading. Binding a variable at its existing sort does not warn.
 
-**Shadowing is warned about, not refused.** Where a binder's name already means
-something in the theory, the compiler says so on the goal's line and compiles
-anyway — a rule schema has to call its metavariables *something*, and in a
-theory that spends every letter on its lexicon there is nothing left to call
-them, so only the author can tell whether a given collision was intended. A
-warning does not stop the save; it is listed under the editor in gold rather
-than red.
+Starters are parsed during authoring, so invalid starter formulas are caught
+before students open the exercise.
 
-Three kinds, by what was displaced. A binder over a **variable** of another
-sort (`(a: wff)` where `a` is a name) or over a **declared term** (`(f: tm)`
-where `f` is a function letter) simply wins, and the warning is a note. A
-binder over a **notation** — a token, or a letter an `@syntax elab` rule uses
-to spell something, as `A` spells `∀` in forallx — additionally takes that
-spelling away inside the exercise: a line reading `Ax F(x)` there will not
-parse. That is the one worth reading twice.
+Goals in shaped proof exercises are also converted from surface syntax.
+Each math string in the `theorem` declaration is read at the turnstile result
+sort, falling back to the sentence sort. Goal parsing omits the stricter
+student-formula lints, such as redundant-bracket checks, but it still requires
+valid language syntax. Failures produce `invalid_goal_formula`.
+The linear `aufbau-proof` directive keeps its goal and lines in engine syntax.
 
-Binding a name to the reading it already had is not shadowing and says nothing:
-`theorem unimp {x: var}` over an `s`–`z` variable pool is every first-order
-goal's normal shape.
-
-A **starter** is read the same way at compile time, so an author who writes a
-line the language refuses is told while saving the revision rather than by a
-student who cannot get the editor to accept what it opened with.
-
-So is the **goal**. The `theorem` line is an MM0 declaration, and MM0's own
-math strings are engine text — `∃x` is one token to the engine, and a forallx
-sentence letter on its own is a term the engine wants an argument for (the
-operator spellings themselves, `\/`, `->` and the rest, are ordinary MM0
-notations the engine reads) — so writing the goal the way the lines
-are written, which is the only way a student ever sees it, used to hand the
-engine a declaration it refused, and the refusal surfaced in the widget as an
-"extra proof block with no matching theorem". Now every `$ … $` in the goal
-is read through the system's language and re-printed for the engine: `theorem
-cd: $ P \/ Q ; P -> S ; Q -> S ⊢ S $` and `theorem exelim {x: var}: $ ∃x F(x) ;
-∀x (F(x) → G(x)) ⊢ ∃x G(x) $` both declare cleanly, and the student sees the
-statement as you wrote it. A goal formula the language refuses is an
-`invalid_goal_formula` diagnostic on the goal's line, carrying the parser's own
-complaint. The reading is at the sort a tree node reads at — the turnstile's,
-where the system declares one — falling back to the sentence sort, so a bare
-`theorem t: $ P → P $` over forallx reads too. The lints a student's line is
-held to — bracket discipline, chain refusal, closed sentences — are not applied
-to a goal, so `(∀ x F(x)) ∧ G(a)` reads there where a line must say `∀ x F(x)
-∧ G(a)`; what is refused is what is not the language at all — an explicit
-`snil`, or `F a` juxtaposed where the language spells `F(a)`. `aufbau-proof` is exempt on the same terms as its
-lines.
+In Magnus Fitch reductio, one range can cite a subproof whose final two lines
+are a sentence followed by its negation. For example, `neg_intro 2-5` uses
+lines 4 and 5 as the contradictory pair. Explicit citations such as
+`neg_intro 2-4 2-5` also work; the rule signature determines how many premises
+a range supplies.
 
 ## Aufbau-proof-tree directive
 
-Use `aufbau-proof-tree` for the **same engine-checked proof, built as a tree**
-instead of typed as linear proof lines. The student assembles a natural-deduction
-/ sequent tree — each node is a conclusion justified by a rule citing its premise
-sub-proofs — and the browser flattens it (a postorder walk, children before
-parents) into exactly the linear `.auf` the text editor produces, compiles it to
-an MMB certificate, and the worker re-verifies that certificate. Grading, the
-trust boundary, and the `aufbau-mm0` theory it pairs with are identical to
-`aufbau-proof`; only the input surface differs.
+Use a proof tree when students should build premise subtrees above each
+conclusion. The browser converts the tree to linear proof text, compiles it,
+and submits a certificate for server verification.
 
-Its body is prose (the prompt) then a single `theorem <name>: $ … $` goal line.
-By default there is no starter body — the student builds the tree from a root
-seeded with the goal:
+The body has a prompt and a theorem line. Without a starter, the root is
+seeded with the fixed goal:
 
 ```md
-:::aufbau-proof-tree{system="prop" id="identity"}
-Build a proof of the law of identity.
+:::aufbau-proof-tree{system="gentzen-lk" id="tree-identity"}
+Build a derivation of identity.
 
-theorem thm_k (a b: wff): $ a -> b -> a $
+theorem identity (a: wff): $ a ⊢ a $
 :::
 ```
 
-**Pre-populating the tree (optional).** To hand the student a partially- or
-fully-built tree, add a `----` underline after the goal and then a starter proof
-written in the **same linear `.auf` form the tree flattens to** — one node per
-line, `<label>: $ <formula> $ by <rule> [<refs>]`, where a ref is another line's
-label or a hypothesis `#n`. The compiler parses it back into a tree and the
-editor seeds from it:
+To prepopulate the tree, add `----` and linear starter lines:
 
-```md
-:::aufbau-proof-tree{system="prop" id="mp-start"}
-Finish the proof.
-
-theorem mp (a b: wff): $ (a -> b) , a ⊢ b $
-----
-l1: $ (a -> b) , a ⊢ a -> b $ by ax []
-l2: $ (a -> b) , a ⊢ b $ by imp_elim [l1, #1]
-:::
+```text
+label: $ formula $ by rule [references]
 ```
 
-Because the editor represents a *tree*, the starter must be one: each line may be
-cited by **at most one** other line. A linear proof that reuses a line (a DAG) has
-no tree form, so such a body is rejected at author time with a
-`proof_is_not_a_tree` diagnostic — duplicate the shared derivation into each
-branch instead. Malformed lines, dangling `[refs]`, and multiple un-cited lines
-are likewise reported to the author.
+References name earlier labels or hypotheses such as `#1`. Each line may
+be cited by at most one other line, and exactly one root remains uncited.
+A proof that reuses a line is a graph rather than a tree and is rejected with
+`proof_is_not_a_tree`; duplicate the shared derivation in each branch.
+Malformed lines, dangling references, and multiple roots are author errors.
 
-In the editor the goal sits at the foot of the tree (its conclusion is fixed);
-the student adds the premises that justify each line and types the rule under
-each inference bar. A small toolbar adds a premise, adds a hypothesis reference
-(`#n`), or deletes the selected subtree. Feedback is live — a "verified ✓" mark
-once the tree compiles, and any engine diagnostic is shown inline on the node
-whose line caused it. The widget submits `{ mmb, proofText, tree }`; the worker
-verifies the certificate and stores the rest, and review pages redraw the
-submitted tree.
+Students can add premises or hypothesis references and delete subtrees.
+Feedback is shown on the relevant node. Submission data includes the tree,
+generated proof text, and certificate; the server stores the answer and
+verdict, not the certificate. Review redraws the submitted tree.
 
-It takes the same attributes as `aufbau-proof` (`system`, `id`, `title`,
-`points`, `exam`, `feedback`, `options`). v1 is plain tree editing (free-text rule names, no
-rule-picker or drag-to-reparent); the tree is drawn by the vendored ProofML
-elements. The full reference lives in
-`src/worker/exercises/aufbau-proof-tree/README.md`.
+Common attributes and the proof `system` and `options` attributes apply.
+Rule names are free text; there is no rule picker or drag-to-reparent UI.
+The tree renderer uses the vendored ProofML elements. See
+[the tree guide](../src/worker/exercises/aufbau-proof-tree/README.md).
 
 ## Aufbau-proof-fitch directive
 
-Use `aufbau-proof-fitch` for the **same engine-checked proof, written in the
-classic Fitch shape** from textbooks like *forallx* — a linear list of formulas
-where **indentation marks subproofs** and the subproof scope-lines are drawn in.
-It suits sequent/ND theories that expose a turnstile judgement (`⊢`) with a
-comma-separated context: the editor translates the Fitch text into the linear
-`.auf` the other proof types produce (each line becomes a sequent `Γ ⊢ φ`,
-its context read off the indentation), compiles it to an MMB certificate, and the
-worker re-verifies that certificate. Grading and the trust boundary are identical
-to `aufbau-proof`; only the input surface differs.
+Fitch proofs are linear lists where indentation opens subproofs. Each line
+has a formula, a colon, a rule name or alias, and references:
 
-Each proof line is `<formula> :<rule> <refs>`, where a ref is a proof-step number
-`n` or a subproof range `a-b`. Rules are the theory's own axiom names (e.g.
-`imp_elim`, `imp_intro`), or any alias the theory gives them (`:→E 1 2`; see
-the `@syntax alias` note under *Languages* above). A **premise or assumption**
-line just cites the theory's assumption axiom with no refs (`:ax` here, `:AS`
-or `:PR` in the forallx systems, whose axiom carries the book's own name); indenting a line opens a subproof
-whose first assumption is discharged when a shallower line later cites its range.
-The body reads prose (the prompt), the `theorem <name>: $ Γ ⊢ φ $` goal line, a
-`----` underline, then a starter Fitch proof (which may be empty):
+```text
+formula :rule 1 2
+formula :rule 2-5
+```
+
+A reference is a step number or subproof range. An assumption cites the
+theory's assumption rule with no references. A deeper indent opens its
+scope; a later shallower line can discharge it by citing the range.
 
 ```md
-:::aufbau-proof-fitch{system="prop" id="mp"}
+:::aufbau-proof-fitch{system="forallx-calgary-2019" id="fitch-mp"}
 Derive Q from P → Q and P.
 
-theorem mp (a b: wff): $ (a → b) , a ⊢ b $
+theorem mp: $ (P → Q) ; P ⊢ Q $
 ----
-a → b   :ax
-a       :ax
-b       :imp_elim 1 2
+P → Q   :AS
+P       :AS
+Q       :→E 1 2
 :::
 ```
 
-The student is shown the goal's **statement**, not the declaration you wrote it
-as: `(a → b) , a ⊢ b`, with the theorem's name, its binders and its `$ … $`
-dropped — the same thing the tree and Prawitz editors show. The name is the
-engine's handle on the goal and need not match the exercise `id`; a `{x: var}`
-binder is there to make `∀ x` legal and means nothing to a reader. This does
-not depend on the system being a language — that decides whether the formula
-itself reads as surface text; taking a declaration apart is MM0 grammar.
+For conditional introduction, indent the assumption and cite that subproof:
 
-A discharging proof indents its assumption and cites the subproof's range; the
-translator drops the discharged assumption from the context automatically:
+```md
+:::aufbau-proof-fitch{system="forallx-calgary-2019" id="fitch-self"}
+Prove P → P.
 
-```
-    a       :ax
-a → a       :imp_intro 1-1
+theorem self: $ _ ⊢ P → P $
+----
+    P   :AS
+P → P   :→I 1-1
+:::
 ```
 
-Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
-`options` attributes it takes only the required `system`. Three things the
-translator needs come from the theory, by `@syntax role`: which axiom opens a
-hypothesis (`role assumption` — the rule the translator treats as introducing a
-context formula), and how this theory spells a sequent — `role turnstile` on
-its turnstile and `role context-join` on the separator between a context's
-formulas — both written into every sequent the translator emits. The student's
-Fitch source never spells either. A theory that declares none of the three
-does not compile a Fitch exercise; the diagnostic names the missing role. This
-is why forallx's `;` appears on no exercise anywhere: the theory says it once.
-The widget submits `{ mmb, proofText, fitchText }`; the worker verifies the
-certificate and stores the rest, and review pages show the submitted Fitch
-source. Because the `:<rule>` justification
-uses a colon, the Fitch body is treated as raw text (not Markdown), and formulas
-whose own notation uses a colon still parse — the justification is taken after the
-line's *last* colon. The full reference lives in
-`src/worker/exercises/aufbau-proof-fitch/README.md`.
+The widget shows the goal statement without the theorem name, binders, or
+math-string delimiters. It derives each line's context from open assumptions
+and translates the proof to sequents for the compiler. Scope lines in the
+editor show the same subproof structure used by the translator.
+
+The body after `----` is raw text, not Markdown. The last colon on a line
+separates its formula from the justification, allowing colons inside formula
+notation.
+
+`system` is required, along with the common attributes. The selected theory
+must identify the assumption, turnstile, and context-join roles. The forallx
+systems supply them; a theory without them produces a diagnostic naming the
+missing role.
+
+Submission data contains `fitchText`, generated `proofText`, and `mmb`.
+Only the certificate is verified; the answer text remains available for
+review. See
+[the Fitch reference](../src/worker/exercises/aufbau-proof-fitch/README.md).
 
 ## Aufbau-proof-prawitz directive
 
-Use `aufbau-proof-prawitz` for the **same engine-checked proof, drawn as a
-Prawitz-style natural-deduction tree** — the textbook picture, with the
-premises of each inference above its line and discharge written as labels:
-a discharged assumption is bracketed with a superscript (`[A]¹`) and the
-discharging rule carries the matching mark beside its line. Like
-`aufbau-proof-fitch` it suits sequent/ND theories with a turnstile judgement
-(`⊢`) and a comma-separated context; where Fitch reads the discharge off the
-indentation, here the **labels** determine each assumption's scope, and the
-browser infers every node's context from them (each sequent's context is its
-dependency set: the assumptions above that node not yet discharged — never
-anything from a sibling branch, so ∀I/∃E eigenvariable side conditions judge
-only what the inference actually rests on). The translated tree compiles to the same
-linear `.auf`, the MMB certificate is re-verified by the worker, and grading
-and the trust boundary are identical to `aufbau-proof`.
+Prawitz proofs use natural-deduction trees with labeled discharge. A labeled
+assumption appears as `[A]¹`; the inference discharging it carries the same
+label.
 
-The editor is a **forest workspace built for top-down proving**: the student
-starts free-standing assumptions, selects one or more finished trees (in
-premise order), and applies a rule *below* them; the exercise is complete when
-the forest joins into a single verified tree ending in the goal. Growing
-upward (adding a premise or assumption above a line) works too. To discharge,
-the student labels an assumption and repeats the label on the discharging
-rule. Feedback is live — a ✓ once the single tree verifies, and diagnostics
-shown on the node that caused them. The widget submits
-`{ mmb, proofText, tree }`; the worker verifies the certificate and stores the
-rest, and review pages redraw the submitted tree in the bracket notation.
+Students work in a forest of partial trees. They can start assumptions,
+select trees in premise order, and apply a rule below them, or add premises
+above an existing line. A complete answer is one verified tree ending in
+the goal.
 
-Its body is prose (the prompt) then a single `theorem <name>: $ … $` goal
-line, optionally followed by a `----` underline and a **starter** the editor
-opens with instead of a blank canvas:
+The body is a prompt and theorem line, optionally followed by `----` and a
+starter:
 
 ```md
-:::aufbau-proof-prawitz{system="forallx" id="self"}
+:::aufbau-proof-prawitz{system="forallx-calgary-2019" id="prawitz-self"}
 Prove the conditional by discharging its antecedent.
 
-theorem self (a: wff): $ _ ⊢ a → a $
+theorem self: $ _ ⊢ P → P $
 ----
-a1: $ a ⊢ a $ by ax [] -- label:1
-c1: $ _ ⊢ a → a $ by imp_intro [a1] -- label:1
+a1: $ P ⊢ P $ by AS [] -- label:1
+c1: $ _ ⊢ P → P $ by imp_intro [a1] -- label:1
 :::
 ```
 
-Starter lines use the tree type's linear form — `<label>: $ <sequent> $ by
-<rule> [<refs>]`, each line cited by at most one other and a single line (the
-root) left uncited — extended two ways. **Each line is a full sequent**, the
-same text the translator emits, so a valid `.auf` proof for the theory is a
-valid starter; the context left of the exercise's sequent symbol is
-*discarded* on parse, because nodes carry bare conclusions and the discharge
-labels re-derive every context (a stale or wrong context therefore cannot
-mislead the grader). **Discharge is written as a trailing comment**:
-`-- label:1` at the end of an assumption line gives that leaf its discharge
-label (`[A]¹`), and at the end of any other line lists the marks that rule
-discharges (comma-separated for a multi-label discharge like ∨E's). Position
-is what disambiguates — a leaf can only carry a label, a rule only marks.
-Other `--` comments, whole-line or trailing, stay ordinary comments (the
-engine's `.auf` grammar accepts trailing comments too, so the annotated lines
-above compile as written). A starter only has to *parse*; it does not need to
-prove anything — but a discharge mark that binds to no assumption fails the
-compile, since the student could never fix it.
+Starter lines use the same linear format as tree starters, with full
+sequents and one uncited root. The parser discards the written contexts and
+recomputes them from the assumption and discharge labels.
 
-Alongside the common `id`, `title`, `points`, `exam`, `feedback`, and
-`options` attributes it takes only the required `system`. As with the Fitch
-type, the theory's `@syntax role` annotations say the rest: `role assumption`
-names the axiom every assumption leaf is emitted through, `role turnstile` the
-notation used in every sequent the translator emits — a pasted starter line is
-cut at it in any spelling the theory declares, so `|-` reads where `⊢` is
-canonical — and `role context-join` the separator between a context's
-formulas. A theory missing any of them does not compile a Prawitz exercise.
+`-- label:1` labels an assumption leaf. On an inference line it lists labels
+to discharge; separate several with commas. Other trailing or whole-line
+comments remain ordinary comments. A starter must parse but need not be a
+finished proof. A discharge mark with no matching assumption is rejected.
 
-One caveat when setting goals: a tree cannot discharge **vacuously**. Every
-assumption stands somewhere in the tree, so a goal like `a ⊢ b → a` — where
-the antecedent is never used — has no direct tree proof (Fitch can assume and
-reiterate past; a tree cannot). The classical detour works: conjoin the unused
-assumption in with ∧-introduction and take it back out with ∧-elimination
-before discharging. Either avoid such goals or teach the detour, as the demo
-lesson (`scripts/seed-prawitz-demo.ts`) does. The full reference lives in
-`src/worker/exercises/aufbau-proof-prawitz/README.md`.
+Each node's context contains only its undischarged dependencies, not
+assumptions from sibling branches. The compiler and verifier enforce the
+selected theory's rules, including eigenvariable conditions.
+
+Like Fitch, Prawitz requires `assumption`, `turnstile`, and `context-join`
+roles in the theory. Common attributes and proof options apply. Starter
+separators can use any turnstile spelling declared by the theory.
+
+Submission data contains `tree`, generated `proofText`, and `mmb`. Review
+redraws the tree; the server records its answer data and verification verdict,
+not the certificate.
+
+Vacuous discharge has no direct tree representation: an assumption must
+occur in the tree before it can be discharged. A goal such as `a ⊢ b → a`
+therefore needs a detour that uses b, for example conjunction introduction
+followed by elimination, before discharge. Choose goals accordingly or teach
+that derivation. See
+[the Prawitz guide](../src/worker/exercises/aufbau-proof-prawitz/README.md).
 
 ## Style directive
 
-A `style` block carries a custom stylesheet for the whole content document.
-Its body is raw CSS, not Markdown; three colons are enough (four also work):
+A style block supplies raw CSS for the isolated content document:
 
 ```md
 :::style
@@ -1577,177 +1201,144 @@ h1 { color: maroon; }
 :::
 ```
 
-The CSS is extracted at compile time into the artifact's `css` field and never
-rendered as HTML. It applies only in the isolated content document (the iframe
-on assignment pages, and the fullscreen view its corner glyph opens), layered
-after the default content styles so equally specific author rules win. A
-` ```css ` fenced code block is unrelated: it always renders as a code sample.
+The compiler stores it in the artifact's `css` field. It applies inside the
+content iframe and fullscreen document, not to application navigation or
+other surrounding UI. Inline author CSS follows the default styles, so it
+wins when specificity is equal.
 
-Rules and behavior:
+- Style blocks must be top-level, not inside exercises.
+- Multiple blocks concatenate in source order.
+- The raw-HTML restriction does not apply inside CSS strings.
+- Use a longer colon fence if the body needs a line containing `:::`.
+- A fenced `css` code block is only a displayed code sample.
 
-- Style blocks are allowed only at the top level, not inside exercise bodies.
-- Several style blocks concatenate in source order.
-- The raw-HTML restriction does not apply inside a style body, so CSS like
-  `content: "<b>"` is fine there.
-- A literal `:::` line inside the CSS would close the directive early; fence
-  the block with `::::style` if you ever need one.
-- The renderer preserves `class` attributes, but no dialect syntax writes
-  them yet, so for now target element selectors and the renderer's structural
-  classes: `.exercise`, `.exercise-prompt`, `.exercise-status`,
-  `.exercise-actions` and the controls in it, including
-  `.exercise-check-status` — the line a widget's own Check writes under the
-  button row. `.exercise` is on every exercise's outermost element, of every
-  kind, so a rule written against it reaches all ten. Interactive widget
-  chrome (e.g. multiple-choice options) lives
-  inside a shadow root and is deliberately unreachable from author styles; only
-  the slotted prompt, the action bar, and option labels can be styled.
-- Long documents print best from the fullscreen view.
+Target elements or existing structural classes such as `.exercise`,
+`.exercise-prompt`, `.exercise-status`, `.exercise-actions`, and
+`.exercise-check-status`. There is no general author syntax for assigning
+classes. `.exercise` is on each exercise's outer box.
+
+Shadow-root controls are isolated from author CSS. Slotted prompts, action
+bars, and option labels remain styleable, but internal widget controls do
+not. Print long lessons from the fullscreen view.
 
 ### Linking external stylesheets
 
-Use the `src` attribute to link a stylesheet instead of (or as well as)
-writing CSS inline:
+`src` links a stylesheet and can be combined with an inline body:
 
 ```md
 :::style{src="https://example.edu/logic-course.css"}
 :::
 ```
 
-The target must be an absolute `https` URL or a site-relative path starting
-with `/` (for stylesheets this site serves). Anything else — `http`,
-protocol-relative `//host` URLs, other schemes, or bare relative paths —
-fails with `invalid_style_src`. One `src` per block; use several blocks for
-several sheets. Linked stylesheets load in source order, after the default
-styles and before any inline style CSS, and they combine freely with
-`reset`. External sheets are fetched by the reader's browser, so content
-depending on one needs that host reachable.
+It must be an absolute HTTPS URL or a site-relative path beginning with `/`.
+HTTP, protocol-relative URLs, other schemes, and bare relative paths produce
+`invalid_style_src`.
+
+Use one block per linked stylesheet. Linked sheets load in source order after
+default styles and before inline author CSS. They are fetched by the reader's
+browser, so the external server must remain reachable.
 
 ### Resetting the defaults
 
-`:::style{reset}` additionally drops the default content stylesheet from the
-document, leaving bare browser styles under your CSS — full control for slides
-or posters. The interface fonts go with it, since the platform declares them in
-that stylesheet; name your own, or `@font-face` them from your sheet. Exercises in a reset document render unstyled
-unless your stylesheet styles them. An empty `:::style{reset}` block clears
-the defaults without adding any CSS. `reset` and `src` are the only supported
-attributes; anything else fails with `invalid_style_attributes`.
+`:::style{reset}` omits the default content stylesheet and its font
+face declarations. Use it when supplying a complete document design.
+It can be empty, contain CSS, or also use `src`.
+
+Supply any needed document and light-DOM exercise styles yourself. Widget
+shadow-root styles remain isolated and may use their fallback values; reset
+does not give author CSS access to those internals.
+
+`reset` and `src` are the only style attributes. Unknown style attributes
+produce `invalid_style_attributes`.
 
 ## Normalized answer contract
 
-Submission routes use the generic answer envelope. A multiple-choice answer
-looks like this:
+This section is for API and exercise developers. Students do not need to
+construct answer JSON manually; the runtime does it for them.
+
+A multiple-choice answer uses the common envelope:
 
 ```json
 {
   "kind": "multiple-choice-answer@1",
   "schemaVersion": 1,
-  "data": {
-    "selectedOptionIds": ["excluded_middle"]
-  }
+  "data": { "selectedOptionIds": ["excluded_middle"] }
 }
 ```
 
-Free-response and short-answer submissions use the same envelope shape with a
-text payload:
+Text exercises use `data.text`, with the corresponding answer kind:
 
 ```json
 {
   "kind": "short-answer-answer@1",
   "schemaVersion": 1,
-  "data": {
-    "text": "modus ponens"
-  }
+  "data": { "text": "modus ponens" }
 }
 ```
 
-A truth-table answer (`truth-table-answer@1`) carries the filled grid as
-`"T"`/`"F"`/`""` cells: `reference[row][atom]` for the atom columns and
-`cells[formula][row][cell]` for each formula's written-out cells. A
-counterexample submission adds a `counterexample` row index naming the one row
-that is graded (the rest of the grid rides along as the student left it); a
-`validity` submission adds a `validity[row]` turnstile column. A `partial`
-submission is simply that same grid with exactly **one row**. The element builds
-and submits this automatically; see the truth-table README for the exact layout.
+Truth-table data uses `T`, `F`, or an empty string per cell:
 
-Answer validation is dispatched through the exercise-kind registry. The
-registry rejects option IDs that are not present in the manifest entry for the
-exercise, wrong answer kinds, unsupported schema versions, and malformed data.
+- `reference[row][atom]` contains atom values.
+- `cells[formula][row][cell]` contains formula-cell values.
+- `validity[row]` supplies the turnstile column for validity tables.
+- `counterexample` optionally selects the single row to grade.
+- A partial table uses the same layout with one row.
+
+See each exercise package's reference for its full answer schema. The
+assessment registry rejects wrong kinds, unsupported versions, malformed
+data, and identifiers not present in the declaration. A valid but wrong
+answer is evaluated rather than rejected as malformed.
+
+The submission request also supplies `exerciseId`. See
+[Exercise runtime API](./exercise-runtime-api.md) for headers, response
+shapes, idempotency, and the distinction between checking and recording.
 
 ## Diagnostics
 
-Compiler diagnostics are safe to show to authors. They include a `code`, a
-`message`, and one-based `line` and `column` positions.
+Diagnostics include a code, author-facing message, and one-based line and
+column. Errors prevent saving; warnings are displayed but allow it.
 
-Common diagnostic codes include:
+Common groups include:
 
-- `unsafe_raw_html`
-- `invalid_directive`
-- `unclosed_directive`
-- `unsupported_directive`
-- `invalid_directive_attributes`
-- `unknown_attribute`
-- `missing_id`
-- `invalid_exercise_id`
-- `duplicate_exercise_id`
-- `invalid_points`
-- `invalid_mode`
-- `missing_answer`
-- `not_enough_options`
-- `invalid_option_id`
-- `duplicate_option_id`
-- `invalid_option_label`
-- `invalid_multiple_choice_body`
-- `invalid_answer_key`
-- `invalid_case_sensitive`
-- `invalid_exam`
-- `invalid_feedback`
-- `redundant_check_attribute`
-- `invalid_formula`
-- `no_formulas`
-- `too_many_atoms`
-- `no_fillable_cells`
-- `invalid_fill_scope`
-- `invalid_grading_mode`
-- `invalid_check_mode`
-- `invalid_counterexample_target`
-- `missing_turnstile`
-- `multiple_turnstiles`
-- `empty_premises`
-- `empty_conclusions`
-- `given_row_arity`
-- `given_cell_arity`
-- `invalid_grid_token`
-- `given_conflicts_with_key`
-- `invalid_mark`
-- `unknown_truth_table_option`
-- `unsupported_truth_table_variant`
-- `invalid_truth_table_body`
-- `missing_name`
-- `empty_theory`
-- `duplicate_theory`
-- `unknown_theory_src`
-- `remote_theory_src`
-- `unknown_theory`
-- `missing_theorem_header`
-- `missing_proof_underline`
-- `unknown_proof_option`
-- `invalid_style_attributes`
-- `invalid_style_src`
-- `invalid_item_link`
-- `invalid_math`
+- **Syntax and safety:** `unsafe_raw_html`, `invalid_directive`,
+  `unclosed_directive`, `unsupported_directive`,
+  `invalid_directive_attributes`, `unknown_attribute`.
+- **Exercise identity and settings:** `missing_id`, `invalid_exercise_id`,
+  `duplicate_exercise_id`, `invalid_points`, `invalid_exam`,
+  `invalid_feedback`, `redundant_check_attribute`.
+- **Choice/text answers:** `invalid_mode`, `missing_answer`,
+  `not_enough_options`, `invalid_option_id`, `duplicate_option_id`,
+  `invalid_option_label`, `invalid_multiple_choice_body`,
+  `invalid_answer_key`, `invalid_case_sensitive`.
+- **Formulas and tables:** `invalid_formula`, `no_formulas`, `too_many_atoms`,
+  `no_fillable_cells`, `invalid_fill_scope`, `invalid_grading_mode`,
+  `invalid_check_mode`, `invalid_counterexample_target`,
+  `missing_turnstile`, `multiple_turnstiles`, `empty_premises`,
+  `empty_conclusions`, `given_row_arity`, `given_cell_arity`,
+  `invalid_grid_token`, `given_conflicts_with_key`, `invalid_mark`,
+  `unknown_truth_table_option`, `unsupported_truth_table_variant`,
+  `invalid_truth_table_body`.
+- **Theories and proofs:** `missing_name`, `empty_theory`, `duplicate_theory`,
+  `unknown_theory_src`, `remote_theory_src`, `unknown_theory`,
+  `missing_theorem_header`, `missing_proof_underline`, `unknown_proof_option`,
+  `invalid_goal_formula`, `proof_is_not_a_tree`.
+- **Other content:** `invalid_style_attributes`, `invalid_style_src`,
+  `invalid_item_link`, `invalid_math`.
+
+This is not an exhaustive code list. Read the diagnostic message for the
+specific repair and accepted values.
 
 ## Versioning notes
 
-Changes that alter parsing, compiled artifact shape, answer validation, or
-render semantics should either be backward-compatible for existing revisions or
-introduce a new source profile such as `carnap-markdown-v2`.
+Changes to parsing, artifact shapes, answer validation, or rendering must
+remain compatible with saved revisions or introduce an explicit new version.
+A new source profile would use a name such as `carnap-markdown-v2`.
 
-Existing immutable revisions retain their source text and compiled artifact.
-Assignment code should depend on stored revision IDs and compiled manifests,
-not on reparsing mutable drafts.
+Assignments depend on pinned revision IDs and stored manifests, not mutable
+drafts. Stored systems preserve the theory source used when the lesson was
+compiled, rather than resolving a newer built-in at grading time.
 
-The four exercise directives were once spelled with a `carnap-` prefix
-(`carnap-truth-table`, …). Those names are gone, not deprecated: a draft still
-using one fails with `unsupported_directive`, and the fix is to delete the
-prefix. Already-published revisions are unaffected — they render from their
-stored artifact and are never reparsed.
+The old `carnap-` prefix on the original exercise directive names is no longer
+accepted. For example, change `carnap-truth-table` to `truth-table` before
+saving an old draft. Published revisions continue to render their stored
+artifacts and are not reparsed solely because the spelling changed.

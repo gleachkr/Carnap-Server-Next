@@ -1,24 +1,32 @@
 # Grading model
 
-Carnap treats grading as a chain of evidence and projections. Exercise
-packages may produce evaluation evidence, course policies may derive modifiers,
-and score services may project a visible grade. These are separate concepts.
+Grading has three stages:
+
+1. Normalize a submitted answer against its exercise declaration.
+2. Record automatic or manual evaluation evidence.
+3. Calculate scores from that evidence and the course's policies.
+
+Exercise evaluators do not calculate final assignment or course grades.
 
 ## Exercise declarations
 
-Every compiled exercise is described by a manifest item in an immutable
-content revision. The manifest item includes a versioned exercise kind, a
-schema version, an answer kind, nominal points, public render data, private
-assessment data, component render metadata, capabilities, and a declaration
-hash.
+An immutable content revision contains an exercise manifest. Each entry has:
 
-The compiled document is the student-facing render artifact. It may include
-public data and component metadata, but it must not contain answer keys,
-checker declarations, or other private assessment data.
+- a stable exercise ID and versioned exercise kind;
+- the answer kind and schema version;
+- nominal points;
+- public render data and private assessment data;
+- component metadata and capabilities; and
+- a declaration hash identifying the compiled declaration.
+
+Private answer keys and rubrics belong in manifest `privateData`, not in
+student document nodes or hydration payloads. Some exercise types deliberately
+use public solutions: translation exercises need them for browser-side
+verification. Do not treat those solutions as secret.
 
 ## Answer envelopes
 
-Student submissions use a generic answer envelope:
+Submissions use a common envelope:
 
 ```ts
 type AnswerEnvelope = {
@@ -28,132 +36,114 @@ type AnswerEnvelope = {
 };
 ```
 
-Routes and submission services should not switch on exercise-specific payload
-fields. They select the manifest item, pass the envelope to the assessment
-registry, and record the normalized answer or structural diagnostics.
+The route and submission service select the manifest entry and pass the
+answer to the assessment registry. Exercise packages interpret their own
+payload fields.
 
 ## Normalization
 
-Normalization answers one question: is this payload structurally a valid answer
-for this exercise declaration?
+Normalization checks whether a payload is structurally valid for the
+exercise. It does not decide whether the answer is academically correct.
 
-Normalization failure means the answer cannot be academically evaluated. The
-standard failure reasons are:
+Failure reasons are:
 
-- `malformed`: the envelope or data is not shaped like an object the exercise
-  package can inspect.
-- `wrong-kind`: the answer kind does not match the exercise declaration.
-- `schema-invalid`: the answer kind is right, but required fields, schema
-  version, option IDs, or other structural details are invalid.
+- `malformed`: the envelope or data cannot be inspected as the expected
+  object shape.
+- `wrong-kind`: the answer kind does not match the declaration.
+- `schema-invalid`: the kind matches, but the version, required fields,
+  option IDs, or other structural details are invalid.
 
-A well-formed but wrong answer is not a normalization failure. It should be
-normalized and then evaluated as incorrect or partial.
+A well-formed wrong answer should normalize successfully and then receive an
+incorrect or partial evaluation.
 
 ## Automatic evaluations
 
-Automatic evaluations are earned-credit evidence for one normalized answer.
-They are not final course scores.
+An automatic evaluation records the earned score, maximum score, status,
+evaluator version, declaration hash, and optional feedback for one answer.
+It does not apply late penalties, accommodations, overrides, dropped scores,
+release settings, or course-total rules.
 
-An automatic evaluation records the awarded score, nominal maximum score,
-status, evaluator version, declaration hash, and optional feedback. It cannot
-claim late penalties, accommodations, overrides, dropped scores, grade
-visibility, or final course totals.
-
-The policy and score services consume evaluation evidence later. They decide
-which attempts count, which modifiers apply, and what score is visible.
+Whether an evaluated answer is recorded depends on the exercise's resolved
+`exam` setting. Outside exam mode, an automatically evaluated answer must be
+fully correct to be recorded. A checked but unrecorded answer does not become
+grade evidence. See [Assessment modes](./course-items-and-assessment.md).
 
 ## Manual evaluations
 
-Manual evaluations are first-class evaluation evidence. Instructors may
-manually evaluate any recorded submission in their courses, even if the
-exercise type has no custom manual-grading metadata.
+Instructors can manually evaluate recorded submissions in graded and practice
+activities. Optional exercise-specific rubrics and answer viewers improve the
+review interface; their absence does not prevent manual grading.
 
-Exercise packages may provide optional manual-grading metadata such as a rubric
-or answer viewer. Missing metadata means the UI uses a generic fallback; it
-does not make the submission ungradable.
+Manual evaluations are appended, not replacements for prior evidence. They
+can award partial or extra credit.
 
-Manual evaluations may award partial credit or extra credit. They are still
-not final scores. They are evidence used by the score projection layer.
+The maximum score comes from the exercise's declared points in the
+assignment's current pinned revision. The grader cannot supply a different
+maximum; the route rejects that field. The earned score is uncapped, so extra
+credit increases the numerator without increasing the assignment maximum.
 
-A manual evaluation is always out of the exercise's own declared points, read
-from the assignment's pinned revision — the same artifact the review page shows
-and the score projection divides by. The max score is not the grader's to set,
-and the route refuses one rather than accepting a number it will not honour.
+## Historical and current point values
 
-The score itself is uncapped, and that is where extra credit lives. An
-assignment's maximum is the sum of the manifest's declared points; the earned
-score is the sum of the evaluations. A score above one exercise's points
-therefore adds to the numerator over an unchanged denominator, which is what
-lets it offset a low score elsewhere. Raising a per-evaluation maximum would do
-the opposite of what it looks like: it changes how the submission reads on the
-review card — including whether it counts as full marks — while the total goes
-on dividing by the author's figure.
+An evaluation's stored `max_score` describes what the work was graded out of
+at grading time. Review displays and verdicts use that historical value.
 
-## Two denominators
+The assignment total instead uses the current revision's exercise points,
+excluding excused exercises. Its numerator uses the selected stored scores,
+without rescaling them to the new point values.
 
-A stored evaluation's maximum and an assignment's maximum answer different
-questions, and they are allowed to disagree.
+For example, after a correction changes an exercise from 5 points to 2,
+work previously graded 5/5 still contributes 5 points, while the assignment
+maximum includes only 2 for that exercise. The evaluation remains 5/5.
 
-`evaluations.max_score` is historical evidence: what the work was graded out
-of, copied from the assignment's pinned revision at grading time. The
-verdict, the review queue, and every displayed "4/5" read it, so graded work
-keeps meaning what it meant when it was graded. The assignment total is a
-live projection: it divides by the sum of the *current* manifest's declared
-points (minus excused exercises), and its numerator is the sum of stored raw
-scores.
-
-Repointing a published assignment at a revision with different points is the
-one act that splits them, and it restamps nothing — rewriting evaluations
-would let a repoint retroactively re-judge old work, and deriving the stored
-maximum at read time would do the same thing implicitly. The projection is
-recomputed immediately (and pushed to any linked LMS), but each evaluation
-keeps its own denominator. A consequence to know about: a stored raw score
-feeds the numerator unscaled, so work graded 5/5 on an exercise now worth 2
-contributes 5 points against a denominator counting 2 — the same
-numerator-over-unchanged-denominator arithmetic that makes deliberate extra
-credit work.
-
-The views say so rather than reconcile. A page showing an affected score
-tints it gold and names the current figure ("now worth 2", or "no longer in
-the assignment" when the exercise has left the manifest), under a banner
-explaining that totals count every exercise at its current points.
+Changing the pinned revision recalculates the projection and updates passback
+state without rewriting old evaluations. Affected review displays identify
+the current point value, or say that the exercise is no longer in the
+assignment. Removed exercises no longer contribute to its total.
 
 ## Policy-derived modifiers
 
-Availability, timing, attempt limits, resets, accommodations, overrides, late
-credit, and similar rules belong to policy services. Exercise packages and
-submission routes must not duplicate those decisions.
+Availability, deadlines, attempt limits, resets, accommodations, per-student
+overrides, excuses, and late credit belong to policy and score services.
+Submission routes and exercise evaluators must use those services rather
+than repeat the rules.
 
-Policies may derive score modifiers from recorded facts such as due dates,
-submission times, overrides, or voided attempts. Those modifiers are applied by
-score projections, not by exercise evaluators.
+Late penalties are applied during score projection, based on recorded times
+and effective policy. They do not change the original evaluation.
 
-## Score projections
+## Score selection
 
-Scores are projections over append-only history: submissions, automatic
-evaluations, manual evaluations, voiding records, policy decisions, and release
-settings.
+The gradebook calculates scores from non-voided evidence:
 
-Every score a person is shown — a student's scorecard, the gradebooks, the
-CSV exports — is that projection computed at the moment of reading, from the
-live rows, in a fixed number of statements however much work there is
-(`GradebookService` reads a scope's attempts, submissions and evaluations in
-bulk and sums in memory). There is no stored number a page shows; there is
-nothing that could disagree with the rows.
+1. For each submission, use its latest manual evaluation if one exists;
+   otherwise use its best automatic evaluation.
+2. Select the best result for each exercise across non-voided attempts,
+   applying the relevant score policy.
+3. Sum the selected exercise scores and current nominal points, excluding
+   excused exercises.
 
-The `assignment_scores` table is not that number. It is the grade-passback
-ledger: what each student's score last evaluated to, kept so that a change can
-be told from a repeat (an LMS must not be sent the same score twice) and so
-that deliveries can be ordered by data recency. It is written only by the
-paths that change what a score evaluates to — a submission, a hand-written
-grade, and an instructor's excuse, override, repoint, attempt reset, late
-policy or accommodation — and never by a page view. A path that neglected to
-write it would delay an LMS sync until the next one did; it could not put a
-wrong number in front of anyone. The table holds rows for students who have
-submitted, since the submission writes the first one, and a student who never
-has is "not started" or "missing" whatever else changes, neither of which is
-a score passback sends unprompted.
+Resetting an attempt voids it and creates a replacement. Its old work remains
+available as history but no longer contributes to the score.
 
-Refreshing the ledger should be deterministic and idempotent. Recalculation
-may produce the same projection again, but it should not rewrite the
-historical evidence that explains how the score was derived.
+## Displayed scores and the passback ledger
+
+Student scorecards, gradebooks, and CSV exports calculate their scores when
+read. `GradebookService` loads a scope's evidence in bulk and calculates the
+results in memory; query count does not grow once per submission.
+
+`assignment_scores` serves a different purpose. It stores the last calculated
+score state so passback can detect changes, avoid redundant jobs, and order
+deliveries by data recency. Page views do not write this table.
+
+Score-changing operations refresh the ledger: submissions, manual grades,
+excuses, overrides, content corrections, attempt resets, late policies, and
+accommodations. A missing refresh can delay an LMS update even when the
+application displays the correct score.
+
+A student who has never submitted remains not started or missing. Passback
+does not send an unsolicited score for that student merely because policy
+changed.
+
+Ledger refreshes must be deterministic and idempotent. They must not rewrite
+the evidence used to calculate the score. The score store coordinates ledger
+updates with LTI outbox jobs; preserve its claim, retry, and supersession
+checks when changing delivery behavior.

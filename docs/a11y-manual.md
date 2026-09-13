@@ -1,154 +1,151 @@
-# Manual accessibility checklist (WCAG 2.2 AA)
+# Manual accessibility checklist
 
-Automated tiers (see [`a11y.md`](./a11y.md)) cover roughly a third of AA. This is
-the rest — the criteria that need a human at a keyboard and a screen reader. Run
-it per release (or when a page/widget changes materially) and record the date +
-result. Each item cites the WCAG success criterion so it complements, not
-duplicates, the axe tiers.
+Use this checklist with the [automated tests](./a11y.md) to assess WCAG 2.2
+AA behavior. Run it before each release and after substantial page or widget
+changes. Record results in the sign-off table.
 
-Test matrix: **keyboard only** (no mouse/trackpad) and **one screen reader**
-(NVDA + Firefox on Windows, or VoiceOver + Safari on macOS). Zoom tests in any
-current browser.
+Test with:
 
-## Keyboard operability — every interactive surface
+- Keyboard only, without a mouse or trackpad.
+- At least one screen reader: NVDA with Firefox on Windows, or VoiceOver
+  with Safari on macOS.
+- A current browser for zoom, spacing, and reflow checks.
 
-Tab/Shift-Tab, arrows, Enter/Space, Esc only.
+Criterion numbers below identify the relevant WCAG success criteria. A
+checked item records a test result, not a claim of complete conformance.
 
-- [ ] **2.1.1 Keyboard** — every control is reachable and operable: nav, forms,
-      buttons, dialogs, and each exercise widget:
-  - [ ] Multiple choice — radios/checkboxes selectable, submit reachable.
-  - [ ] Truth table — the grid is **one** tab stop; arrows move between cells
-        (Home/End for the row ends, Ctrl+Home/End for the grid's), Space or
-        Enter cycles blank→T→F, and the focused cell shows a ring. Check and
-        counterexample are reachable by Tab from the grid. In counterexample
-        mode the row radios are their own tab stop before the cells, each named
-        for the row it claims, walked and picked with the arrow keys.
-  - [ ] Proof (linear) — CodeMirror editor takes focus, types, and is escapable.
-  - [ ] Proof (Fitch) — CodeMirror editor takes focus, types, and is escapable;
-        the subproof scope-lines are decorative (no keyboard interaction).
-  - [ ] Proof tree — roving `treeitem` nav (Up/Down/Left/Right), Enter to edit
-        the conclusion / r to edit the rule, Esc back to nav,
-        add-premise/hypothesis/delete via keyboard.
-  - [ ] Prawitz forest — roving `treeitem` nav; arrows move focus **without
-        changing the ticked selection**, Space ticks the focused line (ticks
-        accumulate in premise order), and the premise dots under the roots are
-        reachable buttons. Enter/r/l/d enter a line's fields, a/b/p/h/Delete
-        mirror the toolbar, and a focused-but-unticked line still shows a
-        visible focus ring distinct from the selection tint.
-  - [ ] Markdown source (revision editor and a revision's read-only source) —
-        the source is one Tab stop, arrows move the cursor in both (the
-        read-only view included), Ctrl-Shift-[ / ] fold and unfold the block at
-        the cursor and the fold is announced, and the `…` standing in for a
-        folded block is a Tab stop of its own that unfolds it. The gutter's fold
-        arrow is a mouse affordance only — the gutter is `aria-hidden`, so the
-        keyboard path must not depend on it.
-  - [ ] Split view (revision editor, a shared revision) — the Write/Split/
-        Preview switch is three buttons, and the pressed one is the view on
-        screen; below 70rem `Split` is not offered and the pressed half is the
-        column showing. In `Split`, the boundary handle between the columns is
-        a Tab stop with `role="separator"`: Left/Right move it, Home/End take
-        it to its limits, and its `aria-valuenow` follows.
-- [ ] **2.1.2 No keyboard trap** — focus never gets stuck (esp. CodeMirror and
-      the contenteditable proof-tree fields — Tab must escape them).
-- [ ] **2.4.3 Focus order** — Tab order follows reading/visual order on each
-      page and within dialogs.
-- [ ] **2.4.7 Focus visible** — the focused element always shows a visible ring
-      (the `:focus-visible` outline); check custom controls and tree nodes. In
-      the two tree editors' contenteditable fields the *text caret* counts too:
-      it must stay visible after typing, not just in the empty box. Chromium
-      paints no caret in an editable inline box whose ancestry up to the block
-      container is all inline, which is why those fields are `inline-block`.
-- [ ] **2.4.11 Focus not obscured** — the focused element isn't hidden behind the
-      sticky header or a dialog edge.
-- [ ] **2.5.7 Dragging** — any drag affordance has a single-pointer / keyboard
-      alternative: the split view's column boundary moves with Left/Right and
-      Home/End as well as by drag, and double-click returns it to where the
-      page opened it. (Also: future tree reparent.)
+## Keyboard operation
 
-## Dialogs / modals
+Use Tab, Shift-Tab, arrows, Enter, Space, and Escape.
 
-- [ ] **2.4.3 / 2.1.2** — opening a dialog moves focus into it; focus is trapped
-      while open; Esc and a click on the backdrop both close it; on close focus
-      returns to the trigger. A drag-select that starts in a field and ends past
-      the panel's edge is not a click out and must leave the dialog open.
-- [ ] **Widget help** — the `(?)` at the head of the tree and Prawitz action
-      bars (and `?` on a
-      focused proof line) opens the usage dialog *beside its trigger*, not at the
-      middle of the lesson, and without scrolling the page. Its heading is its
-      accessible name; the key table reads as pairs; Esc and the backdrop both
-      close it; focus lands back on the control that opened it. Check inside a
-      **long** lesson, and **embedded in a page** rather than only fullscreen: a
-      content iframe is sized to the whole document, so it never scrolls — the
-      page around it does, and neither a centred dialog nor a scroll the frame
-      cannot undo is visible from inside. Opening it must move nothing.
+- [ ] **2.1.1 Keyboard:** every navigation link, form control, dialog, and
+      exercise can be used without a pointer.
+  - [ ] Multiple choice: select radios or checkboxes and reach Submit.
+  - [ ] Truth table: the grid is one tab stop. Arrows move between cells;
+        Home/End move to row ends; Ctrl+Home/End move to grid ends. Space or
+        Enter cycles blank → T → F. Tab reaches Check and counterexample
+        controls. Counterexample row radios form a separate tab stop before
+        the cells; arrows select rows, and each radio names its row.
+  - [ ] Linear and Fitch proofs: focus the CodeMirror editor, type, move the
+        cursor, and leave it with the keyboard. Fitch scope lines require no
+        interaction.
+  - [ ] Proof tree: arrows navigate `treeitem` elements; Enter edits a
+        conclusion; `r` edits a rule; Escape returns to navigation. Add a
+        premise or hypothesis and delete a subtree using the keyboard.
+  - [ ] Prawitz forest: arrows move focus without changing selection. Space
+        selects the focused line; selections retain premise order. Premise
+        buttons below roots are reachable. Enter/r/l/d edit line fields;
+        a/b/p/h/Delete match the toolbar actions. An unselected focused line
+        has a focus ring distinct from the selection highlight.
+  - [ ] Model: reach and edit the domain, predicates, constants, and function
+        values, then Check and Submit.
+  - [ ] Translation: edit the formula, check with Enter, and reach Submit.
+  - [ ] Free response and short answer: edit the text and reach Submit.
+  - [ ] Markdown source: editable and read-only views are each one tab stop,
+        and arrows move the cursor in both. Ctrl+Shift+[ and Ctrl+Shift+]
+        fold and unfold the current block with an announcement. The folded
+        `…` placeholder is independently focusable and can unfold the block.
+        The hidden gutter is not required for keyboard operation.
+  - [ ] Split view: Write, Split, and Preview expose the correct pressed
+        state. Below 70rem, Split is unavailable and the selected button
+        matches the visible column. In Split, the boundary is a focusable
+        separator: Left/Right resize it, Home/End reach its limits, and
+        `aria-valuenow` updates.
+- [ ] **2.1.2 No keyboard trap:** Tab can leave editors and contenteditable
+      fields. Modal focus stays inside only while the modal is open.
+- [ ] **2.4.3 Focus order:** Tab follows reading order, including in dialogs.
+- [ ] **2.4.7 Focus visible:** every focused control has a visible indicator.
+      In tree-editor fields, also check that the caret remains visible after
+      typing. Their editable boxes must not lose the caret in inline layout.
+- [ ] **2.4.11 Focus not obscured:** headers and dialog edges do not hide the
+      focused control.
+- [ ] **2.5.7 Dragging:** dragging has a non-drag alternative. The split-view
+      separator supports keyboard resizing as well as dragging; double-click
+      restores its initial position. Check the same requirement for any new
+      drag interaction.
 
-## Screen reader — semantics and announcements
+## Dialogs
 
-- [ ] **1.1.1 Non-text content** — images/icons are described or marked
-      decorative (`aria-hidden`); the ⊨ brand mark and review ✓/✗ glyphs read
-      sensibly (not as stray punctuation).
-- [ ] **1.3.1 Info & relationships** — headings, lists, and tables are announced
-      as such; form fields announce their label; the proof tree announces node
-      role/selection; a sortable column heading (roster, assignments, courses,
-      gradebooks, content list) is a button once the shell script upgrades it,
-      and the sorted one announces ascending/descending from `aria-sort`, with
-      only one column claiming it at a time.
-- [ ] **2.4.6 Headings & labels** — each page has one descriptive `<h1>` and a
-      sensible heading outline (no skipped levels).
-- [ ] **3.3.2 Labels/instructions** — every input's purpose is clear from its
-      label; required fields are indicated non-visually.
-- [ ] **1.3.1 / 4.1.2 (exercises)** — entering any exercise announces the group
-      and its name (the author's title, or the kind for an untitled one); a
-      truth-table cell announces its column, row number, and value in words; the
-      three proof editors and both tree workspaces announce their own names; no
-      widget still claims `aria-busy` after it has upgraded.
-- [ ] **4.1.2 Name/role/value** — custom widgets expose correct name+role+state
-      (truth-table `aria-pressed`, tree `aria-selected`, the Prawitz premise
-      dots `aria-pressed` with a name that switches to "Premise n" once ticked,
-      publish toggles).
-- [ ] **4.1.3 Status messages** — submit results and the truth-table check
-      outcome are announced via the live regions without moving focus.
+- [ ] **2.4.3 / 2.1.2:** opening moves focus inside. Escape and a backdrop
+      click close the dialog, and focus returns to the trigger. Drag-selecting
+      from a field past the panel edge does not close it.
+- [ ] Widget Help opens from `(?)` or `?` on a focused proof line. It appears
+      near its trigger without scrolling the page. The heading names the
+      dialog, and key tables read as key/action pairs.
+- [ ] Test Help in a long embedded lesson, not just fullscreen. The iframe
+      spans the whole lesson, so positioning at the frame's center could put
+      the dialog outside the visible page area.
 
-## Forms & errors
+## Screen-reader semantics and announcements
 
-- [ ] **3.3.1 Error identification** — validation errors are announced and
-      identify the field in text (not colour alone).
-- [ ] **3.3.3 Error suggestion** — where possible the message says how to fix it.
-- [ ] **1.4.1 Use of colour** — required/error/correct states are conveyed by
-      more than colour (text, icon, or `.visually-hidden` label).
+- [ ] **1.1.1 Non-text content:** meaningful images and icons have names;
+      decoration is hidden. The ⊨ brand and review ✓/✗ marks do not announce
+      as unexplained punctuation.
+- [ ] **1.3.1 Information and relationships:** headings, lists, tables, and
+      field labels are announced correctly. Tree nodes expose their role and
+      selection. Sortable table headings become buttons after enhancement;
+      exactly one sorted column exposes ascending or descending `aria-sort`.
+- [ ] **2.4.6 Headings and labels:** each page has a descriptive main heading
+      and a logical outline. Check the project's single-`h1` convention.
+- [ ] **3.3.2 Labels and instructions:** input purpose and required state are
+      available without relying on visual placement or color.
+- [ ] **1.3.1 / 4.1.2 Exercise groups:** entering an exercise announces its
+      title, or its kind if untitled. Truth-table cells announce column, row,
+      and value in words. Each proof workspace has a name. Enhanced widgets
+      do not retain `aria-busy`.
+- [ ] **4.1.2 Name, role, value:** custom widgets expose current state,
+      including truth-table `aria-pressed`, tree `aria-selected`, Prawitz
+      premise-button names and pressed state, and publication toggles.
+- [ ] **4.1.3 Status messages:** submission and local-check results are
+      announced without moving focus or repeatedly announcing typing updates.
+
+## Forms and errors
+
+- [ ] **3.3.1 Error identification:** errors are announced and identify the
+      relevant field in text.
+- [ ] **3.3.3 Error suggestion:** messages explain how to fix a problem when
+      a correction is known.
+- [ ] **1.4.1 Use of color:** required, incorrect, and correct states have a
+      text, icon, or accessible-label equivalent.
 
 ## Reflow, zoom, and spacing
 
-- [ ] **1.4.10 Reflow** — at 320 CSS px wide there is no horizontal scroll for
-      content (watch the wide tables and the proof-tree/truth-table iframes).
-- [ ] **1.4.4 Resize text** — at 200% zoom nothing is clipped or overlapping.
-- [ ] **1.4.12 Text spacing** — bumping line/letter/word spacing doesn't clip
-      text.
-- [ ] **1.4.10 (iframe)** — exercise content reflows and the parent resizes to
-      it (the content-height postMessage) without a nested scrollbar trap.
+- [ ] **1.4.10 Reflow:** at 320 CSS px, ordinary content does not require
+      horizontal scrolling. Check wide tables and exercise layouts separately
+      where a two-dimensional layout is necessary.
+- [ ] **1.4.4 Resize text:** at 200% zoom, text remains readable and controls
+      are not clipped or overlapping.
+- [ ] **1.4.12 Text spacing:** apply line height 1.5 times the font size,
+      paragraph spacing 2 times, letter spacing 0.12 times, and word spacing
+      0.16 times. No content or functionality is lost.
+- [ ] Content iframes reflow and send updated heights to their parent without
+      creating a nested scrollbar trap.
 
-## Motion, timing, media
+## Motion and timing
 
-- [ ] **2.2.1 Timing** — timed assignments warn and don't trap; no essential
-      content is lost to a timeout without recourse.
-- [ ] **2.3.1 Three flashes** — nothing flashes more than 3×/s (spinners are
-      smooth).
-- [ ] **2.2.2 Pause/stop/hide** — the compile/checking spinners don't spin
-      indefinitely in a way that distracts; they resolve or can be ignored.
+- [ ] **2.2.1 Timing adjustable:** review time limits, warnings, extensions,
+      and any applicable exceptions. A timeout must not unexpectedly trap
+      users or discard essential work without an appropriate remedy.
+- [ ] **2.3.1 Three flashes:** nothing flashes more than three times per
+      second unless it meets the criterion's threshold exception.
+- [ ] **2.2.2 Pause, stop, hide:** review persistent animation, including
+      checking spinners, for the applicable pause or stop requirements.
 
-## Global
+## Documents and contrast
 
-- [ ] **3.1.1 Language** — every document (page **and** each content iframe) has
-      the right `<html lang>`.
-- [ ] **1.4.3 Contrast** — spot-check that Tier 2's contrast findings are the
-      only ones (new colours in authored exercise CSS aren't checked by tooling).
-- [ ] **2.4.2 Page titled** — each page and content document has a meaningful
+- [ ] **3.1.1 Language:** each page and content iframe has the correct
+      `<html lang>`.
+- [ ] **1.4.3 / 1.4.11 Contrast:** check text, controls, and state indicators
+      in both palettes, including glyph-only controls and authored CSS that
+      the automated fixtures do not cover.
+- [ ] **2.4.2 Page titled:** each page and content document has a meaningful
       `<title>`.
 
----
+## Sign-off
 
-### Sign-off
+Record browser and screen-reader versions in Notes, along with failures and
+follow-up work.
 
-| Date | Release / change | Tester | Keyboard | Screen reader | Notes |
-|------|------------------|--------|----------|---------------|-------|
-|      |                  |        |          |               |       |
+| Date | Release/change | Tester | Keyboard | Screen reader | Notes |
+| --- | --- | --- | --- | --- | --- |
+| | | | | | |

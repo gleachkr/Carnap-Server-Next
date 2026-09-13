@@ -1,126 +1,110 @@
 # Exercise runtime API
 
-The exercise runtime API is the browser-facing contract between an assignment
-page and an exercise widget. It is separate from the authoring contract, the
-compiled content artifact, the answer envelope, and the server-side checker
-contract.
+The runtime connects exercise widgets to the assignment submission endpoint.
+It is separate from the Markdown authoring format and the server assessment
+registry.
 
-The page owns assignment context. The widget owns answer collection, local UI
-state, and inline submission feedback. Server routes and application services
-remain authoritative for policy checks, normalization, evaluation, and recorded
-submissions.
+Responsibilities are divided as follows:
+
+- The **assignment runtime** sends requests, supplies CSRF and idempotency
+  headers, displays submission status, and dispatches result events.
+- The **widget** collects the answer, maintains local UI and checker state,
+  and synchronizes the hidden `answerData` field. It does not call `fetch` to
+  submit answers.
+- The **server** enforces policy, normalizes answers, evaluates them, and
+  decides what to record and return to the student.
+
+Exercises require JavaScript. Server-rendered forms are shells for the
+runtime; the answer endpoint accepts JSON only. There is no form-encoded
+submission-and-redirect fallback.
+
+The implementation is in `src/worker/web/assignment-scripts.ts`,
+`src/worker/web/assignment-detail.tsx`, and the browser components under
+`src/client/components/`. Runtime identifiers still use the `carnap-` prefix.
 
 ## Runtime shell
 
-A submittable exercise is rendered as a progressively enhanced form:
+A submittable exercise has this structure. The example omits the widget's
+internal markup and the full hydration payload:
 
 ```html
 <form
-  class="exercise"
+  class="exercise-submission"
   data-component="carnap-multiple-choice"
   data-component-version="1"
   data-exercise-id="q1"
   data-exercise-kind="multiple-choice@1"
   data-content-revision-id="rev_123"
-  action="/courses/course_1/assignments/asn_1/attempts/att_1/submissions"
+  action="/courses/c1/assignments/a1/attempts/t1/submissions"
   method="post"
 >
   <input type="hidden" name="csrfToken" value="...">
   <input type="hidden" name="exerciseId" value="q1">
   <input type="hidden" name="answerKind" value="multiple-choice-answer@1">
   <input type="hidden" name="schemaVersion" value="1">
-  ...exercise controls...
-  <div class="exercise-actions">
-    <button class="exercise-submit" type="submit">Submit answer</button>
-    <p class="exercise-status" data-exercise-status aria-live="polite">
-      No submission in this attempt.
-    </p>
-    <span class="exercise-mark" data-state="idle" role="img" aria-label="Not correct yet"
-          data-label-idle="..." data-label-working="..."
-          data-label-ok="..." data-label-error="...">-</span>
-  </div>
+  <input type="hidden" name="answerData">
+  <script type="application/json" data-exercise-hydration>
+    {"version":1,"mode":"answer","publicData":{},
+     "priorAnswer":null,"options":{},"strings":{}}
+  </script>
+  <!-- Exercise element, controls, and action bar go here. -->
 </form>
 ```
 
-Without JavaScript, the form submits normally and the server redirects back to
-the assignment. With JavaScript, the runtime intercepts submission, sends JSON
-to the same URL, and updates `data-exercise-status` inline.
+`.exercise-submission` identifies the form. `.exercise` belongs to the
+exercise's own outer box, which also exists outside submission forms.
+The runtime prefers `answerData`; free response and short answer use native
+text fields instead.
 
-Every exercise gets that action bar, whether or not it has an element to enhance
-it. A widget adds its own controls to it — the `(?)` that opens its instructions,
-`Check`, `Find counterexample` — and projects the whole bar into its shadow card
-through `slot="exercise-actions"`, so the bar stays in the form's light DOM,
-where the runtime finds it, and author CSS can still reach it. The row therefore
-reads `(?) · Check · Submit · status · mark`, in that order, for every type.
+Every exercise has an action bar containing Submit, a polite live status
+region (`data-exercise-status`), and a correctness mark. Widgets may add Help,
+Check, or counterexample controls. The bar stays in light DOM and is slotted
+into the widget with `slot="exercise-actions"`. This lets the runtime find it
+and author CSS style it.
 
-The bar is rendered on the **preview** paths too (`exerciseActionsHtml` in
-`src/worker/exercises/actions.ts`, which every `read-only-view.ts` calls), with
-the submit `disabled` and saying so on hover: an author writing an exercise
-should be looking at the shape a student will work in, and a widget's own
-controls — including a local `Check` — have nowhere else to go.
+Preview renderers use `exerciseActionsHtml` from
+`src/worker/exercises/actions.ts`. They show the same bar with Submit
+disabled.
+Local controls still work, but no enclosing form exists and nothing is saved.
 
 ## Correctness mark
 
-`.exercise-mark` is the one place every exercise says whether the work is right.
-It sits hard right of the action bar for all nine types, and is described once,
-in `styles.ts`: a green check on a pale green outline when correct, a grey `-`
-before that, a red `!` with the problem on hover, a spinner while a proof
-compiles. `src/worker/exercises/correctness-mark.ts` holds the glyphs, the state
-names and the label attributes; nothing else spells them.
+`.exercise-mark` displays the current verdict. Use the shared definitions in
+`src/worker/exercises/correctness-mark.ts`, not separate glyphs or labels.
 
-Two things write to it, and they answer different questions.
-
-- **The runtime**, from the recorded evaluation, on load and after each
-  submission: is the answer the *server* holds correct? Only a full score
-  counts — partial credit is not a green check, and an ungraded hand-marked
-  response is not one either. For the text types it also clears the mark as soon
-  as the field differs from what was recorded, and restores it if the reader
-  types the recorded answer back.
-- **The widget**, from its own checker: is what is *on screen* right now
-  correct? `CarnapExerciseElement.setMark(state, title?)` writes it, and the live
-  answer wins whenever there is one, because it is the one about the work the
-  reader is looking at. A widget whose verdict lapses — the grid was edited, the
-  proof stopped compiling — passes `idle` rather than leaving a stale claim up.
-
-For the truth table and the model this is not an approximation of the server:
-neither has a secret answer key, so the browser runs the very check the worker
-runs. The proof types compile a certificate the worker re-verifies, so their
-mark is the compiler's verdict on the current text.
-
-Each state has one string, which is both the mark's `aria-label` and its
-`title`, so hovering answers the question a small coloured glyph raises and a
-reader who cannot see it is told the same thing:
-
-| State | Glyph | Name and tooltip |
-|---|---|---|
+| State | Display | Accessible name |
+| --- | --- | --- |
 | `idle` | `-` | Not correct yet |
-| `working` | spinner | Checking |
+| `working` | Spinner | Checking |
 | `ok` | `✓` | Correct |
 | `error` | `!` | Could not check |
 
-Idle says "not correct **yet**" rather than "incomplete" because it is three
-situations at once: not started, half-finished, and finished but wrong. All the
-mark ever claims is that nothing has said the work is right — so a wrong answer
-is idle, not an error.
+`idle` includes untouched, incomplete, and incorrect work. `error` means the
+checker could not run, such as a proof engine that failed to load; it does not
+mean the answer is wrong.
 
-`error` is *could not check*, not *wrong*. Today its only cause is the WASM proof
-engine failing to load, and a red mark reading "not correct" would blame the
-reader for the machine. A widget in that state passes its own message as
-`setMark`'s second argument, which replaces the `title` but not the name: named
-for the general case, described by the particular one. The title is assigned on
-every call, so a recovered widget cannot leave "Could not load the proof engine."
-hanging over a green check.
+The runtime sets the mark from the recorded evaluation on load and after
+submission. Only full credit counts as correct. For native text fields, it
+clears the mark when the answer changes and restores it if the saved text is
+restored.
 
-The mark carries `role="img"` rather than being a live region. The status line
-beside it is already `aria-live`, and the proof types recompute the mark on a
-debounce while the reader types: a polite region here would announce "checking",
-"correct", "not correct yet" over and over through an edit, and duplicate the
-status line on every submit.
+A widget can set a verdict on the current answer with
+`CarnapExerciseElement.setMark(state, title?)`. Its live verdict takes
+precedence over recorded state. Reset it to `idle` when an edit invalidates
+the check, and respect the resolved feedback setting.
 
-## Initial state bootstrap
+Normally the accessible name and tooltip use the same text. A specific error
+message can replace the tooltip without replacing the general accessible
+name. Each call updates the tooltip so old error text cannot remain on a
+correct mark.
 
-Assignment pages with an active attempt include one bootstrap block for all
-exercise widgets:
+The mark has `role="img"`, not a live region. The adjacent status line already
+announces submissions; announcing every debounced checker update would create
+repeated interruptions.
+
+## Initial recorded state
+
+An active attempt includes one JSON bootstrap for all its exercises:
 
 ```html
 <script type="application/json" data-carnap-exercise-runtime-state>
@@ -134,40 +118,26 @@ exercise widgets:
         "answerKind": "multiple-choice-answer@1",
         "submittedAt": "2026-07-07T12:34:56.000Z"
       },
-      "evaluation": {
-        "id": "eval_123",
-        "submissionId": "sub_123",
-        "evaluatorKind": "automatic",
-        "checkerVersion": "multiple-choice-evaluator@1",
-        "score": 1,
-        "maxScore": 1,
-        "result": { "status": "correct" },
-        "createdAt": "2026-07-07T12:34:56.000Z",
-        "voidedAt": null
-      },
-      "answerReview": {
-        "summary": "Yes"
-      }
+      "evaluation": null,
+      "answerReview": { "summary": "Yes" }
     }
   }
 }
 </script>
 ```
 
-The `exercises` object is keyed by stable exercise ID. Each value represents
-the latest recorded submission for that exercise in the active attempt. If an
-exercise ID is absent, the exercise has no submission in this attempt.
+The map is keyed by stable exercise ID and contains the latest submission in
+the active attempt. An absent ID means no submission in that attempt.
+Evaluation data is filtered for the viewer; it may be absent or have numeric
+scores withheld.
 
-This bootstrap is display state. It is not permission state. Widgets may use it
-to render continuity, but the server response to a submission remains
-authoritative.
+This is display state, not authorization. The server checks each new request
+against current policy.
 
 ## Component loading and hydration
 
-An exercise is inert server-rendered markup — a Declarative Shadow Root with
-`aria-busy` — until its custom element upgrades. Every content document that
-contains exercises therefore lists the bundles it needs and loads one ES module
-per id:
+Custom elements start as inert server-rendered Declarative Shadow DOM. The
+content document lists the component assets it needs:
 
 ```html
 <script type="application/json" data-carnap-component-assets>
@@ -175,81 +145,70 @@ per id:
 </script>
 ```
 
-Each element then reads one hydration payload, most specific channel first:
+The loader imports one ES module per asset ID. Native text-field exercises
+do not need a custom element.
 
-1. `<script data-exercise-hydration>` inside the element (a self-contained
-   widget, e.g. a hydrated review),
-2. the same script inside the enclosing `form.exercise-submission` — the
-   interactive path, whose payload carries the viewer's own `priorAnswer`. The
-   form is named for what it does rather than what it holds: `.exercise` is on
-   the exercise's own box, which the form wraps on this path and nothing wraps
-   on the others,
-3. the document's hydration table, keyed by exercise id:
+An element looks for hydration data in this order:
 
-```html
-<script type="application/json" data-exercise-hydration-map>
-{ "q1": { "version": 1, "mode": "answer", "publicData": { ... },
-          "priorAnswer": null, "options": {} } }
-</script>
-```
+1. A `script[data-exercise-hydration]` inside itself, as used for review.
+2. The same script inside its enclosing `form.exercise-submission`.
+3. The document's `data-exercise-hydration-map`, keyed by exercise ID, as
+   used for previews.
 
-Two obligations come with that payload, and both are about what a reader who
-cannot see the widget is told:
+`ExerciseHydration` is defined in `src/worker/exercises/hydration.ts`:
 
-- **`strings`** carries the widget's own interface text, resolved for the viewer
-  (`src/worker/exercises/<type>/strings.ts`, gathered by `exerciseStrings`). Look
-  ids up through the element's `t(id, values)`, whose fallback is
-  `strings[id] ?? id` — which is why every key in those maps *is* its own English
-  text, and why the literal at a `t(...)` call site must be a catalog id (the
-  `i18n-extraction` gate reads those call sites literally).
-- **Accessible names are the element's job to maintain.** The server renders the
-  first one; anything the element then rewrites has to be rewritten too. A
-  truth-table cell is the worked example: its `aria-label` names the column, the
-  1-based row, and the value *in words*, so all three writes go through one
-  `setCellValue`. The glyph cannot stand in for the word — an author's `trueMark`
-  may be `1` or ✓, and under `nodash` an empty cell has no text at all, leaving the
-  button with no name. An element that replaces its inert markup must also drop the
-  `aria-busy` that markup carries, or it tells assistive technology it is still
-  loading for the life of the page.
-- **Instructions live behind a `(?)`, not on the page.** A widget that needs
-  explaining builds one with `createHelpDialog` / `openHelpDialog`
-  (`src/client/components/help-dialog.ts`), spreads `buildExerciseHelpStrings`
-  (`src/worker/exercises/help-strings.ts`) into its map for the frame text, and
-  writes one message per paragraph and per key row — `t()` substitutes but does
-  not format, so a table cannot come out of one long string. Three constraints are
-  not stylistic: append the dialog to the **shadow root**, not to the widget's
-  container, or a container-level `keydown` (undo, Escape) fires for keys typed
-  inside it; mount the trigger with `mountHelpTrigger`, which puts it first in the
-  light-DOM action bar rather than in the widget's own toolbar, so it is in one
-  place for every type and out of reach of an island's rerenders; and leave
-  `openHelpDialog` to place it, because a content iframe is sized to the whole
-  document and the UA would centre a modal at the lesson's midpoint.
-- **A shadow root inherits no page CSS**, so text a widget hides is only hidden if
-  that root's own `<style>` says so. Reach for `EXERCISE_GROUP_SHADOW_STYLES`
-  (`src/worker/exercises/group.ts`), which ships the group's look together with the
-  rule that hides its legend: the three proof widgets took the group styles alone
-  and printed "PROOF" above every untitled exercise — a name meant to be heard,
-  rendered on screen instead.
+- `version`: wire-format version, currently 1.
+- `mode`: `answer` or `review`.
+- `publicData`: public exercise configuration, never private manifest data.
+- `priorAnswer`: the viewer's previous answer, or `null`.
+- `options`: server-resolved options, including `feedback`.
+- `strings`: interface text translated for the viewer.
 
-The table is the **preview** channel — the instructor's assignment preview and
-the authoring editor's live preview, which render no submission forms. Widgets
-there are fully interactive (options select, truth-table cells cycle, proof
-editors compile and write the correctness mark) but unsubmittable: the action bar
-is rendered with its submit disabled, and with no enclosing form there is no
-`answerData` to mirror into, so working an exercise in a preview records nothing.
-A widget looking for the bar or the mark finds them inside itself here rather
-than inside a form, which is why `setMark` falls back to the element.
+Shared theory text is sent once per document. Exercise public data refers to
+it by system name; the helpers in `exercises/systems.ts` restore the full
+consumer shape, including theory and goal, where needed. Do not duplicate the
+whole theory in every widget payload.
+
+Review renderers also send hydration with translated strings. They can use
+`null` public data and prior answer when the review is already rendered and
+needs only read-only enhancement.
+
+### Widget requirements
+
+- Restore the prior answer and keep `answerData` synchronized after changes.
+- Set `data-enhanced="true"` when ready and remove stale `aria-busy` state.
+- Keep accessible names in sync with visible state. For example, each
+  truth-table cell names its column, row, and value in words, even if the
+  author's display glyph is `1` or the empty cell has no visible text.
+- Read translations through `t(id, values)`. See [i18n](./i18n.md) for the
+  string-ID type and server payload requirements.
+- Include `EXERCISE_GROUP_SHADOW_STYLES` when using the shared group markup.
+  Page styles do not cross a shadow root, including visually hidden styles.
+
+Use `createHelpDialog`, `openHelpDialog`, and `mountHelpTrigger` from the
+shared help-dialog module for widget instructions. Mount the trigger first in
+the light-DOM action bar and append the dialog to the shadow root, outside
+containers whose keyboard handlers could intercept its events. Let the
+helper position the dialog near its trigger: a full-height lesson iframe
+cannot use the lesson midpoint as the visible viewport center.
+
+Previews are interactive but unsubmittable. Methods that locate the action
+bar or mark must work without a form; `setMark` falls back to the element.
 
 ## JSON submission
 
-Enhanced widgets submit to the form `action` with:
+POST to the form's `action` with these headers:
 
-- `Content-Type: application/json`
-- `Accept: application/json`
-- `X-CSRF-Token: <csrf token>`
-- `Idempotency-Key: <per-click idempotency key>`
+```text
+Content-Type: application/json
+X-CSRF-Token: <csrf token>
+Idempotency-Key: <key for this submission>
+```
 
-The request body is the standard answer envelope plus the exercise ID:
+API clients may also send `Accept: application/json`. The page runtime does
+not currently set it explicitly.
+
+The request body contains the exercise ID and answer envelope:
 
 ```json
 {
@@ -257,74 +216,84 @@ The request body is the standard answer envelope plus the exercise ID:
   "answer": {
     "kind": "multiple-choice-answer@1",
     "schemaVersion": 1,
-    "data": {
-      "selectedOptionIds": ["yes"]
-    }
+    "data": { "selectedOptionIds": ["yes"] }
   }
 }
 ```
 
-The response is the authoritative recorded submission result:
+A newly recorded submission returns 201. An idempotent replay returns 200.
+The following response is abbreviated:
 
 ```json
 {
+  "recorded": true,
   "submission": { "id": "sub_123", "exerciseId": "q1" },
-  "evaluation": { "score": 1, "maxScore": 1 },
+  "evaluation": null,
   "policy": { "canSubmit": true },
   "idempotent": false
 }
 ```
 
-Widgets should update inline feedback from this response. They should not treat
-browser state, local checking, or bootstrap state as a recorded submission.
+`evaluation` can be `null` because grading is pending or feedback is withheld.
+A visible evaluation can also have its numeric scores withheld until release.
+
+An automatically checked answer rejected by the recording rule returns 200
+with `recorded: false` and `policy`, rather than a submission record.
+It includes `check` only when feedback allows the verdict to be returned.
+The runtime leaves the previous recorded state unchanged and tells the student
+to try again. A successful HTTP request is therefore not proof that work was
+saved.
 
 ## Unsaved work
 
-Leaving the assignment page — following a link, closing the tab, reloading —
-throws away every answer that has not been submitted, and used to do so in
-silence. The content document carries a `beforeunload` guard that asks first.
-It lives there rather than on the assignment page because that is the frame the
-exercise forms are in, and a `beforeunload` inside a same-origin frame also
-stops the *enclosing* page from navigating or reloading — so one guard covers
-the inline frame and the fullscreen view both. (The browser writes the wording
-and decides whether to show it at all, so there is nothing here to translate.)
+The content document installs a `beforeunload` guard when answers have changed
+since their last recorded submission. In a same-origin frame this can also
+warn before the enclosing page navigates. The browser controls the wording
+and whether the warning is shown; it is not a persistence mechanism.
 
-**The element decides whether it holds unsaved work, not the runtime.** While
-the reader's answer is ahead of the server's, `CarnapExerciseElement` sets
-`data-unsaved` on itself; the runtime only looks for that attribute (and, for
-the text types, which have no element, compares the native field against what
-the server rendered).
+Custom elements set `data-unsaved` on themselves. The runtime checks that
+attribute and compares native text fields against their saved values.
+It must not compare the hidden `answerData` directly: proof certificates can
+change asynchronously without a student edit.
 
-It has to be that way round. A runtime diffing the hidden `answerData` field
-against what arrived cannot work, because the four proof types compile an `mmb`
-certificate into that field asynchronously, on a debounce, seconds after the
-page has settled and with nobody touching it. Only the element can tell that
-from an edit. Two obligations follow for a widget author:
+For widget authors:
 
-- **Override `authoredAnswer()` if the answer carries a derived field.** It
-  returns the part of the answer the *reader* authors, serialized, and defaults
-  to the whole answer. The proof types return
-  `JSON.stringify(withoutCertificate(this.getAnswer()))`.
-- **Keep it stable.** Two reads with nothing in between must agree, so nothing
-  may be minted while serializing. The Prawitz widget's `EMPTY_TREE` exists for
-  this: its placeholder node used to be a fresh `newAssumption()`, minting an id
-  per read, which made every read of an untouched workspace look like an edit.
+- Override `authoredAnswer()` when the payload includes derived data. Proof
+  widgets serialize the answer without its certificate.
+- Keep serialization stable. Do not allocate IDs or mutate defaults while
+  reading the answer.
+- Call `syncAnswer()` after each change; it also updates the unsaved flag.
 
-`syncAnswer()` re-checks the flag, so a widget that already calls it on every
-change needs nothing further. On a recorded submission the runtime dispatches
-`carnap:answer-recorded` on the form and the element takes the answer *as it
-stood when the submit began* as the new saved state — an edit typed while the
-request was in flight is still unsaved when it lands. A checked-but-not-recorded
-answer (`recorded: false`) gets no such event: nothing was stored, so leaving
-still loses it.
+After recording, the runtime dispatches `carnap:answer-recorded` on the form.
+The element adopts the answer captured when submission began as its saved
+state. Edits made while the request was in flight remain unsaved.
+A `recorded: false` result sends no such event.
 
-The revision editor guards itself separately (`src/client/unsaved-changes.ts`),
-by snapshotting its form's fields; its answer is in the form, so it needs none
-of the above.
+### Local draft recovery
 
-## Runtime event
+`CarnapExerciseElement` also saves unsent authored answers in `localStorage`.
+The key combines the form action, which identifies the attempt, with the
+exercise ID. Review widgets and formless previews do not save drafts.
 
-After a successful enhanced submission, the form dispatches:
+On reconnect, a valid draft is restored through the `priorAnswer` channel
+while retaining the saved-answer baseline, so restored work remains unsaved.
+When the current answer matches the recorded answer, the local draft is
+removed. Malformed records are discarded, and records older than 30 days are
+pruned when draft storage is read.
+
+Draft storage is best-effort: unavailable storage, quota failures, or invalid
+restored data must not prevent the widget from loading. `authoredAnswer()`
+also determines what is stored, so derived certificates are excluded. This
+mechanism applies to custom elements, not the native free-response and
+short-answer fields. A local draft is not a server submission or a backup.
+
+The revision editor has a separate form-snapshot guard in
+`src/client/unsaved-changes.ts`.
+
+## Result event
+
+After a successful JSON response, including a checked but unrecorded answer,
+the form dispatches:
 
 ```js
 new CustomEvent("carnap:exercise-submitted", {
@@ -333,5 +302,6 @@ new CustomEvent("carnap:exercise-submitted", {
 });
 ```
 
-The assignment shell may listen for this event to update coarse progress or
-scores. The exercise widget remains responsible for its own submission status.
+Listeners can update progress or scores, but must inspect `recorded` before
+treating the event as saved work. Submission status remains the assignment
+runtime's responsibility.
