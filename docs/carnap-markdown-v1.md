@@ -158,7 +158,7 @@ Limitations:
 - Long display formulas scroll; they do not automatically break into lines.
 - Column alignment in `aligned` and left/right array columns differs between
   Firefox and Chromium. Use separate display lines when alignment is
-essential.
+  essential.
 - Long `underbrace` and `overbrace` constructions can render at the wrong
   width in Chromium. Check them in the browsers your students use.
 - Color commands are disabled because the sanitizer strips their style
@@ -227,8 +227,9 @@ is an exercise.
 ### Common exercise attributes
 
 - `id` is required and unique within the revision. It accepts 1–64
-  non-whitespace characters, including punctuation and Unicode. IDs are
-  compared exactly, without Unicode normalization.
+  non-whitespace characters, including punctuation and Unicode, but excludes
+  control and formatting characters. IDs are compared exactly, without
+  Unicode normalization.
 - `title` is optional and names the exercise in the interface.
 - `points` defaults to `1`. It must be greater than zero and at most `1000`.
 - `exam` and `feedback` control recording and displayed results, as below.
@@ -482,7 +483,8 @@ In addition to the common attributes:
   Defaults to `carnap-prop`.
 - `options`: space-separated flags: `autoAtoms`, `nodash`, `nocheck`,
   `nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
-  and `negated-double-turnstile`. `immutable` is recognized but not effective.
+  and `negated-double-turnstile`. `immutable` and `turnstilemark` are
+  recognized but have no effect.
 
 Unless `nocounterexample` is set, students in `simple` and `validity` can
 submit a chosen counterexample row instead of the whole table.
@@ -651,10 +653,9 @@ a proof with `@aufbau/compiler` into an MMB certificate. The server verifies
 that certificate with `@aufbau/verifier` against the saved theory and goal.
 Browser success state and submitted proof text are not trusted for grading.
 
-The engine's `sorry!` justification, which admits a line without a rule, is
-not available in an exercise: a line justified that way is shown as a
-problem, the widget sends no certificate, and the server would refuse the
-certificate if one arrived.
+The engine's `sorry!` justification admits a line without a rule. Exercises
+reject it: the widget reports a problem and sends no certificate, and server
+verification rejects certificates containing such admissions.
 
 `aufbau-proof` is the linear proof-script editor. Its body contains a prompt,
 a `theorem` declaration, a `----` separator, and a starter proof body. The
@@ -977,10 +978,9 @@ side of disjunctive syllogism or either direction of a replacement rule.
 Magnus's replacement rules (`Comm`, `DN`, `MC`, `↔ex`, `DeM`, `QN`) apply
 inside a larger sentence, as in the textbook: `~~P -> Q` becomes `P -> Q`
 by `DN` in one step, under a connective, under a quantifier, or inside a
-subproof. One step makes one exchange, at one site or at several sites of
-the same subsentence; a line that changes anything else, or would need two
-different exchanges, is refused. Calgary's `DeM` and `CQ` still apply to
-whole lines only.
+subproof. One step exchanges one subsentence, at one or more occurrences.
+A line requiring two different exchanges is rejected. Calgary's `DeM` and
+`CQ` still apply to whole lines only.
 
 ### Rule aliases and structural roles
 

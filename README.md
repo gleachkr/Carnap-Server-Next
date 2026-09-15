@@ -1,36 +1,32 @@
 # Carnap Server
 
-Carnap is a platform for teaching and practicing formal logic: courses,
-assignments, and machine-checked exercises — truth tables, counterexamples, and
-proofs in several styles — authored in a Markdown dialect of its own. This
-repository is the server, written in TypeScript against Bun and Hono.
+Carnap is a platform for teaching and practicing formal logic. Instructors
+write lessons and exercises in Markdown, publish them in courses, and review
+student work. Exercises include truth tables, models, translations, and
+machine-checked proofs.
 
-It runs in two places from one codebase. As a **Cloudflare Worker** on D1, which
-is what `bun run dev` and `wrangler deploy` target. And as an **ordinary
-long-running process** against a SQLite file, which is `bun run serve` and the
-`Dockerfile` — see [`docs/self-hosting.md`](docs/self-hosting.md). The
-application layer does not know which one it is in; the storage contract test
-runs its whole body against both drivers to keep that honest.
+This TypeScript and Hono application runs on either host:
+
+- A Cloudflare Worker backed by D1, using `bun run dev` locally and Wrangler
+  for deployment.
+- A standalone Bun process backed by SQLite, using `bun run serve` or the
+  `Dockerfile`. See [Self-hosting](docs/self-hosting.md).
+
+Both hosts use the same routes and stores. The storage contract tests run
+against both database drivers.
 
 ## Carnap and Aufbau
 
-Two names live side by side here, and the difference is load-bearing.
+Carnap names the platform and its `carnap-markdown-v1` authoring format.
+Platform identifiers include `carnap_session`, `CARNAP_ENV`, and the
+`<carnap-…>` custom elements. Most authoring directives use plain names such
+as `multiple-choice` and `truth-table`.
 
-**Carnap** is this platform — the courses, assignments, grading, and the
-`carnap-markdown-v1` authoring format. Everything the platform owns is named
-for it: the `carnap_session` cookie, the `CARNAP_ENV` binding, the
-`<carnap-…>` custom elements. Authoring directives are the exception — they
-are written plain (`multiple-choice`, `truth-table`), since an author writing
-for Carnap gains nothing from being told so on every block.
-
-**Aufbau** is the proof engine ([`gleachkr/Aufbau`](https://github.com/gleachkr/Aufbau),
-published as `@aufbau/compiler` and `@aufbau/verifier`). Three exercise types
-are checked by it and keep its name: the `aufbau-proof`, `aufbau-proof-tree`,
-and `aufbau-proof-fitch` directives, their `aufbau-proof@1`-style kinds, and
-`src/worker/exercises/aufbau-proof*/`. Their custom elements carry both —
-`<carnap-aufbau-proof>` is Carnap's element for an Aufbau-checked proof.
-
-So an `aufbau` in this tree is not a missed rename. It means the Aufbau engine.
+Aufbau is the [logic engine](https://github.com/gleachkr/Aufbau), including
+`@aufbau/compiler`, `@aufbau/verifier`, and `@aufbau/syntax`. Its four proof
+directives retain the engine name: `aufbau-proof`, `aufbau-proof-tree`,
+`aufbau-proof-fitch`, and `aufbau-proof-prawitz`. Their browser elements use
+both names, as in `<carnap-aufbau-proof>`.
 
 ## Local development
 
@@ -46,9 +42,11 @@ Install dependencies:
 bun install
 ```
 
-Run the test suite:
+Build the browser assets, then run the test suite. Some tests inspect the
+built bundles:
 
 ```sh
+bun run build:client
 bun test
 ```
 
@@ -65,7 +63,8 @@ bun run format:check
 bun run lint:check
 ```
 
-Run everything the way a commit is gated:
+Run the client build, tests, typechecking, and Biome checks together.
+These checks are manual; no CI or git hook runs them automatically:
 
 ```sh
 bun run validate
@@ -89,15 +88,16 @@ Check the health endpoint once Wrangler is running:
 curl http://localhost:8787/health
 ```
 
-Or start the same application as a plain server on a SQLite file, which needs no
-Wrangler and applies its own migrations at boot:
+Alternatively, start the standalone server with a SQLite file. It needs no
+Wrangler and applies pending migrations at startup:
 
 ```sh
 CARNAP_ENV=local bun run serve
 ```
 
-Both listen on port 8787, so run one at a time or set `PORT`. The rest of this
-file assumes the Worker; everything in it works the same either way.
+Both default to port 8787. Run one at a time, set `PORT` for the standalone
+server, or pass `--port` to Wrangler. The login and course workflows below
+apply to both hosts.
 
 ## Local native login
 
@@ -108,7 +108,7 @@ route returns that token in the response body so no email service is required.
 ```sh
 curl -s http://localhost:8787/auth/login/start \
   -H 'Content-Type: application/json' \
-  -d '{"email":"ada@example.test","name":"Ada Lovelace"}'
+  -d '{"email":"ada@example.test"}'
 ```
 
 Use the returned `login.loginToken` to create a session:
@@ -120,12 +120,16 @@ curl -i http://localhost:8787/auth/login/confirm \
 ```
 
 The confirm route sets `carnap_session` and `carnap_csrf` cookies. Unsafe
-requests made with the session cookie must send `X-CSRF-Token` with the value
-from the `carnap_csrf` cookie. Both are `HttpOnly`; whether they carry `Secure`
-follows the request's protocol, not `CARNAP_ENV`, so over local http they are
-`SameSite=Lax` without `Secure`, and over https (`wrangler dev --local-protocol
-https`, preview, production, or a self-hosted instance behind a trusted proxy —
-see `docs/self-hosting.md`) they are marked `Secure`.
+session-authenticated requests must send `X-CSRF-Token` with the CSRF token.
+Both cookies are `HttpOnly`. API clients can use `csrfToken` from the login
+confirmation response; page scripts receive it through rendered markup.
+
+Cookie `Secure` follows the resolved request protocol, not `CARNAP_ENV`.
+Native login uses `SameSite=Lax`; HTTPS LTI sessions use `SameSite=None` for
+embedding. See [Self-hosting](docs/self-hosting.md) for proxy configuration.
+
+Do not expose `CARNAP_ENV=local` to other users: its disclosed login tokens
+allow anyone who can reach the server to sign in as any email address.
 
 ## Browser course workflow
 
@@ -140,10 +144,11 @@ when Resend is not configured. Follow that link to sign in, then use
 `/courses` to create a course. The course page can create enrollment links,
 show the newly created browser enrollment URL, and revoke active links.
 
-An empty database has nobody who may create one, so the first account has to
-grant itself the capability: start the server with `ADMIN_BOOTSTRAP_TOKEN` set,
-sign in, and submit that token at `/admin/bootstrap`. Unset the variable once it
-has been spent.
+On a fresh database, first obtain administrator access: start the server with
+`ADMIN_BOOTSTRAP_TOKEN` set to a secret, sign in, and submit it at
+`/admin/bootstrap`. Remove the variable after setup. Configure the token
+before exposing a fresh instance; without it, any signed-in user can
+bootstrap while no active administrator exists.
 
 To test the student path, use a second browser profile or clear cookies, sign
 in as a different email address, and open the enrollment URL. The student can
@@ -163,15 +168,17 @@ configuration error if Resend settings are missing.
 
 ## Documentation
 
-| Document | What it covers |
-|---|---|
-| [`docs/carnap-markdown-v1.md`](docs/carnap-markdown-v1.md) | The authoring dialect: directives, exercises, mathematics, diagnostics |
-| [`docs/exercise-runtime-api.md`](docs/exercise-runtime-api.md) | The browser-facing contract every exercise widget implements |
-| [`docs/course-items-and-assessment.md`](docs/course-items-and-assessment.md) | How content, assignments, and attempts fit together |
-| [`docs/grading-model.md`](docs/grading-model.md) | Scoring, release, regrades, and LMS passback |
-| [`docs/self-hosting.md`](docs/self-hosting.md) | Running Carnap off Cloudflare: configuration, first run, upgrades |
-| [`docs/i18n.md`](docs/i18n.md) | Translation with Lingui, and the failure modes that are silent |
-| [`docs/a11y.md`](docs/a11y.md) | The WCAG 2.2 AA testing tiers; [`docs/a11y-manual.md`](docs/a11y-manual.md) is the by-hand checklist |
+- [Authoring](docs/carnap-markdown-v1.md): Markdown, directives, exercises,
+  mathematics, and diagnostics.
+- [Exercise runtime](docs/exercise-runtime-api.md): widget and submission
+  contracts.
+- [Course items](docs/course-items-and-assessment.md): content, publication,
+  assessment modes, and attempts.
+- [Grading](docs/grading-model.md): score calculation, release, and passback.
+- [Self-hosting](docs/self-hosting.md): configuration, setup, and upgrades.
+- [Internationalization](docs/i18n.md): Lingui extraction and translation.
+- [Accessibility](docs/a11y.md): automated checks, with a separate
+  [manual checklist](docs/a11y-manual.md).
 
 Update the first two whenever supported Markdown syntax or exercise runtime
 behavior changes.
@@ -179,7 +186,7 @@ behavior changes.
 ## Conventions
 
 Local, preview, and production environments use the `CARNAP_ENV` variable.
-Request IDs are carried in the `X-Request-ID` header. Error responses use this
+Request IDs are carried in the `X-Request-ID` header. JSON errors use this
 shape:
 
 ```json

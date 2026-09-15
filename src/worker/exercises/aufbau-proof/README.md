@@ -1,73 +1,51 @@
-# Aufbau-proof exercise (`aufbau-proof@1`)
+# Linear proof exercise (`aufbau-proof@1`)
 
-A proof the student writes and the **Aufbau engine** checks. The student's
-browser compiles their proof against a fixed theory to an MMB certificate; the
-worker independently re-verifies that certificate. The compiler is the untrusted
-convenience; the [verifier](./verifier.ts) is the arbiter — see the engine notes
-in memory (`aufbau-engine-packages`).
+Students write a linear Aufbau proof script in CodeMirror. The browser
+compiles it with `@aufbau/compiler` into an MMB certificate. The server checks
+that certificate independently with `@aufbau/verifier` against the saved
+theory and goal. It does not grade the proof text or trust browser status.
 
-This is the first GUI layer on the Aufbau engine (`gleachkr/Aufbau`, published as
-the `@aufbau/compiler` and `@aufbau/verifier` npm/wasm packages). v1 is a plain
-CodeMirror text editor.
+Tree, Fitch, and Prawitz proofs use the same compiler and verifier, with
+additional code to translate their input formats to linear proof scripts.
 
-## The trust boundary
+## Verification and storage
 
-- The instructor authors an **`aufbau-mm0`** theory (sorts, terms, axioms) and,
-  in each **`aufbau-proof`**, a goal `theorem`. The compiler **freezes** the
-  theory into the document's systems table and names it from the exercise, which
-  keeps its own goal declaration; reading either side of that seam — the store
-  or the browser — hands the widget and the grader `publicData.mm0`, the theory
-  plus the declaration, exactly as before it was a table. See
-  [`systems.ts`](../systems.ts).
-- The **client** ([`carnap-aufbau-proof-v1.ts`](../../../client/components/carnap-aufbau-proof-v1.ts))
-  compiles `mm0 + (goal header + student body)` on each edit and writes
-  `{ proofText, mmb }` (the base64 certificate) into `answerData`. It gets the
-  engine from [`proof-compiler.ts`](../../../client/proof-compiler.ts), which
-  loads `@aufbau/compiler` lazily (its ~5 MB wasm) once for the whole page and in
-  the reader's language — all four proof types share that one instance.
-- The **worker** ([`assessment.ts`](./assessment.ts) → [`verifier.ts`](./verifier.ts))
-  decodes the MMB ([`certificate.ts`](./certificate.ts)) and `verifyPair`s it
-  against the *frozen* mm0 — never the student's proofText. `ok` ⇔ the declared
-  goal is proved. All-or-nothing. The verdict is what gets stored; the
-  certificate is not. A submission row keeps `{ proofText }`, which is enough
-  to compile the certificate again should a verdict ever be questioned, and
-  is a tenth of the size (a Fitch certificate runs to ~45 KB).
+The author selects a theory and declares a goal theorem. Compilation stores
+shared theory text once in the artifact's systems table and stores the goal
+with the exercise. `../systems.ts` joins them into `publicData.mm0` for the
+widget and grader. The original source is also available for display and
+surface-language parsing.
 
-Because verification is bound to the mm0 we hold, a certificate for a different
-statement will not verify, and a valid certificate *is* a valid proof however it
-was produced (copying is a plagiarism concern, not a soundness one).
+The browser loads the compiler lazily through `src/client/proof-compiler.ts`.
+One instance serves the document's proof widgets, using the document locale.
+After edits, the widget compiles the theory and proof and updates
+`answerData` with the proof text and base64 certificate.
 
-## Authoring syntax
+The server decodes the certificate and calls `verifyPair` against its own
+frozen MM0. Credit is all-or-nothing. A certificate for a different statement
+cannot satisfy the saved goal. Verification establishes validity, not
+originality: copied valid proofs remain a plagiarism concern.
 
-Two directives. `aufbau-mm0` declares a named theory; `aufbau-proof` references
-it and states the goal.
+The server stores `{ proofText }` and the evaluation, not the certificate.
+The text can be compiled again for investigation, but old evaluations are
+not automatically recalculated. The engine's `sorry!` justification cannot
+produce an accepted exercise certificate.
 
-A theory's MM0 comes from a `src` naming one this site serves, from a raw MM0
-body, or from both — in which case the body's declarations are appended to what
-the path brought, which is how a course adds its own predicates without carrying
-the whole system. The built-ins live in `src/worker/logic/theories/` and are
-served at `/theories/<name>.mm0`; `logic/theories/index.ts` is the resolver, and
-it answers from the module graph rather than fetching the path it names, so a
-theory resolves identically in the worker, in the browser preview, and in tests
-with no server running. A `src` pointing at another origin is refused
-(`remote_theory_src`) rather than fetched.
+## Authoring
+
+Declare a named theory before using it, or select a built-in system directly:
 
 ```md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
---| @syntax delimiter $ Cube $
-term Cube (x: tm): wff;
-:::
-
 :::aufbau-mm0{name="prop"}
 delimiter $ ( ) $;
 provable sort wff;
-term imp (a b: wff): wff; infixr imp: $->$ prec 25;
-axiom top_i: $ top $;
+term imp (a b: wff): wff;
+infixr imp: $->$ prec 25;
 axiom ax_1 (a b: wff): $ a -> b -> a $;
 :::
 
-:::aufbau-proof{system="prop" id="identity"}
-Prove the law of identity.
+:::aufbau-proof{system="prop" id="implication"}
+Prove the stated implication.
 
 theorem thm_k (a b: wff): $ a -> b -> a $
 ----
@@ -75,71 +53,86 @@ l1: $ a -> b -> a $ by ax_1 []
 :::
 ```
 
-The proof body is: prompt prose, a `theorem <name>: $ … $` line (the goal, in MM0
-declaration syntax — the first identifier after `theorem` is the goal name and
-the whole line becomes the frozen mm0's theorem declaration), a `----` underline,
-then the starter proof body. The student edits only the body.
+The exercise body contains prompt prose, a `theorem` declaration, a `----`
+separator, and the starter proof body. The theorem name is the first
+identifier after `theorem`; it need not match the exercise ID. Students edit
+only the proof body.
+
+A theory block accepts raw MM0, a `src` URL, or both. With both, the body is
+appended to the referenced source. For example:
+
+```md
+:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+--| @syntax delimiter $ Cube $
+term Cube (x: tm): wff;
+:::
+```
+
+Built-ins resolve from imported files under `src/worker/logic/theories/`,
+without fetching their URLs. Hosted theories use immutable content-revision
+URLs, resolved through stores in the Worker and a same-origin fetch in the
+preview. Remote-origin URLs are rejected. See the authoring reference's
+[Languages and theories][languages] section for sharing and extensions.
 
 ### Attributes
 
-| Attribute | Directive | Meaning |
-| --- | --- | --- |
-| `name` | `aufbau-mm0` | theory name other proof blocks reference (required) |
-| `src` | `aufbau-mm0` | a theory path this site serves; the body, if any, extends it |
-| `id` | `aufbau-proof` | exercise id (required) |
-| `system` | `aufbau-proof` | an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships (required) |
-| `title`, `points`, `exam`, `feedback` | `aufbau-proof` | as for every exercise |
-| `options` | `aufbau-proof` | space-separated: `auto` (proof search), `complete` (rule completion) |
+- `id`: required stable exercise ID.
+- `system`: required preceding theory-block name or built-in system ID.
+  Unknown names produce `unknown_system`.
+- `title`, `points`, `exam`, `feedback`: common exercise settings.
+- `options`: space-separated `auto` and `complete` flags, both off by
+  default. The linear editor's search and completion controls are not wired
+  up yet.
 
-Theories must be declared **before** the proofs that use them (matching the
-engine's own no-forward-reference model); a name that is neither a block nor
-a shipped id is `unknown_system`.
+On `aufbau-mm0`, `name` is required, `src` is optional, and `show` displays a
+collapsed source panel. The top-level compiler handles this block separately
+from exercise forms.
 
-## Proof-script format
+Linear proof lines use engine syntax, including axiom identifiers. Unlike
+the structured proof editors, this editor does not convert student notation
+or rule aliases before compilation. See `docs/proof.md` in
+[the Aufbau repository](https://github.com/gleachkr/Aufbau) for proof lines,
+rule applications, named bindings, and engine declarations.
 
-Proof lines, `by`, rule applications, named bindings, `auto?`/`exact?` holes, and
-theory declarations (`term`, `axiom`, `theorem`, notation) are the engine's, not
-this repo's. See `docs/proof.md` in `gleachkr/Aufbau`.
+## Answer data
 
-## How it fits together
-
-| File | Role |
-| --- | --- |
-| [`types.ts`](./types.ts) | constants, `publicData`/`answerData` shapes, guards |
-| [`authoring.ts`](./authoring.ts) | `compileAufbauMm0`, `compileAufbauProof` |
-| [`verifier.ts`](./verifier.ts) | wasm-ABI binding over `@aufbau/verifier` |
-| [`assessment.ts`](./assessment.ts) | normalize + evaluate (verify) + review |
-| [`read-only-view.ts`](./read-only-view.ts) | inert DSD chrome + review render |
-| [`carnap-aufbau-proof-v1.ts`](../../../client/components/carnap-aufbau-proof-v1.ts) | the editor element |
-| [`proof-compiler.ts`](../../../client/proof-compiler.ts) | the page's one `@aufbau/compiler`, and its locale |
-
-The theory panel is emitted as a plain markdown content node by the top-level
-compiler (like `:::style`), which also collects theories and dispatches proof
-blocks. The interactive answer form is wired in `assignment-detail.tsx`
-(`aufbauProofSubmissionForm`); the authoring live-preview runs the same engine
-check per proof (`editor-preview.ts`).
-
-### Answer shape
-
-What the widget submits:
+The widget submits:
 
 ```jsonc
 {
-  "proofText": "thm_k\n----\nl1: $ a -> b -> a $ by ax_1 []", // display/review only
-  "mmb": "<base64 MMB certificate>"                            // the graded input
+  "proofText": "thm_k\n----\nl1: $ a -> b -> a $ by ax_1 []",
+  "mmb": "<base64 MMB certificate>"
 }
 ```
 
-What is stored is `{ proofText }` beside the evaluation: the certificate is
-verified on the way in and not kept.
+`proofText` supports display and review; `mmb` is the verified input. The
+stored submission omits `mmb`.
 
-## Roadmap
+## Implementation
 
-- Wire the `auto?` / `complete` toggles to the LSP (`@aufbau/lsp`).
-- `src=` theories (an in-system `item:` reference is preferred over an external
-  URL fetch).
-- Engine-rendered theory panel (an `<aufbau-index>`-style pretty print) instead
-  of raw MM0.
-- Cross-cell proof documents (a later proof citing an earlier proof's lemmas);
-  v1 proofs are independent, each verified against the shared theory.
-- Additional GUI layers (structured / Fitch-style) on the same engine.
+- `types.ts`: constants, public/answer shapes, and guards.
+- `authoring.ts`: theory-block and proof compilation, theory resolution,
+  and goal parsing. `application/content/mm0.ts` provides shared diagnostics
+  and standalone theory-source validation.
+- `certificate.ts`: certificate decoding and storage-related helpers.
+- `verifier.ts`: `@aufbau/verifier` integration.
+- `assessment.ts`: normalization, evaluation, and review.
+- `read-only-view.ts`: inert markup and review rendering.
+- `src/client/components/carnap-aufbau-proof-v1.ts`: editor element.
+- `src/client/proof-compiler.ts`: shared browser compiler loader.
+
+Paths beginning with `src/` are relative to the repository root.
+`web/assignment-detail.tsx` builds active submission forms. The editor preview
+uses the same compiler and rendering code.
+
+Relevant tests include `tests/aufbau-proof.test.ts` and
+`tests/aufbau-proof-verify.test.ts`.
+
+## Limitations
+
+- Search and completion controls remain unimplemented.
+- The source panel shows MM0 rather than an engine-rendered rule reference.
+- Proof exercises are independent; a later exercise cannot cite an earlier
+  exercise's proof as a lemma.
+
+[languages]: ../../../../docs/carnap-markdown-v1.md#languages-and-theories

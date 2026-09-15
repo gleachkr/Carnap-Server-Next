@@ -20,7 +20,7 @@ submission-and-redirect fallback.
 
 The implementation is in `src/worker/web/assignment-scripts.ts`,
 `src/worker/web/assignment-detail.tsx`, and the browser components under
-`src/client/components/`. Runtime identifiers still use the `carnap-` prefix.
+`src/client/components/`. Runtime identifiers use the `carnap-` prefix.
 
 ## Runtime shell
 
@@ -64,8 +64,8 @@ and author CSS style it.
 
 Preview renderers use `exerciseActionsHtml` from
 `src/worker/exercises/actions.ts`. They show the same bar with Submit
-disabled.
-Local controls still work, but no enclosing form exists and nothing is saved.
+disabled. Local controls still work, but no enclosing form exists and
+nothing is saved.
 
 ## Correctness mark
 

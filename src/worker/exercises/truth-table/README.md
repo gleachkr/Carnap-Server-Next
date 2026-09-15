@@ -1,26 +1,22 @@
 # Truth-table exercise (`truth-table@1`)
 
-An interactive truth-table exercise in the Carnap `prop` tradition. The student
-fills a grid; a local **Check** grades it in the browser (no round trip);
-**Submit** records an authoritative server grade. Instead of the full table the
-student may also designate one row as a **counterexample** (see below). Three
-variants ship: **Simple** (construct a table for one or more formulas),
-**Validity** (test an argument written with the `:|-:` turnstile), and
-**Partial** (fill in a single free row, optionally constrained by givens — see
-below). Alternate notation systems and custom marks are deferred — see the
-roadmap at the bottom.
+Students fill a truth-table grid and can optionally identify a counterexample
+row. Browser Check and server grading share a DOM-free logic core. The server
+independently checks submissions; no private answer key is needed because
+cell values follow from the public formulas.
 
-## Authoring syntax
+Variants are `simple` (a full table), `validity` (an argument with a turnstile
+column), and `partial` (one student-chosen valuation).
 
-Exercises are embedded in `carnap-markdown` with a container directive.
-Attributes go in **braces** (`{...}`); the `#id` shorthand sets the id. Formulas
-are markdown **list items**; any prose *before* the first list item is the
-prompt. A single bullet may hold **several comma-separated formulas**, so the two
-lines below are equivalent to `- ~(P /\ Q), ~P \/ ~Q`.
+## Authoring
 
-```
-::::truth-table{#demorgan variant="simple" fill="all" check="terse" points="4"}
-Fill in both tables. If they agree on every row, the formulas are equivalent.
+Attributes go in braces; `#id` abbreviates `id`. In simple and partial
+exercises, formulas are list items and preceding prose is the prompt. A
+bullet can hold comma-separated formulas:
+
+```md
+::::truth-table{#demorgan feedback="terse" points="4"}
+Fill in both tables and compare their results.
 
 - ~(P /\ Q)
 - ~P \/ ~Q
@@ -29,105 +25,88 @@ Fill in both tables. If they agree on every row, the formulas are equivalent.
 
 ### Attributes
 
-| Attribute  | Values / form                         | Default          | Meaning |
-|------------|---------------------------------------|------------------|---------|
-| `#id` / `id` | identifier (`[A-Za-z][\w-]{0,63}`)  | — (**required**) | Stable exercise id; unique within the document. |
-| `variant`  | `simple` \| `validity` \| `partial`   | `simple`         | `simple` builds a table for the body formulas; `validity` tests a `:|-:` sequent; `partial` fills a single free row (see below). |
-| `fill`     | `all` \| `connectives` \| `main`      | `all`            | Which cells the student fills (see below). |
-| `grading`  | `all-or-nothing` \| `partial`         | `all-or-nothing` | Score all-or-nothing, or by fraction of correct cells. |
-| `check`    | `cells` \| `terse` \| `off`           | `cells`          | Local Check verbosity (see below). |
-| `counterexample-to` | `tautology`/`validity` \| `equivalence` \| `inconsistency`/`contradiction` | `tautology` | The property a counterexample row must show; applies to both variants (see below). The `nocounterexample` flag hides the button. |
-| `points`   | number `0 < n ≤ 1000`                 | `1`              | Nominal points. |
-| `trueMark` / `falseMark` | glyph, 1–8 chars          | `T` / `F`        | Display glyph for a true / false cell (cf. Carnap). Display only — the recorded answer stays `T`/`F`. |
-| `system`   | a block name or a spec id             | `carnap-prop`    | The notation the formulas are written in: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. Any language that reads will do, including a predicate one — see below. |
-| `title`    | string                                | —                | Optional title. |
-| `exam`     | `true` \| `false`                     | the assignment's: `true` while its grades are withheld, `false` once released | `true` records every submission; `false` records only correct autograded work. Leaving it out is a third value, not `false`. |
-| `feedback` | `full` \| `terse` \| `none` | the assignment's: `none` while its grades are withheld, `full` once released | How much the student is told: `terse` drops the detail, `none` drops the verdict too. The score is separate — it waits for the release date whatever this says. See `docs/carnap-markdown-v1.md`. |
-| `options`  | space-separated flags                 | —                | Bare Carnap-style flags (see below). |
+- `id` / `#id`: required and unique within the document. IDs allow 1–64
+  non-whitespace characters, excluding control and formatting characters.
+- `variant`: `simple` (default), `validity`, or `partial`.
+- `fill`: `all` (default), `connectives`, or `main`.
+- `grading`: `all-or-nothing` (default) or `partial`.
+- `check`: legacy `cells`, `terse`, or `off`; prefer `feedback`.
+- `counterexample-to`: `tautology`/`validity` (default), `equivalence`, or
+  `inconsistency`/`contradiction`.
+- `trueMark` / `falseMark`: display strings of 1–8 characters, defaulting to
+  T and F. Stored answers always use `T` and `F`.
+- `system`: preceding theory-block name or built-in system ID, defaulting
+  to `carnap-prop`.
+- `options`: space-separated flags, listed below.
+- `title`, `points`, `exam`, `feedback`: common settings. Points default to
+  1 and must be greater than zero and at most 1000.
 
-### `fill` — which cells are student-filled
+Omitted `exam` and `feedback` use assignment defaults. Unreleased graded work
+uses `true` and `none`; released grades, practice, readings, and previews use
+`false` and `full`. Readings and previews never record answers. Numeric
+scores require grade release and feedback other than `none`. See
+[Recording and feedback][feedback].
 
-The grid has **reference** columns (one per atom, on the left) and, for each
-formula, a cell under **every atom occurrence and every connective** in the
-written-out formula. `fill` chooses which formula cells the student completes;
-the rest are shown pre-filled (given) as scaffolding:
+### Fill scope
 
-- `all` — every atom-occurrence and connective cell (Carnap default).
-- `connectives` — only the sub-formula (connective) columns.
-- `main` — only the main-connective column of each formula.
+Reference columns on the left contain atom values. Formula columns contain
+one cell for each atom occurrence and connective. `fill` chooses the formula
+cells students complete:
 
-The reference columns are student-filled unless `autoAtoms` is set. `fill` does
-**not** apply to the `partial` variant: with no fixed key there is nothing to
-pre-fill the omitted cells with, so the student always completes the whole row.
+- `all`: every cell;
+- `connectives`: connective cells only;
+- `main`: each formula's main-connective cell only.
 
-### `check` — local Check behaviour
+Other formula cells are given. Reference columns are editable unless
+`autoAtoms` is set. `partial` always requires the whole row; it has no fixed
+valuation from which to prefill omitted cells.
 
-Check never contacts the server (a truth table's key is a function of the public
-formulas, so it is graded client-side with the same core the worker uses):
+### Local checking
 
-- `cells` — mark every graded cell green/red with a running count.
-- `terse` — only report "All cells correct." or "There's an error somewhere.",
-  so students go find the mistake themselves.
-- `off` — no Check button (equivalent to the `nocheck` option flag).
+Legacy `check` values map to shared feedback:
 
-Editing any cell clears the previous Check result.
+- `cells` means `full`: per-cell marks and a correct-cell count;
+- `terse`: a verdict without identifying mistakes;
+- `off` means `none`: no Check button or verdict.
 
-`check` is this type's older spelling of the shared `feedback` attribute —
-`cells` is `full`, `terse` is `terse`, `off` is `none` — and is kept so ported
-Carnap problems compile unchanged. Prefer `feedback` in new content; writing
-both earns a `redundant_check_attribute` diagnostic and `feedback` wins. Only
-`feedback` knows about the assignment, which is why a table with nothing
-authored on it comes out sealed on an assignment whose grades are withheld.
+An explicit `feedback` wins over `check`, with a
+`redundant_check_attribute` diagnostic if both are present. With neither,
+the assignment resolves the setting rather than assuming full feedback.
+Editing a cell clears the previous local result.
 
-### Counterexample shortcut
+### Counterexamples
 
-A claim about one row: **this row disproves it**. The student fills the table in
-the ordinary way and presses **Find counterexample**, which reveals a column of
-row radios; marking a row submits that row as the counterexample, and Check and
-Submit then grade it alone. The button appears unless the shortcut is disabled
-(`nocounterexample` / `check`-independent). Filling the whole table and
-submitting it as a table is always a valid path too; the shortcut just says
-which row the student is standing on, and spares them the rest of a large
-"not-a-tautology" problem.
+In simple and validity tables, Find counterexample reveals row-selection
+radios. Selecting a row designates it for the next Check or Submit; selection
+does not itself send a request. All cells remain editable. Leaving the mode
+removes the designation without erasing work.
 
-`counterexample-to` sets the **property** a counterexample row must show,
-evaluating each formula's main connective on it (Carnap's synonyms are folded):
+The selected row must be filled correctly and satisfy `counterexample-to`:
 
-- `tautology` (synonym `validity`, the default) — the formulas are **all false**.
-- `equivalence` — the formulas **disagree** (not all equal).
-- `inconsistency` (synonym `contradiction`) — the formulas are **all true**.
+| Target | Required formula values |
+| --- | --- |
+| `tautology`, `validity` | All false |
+| `equivalence` | At least one true and at least one false |
+| `inconsistency`, `contradiction` | All true |
 
-How the property is applied depends on the variant:
+For `simple`, the target applies to every formula. For `validity`, premises
+must be true and the target applies to conclusions. The default is therefore
+an ordinary invalidity counterexample: premises true, conclusions false.
 
-- **simple** — the property must hold over **all** the formulas (e.g. `tautology`
-  = every formula false, so the set is not all tautologies).
-- **validity** — every **premise** (left of the turnstile) must be **true**, and
-  the property must hold over the **conclusions** (right of the turnstile). So
-  the default (`tautology`) is the ordinary invalidity counterexample (premises
-  true, conclusions all false); `equivalence` asks for a row where the premises
-  hold but the conclusions disagree ("are the RHS formulas equivalent, assuming
-  the LHS?"); and so on. The designated row's `⊢` mark is `F`.
+The validity turnstile cell is F when the row meets this counterexample
+condition and T otherwise. Changing the target changes that column's meaning
+even if `nocounterexample` hides the shortcut.
 
-The property also defines the correct value of a validity table's turnstile
-column, so it matters even when `nocounterexample` hides the button.
+A counterexample earns all or no credit, including under `grading="partial"`.
+Review marks only the designated row and displays the rest as submitted,
+without grading it. Students can instead submit the whole table.
 
-The UI is **in-place and non-destructive**: pressing the button reveals a leading
-column of row radios and touches nothing else, every cell stays editable, and the
-marked row is highlighted; Check / Submit then grade that row alone. Leaving the
-mode drops the designation and the table goes back to being submitted whole. A
-counterexample is accepted only when the row is filled in correctly **and**
-satisfies the target, and it is scored all-or-nothing even under `grading="partial"`
-(it is a single claim, not a fraction of cells). On review, the designated row
-carries the marks and the rest of the table is echoed back as the student left
-it — ungraded, but theirs.
+### Validity tables
 
-### Validity variant
+The body uses one sequent line: comma-separated premises, `:|-:`, and
+comma-separated conclusions. Prose before it is the prompt:
 
-With `variant="validity"` the body is a single **sequent** line in Carnap's
-turnstile form — comma-separated premises, `:|-:`, comma-separated conclusions —
-instead of one-formula-per-list-item. Any prose before the sequent is the prompt:
-
-```
+```md
 ::::truth-table{#modus-ponens variant="validity"}
 Is this argument valid?
 
@@ -135,259 +114,183 @@ P, P -> Q :|-: Q
 ::::
 ```
 
-The grid gains one **turnstile column** (headed `⊢`), sitting between the last
-premise and the first conclusion, with one cell per row that the student marks
-`T` or `F`. A row is a **counterexample to validity** when every premise is true
-and every conclusion is false; the student marks that row `F` (and every other
-row `T`). The argument is valid exactly when no row is a counterexample. The
-turnstile column is always student-filled, and it is graded as one more cell per
-row — so `fill`, `grading`, and `check` behave exactly as they do for Simple.
+A turnstile column appears between premises and conclusions. It is always
+student-filled and graded as an additional cell per row. With the default
+target, no F in that column means the argument is valid.
 
-A validity table also offers the single-row **counterexample** shortcut (see
-above): press **Find counterexample** and mark the row where the premises all
-hold and the conclusions have the counterexample property, filled in with its `⊢`
-cell `F`. By default that property is `tautology` (conclusions all false, the ordinary
-invalidity counterexample), but `counterexample-to` can set it to `equivalence`
-or `inconsistency`, which also redefines the turnstile column accordingly.
-`nocounterexample` turns the button off (the turnstile column still uses the
-property).
+Exactly one `:|-:` and at least one formula on each side are required.
+Failures produce `missing_turnstile`, `multiple_turnstiles`,
+`empty_premises`, or `empty_conclusions`.
 
-A sequent must contain exactly one `:|-:`, with at least one premise and one
-conclusion; otherwise the compiler reports `missing_turnstile`,
-`multiple_turnstiles`, `empty_premises`, or `empty_conclusions`.
+### Partial tables
 
-### Partial variant
+A partial exercise asks for one row. Students choose atom values and fill
+all formula cells consistently with them:
 
-With `variant="partial"` the student fills in **one single row** rather than the
-whole table. The body is a formula list, exactly like Simple (`- formula`, with
-comma-separated formulas allowed):
-
-```
+```md
 ::::truth-table{#p1 variant="partial"}
-Pick any values for the letters and fill the row in correctly.
+Choose any atom values and complete the row consistently.
 
 - (P /\ Q) -> P
 ::::
 ```
 
-The grid shows one row: the student chooses the atom valuation (the reference
-columns are theirs to set) and completes every formula cell for that valuation.
-By default the row is correct as long as it is **filled in consistently** — any
-valuation is accepted. (The `fill` scope does not apply; the whole row is always
-filled — see above.)
+Any valuation is accepted unless givens restrict it. An unconstrained row
+can receive per-cell credit under `grading="partial"`. A row constrained
+by givens is graded all-or-nothing.
 
-For a partial row with *particular* properties, add a **given grid** after the
-formulas (see below) — the reference tokens pin the student's chosen valuation,
-and the cell tokens pin cells the solution must match. Multiple grid rows are
-alternatives (accept-any-one), which is how you ask for an inequivalence witness.
+### Given grids
 
-### Prepopulated cells — the given grid
+All variants accept a trailing positional grid:
 
-Any variant may seed cells with a trailing **positional grid** (Carnap's "bar"
-form), one line per row:
-
-```
-::::truth-table{#g1 options="immutable"}
-Fill in the table.
+```md
+::::truth-table{#g1 options="strictGivens"}
+Complete the table using the given cell.
 
 - P -> Q
 
-P Q | P -> Q      (optional header — skipped)
-T F | . F .       (row P=T,Q=F: reveal the main -> cell; P,Q left to the student)
+P Q | P -> Q
+T F | . F .
 ::::
 ```
 
-Grammar: `refTokens | f1Tokens | … | fNTokens`, tokens whitespace-separated.
-`T`/`F` pin a value; `.` leaves the cell for the student. The reference segment
-has one token per atom; each formula segment has one token per cell of that
-formula's layout (`P -> Q` → three cells `[P, ->, Q]`). Alignment does **not**
-matter — the parser counts tokens, not columns. A leading `P Q | P -> Q` header
-echo (left segment = the atom names) is skipped.
+The first line is an optional header and is skipped. Each data row has
+`reference | formula1 | … | formulaN` segments. Tokens are separated by
+whitespace: `T` or `F` pins a value, and `.` leaves it open. Reference tokens
+follow atom order; formula tokens follow displayed cell order. For `P -> Q`,
+that is `[P, ->, Q]`. Alignment spaces do not affect interpretation.
 
-- **Sparse rows.** Write only the rows you seed. A row's reference tokens are a
-  **pattern** over the 2ⁿ rows: `T`/`F` pins an atom, `.` is a wildcard, so
-  `T . | . F .` seeds every `P=T` row. Unlisted/unmatched rows are fully
-  student-filled.
-- **Integrity, not answer key.** The key is computed from the formulas, so for
-  `simple`/`validity` a seeded value must equal the computed value on every
-  matched row, else `given_conflicts_with_key`. (A `partial` grid has no fixed
-  key — its tokens *are* the acceptance constraints.)
-- **`strictGivens`** locks seeded cells: they render inert and are not graded.
-  Without it a seeded cell is prefilled but editable, and graded like any cell.
-- For **`partial`**, each grid row is one accepted alternative: the student's row
-  is accepted if it matches (any one) grid row's pinned cells. `hiddenGivens`
-  keeps them off the grid (grade-only); a lone visible given is prefilled, frozen
-  under `strictGivens`. A partial row constrained by a grid is graded
-  all-or-nothing even under `grading="partial"`; an unconstrained partial row is
-  an ordinary fill that can earn per-cell credit.
+For `simple` and `validity`:
 
-Malformed grids are reported at compile time: `given_row_arity` (wrong number of
-`|` segments), `given_cell_arity` (wrong token count in a segment),
-`invalid_grid_token` (a token that is not `T`/`F`/`.`), and
-`given_conflicts_with_key` (a seed contradicting the computed key). Seeding an
-interior sub-formula cell is supported; seeding a validity turnstile-column cell
-is not (grid segments are `reference | formulas`).
+- Reference tokens select rows of the full table. `.` is a wildcard, so
+  `T . | . F .` targets every P=T row.
+- Only listed patterns seed cells; unmatched rows remain unchanged.
+- Every seed must agree with the computed value on every matched row.
+  Otherwise compilation reports `given_conflicts_with_key`.
 
-### `options` flags
+For `partial`, each grid row is an accepted alternative. The submitted row
+must match at least one alternative's pinned cells. `hiddenGivens` hides
+these constraints from the grid. One visible alternative can prefill the row.
 
-Space-separated bare flags, mirroring Carnap so existing problems port. We
-**implement**:
+`strictGivens` locks seeded cells and excludes them from grading. Without
+it, seeded cells are editable and graded normally. In partial tables it locks
+a single visible alternative.
 
-- `autoAtoms` — pre-fill (give) the reference atom columns.
-- `nodash` — draw empty cells blank instead of with a dash (`–`).
-- `nocheck` — hide the Check button (same as `check="off"`).
-- `nocounterexample` — hide the Find-counterexample button.
-- `hiddenGivens` — hide a partial table's givens (grade-only; see above).
-- `strictGivens` — lock the seeded given cells (inert, ungraded), so the student
-  cannot change the hints; applies to every variant (cf. Carnap "makes givens
-  immutable"). See the grid.
-- `double-turnstile` / `negated-double-turnstile` — head a validity table's
-  turnstile column with `⊨` / `⊭` instead of `⊢` (display only).
+Malformed grids produce `given_row_arity`, `given_cell_arity`, or
+`invalid_grid_token`. Interior subformula cells can be seeded; validity
+turnstile cells cannot because the grid has only reference/formula segments.
 
-Recognised-but-inert (accepted so problems compile; not yet effective):
-`turnstilemark`, and `immutable` (Carnap's whole-table *display* lock — distinct
-from `strictGivens`; a display-table mode is a future increment). Any other token
-is a compile error.
+### Options
 
-## Notation (`prop`)
+Implemented flags:
 
-| Connective    | Symbol | Notes                          |
-|---------------|--------|--------------------------------|
-| negation      | `~`    | unary prefix                   |
-| conjunction   | `/\`   |                                |
-| disjunction   | `\/`   |                                |
-| conditional   | `->`   | right-associative              |
-| biconditional | `<->`  |                                |
+- `autoAtoms`: gives reference atom values.
+- `nodash`: displays empty cells without a dash.
+- `nocheck`: equivalent to `check="off"`.
+- `nocounterexample`: hides the counterexample shortcut.
+- `hiddenGivens`: hides partial-table constraints.
+- `strictGivens`: locks seeded cells.
+- `double-turnstile` / `negated-double-turnstile`: displays `⊨` / `⊭`
+  instead of `⊢`, without changing grading.
 
-Those five are what `carnap-prop` declares, not what this type can read: see
-*What counts as an atom* below. Every symbol a table **draws** is the spec's
-own — its last-declared notation for the role — so a course spelling
-conjunction `&` sees `&` in the grid, not `/\`.
+`turnstilemark` and `immutable` are accepted but have no effect. In
+particular, `immutable` does not lock givens; use `strictGivens` for that.
+Unknown flags are compile errors.
 
-The table above is `src/worker/logic/theories/carnap-prop.mm0` — an MM0 signature
-with `@syntax` annotations, read by `@aufbau/syntax` — rather than anything in
-TypeScript. It is the *default*, not the only possibility: `system=` names
-another the way it does on every other type that reads a formula. Sentence letters are the 52 single Roman letters it declares, of
-either case: `P`, `Q`, `p`, `q`. The vocabulary is finite because an MM0
-signature is; the hand parser this replaced also read a bare-digit subscript
-(`P0`, `R12`), and that went with it (2026-08-24). Precedence, loosest to
-tightest:
-`<->` < `->` < `\/` < `/\` < `~`. `/\`, `\/`, and `<->` are left-associative;
-`->` is right-associative. Use parentheses to override. A table may use at most
-`MAX_TABLE_ATOMS` (12) distinct atoms.
+## Formula notation
 
-### What counts as an atom, and what a table refuses
+The default `carnap-prop` language is an MM0 signature in
+`src/worker/logic/theories/carnap-prop.mm0`, read by `@aufbau/syntax`.
+It declares 52 single Roman sentence letters and these connectives:
 
-A table may be set over **any** language that reads, including a first-order
-one. There is no requirement that it declare no binders — there used to be, and
-it was wrong in both directions: it refused forallx outright, whose
-propositional fragment makes perfectly good tables, while a language whose
-binder carried no `@syntax role` sailed straight past it and had its quantifier
-read as an atom.
+| Connective | Notation | Association |
+| --- | --- | --- |
+| Negation | `~` | Prefix |
+| Conjunction | `/\` | Left |
+| Disjunction | `\/` | Left |
+| Conditional | `->` | Right |
+| Biconditional | `<->` | Left |
 
-What is and is not a column is decided **per node**, when the formula is read:
+Precedence, loosest first, is `<->`, `->`, `\/`, `/\`, `~`.
+Parentheses override it. Undeclared subscripted names such as `P0` are not
+supplied automatically. A table may use at most `MAX_TABLE_ATOMS` (12)
+distinct atoms.
 
-- A constructor with **no `@syntax role`** is an atom, keyed by how it *prints*.
-  `carnap-prop` spells a letter `term P: wff;`; forallx spells one
-  `term F (sq: seq): wff;` at the elided empty sequence, so `F`, `F(a)` and
-  `R(a,b)` are all that one declaration — and all three are distinct columns.
-  Predications over different terms are independent, so `F(a) -> F(b)` has two
-  reference columns, not one.
-- A constructor with a role this type **has a reading for** gets its cells as
-  usual. That is `negation`, `verum`, `falsum`, and **all sixteen** binary truth
-  functions — not just the five `carnap-prop` happens to declare. A course
-  whose textbook uses the Sheffer stroke, exclusive disjunction or NAND declares
-  the constructor in its own `aufbau-mm0` block, annotates it
-  (`--| @syntax role nand`), and gets a column for it with nothing changed here.
-  The roles are listed in `docs/carnap-markdown-v1.md`; the truth functions are
-  `src/worker/logic/specs/connectives.ts`.
-- `⊤` and `⊥` are columns, not reference columns: nothing varies, but the
-  student still writes the value under the symbol.
-- Anything else is **refused where it is written**, and the complaint names it:
-  a binder (`∀`), an identity (`=`), a modal operator an author declared. The
-  list of readable roles is closed on purpose. Treating an unrecognized
-  connective as an opaque atom would let a student assign `□(P -> Q)` a free
-  truth value and score full marks on an exercise that had quietly become a
-  different one.
-- A roleless constructor that takes a **sentence** argument is refused too, and
-  that is the case no language-level check could ever have caught: an author's
-  `term box (p: wff): wff;` with no annotation declares nothing about itself.
+`system` can select another language, including a first-order language's
+propositional fragment. Grid labels use its canonical notation rather than
+the default spellings. See [Languages and theories][languages] for extensions.
 
-## How it fits together
+### Supported formula constructs
 
-| File | Role |
-|------|------|
-| `logic/` | DOM-free `prop` core: `formula.ts` (spec parse → AST, and back), `truth-table.ts` (atoms, 2ⁿ valuations, evaluator, sub-formula columns, `buildTruthTable`), `layout.ts` (written-out formula → parens + cells, spelled by the spec). Imported by **both** the worker and the client. |
-| `types.ts` | Kind/answer/component constants and the public-data, options, and answer-grid shapes. |
-| `grading.ts` | DOM-free grading shared by the worker (score + review marks) and the client (Check): resolve the table, fill mask, correct grid, per-cell verdicts, score fraction, structural guards. |
-| `authoring.ts` | Compiles the directive → a `CompiledExercise` (parses formulas, validates attributes/options). |
-| `assessment.ts` | `normalizeAnswer` (with dimension checks), `evaluate`, `reviewAnswer` (a marked grid). |
-| `read-only-view.ts` | SSR of the inert Declarative-Shadow-DOM grid (reused by the interactive form) and the static review renderer. |
-| `../../../client/components/carnap-truth-table-v1.ts` | The client element: enables cells, cycles blank→T→F, restores the prior answer, mirrors the full grid into `answerData`, runs local Check, and moves focus around the grid (below). |
+The reader decides per node whether it can build a truth-table column:
 
-### Keyboard
+- A role-less constructor is an atom, keyed by its printed form, provided it
+  does not take sentence arguments. Thus `F(a)` and `F(b)` are independent
+  atoms even though they use the same predicate constructor.
+- Negation, truth constants, and all sixteen binary truth-function roles
+  have built-in interpretations. A custom NAND or exclusive-disjunction
+  constructor can use the corresponding role without changing this package.
+- Truth constants have formula cells but no reference columns: their values
+  do not vary.
+- Binders, identity, unsupported roles, and role-less constructors with
+  sentence arguments are rejected at their source location. They must not
+  silently become independent atoms, which would change the exercise's
+  meaning.
 
-The grid is **one tab stop**, not one per cell: every cell ships
-`tabindex="-1"` and the element promotes whichever cell holds focus. A
-4-variable table is 32 cells, and tabbing through all of them to reach the next
-exercise is its own barrier.
+## Keyboard behavior
 
-| Key | Moves to |
-|-----|----------|
-| ← / → | the previous / next open cell in the row |
-| ↑ / ↓ | the same column one row up / down — or the nearest open cell in that row, since a given grid can pre-fill a column on some rows only |
-| Home / End | the row's first / last open cell |
-| Ctrl+Home / Ctrl+End | the grid's first / last open cell |
-| Space / Enter | cycles the focused cell (the cells are buttons; nothing extra is wired) |
+The grid is one tab stop. Each cell initially has `tabindex="-1"`, and the
+widget promotes the active cell. Large tables therefore do not require
+visiting every cell with Tab before leaving the exercise.
 
-The counterexample radios are not cells: they are left to the browser, which
-walks a radio group with the same arrow keys, so pressing ↑/↓ in that column
-picks a row — which is all that column is for. The table carries an
-`aria-describedby` note naming these keys — visually hidden, because a sighted
-reader infers a grid's navigation from its shape and a screen-reader user
-cannot.
+- Left/Right: previous/next editable cell in the row.
+- Up/Down: same column in the adjacent row, or its nearest editable cell.
+- Home/End: first/last editable cell in the row.
+- Ctrl+Home/End: first/last editable cell in the grid.
+- Space/Enter: cycle blank, T, F.
 
-The type is registered in the three dispatchers under
-`src/worker/application/content/`: `compiler.ts`, `registry.ts`, `renderer.ts`.
+Counterexample radios are a separate native radio group; arrows select rows.
+The grid has an accessible description of its keyboard controls.
 
-### Answer shape
+## Answer data
 
-A full-width positional grid, aligned to the layout both sides derive from
-`publicData.formulas`:
+The answer is a full-width positional grid, including given cells:
 
 ```ts
 {
-  reference: CellValue[][];   // [rowIndex][atomIndex]
-  cells:     CellValue[][][]; // [formulaIndex][rowIndex][cellIndex]
-  counterexample?: number | null; // designated row index, or absent/null for a full table
-  validity?: CellValue[];     // validity variant only: the turnstile column, one mark [rowIndex]
+  reference: CellValue[][];   // [row][atom]
+  cells: CellValue[][][];     // [formula][row][cell]
+  counterexample?: number | null;
+  validity?: CellValue[];    // [row], validity variant only
 }
-// CellValue = "T" | "F" | ""   ("" = unfilled)
+// CellValue = "T" | "F" | ""; empty means unanswered.
 ```
 
-Given (non-fillable) cells carry their value too, so the grid stays full width
-and lines up with the worker's positional grader. A counterexample submission is
-the same full-width grid — as much of it as the student filled in — plus
-`counterexample` naming the row they are claiming; grading then scores just that
-row and checks the target, and the review shows the rest unmarked. For the validity variant, `publicData` also carries `premiseCount`
-(how many leading `formulas` entries are premises) and the answer adds the
-`validity` turnstile column. For the **partial** variant the grid — and so the
-answer's `reference`/`cells` — is exactly **one row** (whatever the atom count);
-`publicData` carries the author's `givens` when the grid seeds any (each a
-`{ reference[atomIndex], cells[formulaIndex][cellIndex] }` of pinned values,
-`""` = free), against which the row is graded (partial) or which prepopulate the
-matched rows' cells (simple/validity). There is **no secret key** — the answer is
-computed from the public formulas (and the student's own chosen valuation, for
-partial) — which is what makes client-side Check legitimate.
+`counterexample` names the row to grade; absent or null means a full table.
+`publicData.premiseCount` identifies the leading premise formulas for
+validity exercises. Partial answers have exactly one row.
 
-## Roadmap
+Compiled givens carry reference and formula-cell constraints, with empty
+values meaning unconstrained. Browser and server derive the same layout
+from public formulas, so submitted dimensions must match that layout.
 
-Shipped past v1: counterexample submission (the single-row shortcut), the
-**Validity** variant (`:|-:` turnstile arguments with a graded turnstile column),
-the **Partial** variant (single free row, consistency grading), the unified
-**given grid** (positional cell seeding across all variants, sparse rows,
-wildcards, `immutable` locking, key-integrity checks), and display polish
-(`trueMark`/`falseMark`, `double-turnstile` / `negated-double-turnstile`).
+## Implementation and tests
 
-Still deferred: `turnstilemark`, and seeding a
-validity turnstile-column cell (the grid seeds `reference | formulas` only).
+- `logic/formula.ts`: language parsing, formula tree, and printing.
+- `logic/truth-table.ts`: atoms, valuations, evaluation, and table building.
+- `logic/layout.ts`: displayed parentheses and cells.
+- `types.ts`: public data, options, and answer contracts.
+- `grading.ts`: fill masks, correct grids, scores, and structural checks.
+- `authoring.ts`: directives, attributes, formulas, and given validation.
+- `assessment.ts`: normalization, grading, and review.
+- `read-only-view.ts`: inert grid and review markup.
+- `src/client/components/carnap-truth-table-v1.ts`: browser interaction
+  (path relative to the repository root).
+
+Use `tests/truth-table.test.ts`, `tests/truth-table-logic.test.ts`, language
+tests, and DOM tests when changing these contracts. Registration also needs
+metadata, compiler/assessment/renderer dispatch, and active assignment forms;
+see `AGENTS.md`.
+
+[feedback]: ../../../../docs/carnap-markdown-v1.md#recording-and-feedback
+[languages]: ../../../../docs/carnap-markdown-v1.md#languages-and-theories

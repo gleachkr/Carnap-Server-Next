@@ -1,167 +1,129 @@
-# Aufbau Prawitz-proof exercise (`aufbau-proof-prawitz@1`)
+# Prawitz proof exercise (`aufbau-proof-prawitz@1`)
 
-A fourth input modality for the engine-checked Aufbau proof: the student builds
-a **Prawitz-style natural-deduction tree** — bare formulas at the nodes,
-labeled assumptions at the leaves (`[A]¹`), discharge marks on inferences. It
-combines the [`aufbau-proof-tree`](../aufbau-proof-tree/README.md) input
-surface (nodes, premises, postorder flatten) with the
-[`aufbau-proof-fitch`](../aufbau-proof-fitch/README.md) idea that sequent
-contexts are *inferred* from structure, not written by the student. Everything
-downstream is shared: the same `@aufbau/compiler`, the same MMB certificate as
-the trust boundary, the same worker-side
-[`verifyMmb`](../aufbau-proof/verifier.ts) against a frozen theory, and the
-same rule that the certificate is verified and not stored
-([`certificate.ts`](../aufbau-proof/certificate.ts)). It targets
-the same sequent/ND theories as the Fitch type (`⊢`, ACUI comma-context, an
-assumption axiom named by `@syntax role assumption`), and a node's rule may be any alias the
-theory declares for an axiom, resolved by `prawitzToAuf`'s `readRule` at emission.
+Students build natural-deduction trees with formulas at the nodes, labeled
+assumptions such as `[A]¹`, and discharge labels on inferences. They work in
+a forest of partial trees, selecting premises in order before applying a
+rule. A complete answer is one tree ending in the goal.
 
-## The idea: labels induce boxes, boxes become contexts
+`prawitzToAuf` translates the tree into sequents for the Aufbau compiler.
+The server verifies the resulting MMB against the frozen theory and goal.
+Verification and certificate storage follow the
+[linear proof contract](../aufbau-proof/README.md).
 
-Where Fitch's indentation boxes *induce* discharge, here the discharge labels
-induce the boxes. [`translate.ts`](./translate.ts) (`prawitzToAuf`) is
-theory-agnostic — it knows only the assumption axiom's name:
+## Discharge and dependency contexts
 
-- An assumption leaf labeled `n` is discharged at its nearest ancestor whose
-  `discharge` list contains `n`; its **box** is the subtree of the child of
-  that ancestor through which the leaf is reached. An unlabeled leaf is a
-  standing premise, in scope everywhere.
-- Every node's context is its textbook **dependency set** — the undischarged
-  assumptions above it, nothing else. A leaf seeds with just itself (`a ⊢ a`,
-  the theory's `ax` weakening `g , a ⊢ a` with `g` empty), and a derived
-  node's context is the union of its premise contexts filtered to assumptions
-  whose box contains the node — discharge falls out of the box filter.
-  Nothing from a sibling branch ever enters a context; that is load-bearing
-  for eigenvariable rules (∀I, ∃E), whose side condition "the context may not
-  mention the eigenvariable" would otherwise be spuriously tripped by an
-  unrelated branch's formula (the `eigenpollute` worked case pins this).
-- Dependency contexts presume **multiplicative** rules — one context variable
-  per premise, joined in the conclusion (`g ⊢ a → b` + `h ⊢ a` → `g , h ⊢ b`),
-  as all of forallx's are. An additive rule (one shared `g` across premises)
-  would demand ACUI-equal sibling contexts, which dependency contexts don't
-  provide; state such rules multiplicatively instead (ACUI idempotence makes
-  that strictly more permissive). The house theories also join a **slack**
-  context variable into every conclusion (implicit weakening, for the Fitch
-  type's ambient contexts — see the
-  [Fitch README](../aufbau-proof-fitch/README.md)); dependency emission simply
-  binds it empty, so the same theory serves both modalities.
-- Entries are tracked **per leaf**, not per formula, so a second
-  same-formula assumption under a different label survives its sibling's
-  discharge.
+The translator derives contexts from assumption labels:
 
-A postorder walk emits `lN: $ Γ ⊢ φ $ by rule [refs]` per node (every leaf
-emits an `ax` line; ND premises live in the goal sequent's context, so there is
-no analogue of the tree type's line-less `#n` leaves), plus a char-space map
-from each generated line back to its node for diagnostic attribution, and the
-inferred per-node contexts for the editor to surface. Eigenvariable side
-conditions (∀I, ∃E) ride entirely on the engine, exactly as in the Fitch type.
+- A labeled assumption is discharged at its nearest ancestor whose
+  `discharge` list contains that label. Its scope is the child subtree of
+  that ancestor containing the leaf.
+- An unlabeled assumption is a standing premise.
+- A leaf starts with a context containing itself. An inference takes the
+  union of its premise dependencies, excluding assumptions discharged there.
+- Dependencies are tracked per leaf, not per formula. Discharging one
+  assumption does not remove another with the same formula and another label.
 
-## Authoring syntax
+Unlike Fitch's ambient contexts, these contexts contain only dependencies of
+the node. Assumptions from unrelated sibling branches must not be included:
+otherwise they can incorrectly prevent an eigenvariable rule from applying.
+The `eigenpollute` worked case tests this distinction.
+
+Rules need a separate context variable per premise, joined in the conclusion
+(the multiplicative form). A rule requiring the same context in every premise
+would fail when sibling branches have different dependency sets. The built-in
+forallx theories use the multiplicative form and also permit an extra context
+in conclusions for Fitch weakening. Prawitz translation can leave that extra
+context empty.
+
+A postorder traversal emits one line per node:
+
+```text
+lN: $ Γ ⊢ φ $ by rule [references]
+```
+
+Assumption leaves emit the theory's assumption axiom. Unlike the general tree
+proof type, Prawitz has no line-less `#n` leaves: standing premises belong to
+the goal sequent's context. The translator returns generated-line mappings,
+per-node contexts, and structural diagnostics. The engine and verifier enforce
+logical rules, including eigenvariable conditions.
+
+## Authoring
 
 ```md
-:::aufbau-proof-prawitz{system="forallx" id="p1"}
-Finish the discharge.
+:::aufbau-proof-prawitz{system="forallx-calgary-2019" id="p1"}
+Prove the conditional by discharging its antecedent.
 
-theorem self (a: wff): $ _ ⊢ a → a $
+theorem self: $ _ ⊢ P → P $
 ----
-a1: $ a ⊢ a $ by ax [] -- label:1
-c1: $ _ ⊢ a → a $ by imp_intro [a1] -- label:1
+a1: $ P ⊢ P $ by AS [] -- label:1
+c1: $ _ ⊢ P → P $ by imp_intro [a1] -- label:1
 :::
 ```
 
-Prose is the prompt; a single `theorem <name>: $ … $` line states the goal; an
-optional `----` underline introduces a **starter** the editor seeds from
-([`parse.ts`](./parse.ts), `parsePrawitzStarter`). Starter lines are the tree
-type's linear form with two Prawitz twists: each line is a **full sequent**
-(a valid `.auf` proof is a valid starter — the context left of the exercise's
-sequent symbol is discarded on parse, since the labels re-derive it), and
-discharge labels ride as trailing `-- label:n` comments — on an assumption
-line the leaf's label, on a rule line the discharged marks (position
-disambiguates, since a node carries only one of the two fields; the engine's
-grammar accepts trailing comments, so annotated lines compile as written).
-The starter is parsed structurally and its discharge structure is checked by
-the translator at compile time; it need not prove anything.
+The prompt and theorem may be followed by `----` and a starter. Starter
+lines use the tree type's linear form with full sequents. The parser discards
+the written contexts and recomputes them from labels.
 
-Attributes match the siblings: `system` (required, a declared `aufbau-mm0` name
-earlier in the document), `id`, `title`, `points`, `exam`, `feedback`,
-`options`. Nothing notational: the theory's `@syntax role assumption` names
-the axiom every assumption leaf is emitted through, `role turnstile` its
-turnstile (emitted in every translated sequent in its canonical spelling, and
-recognized in any spelling the theory declares when a pasted starter line is
-cut at it), and `role context-join` the separator between a context's
-formulas. A theory missing any of the three does not compile a Prawitz
-exercise.
+On an assumption line, `-- label:1` labels the leaf. On an inference, it
+lists labels to discharge; separate multiple labels with commas. The starter
+must parse as a tree and pass structural discharge checks, but need not be a
+finished proof.
 
-## Formulas are read in the theory's language
+Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`, and
+`options`. `system` names a preceding theory block or a built-in system.
+The theory must declare `assumption`, `turnstile`, and `context-join` roles.
+Missing roles produce authoring errors. Starter separators accept any
+turnstile spelling declared by the theory; emitted sequents use its canonical
+spelling. Rule aliases are resolved before emission.
 
-Where the theory names the sort a formula is read at — `@syntax role
-sentence`, as `forallx-calgary-2019` does — each node's formula is parsed against that spec and re-printed
-in engine notation before it reaches the compiler. `~AxF(x)` goes in;
-`(¬ (∀ x (F (x))))` comes out. The compiler's math parser wants every token
-whitespace-separated and every compound operand parenthesized; the book wants
-neither, and this is the layer where the two stop disagreeing (see
-[`../aufbau-proof/formulas.ts`](../aufbau-proof/formulas.ts)).
+See the [authoring reference][authoring] for common settings and theory reuse.
 
-It buys two things beyond notation. A formula that will not read is reported
-against the node that carries it, at the character that broke it, instead of arriving as an engine
-unification failure. And the spec's lints start applying to proofs: forallx
-admits parentheses only around a two-place connective, so `∀ x (x = x)` is now
-refused and must be written `∀ x x = x`.
+## Formula parsing
 
-**One condition: the theory must name the sort a formula is read at** — the one
-carrying `@syntax role sentence`. `gentzen-lk` names none and reads as it
-always did. That is not a claim that such a file is no language: it parses,
-and the language built from it reads its own notations quite happily. It
-simply never says which sort a student's formula is in, and nothing here will
-guess one. A pre-#250 artifact, frozen with the stripped `mm0` and no `source`
-at all, has no text to ask and reads as engine text for that reason instead.
+Nodes use the theory's `@syntax role sentence` sort. The parser converts
+student formulas into engine notation and reports errors on the relevant
+node and character. Language restrictions apply; for example, Calgary
+requires `∀x x = x` rather than `∀x(x = x)`.
 
-A goal stated as a rule schema is read in **its own binders**. `theorem mp
-(a b: wff): $ (a → b) ; a ⊢ b $` is about *any* sentences, and its `a` is not
-the theory's own `a`; the parser is given the goal's binder list, so it reads
-the metavariable rather than the lexicon's name. Before #253 there was no way
-to say that, and such exercises had to keep engine text.
+Without a declared sentence sort, input remains engine text. The same is
+true for old artifacts without the original annotated `source`. Goal
+binders are in scope while parsing, so formula metavariables in a theorem
+schema are not confused with individual names from the lexicon.
 
-The starter is read the same way at compile time, so an author hears about an
-unreadable line while saving rather than a student meeting an editor that will
-not accept what it opened with.
+Starters are parsed during authoring. Goals are converted to engine text as
+`goalEngineDecl`, using the turnstile result sort with a sentence fallback.
+Goal parsing omits stricter student lints but still rejects invalid syntax
+with `invalid_goal_formula`. Original source is kept for display. The shared
+implementation is `../aufbau-proof/formulas.ts`.
 
-So is the goal: every `$ … $` in the `theorem` line is read through the
-language and re-printed in engine text (`goalEngineDeclaration` in
-`../aufbau-proof/formulas.ts`), frozen as `goalEngineDecl` beside the
-declaration as written. The join puts the engine form in `mm0` and the written
-one in `source`, so the engine parses `∃x F(x)` and a bare `P` (which it
-otherwise wants as `P snil`) while the student sees what the author typed. A
-goal the language refuses is an `invalid_goal_formula` diagnostic.
+Discharge matching compares normalized formulas. Thus `~P` and `¬P` under
+the same label can identify the same assumption rather than producing
+`discharge_formula_mismatch` solely because their spellings differ.
 
-It also makes discharge matching notation-insensitive: the translator decides
-which assumption leaves a mark answers to by comparing their formulas as
-strings, and it now compares the *read* ones, so `~P` under a mark and `¬P`
-under the same mark are one assumption rather than a
-`discharge_formula_mismatch`.
+## Answer data and implementation
 
-## Files
+The widget submits `{ tree, proofText, mmb }`. The server verifies the
+certificate and stores the tree, proof text, and evaluation without `mmb`.
+Review redraws the submitted tree.
 
-- [`types.ts`](./types.ts) — `PrawitzProofNode`, public/answer shapes, guards.
-- [`translate.ts`](./translate.ts) — `prawitzToAuf`: labels → boxes →
-  dependency contexts → `.auf`, plus line spans, per-node contexts, and
-  structural diagnostics (pure).
-- [`parse.ts`](./parse.ts) — `parsePrawitzStarter` (starter lines → tree; the
-  structural work is the tree type's `parseProofTree`) and its inverse
-  `serializePrawitzStarter`, which tests round-trip.
-- [`authoring.ts`](./authoring.ts) — `compileAufbauProofPrawitz` (reuses the
-  linear type's theory resolution + goal-header parsing + starter extraction).
+- `types.ts`: `PrawitzProofNode`, public/answer shapes, and guards.
+- `translate.ts`: scope/dependency analysis, `.auf` emission, line mappings,
+  and structural diagnostics.
+- `parse.ts`: `parsePrawitzStarter` and `serializePrawitzStarter`, using the
+  general tree parser for structural work.
+- `authoring.ts`: directive compilation, theory/goal handling, and starters.
 
-Worked cases live in `tests/helpers/prawitz-cases.ts`;
-`scripts/prawitz-verify.ts` compiles + verifies each against the real engine.
+Worked cases are in `tests/helpers/prawitz-cases.ts`.
+`scripts/prawitz-verify.ts` compiles and verifies them with the real engine.
 
-## Accepted limitations (v1)
+## Limitations
 
-- **Vacuous discharge is inexpressible**: every leaf is cited by structure, so
-  `a ⊢ b → a` cannot be proved by discharging an unused `b` (in Fitch you
-  assume `b` and reiterate past it; a tree has nowhere to hang an uncited
-  assumption). The workaround is to conjoin the assumption in and project it
-  back out (`∧I` then `∧E`) — see the `kcomb` worked case. A discharge mark no
-  assumption answers to is reported as `discharge_without_leaf` rather than
-  silently ignored.
-- Single-cell, independent proofs; no cross-cell lemma citation.
+Vacuous discharge has no direct representation: an assumption must occur in
+the tree to be discharged. To prove `a ⊢ b → a`, use the b assumption in a
+conjunction and project a back out before discharge. The `kcomb` case shows
+this workaround. A label with no matching leaf produces
+`discharge_without_leaf` rather than being ignored.
+
+Proof exercises are independent and cannot cite lemmas from other exercises.
+
+[authoring]: ../../../../docs/carnap-markdown-v1.md

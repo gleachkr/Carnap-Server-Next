@@ -1,100 +1,74 @@
 # Translation exercise (`translation@1`)
 
-A symbolization exercise in the tradition of the original Carnap's
-`Translate`: the prompt poses a natural-language sentence, the student types a
-formula, and the answer counts as correct when it is **logically equivalent**
-to one of the author's solutions. Equivalence is the Aufbau engine's `auto?`
-proof search producing a **certificate** the worker independently re-verifies —
-which is what makes the type extensible to logics with no handy decision
-procedure: a new language is a dialect entry plus a proof calculus, not a new
-checker.
+Students symbolize a natural-language prompt. An answer is accepted if its
+parsed formula matches an author's solution, or if the server verifies a
+certificate proving equivalence to one. An `exact` variant accepts only the
+parsed match. Additional tests can require a normal form or limit connective
+counts.
 
-Notation is **forallx: Calgary, 2019 and later**, through the shared syntax
-core in [`../first-order/`](../first-order/).
+The default language is forallx: Calgary 2019. `system` can select another
+built-in or a preceding theory block; parsing uses the shared first-order
+core and `@aufbau/syntax`, not a per-exercise notation table.
 
-## The trust boundary
+## Checking and verification
 
-- The **client** ([`carnap-translation-v1.ts`](../../../client/components/carnap-translation-v1.ts))
-  parses the typed formula, and — unless it is canonically *equal* to a
-  solution, which needs no proof — asks the page's `auto?` search
-  ([`proof-search.ts`](../../../client/proof-search.ts), the `@aufbau/lsp`
-  wasm in a Web Worker) for a rewrite chain joining it to a solution, compiles
-  the found proof to an MMB with the page's one `@aufbau/compiler`, and
-  submits `{ text, mmb, solutionIndex }`.
-- The **worker** ([`assessment.ts`](./assessment.ts)) re-parses the text,
-  rebuilds the mm0 from **its own emission** of `text ↔ solutions[i]`
-  ([`logic/mm0.ts`](./logic/mm0.ts)), and `verifyPair`s the certificate
-  against it via the proof types' [`verifier`](../aufbau-proof/verifier.ts).
-  A certificate for any other statement fails verification; search and
-  compilation stay untrusted conveniences. The verdict is stored; the
-  certificate is not ([`certificate.ts`](../aufbau-proof/certificate.ts)).
-- **The solutions ship in `publicData`.** The client cannot prove equivalence
-  to a target it does not hold — the same exposure the original Carnap
-  accepted. `feedback`/`exam` are display and recording controls, not a wall
-  around the key.
+The browser parses the submitted formula and compares its canonical form to
+the solutions. Both sides are reparsed through `logic/solutions.ts`, so a
+change to canonical spelling does not by itself break an old solution.
 
-## The equivalence relation
+If no solution matches, the browser asks Aufbau's `auto?` proof search for
+an equivalence proof. `src/client/proof-search.ts` runs `@aufbau/lsp` in a
+Web Worker, and the shared compiler turns the proof into an MMB certificate.
+The widget submits `{ text, mmb, solutionIndex }`.
 
-[`logic/theories.ts`](./logic/theories.ts) *is* the relation: a one-sided
-(Tait/Schütte) sequent calculus for classical logic, generated around the
-signature of the two formulas, ported from `tests/proof_cases/tait.mm0` in
-gleachkr/Aufbau. Two formulas are equivalent exactly when `auto?` can prove
-`⊢ S ↔ T` in it. A purely propositional pair gets the propositional fragment
-only — no objects, no substitution, no quantifier rules — which keeps a refused
-prop check an order of magnitude cheaper.
+The server reparses the answer and emits its own MM0 statement for
+`text ↔ solutions[solutionIndex]` through `logic/mm0.ts`. It checks the
+certificate against that statement using the proof exercises' verifier.
+A certificate for another statement cannot satisfy it. Search and compilation
+are not trusted for grading.
 
-**Connectives are selected the same way the quantifier rules are.** Four —
-`∧ ∨ → ↔`, plus `¬` and the two truth constants — are declared in every
-generated theory. Each of the other twelve binary truth functions is a term of
-its own (`(nand p q)`, applied like a signature symbol, so no new operator
-precedence), and a formula that contains one brings its congruence case, its
-substitution case, and its two Tait rules along with it: a positive rule for
-`⊢ (C a b) , Δ` and a De Morgan rule for `⊢ ¬ (C a b) , Δ`, read off the truth
-function. So a course teaching the stroke gets a stroke the search reasons
-about, not a rewritten formula, and `P ↑ Q` ↔ `¬(¬P ↓ ¬Q)` is proved rather
-than made true by spelling. A pair built from the four always-present
-connectives emits byte-for-byte what it emitted before the twelve existed,
-which is what keeps the certificates below verifiable.
+**Solutions are public data.** Browser search needs its target formulas.
+Students can inspect them with developer tools. `exam` and `feedback`
+control recording and display, not access to solutions or local computation.
 
-**Why a calculus and not a rewrite theory.** The first design saturated an
-egraph of `@conversion` laws with `conversion?`. It foundered on quantifier
-*shape*: the egraph is nominal, so `∀x P(x)` and `∀y P(y)` never share a class
-and no rewrite law can rename a binder — alpha has to be spent at emission by
-choosing names. But the parallel form `∀xF ∧ ∀yG` needs its binders to *share*
-a name (so a distribution law can fire) while the nested form `∀x∀y(F ∧ G)`
-forces them *apart*. No static naming satisfies both, so the whole cross-shape
-prenexing family was unreachable. Under a calculus the binders are ordinary
-rule binders, each occurrence gets its own name, and those equivalences are
-simply proved.
+The server stores `{ text, solutionIndex }` and the evaluation, without the
+certificate. Old evaluations are not reverified when the search calculus
+changes. A manual recheck can therefore differ after a calculus change;
+review such changes against the engine regression tests.
 
-The `@vars` pool is the trap to know about. Its tokens become theorem-local
-dummies, and a token that is *already a binder of the goal* takes that binder
-instead of a fresh dummy — after which invention offers the goal's own bound
-variable, the dependency check refuses it, and the branch dies as an exhausted
-search with `rex` tried dozens of times and never accepted. Emitted binders are
-`v*` and the pool is `k*`; keep those namespaces apart.
+## Equivalence calculus
 
-The calculus is pinned by the regression battery in
-[`tests/translation-engine.test.ts`](../../../../tests/translation-engine.test.ts):
-the textbook catalogue certifies in tens of milliseconds, non-equivalences
-exhaust to a refusal in about a second, and adversarial pairs (`F(a)`/`F(b)`,
-`a=a`/`⊤`, `⊤`/`⊥`) must stay refused. Search is bounded, so an equivalence far
-outside the catalogue can time out and be graded wrong; the authoring escape
-hatch is the solutions list.
+`logic/theories.ts` generates a one-sided Tait/Schütte sequent calculus for
+classical logic around the two formulas' signature. Propositional pairs omit
+objects, substitution, and quantifier rules to reduce search cost.
 
-**A verdict is made once, under the calculus in force when the answer was
-checked.** The evaluation row records it, and the certificate it was made from
-is verified on the way in and not stored: a submission keeps
-`{ text, solutionIndex }`. Nothing re-verifies an old answer, so a rule that
-comes or goes changes no grade already given. What a change does alter is
-what an old answer would do if it were checked again by hand — after a rule
-is removed or restated, a once-certified equivalence may not certify — so the
-regression battery, not the database, is where a calculus change is judged.
+Negation, truth constants, and the four core binary connectives are always
+available. The other twelve binary truth functions are included when used.
+Each receives its own term, congruence/substitution support, and rules for
+positive and negated occurrences. These rules are derived from its truth
+function; formulas are not merely rewritten into core connectives before
+checking.
 
-## Authoring syntax
+The earlier rewrite-based design could not reliably handle equivalences
+between differently nested quantifiers. Its e-graph treated binders
+nominally, while different transformations required incompatible choices of
+binder names. The sequent calculus handles binders through inference rules
+instead.
 
-Prose (the sentence to translate), then `- formula` list items — one solution
-per bullet, or comma-separated alternates within one.
+Keep emitted goal binders (`v*`) separate from the `@vars` pool (`k*`). If
+a pool token is already a goal binder, search uses that binder instead of a
+fresh dummy. Dependency checks can then reject every attempted witness.
+
+Search is bounded. Failure to find a proof does not establish
+non-equivalence; even a valid answer can exceed the budget and receive no
+credit. Include intended answer forms as additional solutions when needed.
+`tests/translation-engine.test.ts` checks textbook equivalences and rejects
+adversarial non-equivalences. Run it after calculus or emission changes.
+
+## Authoring
+
+Write prompt prose followed by solution list items. A bullet can contain
+comma-separated alternatives:
 
 ```md
 ::::translation{#fine variant="first-order" points="2"}
@@ -105,78 +79,79 @@ Everything is fine.
 ::::
 ```
 
-### Attributes
+Attributes:
 
-| Attribute | Values / form | Default | Meaning |
-|---|---|---|---|
-| `#id` / `id` | identifier | — (**required**) | Stable exercise id. |
-| `variant` | `prop` \| `first-order` \| `exact` | `prop` | Carnap's `.Prop`/`.FOL`/`.Exact`. `prop` rejects quantifiers, identity, and predicates of things — in solutions at compile time and in answers at grading time. `exact` compares parsed formulas and never consults the engine. |
-| `system` | a block name or a spec id | `forallx-calgary-2019` | The notation system: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. Any language that reads will do — `carnap-prop` for a purely propositional set, which pairs with `variant="prop"`. |
-| `tests` | space-separated | — | Extra conditions on the submission: `CNF` `DNF` `PNF` (first-order only) and `maxCon:N` `maxNeg:N`/`maxNot:N` `maxAnd:N` `maxOr:N` `maxIf:N` `maxIff:N` `maxFalse:N` `maxAtom:N`. Carnap's names and counting ([`logic/tests.ts`](./logic/tests.ts)); note upstream documented `maxNot` but implemented `maxNeg` — both work here. |
-| `starter` | string | — | Prefilled input text (Carnap's partial solution; may be prose). |
-| `options` | space-separated flags | — | `nocheck` (this type's spelling of `feedback="none"`) and `checksyntax` (refuse to submit text that does not parse). |
-| `title`, `points`, `exam`, `feedback` | — | — | As for every exercise. |
+- `id` or `#id`: required stable exercise ID.
+- `variant`: `prop` (default), `first-order`, or `exact`. `prop` rejects
+  quantifiers, identity, and predicates with individual arguments in both
+  solutions and submitted answers. `exact` compares parsed formulas without
+  equivalence search.
+- `system`: preceding theory-block name or built-in system ID; defaults to
+  `forallx-calgary-2019`. For example, use `carnap-prop` for its propositional
+  notation with `variant="prop"`.
+- `tests`: space-separated `CNF`, `DNF`, `PNF` (first-order only),
+  `maxCon:N`, `maxNeg:N`/`maxNot:N`, `maxAnd:N`, `maxOr:N`, `maxIf:N`,
+  `maxIff:N`, `maxFalse:N`, and `maxAtom:N`. Both spellings of the negation
+  limit are accepted for original-Carnap compatibility.
+- `starter`: initial input, which can be incomplete text or prose.
+- `options`: `nocheck` (hides feedback) and `checksyntax` (blocks submission
+  of unparseable input).
+- `title`, `points`, `exam`, `feedback`: common exercise settings.
 
-## The widget
+See the [authoring reference][authoring] for common defaults and the notation
+systems. The supplied solutions need not themselves satisfy `tests`: an
+exercise can ask students to find an equivalent formula in a different form.
 
-Checking is live, proof-type style: the correctness mark tracks on a pause in
-typing, **Enter** checks immediately, and there is no Check button. A submit
-that lands before the check has settled waits for it — the certificate travels
-with the answer, so the form is held until a pending or running search finishes
-and then sent once (an edit meanwhile abandons the click). A preview
-line under the input reads the typed ASCII back in logical symbols, or words
-the parser's complaint — in the reader's language, from the same sentences the
-compile diagnostics use ([`strings.ts`](./strings.ts)). Verdict sentences
-appear only on explicit checks under full feedback; under `none` the base
-clamps the mark while the certificate is still computed, because grading needs
-it even when the student is told nothing.
+## Widget behavior
 
-### Answer shape
+The widget checks after a typing pause; Enter checks immediately. There is
+no separate Check button. A preview below the input shows canonical notation
+or a localized parser error.
 
-What the widget submits:
+Submit waits for a pending check so the answer includes its certificate.
+An edit while waiting cancels that pending submission. Explicit checks show
+verdict text under full feedback; `none` suppresses the mark and verdict,
+but checking still runs because grading needs the certificate.
+
+## Answer data
 
 ```jsonc
 {
-  "text": "~Ex~F(x)",        // as typed; review shows it, exact grades it
-  "mmb": "<base64 MMB>",      // certificate for text ↔ solutions[solutionIndex]
-  "solutionIndex": 0          // which solution the certificate targets
+  "text": "~Ex~F(x)",
+  "mmb": "<base64 MMB certificate>",
+  "solutionIndex": 0
 }
 ```
 
-What is stored is `{ text, solutionIndex }` beside the evaluation: the
-certificate is verified on the way in and not kept.
+An answer is correct only if it parses, meets the variant restrictions and
+all `tests`, and either matches a parsed solution or has a verified
+equivalence certificate. The stored submission omits `mmb`.
 
-`evaluation.ok` ⇔ parse ∧ variant restriction ∧ every `tests=` check ∧
-(canonically equal to a solution | verified certificate). The review page
-shows the submission in logical symbols and asserts nothing — equivalence
-cannot be recomputed without the search engine, so correctness is the recorded
-evaluation's story.
+Review renders the submitted formula in logical symbols. It uses the stored
+evaluation for correctness rather than rerunning search.
 
-## How it fits together
+## Implementation
 
-| File | Role |
-| --- | --- |
-| [`types.ts`](./types.ts) | constants, `publicData`/`answerData` shapes, guards |
-| [`logic/theories.ts`](./logic/theories.ts) | the equivalence relation: `@conversion` preludes per language |
-| [`logic/mm0.ts`](./logic/mm0.ts) | deterministic emission: canonical binders, symbol mangling, `(mm0, auf)` assembly |
-| [`logic/tests.ts`](./logic/tests.ts) | the `tests=` predicates, Carnap's counting |
-| [`logic/variant.ts`](./logic/variant.ts) | the `prop` language restriction |
-| [`authoring.ts`](./authoring.ts) | directive → `CompiledExercise` |
-| [`assessment.ts`](./assessment.ts) | normalize + evaluate (verify) + review |
-| [`read-only-view.ts`](./read-only-view.ts) | inert DSD chrome + review render |
-| [`verdict-text.ts`](./verdict-text.ts) | wording for failed `tests=` checks |
-| [`strings.ts`](./strings.ts) | every widget sentence, keyed by English source |
-| [`carnap-translation-v1.ts`](../../../client/components/carnap-translation-v1.ts) | the element |
-| [`proof-search.ts`](../../../client/proof-search.ts) | the page's one `auto?` search (LSP worker) |
+- `types.ts`: constants, public/answer shapes, and guards.
+- `logic/theories.ts`: generated classical sequent calculus.
+- `logic/mm0.ts`: deterministic binders, symbol names, and proof statements.
+- `logic/solutions.ts`: parsed solution matching.
+- `logic/tests.ts`: normal-form and connective-count requirements.
+- `logic/variant.ts`: propositional restrictions.
+- `authoring.ts`: directive compilation.
+- `assessment.ts`: normalization, verification, and review.
+- `read-only-view.ts`: inert markup and review rendering.
+- `verdict-text.ts` and `strings.ts`: feedback and translated widget text.
+- `src/client/components/carnap-translation-v1.ts`: browser element.
+- `src/client/proof-search.ts`: shared LSP search worker.
 
-## Roadmap
+Paths beginning with `src/` are relative to the repository root.
 
-- **More languages.** A modal system is a dialect entry plus a prelude whose
-  laws axiomatize its equivalence — the point of the architecture.
-- **Upstream batch search.** If `compile_sources` learns to fill search
-  placeholders, `proof-search.ts` collapses into `proof-compiler.ts` and the
-  11 MB LSP wasm leaves the page. Client-only swap.
-- **Alpha-aware egraph interning** upstream would close the cross-shape
-  prenexing gap wholesale; the battery's known-gaps cases flip when it does.
-- Rendering the found rewrite chain as feedback (today it is applied, then
-  discarded beyond the MMB).
+## Possible extensions
+
+Additional logics require parser/semantic support and suitable proof rules;
+adding notation alone is not enough. A future engine batch-search API could
+also remove the separate LSP worker. Neither change is implemented here.
+Displaying the found proof as feedback is another possible extension.
+
+[authoring]: ../../../../docs/carnap-markdown-v1.md

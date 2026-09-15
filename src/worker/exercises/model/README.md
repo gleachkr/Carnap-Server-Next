@@ -1,29 +1,24 @@
 # Model exercise (`model@1`)
 
-A finite-model exercise in the tradition of the original Carnap's
-`CounterModeler`. The student describes a **model** — a domain, and an extension
-or a value for every symbol the sentences use — and the exercise says whether
-that model has the property it asked for. A local **Check** grades it in the
-browser; **Submit** records the server's grade. The two agree by construction:
-a model exercise has no answer key, so both sides run the same `checkModel`.
+Students describe a finite model: a domain and an interpretation for each
+symbol used in the exercise. The model must satisfy the requested property.
+Browser Check and server evaluation use the same DOM-free `checkModel`.
+There is no secret answer key; the server independently checks submitted data.
 
-Three variants ship: **simple** (a model in which the sentences come out true),
-**validity** (a counterexample to an argument written with `:|-:`), and
-**constraint** (`constraints : sentences`, where the constraints must hold too).
+Variants are `simple` (make sentences true), `validity` (find an argument
+counterexample), and `constraint` (satisfy additional constraints).
+The default language is forallx: Calgary 2019; other built-in languages or
+course-defined systems can be selected with `system`.
 
-Notation is **forallx: Calgary, 2019 and later**. Other systems plug in as
-entries in the shared syntax core's [`../first-order/dialect.ts`](../first-order/dialect.ts);
-only this one ships.
+## Authoring
 
-## Authoring syntax
+Attributes go in braces, with `#id` as shorthand for `id`. In a simple
+exercise, formulas are list items. Prose before the first item is the prompt,
+and a bullet can contain comma-separated sentences:
 
-Attributes go in **braces**; `#id` sets the id. Sentences are markdown **list
-items**, and any prose before the first one is the prompt. A single bullet may
-hold several comma-separated sentences.
-
-```
+```md
 ::::model{#two_at_once title="Two at once" points="3"}
-Build a model in which both of these come out true.
+Build a model in which both sentences are true.
 
 - ExF(x), Ex~F(x)
 ::::
@@ -31,92 +26,84 @@ Build a model in which both of these come out true.
 
 ### Attributes
 
-| Attribute | Values / form | Default | Meaning |
-|---|---|---|---|
-| `#id` / `id` | identifier (`[A-Za-z][\w-]{0,63}`) | — (**required**) | Stable exercise id; unique within the document. |
-| `variant` | `simple` \| `validity` \| `constraint` | `simple` | See below. |
-| `system` | a block name or a spec id | `forallx-calgary-2019` | The notation the sentences are written in: an `aufbau-mm0` block declared earlier in the document, or one of the ids the server ships. |
-| `counterexample-to` | `validity`/`tautology` \| `equivalence` \| `inconsistency`/`contradiction` | per variant | The property the model must give the sentences (see below). |
-| `check` | `on` \| `off` | `on` | Whether the local Check button is offered. This type's older spelling of `feedback` (`on` is `full`, `off` is `none`); writing both earns a `redundant_check_attribute` diagnostic and `feedback` wins. |
-| `points` | number `0 < n ≤ 1000` | `1` | Nominal points. |
-| `title` | string | — | Optional title. |
-| `exam` | `true` \| `false` | the assignment's: `true` while its grades are withheld, `false` once released | `true` records every submission; `false` records only correct autograded work. Leaving it out is a third value, not `false`. |
-| `feedback` | `full` \| `terse` \| `none` | the assignment's: `none` while its grades are withheld, `full` once released | How much the student is told: `terse` drops the detail, `none` drops the verdict too. The score is separate — it waits for the release date whatever this says. See `docs/carnap-markdown-v1.md`. |
-| `options` | space-separated flags | — | Carnap-style flags (see below). |
+- `id` / `#id`: required, unique within the document. IDs allow 1–64
+  non-whitespace characters, excluding control and formatting characters.
+- `variant`: `simple` (default), `validity`, or `constraint`.
+- `system`: a preceding theory-block name or built-in system ID; defaults to
+  `forallx-calgary-2019`. `forallx-magnus` uses the original book's notation.
+- `counterexample-to`: `validity`/`tautology`, `equivalence`, or
+  `inconsistency`/`contradiction`; defaults depend on the variant below.
+- `check`: legacy `on`/`off`, equivalent to feedback `full`/`none`. Prefer
+  `feedback`; specifying both produces `redundant_check_attribute` and uses
+  `feedback`.
+- `options`: space-separated flags, listed below.
+- `title`, `points`, `exam`, `feedback`: common settings. Points default to
+  1 and must be greater than zero and at most 1000.
 
-### The three variants
+When omitted, `exam` and `feedback` use assignment defaults. Unreleased
+graded work defaults to `exam="true" feedback="none"`; released grades,
+practice, readings, and previews default to `false` and `full`. Readings
+and previews never record answers. Numeric scores also require grade release
+and feedback other than `none`. See [Recording and feedback][feedback].
 
-**`simple`** takes a list of sentences and asks for a model in which they all
-come out **true**.
+### Variants and target properties
 
-**`validity`** takes one sequent line — comma-separated premises, `:|-:`,
-comma-separated conclusions. The premises must come out **true** and the
-conclusions must have the target property, whose default here is **false**: a
-counterexample to validity.
+`simple` asks for all listed sentences true by default.
 
-```
+`validity` uses one sequent line with comma-separated premises, `:|-:`, and
+comma-separated conclusions. Premises must be true; conclusions must have
+the target property, which defaults to all false:
+
+```md
 ::::model{#someone variant="validity" points="4"}
-Everyone likes someone; so there is someone everyone likes. Show that this does
-not follow.
+Show that everyone liking someone does not imply someone being liked by all.
 
 AxEyR(x,y) :|-: ExAyR(y,x)
 ::::
 ```
 
-**`constraint`** takes one `- constraints : sentences` **list item**. The
-constraints must come out true as well as the sentences having the target
-property. Use it to rule out the model that satisfies a universal sentence by
-having a domain of one:
+`constraint` uses one list item `- constraints : sentences`. Constraints
+must be true in addition to the target property, which defaults to all
+sentences true:
 
-```
+```md
 ::::model{#not_free variant="constraint"}
-Make this true — and no cheating with a one-element domain.
+Use at least two domain elements and make the sentence true.
 
 - ExEy~x = y : AxAyF(x,y)
 ::::
 ```
 
-The separator is a list item rather than the original's bare `:` line, because a
-prompt ending "Find a model where:" would otherwise be read as the constraints.
-A constraint exercise's constraints are **not shown to the student** — the manual
-calls them implicit — so the prompt has to say what they are if the student
-should know.
+Constraints are not displayed in the widget. State them in the prompt if
+students need to know them. Requiring a list item prevents ordinary prose
+ending in a colon from being mistaken for constraints.
 
-### `counterexample-to` — what the model must show
+`counterexample-to` changes the property of the target sentences (conclusions
+only in `validity`):
 
-Over the targeted sentences (all of them for `simple` and `constraint`, the
-conclusions for `validity`):
+| Value | Required result |
+| --- | --- |
+| `validity`, `tautology` | All false |
+| `inconsistency`, `contradiction` | All true |
+| `equivalence` | At least one true and at least one false |
 
-| Value | The model must make the sentences |
-|---|---|
-| `validity`, `tautology` | all false |
-| `inconsistency`, `contradiction` | all true |
-| `equivalence` | disagree — at least one true and at least one false |
-
-Omitted, the default is **all true** for `simple` and `constraint` and **all
-false** for `validity`, which is what the original does. The attribute is
-compiled away: the stored exercise carries the property itself, not the
-vocabulary.
+The compiled exercise stores the resolved property, not the synonym used.
 
 ### Options
 
-Bare flags in an `options` string:
-
-| Flag | Effect |
-|---|---|
-| `nocheck` | Same as `check="off"`. |
-| `strictGivens` | Locks every given, turning a hint into a requirement. |
-| `double-turnstile` | Show `⊨` in a validity exercise's prompt. |
-| `negated-double-turnstile` | Show `⊭`. |
-| `forallxStyle` | Recognised so a ported problem compiles; **not implemented**. It would relabel the fields `UD = `, `extension(F) = `, `referent(a) = `, `truth-value(P) = `. |
+- `nocheck`: equivalent to `check="off"`.
+- `strictGivens`: locks given values and enforces them during grading.
+- `double-turnstile`: displays `⊨` in validity prompts.
+- `negated-double-turnstile`: displays `⊭`.
+- `forallxStyle`: accepted for compatibility but not implemented. It would
+  change labels to forms such as `UD =` and `extension(F) =`.
 
 ### Givens
 
-A trailing `| Field : value` line seeds a field. Field names are the labels the
-exercise shows — `Domain`, `F(_,_)`, `a`, `f(_)` — and the values are written in
-the same little languages the student types (below).
+After the formulas, write `| Field : value` to seed a field. Names match
+interface labels and values use the field syntax described below:
 
-```
+```md
 ::::model{#seeded}
 - AxF(x), G(a)
 | Domain : 0,1,2
@@ -125,224 +112,135 @@ the same little languages the student types (below).
 ::::
 ```
 
-A given naming a field the exercise does not have, holding something that field
-could not contain, or repeating a field, is a **compile error**. The original
-notices none of these until a student submits, and then only in the browser
-console.
+Unknown fields, repeated givens, and invalid values are compile errors.
+Normally givens are editable hints. With `strictGivens`, they are locked in
+the UI and restored by the grader if a submitted payload changes them.
 
-Ordinarily a given is a hint the student may change. `strictGivens` locks it:
-the field renders inert, and grading substitutes the given for whatever arrives,
-so an answer that got around the lock is graded against the exercise as set. (The
-original calls `Prelude.error` there, which takes the widget down.)
+Function givens apply per argument tuple. `| f(_) : [0;1]` supplies only
+`f(0) = 1`. Under `strictGivens`, that cell locks but other cells remain
+editable. This differs from original Carnap's whole-field text lock: a
+partially given function must still allow students to complete its other
+values, especially when they can choose the domain.
 
-A **function's given is read row by row**: `f(_) : [0;1]` says `f(0) = 1` and
-nothing about the other arguments. Those rows are what the generated value table
-starts from, and under `strictGivens` they are the cells that lock — the rest of
-the table stays the student's, and grading puts the given's rows back over the
-submitted ones rather than replacing the whole extension.
+## Formula notation
 
-This is the one place the givens diverge from the original, and the value table
-forces it. There a function is a text field the student types in full, so
-`setField` can drop the given in whole and `strictGivens` can mark the field
-`readonly`; a partial given is then a half-written string to finish, and a
-partial *locked* given is an exercise nobody can answer — the field can only say
-`[0;1]`, and `validateFunc` refuses it with `does not have a value specified for
-some input`. Locking whole cells rather than whole fields keeps the same
-promise (the given is a requirement) without the dead end. Nor could the author
-avoid it: unless the domain is given *and* locked, the student decides how many
-rows the table has, so no given can be sure of covering it.
+Parsing uses `@aufbau/syntax` and the shared core in `../first-order/`.
+Language source lives in `src/worker/logic/theories/`, not in per-type
+TypeScript tables. A forallx file supplies both the model language and the
+proof system used by other exercises.
 
-## Notation: forallx: Calgary 2019
+The [authoring reference][languages] describes Calgary, Magnus, extensions,
+and supported roles. The main Calgary rules are:
 
-Carnap's `thomasBolducAndZachFOL2019ParserOptions` over `calgary2019OpTable`,
-written as `src/worker/logic/theories/forallx-calgary-2019.mm0` — an MM0
-signature with `@syntax` annotations, read by `@aufbau/syntax`. Everything
-below is in that file rather than in any TypeScript, and `system=` names it.
+- Predicates use uppercase letters with parentheses, as in `F(x)` or
+  `R(x,y)`. Bare uppercase letters are sentence letters. Arity is part of
+  symbol identity: `F(a)` and `F(a,b)` produce separate fields.
+- Variables are `s`–`z`, names `a`–`e`, and function letters `f`–`r`.
+  A function letter without arguments is a constant. Names do not take
+  arguments, and variables cannot also be function letters.
+- Quantifiers accept `A`, `E`, `∀`, `∃`, `@`, and `3`, followed by a variable.
+- Core connectives accept `~`, `/\`, `\/`, `->`, and `<->`, with aliases
+  `-`/`¬`, `∧`/`^`/`&`, `∨`/`|`, `=>`/`>`/`→`/`⊃`, and
+  `<=>`/`<>`/`↔`/`≡` respectively.
+- Identity is `=`; `!=` and `≠` mean negated identity. Truth constants are
+  `⊥`/`_|_`/`!?` and `⊤`.
+- The vocabulary is finite. Undeclared subscripts and arity annotations are
+  not accepted automatically. Extend the language to add symbols.
+- Every model sentence must be closed; free variables are rejected.
 
-That file is also the *proof system* a Fitch or Prawitz exercise names in its
-own `system=` — one attribute for both, resolving to the same file — which is
-why a model exercise and a proof from the same course cannot disagree about the
-notation. `logic/specs/index.ts` registers its text under
-the language id; only a language with no proof system behind it (`carnap-prop`)
-is a file in that directory.
+Custom fixed-arity symbols also work. `@syntax role individual` identifies
+the domain sort, and `argument-list` identifies variadic argument lists.
+Fields use constructor identity and arity internally, with labels based on
+canonical notation: `Red(_)` for a named unary predicate, `_+_` for infix +.
+All sixteen binary truth-function roles are supported, not just the default
+language's connectives. Unsupported semantic constructs are rejected.
 
-- **Predicates** any of the 26 uppercase letters, with parentheses: `F(x)`,
-  `R(x,y)`. A bare uppercase letter is a **sentence letter**. A symbol's
-  **arity is part of its identity**, so `F(a)` and `F(a,b)` are two different
-  predicates with two separate fields. The domain interprets the sort the
-  spec marks `@syntax role individual` (`tm`, which names and variables
-  coerce into), and a symbol is read only over arguments of that sort. The
-  letters are variadic because each takes one argument at the `seq` sort,
-  marked `@syntax role argument-list`; the reader flattens a node of that
-  sort into the argument list. A course's own fixed-arity symbols — `term
-  Red (x: tm): wff;`, or an infix `plus` written `+` — read as the
-  constructor applied to its binders, and get one field each, keyed by the
-  constructor's name and arity but **labelled the way the symbol is written**:
-  `Red(_)` for one with no notation, `_+_` for one written `+`.
-- **Variables** `s`–`z`; **names** `a`–`e`; **function symbols** `f`–`r`, a
-  function when parentheses follow and a constant when they do not. Names and
-  variables are separate *sorts*, which is what lets the proof system state
-  ∀I's eigenvariable proviso as MM0 dependency typing; the price is that the
-  pools cannot overlap, so `a` takes no arguments.
-- **The vocabulary is finite**, because an MM0 signature is: those letters and
-  no others. There are no subscripts — the hand parser this replaced read an
-  unbounded `F_12`, and that went with it (2026-08-24). Note also that `s` and
-  `t` are variables *only*, and `a`–`e` names only, where the old table listed
-  both as function letters as well: a letter is a `@vars` pool member or a
-  declared term, never both.
-- **Quantifiers** `A` `E` `∀` `∃` `@` `3`, immediately followed by a variable.
-  `A` and `E` are elaboration rules rather than notations, because they are
-  predicate letters too and one file cannot declare a token as both; the
-  difference shows only in what `Aa` complains about.
-- **Connectives** `~ /\ \/ -> <->`, plus the aliases `- ¬`, `∧ ^ &`, `∨ |`,
-  `=> > → ⊃`, `<=> <> ↔ ≡`.
-- **Identity** `=`; **inequality** `!=` or `≠`, which is sugar for `~(t = t')`.
-- **Boolean constants** `⊥` / `_|_` / `!?` and `⊤`.
+### Display and precedence
 
-Those are forallx's connectives, not the reader's limit: **all sixteen** binary
-truth functions have an `@syntax role`, so a course that extends forallx with
-its own stroke or exclusive disjunction gets it evaluated like any other
-connective. The roles are listed in `docs/carnap-markdown-v1.md`, and the truth
-functions are `src/worker/logic/specs/connectives.ts`. Nothing about it is
-first-order: a connective takes sentences, and terms are what make a formula
-first-order.
+Stored and displayed formulas use canonical notation:
 
-### Input, and display
-
-Those are the spellings a formula is **typed** in. A formula is **written back
-out** in logical symbols, which is what the original does (`rewriteWith opts .
-show`): `∀ ∃ ¬ ∧ ∨ → ↔ ⊤ ⊥`, identity closed up, a quantifier or negation
-written straight onto what follows it, and every binary compound parenthesized
-*except* the outermost pair — `@syntax display drop-outer-parens` in the spec.
-
-Those symbols are the spec's **last** notation for each connective, which is
-the one convention `@aufbau/syntax` fixes: ASCII spellings first, the glyph
-last, and the last is canonical. So there is one written form, not two — what a
-reader sees is also what a compiled exercise stores.
-
-| Typed | Stored, and shown |
-|---|---|
+| Typed | Stored and displayed |
+| --- | --- |
 | `AxAyf(x,y) = f(y,x)` | `∀x∀yf(x,y)=f(y,x)` |
 | `P /\ Q \/ R` | `(P ∧ Q) ∨ R` |
 | `Ax(F(x) -> G(x))` | `∀x(F(x) → G(x))` |
 | `a != b` | `¬a=b` |
 
-That form is itself legal input, which is not a coincidence: forallx brackets
-exactly the compounds its parenthesization rule permits brackets around, so
-printing and reading agree.
+Canonical output uses each constructor's last-declared notation. The output
+is valid input for the same language.
 
-Three things surprise people, and all three are the original's behaviour:
+Calgary has several conventions worth checking when porting a lesson:
 
-1. **A quantifier's scope is the sentence immediately after it**, not the rest
-   of the formula. `AxF(x) -> G(a)` is a conditional with a quantified
-   antecedent; write `Ax(F(x) -> G(a))` for the other reading. Negation scopes
-   the same way.
-2. **`/\` and `\/` share one precedence level**, left-associatively, so
-   `P \/ Q /\ R` is `(P \/ Q) /\ R` — neither binds tighter. `->` and `<->`
-   **join nothing unbracketed**: `P -> Q -> R`, `P -> Q <-> R` and
-   `P /\ Q -> R` are all errors, and each wants its parentheses. (This differs
-   from the propositional `prop` notation the truth tables use, where `/\`
-   does bind tighter and the conditional reads all three. The two are
-   separate specs.)
-3. **Parentheses may only wrap a two-place compound.** `(P)`, `(~P)`, `(AxF(x))`
-   and `(a = b)` are all errors — forallx's own parenthesization convention,
-   which Carnap enforces with its `zachDispatch` guard.
+1. Quantifiers and negation scope over the next sentence, not the rest of
+   the line. `AxF(x) -> G(a)` is a conditional with a quantified antecedent.
+2. Conjunction and disjunction share left-associative precedence. Neither
+   binds more tightly. Conditionals and biconditionals require parentheses
+   when chained or mixed with other binary connectives.
+3. Parentheses may group binary compounds only. `(P)`, `(~P)`, `(AxF(x))`,
+   and `(a = b)` are rejected.
 
-**Open formulas are rejected**: every sentence must be closed. That is why the
-original's "a formula with free variables is its universal closure" rule does not
-appear here — under this dialect it can never fire. It arrives with the first
-dialect that permits free variables.
+English word operators and `v` for disjunction are not supplied by the
+Calgary file. When porting examples, replace unsupported operators and
+remove parentheses around atoms, negations, quantifiers, or identities.
+These restrictions are language-specific, not requirements of every model
+exercise.
 
-### Deliberately not accepted
+## Fields
 
-- **The English word operators** `not`, `and`, `or`, `only if`, `if and only if`.
-  They collide with the constant and function letters `a`–`t`, and telling
-  `Fa nd G(b)` from a conjunction is real tokenizer work for very little.
-- **`^n` arity annotations**, which the original parses and discards.
-- **`v` for disjunction** — also absent from Carnap's Calgary tables, since `v`
-  is a variable letter here.
+The formulas determine the field list. `AxR(x,f(x))` requires a domain,
+`R(_,_)`, and `f(_)`. Fields appear in this order: domain, relations,
+sentence letters, constants, functions; each symbol group is sorted by label.
 
-Porting a problem from the manual therefore needs two edits: `not` becomes `~`,
-and parentheses around an identity or a negation come off (`AxAy(f(x,y) =
-f(y,x))` → `AxAyf(x,y) = f(y,x)`).
+- **Domain:** one or more natural numbers, such as `0,1,2`, with at most
+  `MAX_DOMAIN_SIZE` (16) distinct elements. Duplicates are collapsed.
+- **Relation:** tuples such as `[0,0],[1,0]`. Square, round, and angle
+  brackets work; unary tuples may be bare numbers. Empty means an empty
+  extension.
+- **Sentence letter:** True/False control.
+- **Constant:** menu containing domain elements.
+- **Function:** a value menu for every argument tuple over the domain.
 
-## The fields, and what goes in them
+Every referenced element must belong to the domain. Function tables supply
+all argument tuples in the widget; malformed API submissions can still be
+partial and are checked by the server.
 
-The field list is **derived from the sentences** and is not authored or stored:
-`AxR(x,f(x))` asks for a domain, an extension for `R(_,_)` and a value table for
-`f(_)`, and nothing else. Fields appear in the original's order — domain, then
-relations, then sentence letters, then constants, then functions — each group in
-label order.
+### Function tables
 
-| Field | Control | Value |
-|---|---|---|
-| `Domain` | text | `0,1,2` — one or more naturals, at most `MAX_DOMAIN_SIZE` (16) |
-| `F(_,_)` | text | `[0,0],[1,0]` — tuples in `[…]`, `(…)` or `<…>`; a 1-tuple may be bare (`0,1`); empty field = empty extension |
-| `P` | True/False | — |
-| `a` | menu of the domain | one element |
-| `f(_,_)` | a value table | a menu of the domain per argument tuple, laid out as a grid |
+The last argument labels columns; earlier arguments label rows. A binary
+function over three elements has a 3×3 table. A unary function has one row,
+and higher arities add rows rather than columns. Each menu has the complete
+argument tuple in its accessible name.
 
-Every element mentioned must be in the domain. Duplicate domain elements are
-collapsed (`0,0,1` is the domain {0,1}).
+`functionTableLayout` is shared by server rendering and browser rebuilding.
+Row-major order matches serialization into field text such as
+`[0,0;1],[0,1;2]`. The table is an editor for this existing answer format,
+not a new storage shape.
 
-**Functions get a generated value table** rather than the original's single text
-field: a menu of the domain for every argument tuple over the current domain.
-Totality is then structural, so the original's `does not have a value specified
-for some input` message is unreachable from the widget — only a submission that
-did not come from it can be partial — and a binary function over a three-element
-domain no longer means typing nine tuples by hand. The table is an **editor over
-the same string the original stores** (`[0,0;1],[0,1;2]`), so givens and the
-recorded answer are unchanged by it.
+Changing the domain rebuilds constant menus and function tables, retaining
+values still in range. Function givens seed individual cells as described
+above.
 
-The layout is the one a function is written in on a blackboard: **the last
-argument heads the columns, the rest name the rows.** A binary function over
-`0,1,2` is then a 3×3 square, a unary one a single line of values under its
-arguments (with no header column at all — its one line fixes nothing, and a
-blank label beside a blank corner reads as something withheld), and no cell
-repeats the function symbol — `f(1,2)` is read off the row
-`1,_` and the column `2`, with the symbol itself appearing once, in the field's
-label. Higher arities keep the columns bounded by the domain and grow downwards
-(`0,0,_`, `0,1,_`, …) rather than sideways. Reading the rows in order, and each
-row left to right, is exactly the odometer order the field's string is written
-in, which is what lets the table be serialized straight down the DOM; the shape
-comes from `functionTableLayout`, shared by the server's markup and the client's
-rebuild so the two cannot drift. Every menu still carries the whole argument as
-its accessible name (`f(_,_) of 1,2`), because the two axes are only on the page
-for a reader who can see them.
+## Answer data and grading
 
-The table is also why a function's given is read cell by cell where the original
-reads the field whole (below): the original's field starts *empty* and the
-student types the whole extension, so a partial given there is a half-written
-string to finish. Here every cell already has a value, so a given can only mean
-the cells it names.
-
-The domain drives the constant menus and the function tables, so both are rebuilt
-whenever it changes, keeping any value still in range.
-
-## The recorded answer
-
-`model-answer@1` is the raw text of each field, keyed by label:
+`model-answer@1` stores raw field text keyed by label:
 
 ```json
 { "domain": "0,1", "fields": { "F(_)": "0,1", "a": "0" } }
 ```
 
-Raw rather than parsed, as the original records it, so the review page can show
-what the student actually typed — an instructor reading a wrong answer wants to
-see the wrong thing. Fields the exercise does not ask for are dropped in
-normalization.
+Normalization drops fields not requested by the exercise. Raw values are
+retained so review can show the submitted answer, including mistakes.
+Grading is all-or-nothing.
 
-Scoring is all-or-nothing: there is no fraction of a countermodel.
+Relevant tests include `tests/model.test.ts`,
+`tests/model-semantics.test.ts`, and `tests/language-specs.test.ts`.
 
-## Roadmap
+## Possible extensions
 
-- **More dialects.** `../first-order/dialect.ts` is a table; the pre-2019 forallx
-  (juxtaposed `Fx`, no function symbols) and Carnap's default `firstOrder` are
-  the obvious next entries. A dialect that permits open formulas additionally
-  needs the universal-closure step in the evaluator.
-- **Generated grids for relations.** A checkbox list (arity 1) or a matrix
-  (arity 2) would be the win the function table is — the same
-  `functionTableLayout` shape with checkboxes for cells — but it diverges from
-  the givens syntax, so the text field stays for now.
-- **`forallxStyle`**, the original's undocumented relabelling.
-- **Non-numeric domains.** Elements are naturals, as in the original.
+Relation grids, `forallxStyle` labels, and non-numeric domain elements are
+not implemented. A language allowing open formulas would also need an
+explicit evaluation policy, such as universal closure; it is not supported
+merely by adding notation.
+
+[feedback]: ../../../../docs/carnap-markdown-v1.md#recording-and-feedback
+[languages]: ../../../../docs/carnap-markdown-v1.md#languages-and-theories

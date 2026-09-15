@@ -44,7 +44,7 @@ Use `docker` in place of `podman` if preferred.
 link in the login page and returns login tokens through the API. Anyone who
 can reach it can sign in as any email address. For a shared deployment, use
 production mode, real email delivery, and HTTPS; see
-[the Caddy example](#example-caddy-in-front-of-the-container).
+[the Caddy example](#example-using-caddy-as-a-reverse-proxy).
 
 The database is stored in the `carnap-data` volume at `/data/carnap.db`.
 Replacing the container preserves the database if the volume is retained.
@@ -204,11 +204,10 @@ let public clients bypass it or supply trusted forwarding headers directly.
 
 ### Example: Using Caddy as a reverse proxy
 
-A proxied deployment differs from the quick start in three ways: the
-application port is bound only loopback rather than a network IP, so only the 
-proxy can reach it, `CARNAP_ENV` is left unset so production mode applies, and
-`CARNAP_TRUST_PROXY=1` tells the application to trust the proxy's 
-`X-Forwarded-Proto` and `X-Forwarded-Host`.
+Like the local container example, this setup binds the application port to
+loopback. It leaves `CARNAP_ENV` unset for production mode and sets
+`CARNAP_TRUST_PROXY=1` so the application uses the proxy's public scheme and
+host. Caddy must run on the same host or share a pod with the application.
 
 Put the settings in an environment file so the secrets do not appear in
 shell history or the process list. Values are taken literally after the
@@ -222,7 +221,8 @@ AUTH_LOGIN_EMAIL_FROM=Carnap <login@example.edu>
 ADMIN_BOOTSTRAP_TOKEN=replace-with-a-random-secret
 ```
 
-Then start the container:
+Protect the file with `chmod 600 env`, keep it out of version control, and
+start the container:
 
 ```sh
 podman build -t carnap .
@@ -233,32 +233,38 @@ podman run -d --name carnap --restart unless-stopped \
   carnap
 ```
 
-The environment is fixed when the container is created, so removing
-`ADMIN_BOOTSTRAP_TOKEN` after setup requires running `podman rm -f carnap`, 
-editing the environment file, and running the command above again with the 
-edited file; `podman restart` does not reread the environment. The database is 
-on the volume and survives the replacement.
+Container environment variables are fixed at creation. After administrator
+setup, remove `ADMIN_BOOTSTRAP_TOKEN` from the file, remove the container with
+`podman rm -f carnap`, and recreate it with the command above. This briefly
+stops the service. `podman restart` does not reread the file. The database
+volume survives container replacement.
 
 With [Caddy](https://caddyserver.com), you can use this site block:
 
 ```caddyfile
 carnap.example.edu {
 	reverse_proxy 127.0.0.1:8787 {
+		header_up -CF-Connecting-IP
 		header_up X-Request-Id {http.request.uuid}
 	}
 }
 ```
 
-Caddy obtains and renews the certificate itself, redirects HTTP to HTTPS,
-and passes the browser's `Host` header to the application unchanged. Its
-`reverse_proxy` sets `X-Forwarded-For`, `X-Forwarded-Proto`, and
-`X-Forwarded-Host` on every upstream request, replacing any copies a client
-sent (unless the client is listed in the Caddy option `trusted_proxies`). That 
-satisfies the header list above without further configuration. The `header_up` 
-line adds the optional request ID. Leave `AUTH_LOGIN_CONFIRM_URL` unset: with 
-the scheme and host forwarded, login links resolve to
-`https://carnap.example.edu/login/confirm`. Do not add an `X-Frame-Options`
-header in the site block; see [Cookies and framing](#cookies-and-framing).
+Caddy obtains and renews the certificate and redirects HTTP to HTTPS.
+Its reverse proxy preserves `Host` and supplies `X-Forwarded-For`,
+`X-Forwarded-Proto`, and `X-Forwarded-Host`. By default, it ignores incoming
+copies of those forwarding headers unless the sender is a configured trusted
+proxy.
+
+The example also removes `CF-Connecting-IP`: Carnap prefers that header over
+`X-Forwarded-For`, so an untrusted client must not be allowed to supply it.
+The other `header_up` line adds an optional request ID. If Caddy is itself
+behind another proxy or CDN, configure and review that trust relationship
+separately.
+
+With the scheme and host forwarded, leave `AUTH_LOGIN_CONFIRM_URL` unset;
+login links resolve to `https://carnap.example.edu/login/confirm`.
+Do not add `X-Frame-Options`; see [Cookies and framing](#cookies-and-framing).
 
 To confirm the forwarding took effect:
 
@@ -326,10 +332,8 @@ SQLite database has one writer; a D1 database also has a finite query
 capacity even when Workers scale out.
 
 The repository has query-count regression tests for submissions and course
-pages. Historical laptop measurements of multiple-choice submissions were
-about 190 per second against a local file, but that is not a production
-capacity guarantee. Proof checking, storage latency, lesson size, concurrent
-reads, and hardware all affect throughput.
+pages. Query counts alone do not establish capacity. Proof checking, storage
+latency, lesson size, concurrent reads, and hardware all affect throughput.
 
 Measure realistic workloads before changing deployment architecture. On D1,
 inspect query durations and Worker request timings. D1 read replication
@@ -354,7 +358,7 @@ Set `LTI_TOOL_PRIVATE_KEY` to a signing JWK with `kid` and `alg`. The value
 is the private key itself as one line of JSON, not a path to a file. The
 public key is computed from the private key and served at `/lti/jwks`.
 
-This command, run from the repository root after `bun install`, prints a 
+This command, run from the repository root after `bun install`, prints a
 suitable RSA key:
 
 ```sh
@@ -370,7 +374,7 @@ console.log(JSON.stringify({ ...jwk, alg: "RS256", use: "sig",
 Copy the whole line into the environment file, unquoted:
 
 ```sh
-LTI_TOOL_PRIVATE_KEY={"kty":"RSA","n":"…","e":"AQAB","d":"…","alg":"RS256","use":"sig","kid":"carnap-…"}
+LTI_TOOL_PRIVATE_KEY=<paste the complete one-line JSON output here>
 ```
 
 Keep the key with the other secrets and out of version control. The `kid`
