@@ -1,10 +1,3 @@
-import {
-  diagnostic,
-  htmlToText,
-  isObject,
-  isStringArray,
-  sameSet,
-} from "../../application/content/assessment-support";
 import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
@@ -17,6 +10,13 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import {
+  diagnostic,
+  htmlToText,
+  isObject,
+  isStringArray,
+  sameSet,
+} from "../../exercise-kit/assessment";
 import { renderMultipleChoiceReview } from "./read-only-view";
 import type {
   MultipleChoiceAnswerData,

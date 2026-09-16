@@ -1581,7 +1581,7 @@ msgstr "Die Anmeldung per E-Mail kann nicht von einem Konto entfernt werden."
 msgid "Email status"
 msgstr "E-Mail-Status"
 
-#: src/worker/application/content/assessment-support.ts
+#: src/worker/exercise-kit/assessment.ts
 msgid "Empty response"
 msgstr "Leere Antwort"
 
@@ -3074,7 +3074,7 @@ msgstr ""
 msgid "Resize the source and document columns"
 msgstr ""
 
-#: src/worker/application/content/assessment-support.ts
+#: src/worker/exercise-kit/assessment.ts
 msgid "Response"
 msgstr "Antwort"
 

@@ -23,9 +23,10 @@ glue that enumerates the types (`strings.ts`, `group.ts`).
 - `formula/` — the formula tree the model, translation and (as a mirror)
   truth-table types read: `parseFormula` over a language spec, the tree
   shapes, and the language lookup.
-- the root files — the framework every interactive type plugs into: the action
-  bar (`actions.ts`), the hydration payload (`hydration.ts`), the correctness
-  mark, the answer events, and the help strings.
+- the root files — the framework every type plugs into: the action bar
+  (`actions.ts`), the hydration payload (`hydration.ts`), the correctness
+  mark, the answer events, the help strings, and the assessment helpers
+  (`assessment.ts`) the ten `assessment.ts` classes share.
 
 Everything here is imported by the client bundles as well as the worker, so
 modules stay DOM-free and catalog-free unless their header says otherwise.

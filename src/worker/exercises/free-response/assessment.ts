@@ -1,11 +1,3 @@
-import {
-  diagnostic,
-  htmlToText,
-  isObject,
-  isTextAnswerData,
-  normalizeText,
-  textAnswerReview,
-} from "../../application/content/assessment-support";
 import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
@@ -17,6 +9,14 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import {
+  diagnostic,
+  htmlToText,
+  isObject,
+  isTextAnswerData,
+  normalizeText,
+  textAnswerReview,
+} from "../../exercise-kit/assessment";
 import type {
   FreeResponseAnswerData,
   FreeResponsePrivateData,

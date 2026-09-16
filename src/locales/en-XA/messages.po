@@ -1581,7 +1581,7 @@ msgstr ""
 msgid "Email status"
 msgstr ""
 
-#: src/worker/application/content/assessment-support.ts
+#: src/worker/exercise-kit/assessment.ts
 msgid "Empty response"
 msgstr ""
 
@@ -3074,7 +3074,7 @@ msgstr ""
 msgid "Resize the source and document columns"
 msgstr ""
 
-#: src/worker/application/content/assessment-support.ts
+#: src/worker/exercise-kit/assessment.ts
 msgid "Response"
 msgstr ""
 

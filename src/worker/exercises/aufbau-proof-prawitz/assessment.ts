@@ -1,7 +1,3 @@
-import {
-  diagnostic,
-  isObject,
-} from "../../application/content/assessment-support";
 import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
@@ -14,6 +10,7 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
+import { diagnostic, isObject } from "../../exercise-kit/assessment";
 import { readCertificate } from "../../exercise-kit/proof/certificate";
 // The certificate is the trust boundary, so the Prawitz type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the

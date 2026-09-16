@@ -2,14 +2,15 @@ import type {
   ExerciseAnswerReview,
   ExerciseDiagnostic,
   NormalizedAnswer,
-} from "../../domain/content";
-import type { JsonValue } from "../../domain/json";
-import type { Translator } from "../../i18n/translator";
+} from "../domain/content";
+import type { JsonValue } from "../domain/json";
+import type { Translator } from "../i18n/translator";
 
 /**
  * Shared, DOM-free assessment helpers used by the per-type exercise classes in
  * `src/worker/exercises/<type>/assessment.ts`. A leaf module: it must not
- * depend on the registry or any per-type class.
+ * depend on the registry or any per-type class — the kit rule, and also what
+ * lets it be imported before the registry is built.
  */
 
 export function diagnostic(

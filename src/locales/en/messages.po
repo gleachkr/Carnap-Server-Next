@@ -1581,7 +1581,7 @@ msgstr "Email sign-in cannot be removed from an account."
 msgid "Email status"
 msgstr "Email status"
 
-#: src/worker/application/content/assessment-support.ts
+#: src/worker/exercise-kit/assessment.ts
 msgid "Empty response"
 msgstr "Empty response"
 
@@ -3074,7 +3074,7 @@ msgstr "Resize the editor and preview columns"
 msgid "Resize the source and document columns"
 msgstr "Resize the source and document columns"
 
-#: src/worker/application/content/assessment-support.ts
+#: src/worker/exercise-kit/assessment.ts
 msgid "Response"
 msgstr "Response"
 
