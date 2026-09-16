@@ -64,7 +64,9 @@ import {
   ENGINE_RULE,
   ENGINE_TEXT,
   readNodeFormulas,
+  unionVariables,
 } from "../aufbau-proof/formulas";
+import type { ProofStatement } from "../aufbau-proof/playground";
 import type { PrawitzProofNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
@@ -114,6 +116,12 @@ export interface TranslatedPrawitzProof {
   readonly lineSpans: readonly PrawitzLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
   readonly proofText: string;
+  /**
+   * What the root asserts — its dependency context and its formula, as the
+   * last emitted `$ … $` — and the variables the readings saw in it. What a
+   * playground exercise makes its goal.
+   */
+  readonly statement: ProofStatement;
 }
 
 interface WalkedNode {
@@ -276,6 +284,7 @@ export function prawitzToAuf(
   const contextLeaves = new Map<number, readonly number[]>();
   const contexts = new Map<string, readonly string[]>();
   let counter = 0;
+  let statement: ProofStatement = { text: "", variables: null };
 
   const contextFormulas = (leafIndexes: readonly number[]): string[] => {
     const seen = new Set<string>();
@@ -322,9 +331,25 @@ export function prawitzToAuf(
     counter += 1;
     const label = `l${counter}`;
     owners.push(walked.node.id);
+    const sequent = `${contextText} ${sequentSymbol} ${walked.node.formula}`;
     lines.push(
-      `${label}: $ ${contextText} ${sequentSymbol} ${walked.node.formula} $ by ${readRule(walked.node.rule)} [${refs.join(", ")}]`,
+      `${label}: $ ${sequent} $ by ${readRule(walked.node.rule)} [${refs.join(", ")}]`,
     );
+
+    // The root's sequent is the proof's statement; its variables are those of
+    // the leaves in its context and of its own formula.
+    if (walked.parent === null) {
+      statement = {
+        text: sequent,
+        variables: unionVariables([
+          ...entries.map(
+            (leafIndex) =>
+              read.variables.get(all[leafIndex]?.node.id ?? "") ?? null,
+          ),
+          read.variables.get(walked.node.id) ?? null,
+        ]),
+      };
+    }
     return label;
   }
 
@@ -345,5 +370,12 @@ export function prawitzToAuf(
     offset += line.length + 1;
   }
 
-  return { contexts, diagnostics, formulaProblems, lineSpans, proofText };
+  return {
+    contexts,
+    diagnostics,
+    formulaProblems,
+    lineSpans,
+    proofText,
+    statement,
+  };
 }

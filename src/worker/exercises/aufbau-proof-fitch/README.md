@@ -90,8 +90,8 @@ identifiers or aliases declared by the theory. `proofRuleReader` resolves
 aliases before assumption checks, citation analysis, and emission. Unknown
 rule names are passed to the engine for diagnosis.
 
-Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`, and
-`options`. `system` must name a preceding theory block or built-in system.
+Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
+`options`, and `playground`. `system` must name a preceding theory block or built-in system.
 The selected theory must declare these roles:
 
 - `assumption`: the assumption axiom;
@@ -101,6 +101,16 @@ The selected theory must declare these roles:
 Missing roles produce authoring diagnostics. Add the roles to the theory,
 not per-exercise notation overrides. The common settings are described in
 the [authoring reference][authoring].
+
+`playground` (boolean) drops the goal: the body is the prompt, optionally
+followed by `----` and a starter, and the statement the proof proves is
+derived from the proof itself — the last line with the assumptions still open at it, which is the last sequent the translator emits. The widget shows it live as
+"Proves", the answer carries it as `goal` (its `@vars` binders and the
+statement in engine text), and the worker rebuilds the same
+`theorem playground …` declaration from the answer, checks its binders
+against the system's `@vars` pools, and verifies the certificate against the
+theory plus that declaration. See `aufbau-proof/playground.ts`, and the
+[authoring reference][authoring] for the shared rules.
 
 ### Magnus reductio and citation shapes
 
@@ -153,8 +163,9 @@ several would require changing the translator contract.
 
 ## Answer data and implementation
 
-The widget submits `{ fitchText, proofText, mmb }`. The server stores the two
-texts and evaluation after verification, without `mmb`.
+The widget submits `{ fitchText, proofText, mmb }` — and, in a playground,
+`goal`. The server stores the two texts (and the goal) and evaluation after
+verification, without `mmb`.
 
 - `types.ts`: public/answer shapes, version metadata, and guards.
 - `translate.ts`: scope analysis, translation, and geometry.

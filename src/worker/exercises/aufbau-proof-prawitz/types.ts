@@ -15,6 +15,8 @@
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
+import type { PlaygroundGoal } from "../aufbau-proof/playground";
+import { isPlaygroundGoal } from "../aufbau-proof/playground";
 import type { AufbauProofOptions } from "../aufbau-proof/types";
 
 export const AUFBAU_PROOF_PRAWITZ_KIND = "aufbau-proof-prawitz@1";
@@ -101,6 +103,11 @@ export interface PrawitzProofNode {
  *                      `source`/`mm0` above are what the join fills in from it.
  *                      Absent in an artifact compiled before the table existed,
  *                      which froze its text inline instead
+ *   - `playground`     set when the exercise has no goal of its own: no
+ *                      declaration is frozen, `goalFormula` is empty,
+ *                      `goalName` is the fixed `playground`, and the answer
+ *                      carries the statement its proof derived (see
+ *                      `aufbau-proof/playground.ts`)
  */
 export interface AufbauProofPrawitzPublicData {
   readonly assumptionRule: string;
@@ -111,6 +118,7 @@ export interface AufbauProofPrawitzPublicData {
   readonly goalName: string;
   readonly mm0?: string;
   readonly options: AufbauProofOptions;
+  readonly playground?: boolean;
   readonly promptHtml: string;
   readonly sequentSymbol?: string;
   readonly source?: string;
@@ -127,6 +135,8 @@ export interface AufbauProofPrawitzPublicData {
  * {@link ../aufbau-proof/certificate readCertificate}.
  */
 export interface AufbauProofPrawitzAnswerData {
+  /** A playground's derived goal — what its certificate is verified against. */
+  readonly goal?: PlaygroundGoal;
   readonly proofText: string;
   readonly tree: PrawitzProofNode;
 }
@@ -182,6 +192,7 @@ export function isAufbauProofPrawitzAnswerData(
   return (
     isObject(value) &&
     typeof value.proofText === "string" &&
-    isPrawitzProofNode(value.tree)
+    isPrawitzProofNode(value.tree) &&
+    (value.goal === undefined || isPlaygroundGoal(value.goal))
   );
 }

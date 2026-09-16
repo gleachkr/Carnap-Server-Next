@@ -15,6 +15,12 @@ import type {
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
 import { readCertificate } from "./certificate";
+import {
+  answerGoal,
+  isPlaygroundExercise,
+  playgroundGoalText,
+  verificationText,
+} from "./playground";
 import { renderAufbauProofReview } from "./read-only-view";
 import type { AufbauProofAnswerData } from "./types";
 import {
@@ -51,7 +57,7 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
 
   normalizeAnswer(
     envelope: AnswerEnvelope,
-    _declaration: ExerciseManifestItem,
+    declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
     if (envelope.kind !== this.answerKind) {
       return {
@@ -115,9 +121,28 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
       };
     }
 
+    // A playground's goal travels with the answer, since the artifact has
+    // none: without it there is nothing to verify the certificate against.
+    const goal = answerGoal(envelope.data);
+
+    if (isPlaygroundExercise(declaration.publicData) && goal === undefined) {
+      return {
+        diagnostics: [
+          diagnostic(
+            "malformed_answer_data",
+            "A playground proof answer needs the goal its proof derived.",
+            ["data", "goal"],
+          ),
+        ],
+        ok: false,
+        reason: "malformed",
+      };
+    }
+
     return {
       answer: {
         data: {
+          ...(goal === undefined ? {} : { goal }),
           proofText: envelope.data.proofText,
         } as unknown as JsonValue,
         kind: this.answerKind,
@@ -129,7 +154,7 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
   }
 
   async evaluate(
-    _answer: NormalizedAnswer,
+    answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
     context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
@@ -165,8 +190,21 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
 
     // The certificate is verified against the frozen mm0 — never the student's
     // proofText — so a valid MMB proving the declared goal is the definition of
-    // correct, however it was produced.
-    const result = await verifyMmb(declaration.publicData.mm0, mmb);
+    // correct, however it was produced. A playground's goal is the answer's
+    // own, appended to the same frozen text once it has been checked
+    // (`verificationText`).
+    const theory = verificationText(declaration.publicData, answer.data);
+
+    if (!theory.ok) {
+      return {
+        ...base,
+        awardedScore: 0,
+        feedback: { diagnostics: [{ code: `playground_${theory.problem}` }] },
+        status: "invalid",
+      };
+    }
+
+    const result = await verifyMmb(theory.mm0, mmb);
 
     if (result.errored) {
       return {
@@ -192,9 +230,23 @@ export class AufbauProofExerciseType implements AssessmentExerciseType {
   ): ExerciseAnswerReview {
     const data = proofAnswerData(answer);
     const firstLine = data.proofText.split("\n", 1)[0] ?? "";
+    // A playground's header names the fixed `playground`; what a reviewer
+    // wants to see is the statement the proof derived.
+    const detail =
+      isPlaygroundExercise(declaration.publicData) && data.goal !== undefined
+        ? {
+            label: context.i18n.t("Goal"),
+            value: playgroundGoalText(
+              isAufbauProofPublicData(declaration.publicData)
+                ? declaration.publicData.source
+                : null,
+              data.goal,
+            ),
+          }
+        : { label: context.i18n.t("Proof"), value: firstLine };
 
     return {
-      details: [{ label: context.i18n.t("Proof"), value: firstLine }],
+      details: [detail],
       elementHtml: renderAufbauProofReview(
         {
           exerciseId: declaration.id,

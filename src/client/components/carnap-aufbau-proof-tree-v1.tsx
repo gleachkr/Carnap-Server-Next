@@ -47,6 +47,12 @@ import {
   proofRuleReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
+import type { PlaygroundGoal } from "../../worker/exercises/aufbau-proof/playground";
+import {
+  playgroundGoal,
+  playgroundGoalText,
+  playgroundTheoryText,
+} from "../../worker/exercises/aufbau-proof/playground";
 import { flattenProofTree } from "../../worker/exercises/aufbau-proof-tree/flatten";
 import type { AufbauProofTreeStringId } from "../../worker/exercises/aufbau-proof-tree/strings";
 import type {
@@ -473,6 +479,9 @@ function EditableField(props: {
 
 function NodeView(props: {
   readonly dispatch: (action: Action) => void;
+  /** The root's formula is the fixed goal — except in a playground, where the
+   *  root is the student's to write and the goal follows it. */
+  readonly fixedRoot: boolean;
   readonly isRoot: boolean;
   readonly node: TreeNode;
   readonly nodeErrors: Readonly<Record<string, string>>;
@@ -481,8 +490,9 @@ function NodeView(props: {
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
   readonly selectedId: string;
 }): preact.JSX.Element {
-  const { dispatch, isRoot, node, nodeErrors } = props;
+  const { dispatch, fixedRoot, isRoot, node, nodeErrors } = props;
   const { onNodeKeyDown, onSelect, registerNode, selectedId } = props;
+  const fixed = isRoot && fixedRoot;
   const isHyp = node.hyp !== null;
   // Every non-hypothesis proposition is justified by an inference, so it always
   // gets a proof-forest above it — empty when there are no premises yet. This
@@ -504,6 +514,7 @@ function NodeView(props: {
             <NodeView
               key={child.id}
               dispatch={dispatch}
+              fixedRoot={fixedRoot}
               isRoot={false}
               node={child}
               nodeErrors={nodeErrors}
@@ -532,10 +543,10 @@ function NodeView(props: {
           tabIndex={node.id === selectedId ? 0 : -1}
         >
           <EditableField
-            className={["tree-edit", isRoot ? "tree-fixed" : ""]
+            className={["tree-edit", fixed ? "tree-fixed" : ""]
               .filter((cls) => cls.length > 0)
               .join(" ")}
-            editable={!isRoot}
+            editable={!fixed}
             error={nodeErrors[node.id]}
             onInput={(text) =>
               dispatch({ id: node.id, text, type: "setFormula" })
@@ -595,19 +606,30 @@ function Editor(props: {
   /** An edit run from the toolbar: applies it and focuses the node it made. */
   readonly onToolbarEdit: (action: Action) => void;
   readonly onUndo: () => void;
+  /** In a playground, the statement the tree currently proves; `null` for an
+   *  ordinary exercise, whose goal is the fixed root. */
+  readonly proves: string | null;
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
   readonly status: Status;
   readonly t: Translate;
 }): preact.JSX.Element {
-  const { canRedo, canUndo, dispatch, doc, t } = props;
+  const { canRedo, canUndo, dispatch, doc, proves, t } = props;
   const { onNodeKeyDown, onRedo, onSelect, onUndo } = props;
   const { onToolbarEdit, registerNode, status } = props;
   const selected = locate(doc.model, doc.selectedId);
   const canBranch = selected !== null && selected.node.hyp === null;
+  // A hypothesis leaf cites the goal theorem's n-th hypothesis, and a
+  // playground's goal has none.
+  const canHypothesis = canBranch && proves === null;
   const canDelete = selected !== null && selected.parentId !== null;
 
   return (
     <>
+      {proves === null ? null : (
+        <p class="tree-goal">
+          {t("Proves")} <code>{proves}</code>
+        </p>
+      )}
       <div class="tree-toolbar">
         <button
           disabled={!canBranch}
@@ -617,7 +639,7 @@ function Editor(props: {
           {t("Add premise")}
         </button>
         <button
-          disabled={!canBranch}
+          disabled={!canHypothesis}
           onClick={() => onToolbarEdit({ hyp: 1, type: "addPremise" })}
           type="button"
         >
@@ -651,6 +673,7 @@ function Editor(props: {
       <div aria-label={t("Proof tree")} class="proof-tree-canvas" role="tree">
         <NodeView
           dispatch={dispatch}
+          fixedRoot={proves === null}
           isRoot={true}
           node={doc.model}
           nodeErrors={status.nodeErrors}
@@ -670,7 +693,19 @@ function Editor(props: {
 // ---------------------------------------------------------------------------
 
 class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
-  private mm0 = "";
+  /** The frozen theory: with the goal appended for an ordinary exercise, and
+   *  bare for a playground, whose goal is appended per compile. */
+  private theory: { readonly mm0: string; readonly source: string | null } = {
+    mm0: "",
+    source: null,
+  };
+  /** A playground derives its goal from the root; see
+   *  `aufbau-proof/playground.ts`. */
+  private playground = false;
+  /** The goal the last flattening derived (playground only). */
+  private goal: PlaygroundGoal | null = null;
+  /** What the next compile runs against; `null` when there is nothing to. */
+  private compileMm0: string | null = null;
   /** Reads a node's text in the theory's language; passes it through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
@@ -719,7 +754,8 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     }
 
     const theory = proofTheoryText(data);
-    this.mm0 = theory.mm0;
+    this.theory = theory;
+    this.playground = data.playground === true;
     this.readFormula = proofFormulaReader(
       theory.source,
       "sequent",
@@ -860,6 +896,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
 
   protected getAnswer(): unknown {
     return {
+      ...(this.goal === null ? {} : { goal: this.goal }),
       mmb: this.mmb,
       proofText: this.proofText,
       tree: serialize(this.doc.model),
@@ -1137,12 +1174,60 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
         onSelect={this.selectNode}
         onToolbarEdit={this.toolbarEdit}
         onUndo={this.undo}
+        proves={
+          this.playground
+            ? this.goal === null
+              ? ""
+              : playgroundGoalText(this.theory.source, this.goal)
+            : null
+        }
         registerNode={this.registerNode}
         status={this.status}
         t={this.localize}
       />,
       this.mount,
     );
+  }
+
+  /**
+   * What the tree compiles against: the frozen text, or — in a playground —
+   * the frozen text plus the goal the root makes. `null` when there is
+   * nothing to compile: a playground whose root is empty, or whose
+   * statement's variables the theory cannot name (the mark says so).
+   */
+  private compileTheory(
+    flattened: ReturnType<typeof flattenProofTree>,
+  ): string | null {
+    if (!this.playground) {
+      return this.theory.mm0;
+    }
+
+    const statement =
+      flattened.statement === null || flattened.statement.text.trim() === ""
+        ? null
+        : flattened.statement;
+    const goal =
+      statement === null
+        ? null
+        : playgroundGoal(this.theory.source, statement);
+    this.goal = goal;
+
+    if (goal === null) {
+      this.setStatus(
+        statement === null
+          ? { mark: "idle", markTitle: "", nodeErrors: {} }
+          : {
+              mark: "error",
+              markTitle: this.t(
+                "Could not work out what the last line states.",
+              ),
+              nodeErrors: {},
+            },
+      );
+      return null;
+    }
+
+    return playgroundTheoryText(this.theory, goal).mm0;
   }
 
   private onModelChanged(): void {
@@ -1155,7 +1240,6 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     this.proofText = flattened.proofText;
     this.lineSpans = flattened.lineSpans;
     this.mmb = "";
-    this.syncAnswer();
 
     // A node the language refused never reaches the compiler: the `.auf` it
     // would produce is the text the student typed, and the unification failure
@@ -1166,11 +1250,27 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
         clearTimeout(this.debounceHandle);
         this.debounceHandle = null;
       }
+      this.goal = null;
+      this.syncAnswer();
       this.setStatus({
         mark: "idle",
         markTitle: "",
         nodeErrors: this.formulaNodeErrors(flattened.formulaProblems),
       });
+      return;
+    }
+
+    // The theory the certificate is compiled against, settled here so the
+    // goal row follows every edit rather than the debounced compile.
+    this.compileMm0 = this.compileTheory(flattened);
+    this.syncAnswer();
+
+    if (this.compileMm0 === null) {
+      if (this.debounceHandle !== null) {
+        clearTimeout(this.debounceHandle);
+        this.debounceHandle = null;
+      }
+      this.compileToken += 1;
       return;
     }
 
@@ -1213,6 +1313,11 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
   private async compile(): Promise<void> {
     const token = ++this.compileToken;
     const proof = this.proofText;
+    const mm0 = this.compileMm0;
+
+    if (mm0 === null) {
+      return;
+    }
 
     let compiler: LoadedCompiler;
     try {
@@ -1233,7 +1338,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
 
     let result: CompileResult;
     try {
-      result = compiler.compile(this.mm0, proof);
+      result = compiler.compile(mm0, proof);
     } catch {
       if (token !== this.compileToken) {
         return;

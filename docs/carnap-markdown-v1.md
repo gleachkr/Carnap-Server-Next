@@ -659,7 +659,9 @@ verification rejects certificates containing such admissions.
 
 `aufbau-proof` is the linear proof-script editor. Its body contains a prompt,
 a `theorem` declaration, a `----` separator, and a starter proof body. The
-goal is fixed; students edit only the proof body.
+goal is fixed; students edit only the proof body. (With the `playground`
+attribute there is no goal line at all; see [Playground
+exercises](#playground-exercises).)
 
 This complete example declares a small theory first:
 
@@ -1049,6 +1051,41 @@ lines 4 and 5 as the contradictory pair. Explicit citations such as
 `neg_intro 2-4 2-5` also work; the rule signature determines how many premises
 a range supplies.
 
+### Playground exercises
+
+All four proof directives accept a boolean `playground` attribute. A
+playground has no goal: the student builds whatever derivation they like, and
+the exercise checks that every line is justified. This is Carnap's playground,
+for exploring a system before any particular argument is set.
+
+```md
+:::aufbau-proof-fitch{system="forallx-magnus" id="scratch" playground}
+Try out the rules of SL here. Any well-formed derivation counts.
+----
+P → Q  :AS
+:::
+```
+
+The body is the prompt, optionally followed by a `----` underline and a
+starter; the first `----` line ends the prompt. A `theorem` header is an
+error in a playground (`playground_declares_goal`), and a directive without
+`playground` still needs one (`missing_theorem_header`): dropping the header
+by accident never turns an exercise into a playground.
+
+The statement a playground proves is taken from the proof itself: the last
+line of a Fitch proof with the assumptions still open at it, the root of a
+tree, the root of a Prawitz derivation with its undischarged assumptions, or
+the last line of a linear proof. The widget shows it live as **Proves**, and
+it is the goal the certificate is verified against and the goal the review
+page names. Variables in the statement (the `@vars` tokens of the system —
+`x`, `a` and their pools in the forallx systems) are bound automatically;
+nothing else can be, so a playground statement is always a concrete sentence
+or sequent in the system's own vocabulary, never a schema over metavariables.
+
+A playground is scored like any other exercise: the proof is correct when its
+certificate verifies, and worth `points`. A tree playground has no goal
+hypotheses to cite, so its "Add hypothesis" control is disabled.
+
 ## Aufbau-proof-tree directive
 
 Use a proof tree when students should build premise subtrees above each
@@ -1329,7 +1366,7 @@ Common groups include:
 - **Theories and proofs:** `missing_name`, `empty_theory`, `duplicate_theory`,
   `unknown_theory_src`, `remote_theory_src`, `unknown_theory`,
   `missing_theorem_header`, `missing_proof_underline`, `unknown_proof_option`,
-  `invalid_goal_formula`, `proof_is_not_a_tree`.
+  `invalid_goal_formula`, `playground_declares_goal`, `proof_is_not_a_tree`.
 - **Other content:** `invalid_style_attributes`, `invalid_style_src`,
   `invalid_item_link`, `invalid_math`.
 

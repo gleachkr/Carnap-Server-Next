@@ -17,10 +17,25 @@
 // @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
+import {
+  proofFormulaReader,
+  proofRuleReader,
+  proofTheoryText,
+} from "../src/worker/exercises/aufbau-proof/formulas";
+import {
+  PLAYGROUND_GOAL_NAME,
+  playgroundGoal,
+  playgroundGoalText,
+  playgroundTheoryText,
+} from "../src/worker/exercises/aufbau-proof/playground";
 import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { MAGNUS_CASES } from "../tests/helpers/magnus-cases";
-import { magnusExercise } from "../tests/helpers/magnus-theory";
+import {
+  MAGNUS_THEORY_SOURCE,
+  magnusExercise,
+} from "../tests/helpers/magnus-theory";
 
 const wasmBytes = await Bun.file(
   "node_modules/@aufbau/compiler/compiler.wasm",
@@ -98,7 +113,75 @@ for (const testCase of MAGNUS_CASES) {
   passed += 1;
 }
 
-console.log(`\n${passed}/${MAGNUS_CASES.length} cases verified.`);
-if (passed !== MAGNUS_CASES.length) {
+// Playground cases (#305): no goal is set, so the statement is derived from
+// the proof's last line, bound over the `@vars` tokens it holds, appended to
+// the theory as `theorem playground …`, and compiled and verified against
+// *that* — the same declaration the worker rebuilds from the answer.
+const PLAYGROUND_CASES: readonly (readonly [string, string])[] = [
+  [
+    "quantifiers and names",
+    "∀x(Fx → Gx)  :AS\nFa           :AS\nFa → Ga      :∀E 1\nGa           :→E 3 2",
+  ],
+  ["sentence letters", "P → Q  :AS\nP      :AS\nQ      :→E 1 2"],
+  [
+    "discharge, empty context",
+    "  P        :AS\n  P ∨ Q    :∨I 1\nP → (P ∨ Q)  :→I 1-2",
+  ],
+];
+
+let playgroundPassed = 0;
+for (const [name, fitch] of PLAYGROUND_CASES) {
+  const translation = fitchToAuf(
+    fitch,
+    PLAYGROUND_GOAL_NAME,
+    "AS",
+    "⊢",
+    ";",
+    proofFormulaReader(MAGNUS_THEORY_SOURCE, "sentence", PLAYGROUND_GOAL_NAME),
+    ruleCitationShapes(MAGNUS_THEORY_SOURCE),
+    proofRuleReader(MAGNUS_THEORY_SOURCE),
+  );
+  const goal =
+    translation.statement === null
+      ? null
+      : playgroundGoal(MAGNUS_THEORY_SOURCE, translation.statement);
+
+  if (
+    goal === null ||
+    translation.diagnostics.length > 0 ||
+    translation.formulaProblems.length > 0
+  ) {
+    console.log(`✗ playground: ${name}  no goal derived`);
+    continue;
+  }
+
+  const theory = playgroundTheoryText(
+    proofTheoryText({ source: MAGNUS_THEORY_SOURCE }),
+    goal,
+  );
+  const result = compiler.compile(theory.mm0, translation.proofText);
+  const verdict =
+    result.ok === true && result.mmbBytes !== undefined
+      ? await verifyMmb(theory.mm0, result.mmbBytes)
+      : { errored: false, ok: false };
+
+  if (!verdict.ok) {
+    console.log(`✗ playground: ${name}  ${JSON.stringify(result.diagnostics)}`);
+    continue;
+  }
+
+  console.log(
+    `✓ playground: ${name}  proves ${playgroundGoalText(MAGNUS_THEORY_SOURCE, goal)}`,
+  );
+  playgroundPassed += 1;
+}
+
+console.log(
+  `\n${passed}/${MAGNUS_CASES.length} cases verified, ${playgroundPassed}/${PLAYGROUND_CASES.length} playground cases.`,
+);
+if (
+  passed !== MAGNUS_CASES.length ||
+  playgroundPassed !== PLAYGROUND_CASES.length
+) {
   process.exit(1);
 }

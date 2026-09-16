@@ -430,7 +430,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
       placeholders("reason"),
     ),
 
-    // The three proof types, whose theory and goal headers are shared.
+    // The four proof types, whose theory and goal headers are shared.
+    "A playground exercise takes its goal from the proof itself; remove the 'theorem …' header, or drop 'playground'.":
+      i18n.t(
+        "A playground exercise takes its goal from the proof itself; remove the 'theorem …' header, or drop 'playground'.",
+      ),
     "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal.":
       i18n.t(
         "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal.",

@@ -13,6 +13,8 @@
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
+import type { PlaygroundGoal } from "../aufbau-proof/playground";
+import { isPlaygroundGoal } from "../aufbau-proof/playground";
 import type { AufbauProofOptions } from "../aufbau-proof/types";
 
 export const AUFBAU_PROOF_TREE_KIND = "aufbau-proof-tree@1";
@@ -68,6 +70,11 @@ export interface ProofTreeNode {
  *                   `source`/`mm0` above are what the join fills in from it.
  *                   Absent in an artifact compiled before the table existed,
  *                   which froze its text inline instead
+ *   - `playground`  set when the exercise has no goal of its own: no
+ *                   declaration is frozen, `goalFormula` is empty (the root is
+ *                   the student's to write), `goalName` is the fixed
+ *                   `playground`, and the answer carries the statement its
+ *                   proof derived (see `aufbau-proof/playground.ts`)
  */
 export interface AufbauProofTreePublicData {
   readonly goalDecl?: string;
@@ -76,6 +83,7 @@ export interface AufbauProofTreePublicData {
   readonly goalName: string;
   readonly mm0?: string;
   readonly options: AufbauProofOptions;
+  readonly playground?: boolean;
   readonly promptHtml: string;
   readonly source?: string;
   readonly starterTree?: ProofTreeNode;
@@ -91,6 +99,8 @@ export interface AufbauProofTreePublicData {
  * {@link ../aufbau-proof/certificate readCertificate}.
  */
 export interface AufbauProofTreeAnswerData {
+  /** A playground's derived goal — what its certificate is verified against. */
+  readonly goal?: PlaygroundGoal;
   readonly proofText: string;
   readonly tree: ProofTreeNode;
 }
@@ -135,6 +145,7 @@ export function isAufbauProofTreeAnswerData(
   return (
     isObject(value) &&
     typeof value.proofText === "string" &&
-    isProofTreeNode(value.tree)
+    isProofTreeNode(value.tree) &&
+    (value.goal === undefined || isPlaygroundGoal(value.goal))
   );
 }

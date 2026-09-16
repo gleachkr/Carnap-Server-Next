@@ -79,11 +79,11 @@ describe("proofFormulaReader", () => {
   const read = readerFor("t", CONCRETE);
 
   test("textbook spellings come out as engine text", () => {
-    expect(read("Ax(F(x)->G(x))")).toEqual({
+    expect(read("Ax(F(x)->G(x))")).toMatchObject({
       ok: true,
       text: "(∀ x ((F (x)) → (G (x))))",
     });
-    expect(read("~F(a) /\\ G(a)")).toEqual({
+    expect(read("~F(a) /\\ G(a)")).toMatchObject({
       ok: true,
       text: "((¬ (F (a))) ∧ (G (a)))",
     });
@@ -93,11 +93,11 @@ describe("proofFormulaReader", () => {
     // The whole existing corpus of starters and worked cases is spelled this
     // way, so this is the compatibility claim: turning the reader on must not
     // refuse a line anyone has already written.
-    expect(read("∀ x (F(x) → G(x))")).toEqual({
+    expect(read("∀ x (F(x) → G(x))")).toMatchObject({
       ok: true,
       text: "(∀ x ((F (x)) → (G (x))))",
     });
-    expect(read("¬ F(a)")).toEqual({ ok: true, text: "(¬ (F (a)))" });
+    expect(read("¬ F(a)")).toMatchObject({ ok: true, text: "(¬ (F (a)))" });
   });
 
   test("the printer's own output is not offered back to the reader", () => {
@@ -126,7 +126,10 @@ describe("proofFormulaReader", () => {
     // `parenthesize-binary-only` refuses the parentheses. Before proofs were
     // read, only translation and model exercises were held to this.
     expect(read("∀ x (x = x)").ok).toBe(false);
-    expect(read("∀ x x = x")).toEqual({ ok: true, text: "(∀ x (x = x))" });
+    expect(read("∀ x x = x")).toMatchObject({
+      ok: true,
+      text: "(∀ x (x = x))",
+    });
   });
 
   test("a sequent shape reads at the sort the turnstile yields", () => {
@@ -134,7 +137,7 @@ describe("proofFormulaReader", () => {
     // sentence sort would refuse every one of them.
     const sequent = readerFor("t", CONCRETE, "sequent");
 
-    expect(sequent("Ax(F(x)->G(x)) ; F(a) ⊢ G(a)")).toEqual({
+    expect(sequent("Ax(F(x)->G(x)) ; F(a) ⊢ G(a)")).toMatchObject({
       ok: true,
       text: "(((∀ x ((F (x)) → (G (x)))) ; (F (a))) ⊢ (G (a)))",
     });
@@ -150,8 +153,8 @@ describe("proofFormulaReader", () => {
     // theories that pass through is exactly the set that passed through before.
     const gentzen = proofFormulaReader(GENTZEN, "sequent", "t");
 
-    expect(gentzen("Γ ==> Δ")).toEqual({ ok: true, text: "Γ ==> Δ" });
-    expect(gentzen("this is not a formula")).toEqual({
+    expect(gentzen("Γ ==> Δ")).toMatchObject({ ok: true, text: "Γ ==> Δ" });
+    expect(gentzen("this is not a formula")).toMatchObject({
       ok: true,
       text: "this is not a formula",
     });
@@ -387,13 +390,16 @@ describe("a schematic goal reads in its own binders", () => {
     // `a` is a name in this theory's lexicon and a wff metavariable in this
     // goal. Before #253 this exercise was frozen without a language so the
     // line passed through untouched; now it is read, and read correctly.
-    expect(read("a → b")).toEqual({ ok: true, text: "(a → b)" });
+    expect(read("a → b")).toMatchObject({ ok: true, text: "(a → b)" });
   });
 
   test("textbook notation works in a schematic goal too", () => {
     // The point of the whole feature, previously unavailable to 12 of the 19
     // rule cases: the student may write the book's spelling.
-    expect(read("~(a /\\ b)")).toEqual({ ok: true, text: "(¬ (a ∧ b))" });
+    expect(read("~(a /\\ b)")).toMatchObject({
+      ok: true,
+      text: "(¬ (a ∧ b))",
+    });
   });
 
   test("a metavariable takes no arguments", () => {
@@ -405,7 +411,10 @@ describe("a schematic goal reads in its own binders", () => {
   test("a name the goal does not bind still reads from the lexicon", () => {
     // `c` is not among this goal's binders, so it is the lexicon's name — and
     // the scope shadows only what it holds, never the whole vocabulary.
-    expect(read("F(c) → a")).toEqual({ ok: true, text: "((F (c)) → a)" });
+    expect(read("F(c) → a")).toMatchObject({
+      ok: true,
+      text: "((F (c)) → a)",
+    });
   });
 
   test("shadowing is total, so a metavariable cannot take an argument", () => {

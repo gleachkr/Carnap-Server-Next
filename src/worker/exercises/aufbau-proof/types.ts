@@ -12,6 +12,9 @@
  * [[aufbau-engine-packages]].
  */
 
+import type { PlaygroundGoal } from "./playground";
+import { isPlaygroundGoal } from "./playground";
+
 export const AUFBAU_PROOF_KIND = "aufbau-proof@1";
 export const AUFBAU_PROOF_SCHEMA_VERSION = 1;
 export const AUFBAU_PROOF_ANSWER_KIND = "aufbau-proof-answer@1";
@@ -46,7 +49,16 @@ export interface AufbauProofOptions {
  *                   because this interface describes the payload as a consumer
  *                   receives it, which is always after the join; what the
  *                   compiler writes is {@link CompiledAufbauProofPublicData}.
+ *   - `playground`  set when the exercise has no goal of its own: `goalDecl`
+ *                   is absent, `goalName` is the fixed `playground`, and the
+ *                   answer carries the statement its proof derived (see
+ *                   `playground.ts`)
  *   - `promptHtml`  the rendered prose above the theorem header
+ *   - `source`      the theory as written, `@syntax` intact, which the join
+ *                   fills in beside `mm0`. This type's students write engine
+ *                   text and nothing reads their lines in it; a playground
+ *                   reads its derived *statement* in it, to find the variables
+ *                   the goal must bind
  *   - `starterBody` the seed proof body shown in the editable region (may hold
  *                   `auto?` holes)
  *   - `system`      which of the document's systems this exercise is set in
@@ -56,7 +68,9 @@ export interface AufbauProofPublicData {
   readonly goalName: string;
   readonly mm0: string;
   readonly options: AufbauProofOptions;
+  readonly playground?: boolean;
   readonly promptHtml: string;
+  readonly source?: string;
   readonly starterBody: string;
   readonly system?: string;
 }
@@ -82,6 +96,8 @@ export type CompiledAufbauProofPublicData = Omit<
  * compile the certificate again.
  */
 export interface AufbauProofAnswerData {
+  /** A playground's derived goal — what its certificate is verified against. */
+  readonly goal?: PlaygroundGoal;
   readonly proofText: string;
 }
 
@@ -115,5 +131,9 @@ export function isAufbauProofPublicData(
 export function isAufbauProofAnswerData(
   value: unknown,
 ): value is AufbauProofAnswerData {
-  return isObject(value) && typeof value.proofText === "string";
+  return (
+    isObject(value) &&
+    typeof value.proofText === "string" &&
+    (value.goal === undefined || isPlaygroundGoal(value.goal))
+  );
 }

@@ -83,6 +83,12 @@ preview. Remote-origin URLs are rejected. See the authoring reference's
 - `options`: space-separated `auto` and `complete` flags, both off by
   default. The linear editor's search and completion controls are not wired
   up yet.
+- `playground`: boolean. The body has no `theorem` line; the goal is the
+  last proof line's `$ … $`, read once in the theory's language (engine
+  mode) to find the `@vars` tokens to bind. The widget shows it as "Proves",
+  the answer carries it as `goal`, and the worker verifies the certificate
+  against the theory plus the `theorem playground …` declaration it rebuilds
+  from that goal. See `playground.ts`.
 
 On `aufbau-mm0`, `name` is required, `src` is optional, and `show` displays a
 collapsed source panel. The top-level compiler handles this block separately
@@ -106,7 +112,9 @@ The widget submits:
 ```
 
 `proofText` supports display and review; `mmb` is the verified input. The
-stored submission omits `mmb`.
+stored submission omits `mmb`. A playground answer also carries
+`goal: { binders, statement }`, which is kept: it is what the recorded
+verdict is about, and what the review names as the goal.
 
 ## Implementation
 

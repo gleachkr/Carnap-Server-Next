@@ -19,6 +19,12 @@ import { readCertificate } from "../aufbau-proof/certificate";
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's tree).
 import { proofTheoryText } from "../aufbau-proof/formulas";
+import {
+  answerGoal,
+  isPlaygroundExercise,
+  playgroundGoalText,
+  verificationText,
+} from "../aufbau-proof/playground";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofPrawitzReview } from "./read-only-view";
 import type { AufbauProofPrawitzAnswerData } from "./types";
@@ -45,6 +51,34 @@ function prawitzAnswerData(
   return answer.data as unknown as AufbauProofPrawitzAnswerData;
 }
 
+/**
+ * What the review names beside the drawn tree: the root's formula, as the
+ * student wrote it, or — for a playground, which was asked nothing — the goal
+ * the answer derived, which is the statement the recorded verdict is about.
+ */
+function reviewDetail(
+  data: AufbauProofPrawitzAnswerData,
+  declaration: ExerciseManifestItem,
+  context: ExerciseReviewContext,
+): { readonly label: string; readonly value: string } {
+  if (
+    isPlaygroundExercise(declaration.publicData) &&
+    data.goal !== undefined
+  ) {
+    return {
+      label: context.i18n.t("Goal"),
+      value: playgroundGoalText(
+        isAufbauProofPrawitzPublicData(declaration.publicData)
+          ? proofTheoryText(declaration.publicData).source
+          : null,
+        data.goal,
+      ),
+    };
+  }
+
+  return { label: context.i18n.t("Proof"), value: data.tree.formula };
+}
+
 export class AufbauProofPrawitzExerciseType
   implements AssessmentExerciseType
 {
@@ -62,7 +96,7 @@ export class AufbauProofPrawitzExerciseType
 
   normalizeAnswer(
     envelope: AnswerEnvelope,
-    _declaration: ExerciseManifestItem,
+    declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
     if (envelope.kind !== this.answerKind) {
       return {
@@ -130,9 +164,28 @@ export class AufbauProofPrawitzExerciseType
       };
     }
 
+    // A playground's goal travels with the answer, since the artifact has
+    // none: without it there is nothing to verify the certificate against.
+    const goal = answerGoal(envelope.data);
+
+    if (isPlaygroundExercise(declaration.publicData) && goal === undefined) {
+      return {
+        diagnostics: [
+          diagnostic(
+            "malformed_answer_data",
+            "A playground proof answer needs the goal its proof derived.",
+            ["data", "goal"],
+          ),
+        ],
+        ok: false,
+        reason: "malformed",
+      };
+    }
+
     return {
       answer: {
         data: {
+          ...(goal === undefined ? {} : { goal }),
           proofText: envelope.data.proofText,
           tree: envelope.data.tree,
         } as unknown as JsonValue,
@@ -145,7 +198,7 @@ export class AufbauProofPrawitzExerciseType
   }
 
   async evaluate(
-    _answer: NormalizedAnswer,
+    answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
     context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
@@ -181,11 +234,21 @@ export class AufbauProofPrawitzExerciseType
 
     // The certificate is verified against the frozen mm0 — never the student's
     // tree or proofText — so a valid MMB proving the declared goal is the
-    // definition of correct, however the tree that produced it was built.
-    const result = await verifyMmb(
-      proofTheoryText(declaration.publicData).mm0,
-      mmb,
-    );
+    // definition of correct, however the tree that produced it was built. A
+    // playground's goal is the answer's own, appended to the same frozen text
+    // once it has been checked (`verificationText`).
+    const theory = verificationText(declaration.publicData, answer.data);
+
+    if (!theory.ok) {
+      return {
+        ...base,
+        awardedScore: 0,
+        feedback: { diagnostics: [{ code: `playground_${theory.problem}` }] },
+        status: "invalid",
+      };
+    }
+
+    const result = await verifyMmb(theory.mm0, mmb);
 
     if (result.errored) {
       return {
@@ -217,7 +280,7 @@ export class AufbauProofPrawitzExerciseType
       : DEFAULT_ASSUMPTION_RULE;
 
     return {
-      details: [{ label: context.i18n.t("Proof"), value: data.tree.formula }],
+      details: [reviewDetail(data, declaration, context)],
       elementHtml: renderAufbauProofPrawitzReview(
         {
           assumptionRule,

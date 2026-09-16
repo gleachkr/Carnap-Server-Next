@@ -26,6 +26,14 @@ import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 import { type Diagnostic, setDiagnostics } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
+import { proofTheoryText } from "../../worker/exercises/aufbau-proof/formulas";
+import type { PlaygroundGoal } from "../../worker/exercises/aufbau-proof/playground";
+import {
+  lastProofStatement,
+  playgroundGoal,
+  playgroundGoalText,
+  playgroundTheoryText,
+} from "../../worker/exercises/aufbau-proof/playground";
 import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/strings";
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
 import {
@@ -115,7 +123,19 @@ function bodyFromProofText(proofText: string): string {
 const SHADOW_STYLES = shadowStyles;
 
 class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
-  private mm0 = "";
+  /** The frozen theory: with the goal appended for an ordinary exercise, and
+   *  bare for a playground, whose goal is appended per compile. */
+  private theory: { readonly mm0: string; readonly source: string | null } = {
+    mm0: "",
+    source: null,
+  };
+  /** A playground derives its goal from the body's last line; see
+   *  `aufbau-proof/playground.ts`. */
+  private playground = false;
+  /** The goal the last compile derived (playground only). */
+  private goal: PlaygroundGoal | null = null;
+  /** The goal row's statement, live in a playground. */
+  private statementView: HTMLElement | null = null;
   private goalName = "";
   private editor: EditorView | null = null;
   private proofText = "";
@@ -133,7 +153,8 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
       return;
     }
 
-    this.mm0 = data.mm0;
+    this.theory = proofTheoryText(data);
+    this.playground = data.playground === true;
     this.goalName = data.goalName;
 
     const container = root.querySelector<HTMLElement>(".proof");
@@ -157,10 +178,12 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     goal.className = "proof-goal";
     const label = document.createElement("span");
     label.className = "proof-goal-label";
-    label.textContent = this.t("Prove");
+    // A playground's row says what the proof *proves*, and follows the proof.
+    label.textContent = this.t(this.playground ? "Proves" : "Prove");
     const decl = document.createElement("span");
     decl.className = "proof-goal-decl";
-    decl.textContent = goalDeclaration(data.mm0);
+    decl.textContent = this.playground ? "" : goalDeclaration(data.mm0);
+    this.statementView = decl;
     goal.append(label, decl);
     container.insertBefore(goal, actionsSlot);
 
@@ -208,7 +231,53 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   }
 
   protected getAnswer(): unknown {
-    return { mmb: this.mmb, proofText: this.proofText };
+    return {
+      ...(this.goal === null ? {} : { goal: this.goal }),
+      mmb: this.mmb,
+      proofText: this.proofText,
+    };
+  }
+
+  /**
+   * What the body compiles against: the frozen text, or — in a playground —
+   * the frozen text plus the goal the body's last line makes. `null` when
+   * there is nothing to compile: a playground with no proof line yet, or one
+   * whose statement's variables the theory cannot name (the mark says so).
+   * Updates the goal row and the answer's goal as a side effect.
+   */
+  private compileTheory(body: string): string | null {
+    if (!this.playground) {
+      return this.theory.mm0;
+    }
+
+    const statement = lastProofStatement(body);
+    // The student writes engine text and nothing reads it on the way in, so
+    // the statement's variables are found by reading it once here.
+    const goal =
+      statement === null
+        ? null
+        : playgroundGoal(this.theory.source, {
+            text: statement,
+            variables: null,
+          });
+    this.goal = goal;
+
+    if (this.statementView !== null) {
+      this.statementView.textContent =
+        goal === null ? "" : playgroundGoalText(this.theory.source, goal);
+    }
+
+    if (goal === null) {
+      this.setMark(
+        statement === null ? "idle" : "error",
+        statement === null
+          ? undefined
+          : this.t("Could not work out what the last line states."),
+      );
+      return null;
+    }
+
+    return playgroundTheoryText(this.theory, goal).mm0;
   }
 
   /** The certificate is compiled from the proof, not typed by the reader. */
@@ -244,7 +313,17 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
 
   private async compile(): Promise<void> {
     const token = ++this.compileToken;
-    const proof = this.assemble(this.currentBody());
+    const body = this.currentBody();
+    const proof = this.assemble(body);
+    const mm0 = this.compileTheory(body);
+
+    if (mm0 === null) {
+      this.mmb = "";
+      this.proofText = proof;
+      this.applyDiagnostics([], proof);
+      this.syncAnswer();
+      return;
+    }
 
     let compiler: { compile(mm0: string, proof: string): CompileResult };
     try {
@@ -263,7 +342,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
 
     let result: CompileResult;
     try {
-      result = compiler.compile(this.mm0, proof);
+      result = compiler.compile(mm0, proof);
     } catch {
       // Some malformed input can make the compiler throw rather than returning
       // diagnostics. Don't let that reject and strand the spinner — treat it as

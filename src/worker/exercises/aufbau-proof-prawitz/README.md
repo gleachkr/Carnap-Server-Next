@@ -69,14 +69,24 @@ lists labels to discharge; separate multiple labels with commas. The starter
 must parse as a tree and pass structural discharge checks, but need not be a
 finished proof.
 
-Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`, and
-`options`. `system` names a preceding theory block or a built-in system.
+Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
+`options`, and `playground`. `system` names a preceding theory block or a built-in system.
 The theory must declare `assumption`, `turnstile`, and `context-join` roles.
 Missing roles produce authoring errors. Starter separators accept any
 turnstile spelling declared by the theory; emitted sequents use its canonical
 spelling. Rule aliases are resolved before emission.
 
 See the [authoring reference][authoring] for common settings and theory reuse.
+
+`playground` (boolean) drops the goal: the body is the prompt, optionally
+followed by `----` and a starter, and the statement the proof proves is
+derived from the proof itself — the root with its dependency context, which is the last sequent the translator emits. The widget shows it live as
+"Proves", the answer carries it as `goal` (its `@vars` binders and the
+statement in engine text), and the worker rebuilds the same
+`theorem playground …` declaration from the answer, checks its binders
+against the system's `@vars` pools, and verifies the certificate against the
+theory plus that declaration. See `aufbau-proof/playground.ts`, and the
+[authoring reference][authoring] for the shared rules.
 
 ## Formula parsing
 

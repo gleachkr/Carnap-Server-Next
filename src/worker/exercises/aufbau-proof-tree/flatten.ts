@@ -36,6 +36,7 @@ import {
   ENGINE_TEXT,
   readNodeFormulas,
 } from "../aufbau-proof/formulas";
+import type { ProofStatement } from "../aufbau-proof/playground";
 import type { ProofTreeNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
@@ -58,6 +59,12 @@ export interface FlattenedProofTree {
   readonly lineSpans: readonly ProofTreeLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
   readonly proofText: string;
+  /**
+   * What the root asserts — its sequent, the last emitted `$ … $` — and the
+   * variables the reading saw in it; `null` for a root that is a bare `hyp`
+   * leaf and so emits no line. What a playground exercise makes its goal.
+   */
+  readonly statement: ProofStatement | null;
 }
 
 /**
@@ -99,6 +106,14 @@ export function flattenProofTree(
 
   visit(read.root);
 
+  const statement: ProofStatement | null =
+    read.root.hyp === undefined
+      ? {
+          text: read.root.formula,
+          variables: read.variables.get(read.root.id) ?? null,
+        }
+      : null;
+
   const proofText = `${goalName}${HEADER_SEPARATOR}${lines.join("\n")}`;
   const bodyStart = goalName.length + HEADER_SEPARATOR.length;
 
@@ -114,5 +129,5 @@ export function flattenProofTree(
     offset += line.length + 1;
   }
 
-  return { formulaProblems: read.problems, lineSpans, proofText };
+  return { formulaProblems: read.problems, lineSpans, proofText, statement };
 }

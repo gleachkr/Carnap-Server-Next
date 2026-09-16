@@ -76,8 +76,14 @@ import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import type {
   ProofFormulaReader,
   ProofRuleReader,
+  ProofVariable,
 } from "../aufbau-proof/formulas";
-import { ENGINE_RULE, ENGINE_TEXT } from "../aufbau-proof/formulas";
+import {
+  ENGINE_RULE,
+  ENGINE_TEXT,
+  unionVariables,
+} from "../aufbau-proof/formulas";
+import type { ProofStatement } from "../aufbau-proof/playground";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
 const HEADER_SEPARATOR = "\n----\n";
@@ -153,6 +159,12 @@ export interface TranslatedFitchProof {
   readonly lineSpans: readonly FitchLineSpan[];
   /** `${goalName}\n----\n${body}` — the full text handed to `compile`. */
   readonly proofText: string;
+  /**
+   * What the last line asserts — its ambient context and its formula, as the
+   * last emitted `$ … $` — and the variables the readings saw in it; `null`
+   * for a proof with no lines. What a playground exercise makes its goal.
+   */
+  readonly statement: ProofStatement | null;
 }
 
 /**
@@ -197,6 +209,8 @@ interface ParsedLine {
    *  outermost first — where the client draws each scope-bar. */
   readonly columns: readonly number[];
   readonly formula: string;
+  /** The variables the reading saw in `formula`; `null` where nothing read it. */
+  readonly variables: readonly ProofVariable[] | null;
   readonly isAssumption: boolean;
   /** Index of the first freshly-opened bar in {@link columns}: a deeper indent or
    *  a sibling-subproof split. Bars at or past it get the assumption rule drawn
@@ -328,6 +342,8 @@ function walkFitch(
   lines: ParsedLine[];
   rawLineCount: number;
   scopeAssumptions: ReadonlyMap<number, readonly string[]>;
+  /** The variables each read formula holds, by its engine text. */
+  variablesByFormula: ReadonlyMap<string, readonly ProofVariable[] | null>;
 } {
   const rawLines = fitchText.split("\n");
   const diagnostics: FitchDiagnostic[] = [];
@@ -359,6 +375,10 @@ function walkFitch(
   let nextScopeId = 1;
   const parsed: ParsedLine[] = [];
   const scopeAssumptions = new Map<number, string[]>([[0, []]]);
+  const variablesByFormula = new Map<
+    string,
+    readonly ProofVariable[] | null
+  >();
   // Scopes that have already emitted a derived (non-assumption) line. Used to
   // split sibling subproofs: a fresh assumption in a box that has derived
   // something begins a new box.
@@ -454,12 +474,18 @@ function walkFitch(
       columns,
       formula,
       isAssumption: justification.isAssumption,
+      variables: reading.ok ? (reading.variables ?? null) : null,
       openFrom,
       refs: justification.refs,
       rule: justification.rule,
       scopePath,
       sourceLine: line.sourceLine,
     });
+
+    variablesByFormula.set(
+      formula,
+      reading.ok ? (reading.variables ?? null) : null,
+    );
 
     if (justification.isAssumption) {
       const ownScope = scopePath[scopePath.length - 1] ?? 0;
@@ -475,6 +501,7 @@ function walkFitch(
     lines: parsed,
     rawLineCount: rawLines.length,
     scopeAssumptions,
+    variablesByFormula,
   };
 }
 
@@ -620,6 +647,7 @@ export function fitchToAuf(
     formulaProblems,
     lines: parsed,
     scopeAssumptions,
+    variablesByFormula,
   } = walkFitch(fitchText, assumptionRule, readFormula, readRule);
 
   // A subproof citation `a-b` must name one genuine subproof: line `a` (the
@@ -701,6 +729,7 @@ export function fitchToAuf(
   // context variables absorb whatever the cited lines' (smaller) contexts
   // don't cover, and discharge falls out when a closed scope leaves the path.
   const bodyLines: string[] = [];
+  let statement: ProofStatement | null = null;
 
   for (const [index, line] of parsed.entries()) {
     const seen = new Set<string>();
@@ -724,9 +753,24 @@ export function fitchToAuf(
     )
       .map((label) => `l${label}`)
       .join(", ");
+    const sequent = `${contextText} ${sequentSymbol} ${line.formula}`;
     bodyLines.push(
-      `l${index + 1}: $ ${contextText} ${sequentSymbol} ${line.formula} $ by ${line.rule} [${refText}]`,
+      `l${index + 1}: $ ${sequent} $ by ${line.rule} [${refText}]`,
     );
+
+    // The last line's sequent is the proof's statement, and its variables are
+    // those of the formulas in it — the context's and its own. A formula
+    // nothing read (engine text passed through) leaves the set unknown.
+    if (index === parsed.length - 1) {
+      statement = {
+        text: sequent,
+        variables: unionVariables(
+          [...formulas, line.formula].map(
+            (formula) => variablesByFormula.get(formula) ?? null,
+          ),
+        ),
+      };
+    }
   }
 
   const proofText = `${goalName}${HEADER_SEPARATOR}${bodyLines.join("\n")}`;
@@ -743,7 +787,7 @@ export function fitchToAuf(
     offset += body.length + 1;
   }
 
-  return { diagnostics, formulaProblems, lineSpans, proofText };
+  return { diagnostics, formulaProblems, lineSpans, proofText, statement };
 }
 
 /**

@@ -19,6 +19,9 @@ import {
 import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   goalBinderWarnings,
+  PLAYGROUND_HEADER,
+  parsePlaygroundAttribute,
+  parsePlaygroundBody,
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
@@ -46,6 +49,7 @@ const UNDERLINE = /^\s*-{3,}\s*$/;
 const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "options",
+  "playground",
   "system",
 ] as const;
 
@@ -62,6 +66,10 @@ const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
  * every emitted sequent, and the student's Fitch source never spells either.
  * Grading is identical to the linear type: the translated Fitch text compiles
  * to `.auf`, and the worker verifies the MMB against this frozen mm0.
+ *
+ * With `playground`, the body has no goal line: prose, then optionally the
+ * underline and a starter. Nothing is frozen beside the theory, and the goal
+ * is whatever the submitted proof's last line says (`aufbau-proof/playground.ts`).
  */
 export async function compileAufbauProofFitch(
   block: DirectiveBlock,
@@ -84,16 +92,21 @@ export async function compileAufbauProofFitch(
   );
   const title = block.attrs.title?.trim();
   const notations = requireProofNotations(block, theory, diagnostics);
-  const header = parseTheoremHeader(block, diagnostics);
+  const playground = parsePlaygroundAttribute(block, diagnostics);
+  const header = playground ? null : parseTheoremHeader(block, diagnostics);
+  const playgroundBody = playground
+    ? parsePlaygroundBody(block, diagnostics)
+    : null;
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
   }
 
   // The goal header must be followed by a '----' underline; the starter Fitch
-  // proof (which may be empty) is everything after it.
-  let starterBody = "";
-  let underlineIndex = -1;
+  // proof (which may be empty) is everything after it. A playground has no
+  // header, and its underline is optional.
+  let starterBody = playgroundBody?.starterBody ?? "";
+  let underlineIndex = playgroundBody?.underlineIndex ?? -1;
   if (header !== null) {
     const lines = block.bodyLines;
 
@@ -136,27 +149,37 @@ export async function compileAufbauProofFitch(
     id === null ||
     theory === undefined ||
     notations === null ||
-    header === null
+    (header === null && playgroundBody === null)
   ) {
     return null;
   }
 
   const { assumptionRule, contextSymbol, sequentSymbol } = notations;
-  const goalLine = block.bodyStartLine + header.headerIndex;
+  const promptLines =
+    header?.promptLines ?? playgroundBody?.promptLines ?? [];
+  /** What the starter is read against: the goal, or a playground's absence of one. */
+  const scope = header ?? PLAYGROUND_HEADER;
+  let goal: { readonly goalEngineDecl?: string } = {};
 
-  // The goal's binders shadow the theory's own lexicon for the length of the
-  // exercise (#253), which is how a rule schema is written and also how a
-  // letter quietly stops meaning what the author thinks. Warnings, so the
-  // author decides.
-  diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
+  if (header !== null) {
+    const goalLine = block.bodyStartLine + header.headerIndex;
 
-  // The goal is read the way the lines are (`goalEngineDeclaration`): the
-  // engine is handed what it can parse, and what it cannot is the author's
-  // to hear about here rather than the widget's to refuse.
-  const goal = readGoalDeclaration(theory, header, goalLine, diagnostics);
+    // The goal's binders shadow the theory's own lexicon for the length of the
+    // exercise (#253), which is how a rule schema is written and also how a
+    // letter quietly stops meaning what the author thinks. Warnings, so the
+    // author decides.
+    diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
-  if (goal === null) {
-    return null;
+    // The goal is read the way the lines are (`goalEngineDeclaration`): the
+    // engine is handed what it can parse, and what it cannot is the author's
+    // to hear about here rather than the widget's to refuse.
+    const read = readGoalDeclaration(theory, header, goalLine, diagnostics);
+
+    if (read === null) {
+      return null;
+    }
+
+    goal = read;
   }
 
   // The starter is the text the editor opens with, so a line the theory's
@@ -167,13 +190,13 @@ export async function compileAufbauProofFitch(
     const starterLine = block.bodyStartLine + underlineIndex + 1;
     const translated = fitchToAuf(
       starterBody,
-      header.goalName,
+      scope.goalName,
       assumptionRule,
       sequentSymbol,
       contextSymbol,
-      starterFormulaReader(theory, header, "sentence"),
-      ruleCitationShapes(theoryLanguageSource(theory, header.theoremDecl)),
-      starterRuleReader(theory, header),
+      starterFormulaReader(theory, scope, "sentence"),
+      ruleCitationShapes(theoryLanguageSource(theory, scope.theoremDecl)),
+      starterRuleReader(theory, scope),
     );
 
     for (const problem of translated.formulaProblems) {
@@ -195,10 +218,12 @@ export async function compileAufbauProofFitch(
     assumptionRule,
     contextSymbol,
     ...goal,
-    goalDecl: header.theoremDecl,
-    goalName: header.goalName,
+    ...(header === null
+      ? { playground: true }
+      : { goalDecl: header.theoremDecl }),
+    goalName: scope.goalName,
     options,
-    promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
+    promptHtml: await renderMarkdownSource(promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,
     }),

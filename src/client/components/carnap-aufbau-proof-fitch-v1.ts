@@ -53,6 +53,12 @@ import {
   proofRuleReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
+import type { PlaygroundGoal } from "../../worker/exercises/aufbau-proof/playground";
+import {
+  playgroundGoal,
+  playgroundGoalText,
+  playgroundTheoryText,
+} from "../../worker/exercises/aufbau-proof/playground";
 import { ruleCitationShapes } from "../../worker/exercises/aufbau-proof-fitch/citations";
 import {
   type AufbauProofFitchStringId,
@@ -353,7 +359,19 @@ const scopeGuides = ViewPlugin.fromClass(
 const SHADOW_STYLES = shadowStyles;
 
 class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
-  private mm0 = "";
+  /** The frozen theory: with the goal appended for an ordinary exercise, and
+   *  bare for a playground, whose goal is appended per compile. */
+  private theory: { readonly mm0: string; readonly source: string | null } = {
+    mm0: "",
+    source: null,
+  };
+  /** A playground derives its goal from the proof's last line; see
+   *  `aufbau-proof/playground.ts`. */
+  private playground = false;
+  /** The goal the last translation derived (playground only). */
+  private goal: PlaygroundGoal | null = null;
+  /** The goal row's statement, live in a playground. */
+  private statementView: HTMLElement | null = null;
   /** Reads a typed line in the theory's language; passes text through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
@@ -400,7 +418,8 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     }
 
     const theory = proofTheoryText(data);
-    this.mm0 = theory.mm0;
+    this.theory = theory;
+    this.playground = data.playground === true;
     this.readFormula = proofFormulaReader(
       theory.source,
       "sentence",
@@ -438,10 +457,14 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     goal.className = "proof-goal";
     const label = document.createElement("span");
     label.className = "proof-goal-label";
-    label.textContent = this.t("Prove");
+    // A playground's row says what the proof *proves*, and follows the proof.
+    label.textContent = this.t(this.playground ? "Proves" : "Prove");
     const statement = document.createElement("span");
     statement.className = "proof-goal-statement";
-    statement.textContent = goalText(theory, this.goalName);
+    statement.textContent = this.playground
+      ? ""
+      : goalText(theory, this.goalName);
+    this.statementView = statement;
     goal.append(label, statement);
     container.insertBefore(goal, actionsSlot);
 
@@ -568,9 +591,49 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   protected getAnswer(): unknown {
     return {
       fitchText: this.fitchText,
+      ...(this.goal === null ? {} : { goal: this.goal }),
       mmb: this.mmb,
       proofText: this.proofText,
     };
+  }
+
+  /**
+   * What this translation compiles against: the frozen text, or — in a
+   * playground — the frozen text plus the goal the translation's last line
+   * makes. `null` when there is nothing to compile: a playground with no
+   * lines yet, or one whose statement's variables the theory cannot name
+   * (the mark says so). Updates the goal row and the answer's goal as a side
+   * effect, since every caller wants both kept in step.
+   */
+  private compileTheory(
+    translation: ReturnType<typeof fitchToAuf>,
+  ): string | null {
+    if (!this.playground) {
+      return this.theory.mm0;
+    }
+
+    const goal =
+      translation.statement === null
+        ? null
+        : playgroundGoal(this.theory.source, translation.statement);
+    this.goal = goal;
+
+    if (this.statementView !== null) {
+      this.statementView.textContent =
+        goal === null ? "" : playgroundGoalText(this.theory.source, goal);
+    }
+
+    if (goal === null) {
+      if (translation.statement !== null) {
+        this.setMark(
+          "error",
+          this.t("Could not work out what the last line states."),
+        );
+      }
+      return null;
+    }
+
+    return playgroundTheoryText(this.theory, goal).mm0;
   }
 
   /** The certificate is compiled from the proof, not typed by the reader. */
@@ -618,6 +681,17 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     this.scheduleCompile();
   }
 
+  /** Nothing to compile: an empty playground, or one with no derivable goal. */
+  private settleWithoutCompile(): void {
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+    }
+    this.compileToken += 1;
+    this.mmb = "";
+    this.syncAnswer();
+  }
+
   private scheduleCompile(): void {
     if (this.debounceHandle !== null) {
       clearTimeout(this.debounceHandle);
@@ -643,6 +717,19 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       return;
     }
 
+    const mm0 = this.compileTheory(translation);
+
+    if (mm0 === null) {
+      this.fitchText = fitchText;
+      this.proofText = translation.proofText;
+      if (translation.statement === null) {
+        this.setMark("idle");
+      }
+      this.applyCompilerDiagnostics([], translation);
+      this.settleWithoutCompile();
+      return;
+    }
+
     let compiler: { compile(mm0: string, proof: string): CompileResult };
     try {
       compiler = await loadProofCompiler();
@@ -660,7 +747,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
 
     let result: CompileResult;
     try {
-      result = compiler.compile(this.mm0, translation.proofText);
+      result = compiler.compile(mm0, translation.proofText);
     } catch {
       // Some malformed input can make the compiler throw rather than returning
       // diagnostics. Don't let that reject and strand the spinner.

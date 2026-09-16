@@ -21,6 +21,9 @@ import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
   goalBinderWarnings,
+  PLAYGROUND_HEADER,
+  parsePlaygroundAttribute,
+  parsePlaygroundBody,
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
@@ -43,6 +46,7 @@ import {
 const AUFBAU_PROOF_TREE_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "options",
+  "playground",
   "system",
 ] as const;
 
@@ -56,6 +60,10 @@ const AUFBAU_PROOF_TREE_ATTRIBUTES = [
  * instead of a bare goal root; a starter that is a graph rather than a tree is
  * reported as malformed. Grading is identical to the linear type (a flattened
  * tree compiles to the same `.auf`, verified against this frozen mm0).
+ *
+ * With `playground`, the body has no goal line and the root is the student's
+ * to write: nothing is frozen beside the theory, and the goal is whatever the
+ * submitted tree's root says (`aufbau-proof/playground.ts`).
  */
 export async function compileAufbauProofTree(
   block: DirectiveBlock,
@@ -77,7 +85,11 @@ export async function compileAufbauProofTree(
     diagnostics,
   );
   const title = block.attrs.title?.trim();
-  const header = parseTheoremHeader(block, diagnostics);
+  const playground = parsePlaygroundAttribute(block, diagnostics);
+  const header = playground ? null : parseTheoremHeader(block, diagnostics);
+  const playgroundBody = playground
+    ? parsePlaygroundBody(block, diagnostics)
+    : null;
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
@@ -96,33 +108,52 @@ export async function compileAufbauProofTree(
   if (
     id === null ||
     theory === undefined ||
-    header === null ||
-    header.goalFormula.length === 0
+    (header === null && playgroundBody === null) ||
+    (header !== null && header.goalFormula.length === 0)
   ) {
     return null;
   }
 
-  const goalLine = block.bodyStartLine + header.headerIndex;
+  const promptLines =
+    header?.promptLines ?? playgroundBody?.promptLines ?? [];
+  /** What the starter is read against: the goal, or a playground's absence of one. */
+  const scope = header ?? PLAYGROUND_HEADER;
+  let goal: { readonly goalEngineDecl?: string } = {};
 
-  // The goal's binders shadow the theory's own lexicon for the length of the
-  // exercise (#253), which is how a rule schema is written and also how a
-  // letter quietly stops meaning what the author thinks. Warnings, so the
-  // author decides.
-  diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
+  if (header !== null) {
+    const goalLine = block.bodyStartLine + header.headerIndex;
 
-  // The goal is read the way the lines are (`goalEngineDeclaration`): the
-  // engine is handed what it can parse, and what it cannot is the author's
-  // to hear about here rather than the widget's to refuse.
-  const goal = readGoalDeclaration(theory, header, goalLine, diagnostics);
+    // The goal's binders shadow the theory's own lexicon for the length of the
+    // exercise (#253), which is how a rule schema is written and also how a
+    // letter quietly stops meaning what the author thinks. Warnings, so the
+    // author decides.
+    diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
-  if (goal === null) {
-    return null;
+    // The goal is read the way the lines are (`goalEngineDeclaration`): the
+    // engine is handed what it can parse, and what it cannot is the author's
+    // to hear about here rather than the widget's to refuse.
+    const read = readGoalDeclaration(theory, header, goalLine, diagnostics);
+
+    if (read === null) {
+      return null;
+    }
+
+    goal = read;
   }
 
   // An optional `----` + `.auf` body pre-populates the tree. A body that parses
   // to a graph (or is otherwise malformed) fails the compile with author feedback.
   let starterTree: ProofTreeNode | undefined;
-  const starter = extractStarterBody(block.bodyLines, header.headerIndex);
+  const starter =
+    header !== null
+      ? extractStarterBody(block.bodyLines, header.headerIndex)
+      : playgroundBody?.underlineIndex === null ||
+          playgroundBody?.underlineIndex === undefined
+        ? null
+        : {
+            starterBody: playgroundBody.starterBody,
+            underlineIndex: playgroundBody.underlineIndex,
+          };
   if (starter !== null && starter.starterBody.length > 0) {
     const parsed = parseProofTree(starter.starterBody);
     if (parsed.ok) {
@@ -132,9 +163,9 @@ export async function compileAufbauProofTree(
       // diagnostic and the student's squiggle the same judgement.
       const { formulaProblems } = flattenProofTree(
         parsed.tree,
-        header.goalName,
-        starterFormulaReader(theory, header, "sequent"),
-        starterRuleReader(theory, header),
+        scope.goalName,
+        starterFormulaReader(theory, scope, "sequent"),
+        starterRuleReader(theory, scope),
       );
 
       for (const problem of formulaProblems) {
@@ -174,11 +205,13 @@ export async function compileAufbauProofTree(
 
   const publicData: AufbauProofTreePublicData = {
     ...goal,
-    goalDecl: header.theoremDecl,
-    goalFormula: header.goalFormula,
-    goalName: header.goalName,
+    ...(header === null
+      ? { playground: true }
+      : { goalDecl: header.theoremDecl }),
+    goalFormula: header?.goalFormula ?? "",
+    goalName: scope.goalName,
     options,
-    promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
+    promptHtml: await renderMarkdownSource(promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,
     }),

@@ -14,6 +14,8 @@
  * See [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
+import type { PlaygroundGoal } from "../aufbau-proof/playground";
+import { isPlaygroundGoal } from "../aufbau-proof/playground";
 import type { AufbauProofOptions } from "../aufbau-proof/types";
 
 export const AUFBAU_PROOF_FITCH_KIND = "aufbau-proof-fitch@1";
@@ -82,6 +84,10 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *                      `source`/`mm0` above are what the join fills in from it.
  *                      Absent in an artifact compiled before the table existed,
  *                      which froze its text inline instead
+ *   - `playground`     set when the exercise has no goal of its own: no
+ *                      declaration is frozen, `goalName` is the fixed
+ *                      `playground`, and the answer carries the statement its
+ *                      proof derived (see `aufbau-proof/playground.ts`)
  */
 export interface AufbauProofFitchPublicData {
   readonly assumptionRule: string;
@@ -91,6 +97,7 @@ export interface AufbauProofFitchPublicData {
   readonly goalName: string;
   readonly mm0?: string;
   readonly options: AufbauProofOptions;
+  readonly playground?: boolean;
   readonly promptHtml: string;
   readonly sequentSymbol?: string;
   readonly source?: string;
@@ -108,6 +115,8 @@ export interface AufbauProofFitchPublicData {
  */
 export interface AufbauProofFitchAnswerData {
   readonly fitchText: string;
+  /** A playground's derived goal — what its certificate is verified against. */
+  readonly goal?: PlaygroundGoal;
   readonly proofText: string;
 }
 
@@ -143,6 +152,7 @@ export function isAufbauProofFitchAnswerData(
   return (
     isObject(value) &&
     typeof value.fitchText === "string" &&
-    typeof value.proofText === "string"
+    typeof value.proofText === "string" &&
+    (value.goal === undefined || isPlaygroundGoal(value.goal))
   );
 }

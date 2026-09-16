@@ -246,6 +246,10 @@ msgid "A platform with this issuer and client ID is already registered."
 msgstr "A platform with this issuer and client ID is already registered."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "A playground exercise takes its goal from the proof itself; remove the 'theorem …' header, or drop 'playground'."
+msgstr "A playground exercise takes its goal from the proof itself; remove the 'theorem …' header, or drop 'playground'."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "A Prawitz proof has no “#n” hypothesis leaves — write each premise as its own assumption line."
 msgstr "A Prawitz proof has no “#n” hypothesis leaves — write each premise as its own assumption line."
 
@@ -1144,6 +1148,10 @@ msgstr "Could not parse the goal's formula “{formula}”: {detail}"
 msgid "Could not read the value of {field}."
 msgstr "Could not read the value of {field}."
 
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "Could not work out what the last line states."
+msgstr "Could not work out what the last line states."
+
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Counterexample row"
 msgstr "Counterexample row"
@@ -1865,6 +1873,9 @@ msgid "Go to your courses"
 msgstr "Go to your courses"
 
 #: src/worker/exercises/aufbau-proof-fitch/assessment.ts
+#: src/worker/exercises/aufbau-proof-prawitz/assessment.ts
+#: src/worker/exercises/aufbau-proof-tree/assessment.ts
+#: src/worker/exercises/aufbau-proof/assessment.ts
 msgid "Goal"
 msgstr "Goal"
 
@@ -2898,6 +2909,10 @@ msgstr "Proof tree"
 #: src/worker/exercises/proof-engine-strings.ts
 msgid "Prove"
 msgstr "Prove"
+
+#: src/worker/exercises/proof-engine-strings.ts
+msgid "Proves"
+msgstr "Proves"
 
 #: src/worker/web/admin.tsx
 msgid "Provider"

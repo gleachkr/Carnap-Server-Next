@@ -52,10 +52,24 @@ by at most one other line, and exactly one root must remain uncited. Shared
 subproofs would form a graph, not a tree, and produce
 `proof_is_not_a_tree`. Duplicate the derivation in each branch instead.
 
-Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`, and
-`options`. `system` is required and names a preceding `aufbau-mm0` block or
-a built-in system. Common settings follow the [authoring
-reference][authoring].
+Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
+`options`, and `playground`. `system` is required and names a preceding
+`aufbau-mm0` block or a built-in system. Common settings follow the
+[authoring reference][authoring].
+
+`playground` (boolean) drops the goal: the body is the prompt, optionally
+followed by `----` and a starter, and the statement the proof proves is
+derived from the proof itself — the root node, which is the last line the flattener emits. The widget shows it live as
+"Proves", the answer carries it as `goal` (its `@vars` binders and the
+statement in engine text), and the worker rebuilds the same
+`theorem playground …` declaration from the answer, checks its binders
+against the system's `@vars` pools, and verifies the certificate against the
+theory plus that declaration. See `aufbau-proof/playground.ts`, and the
+[authoring reference][authoring] for the shared rules.
+In a playground the root is editable and starts empty, and "Add hypothesis"
+is disabled, since the goal has no hypotheses to cite. Over a theory whose
+nodes stay engine text (`gentzen-lk`), the root is read once in engine mode
+to find its variables.
 
 ## Formula parsing
 

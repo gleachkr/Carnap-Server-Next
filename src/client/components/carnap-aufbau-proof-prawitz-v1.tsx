@@ -54,6 +54,12 @@ import {
   proofRuleReader,
   proofTheoryText,
 } from "../../worker/exercises/aufbau-proof/formulas";
+import type { PlaygroundGoal } from "../../worker/exercises/aufbau-proof/playground";
+import {
+  playgroundGoal,
+  playgroundGoalText,
+  playgroundTheoryText,
+} from "../../worker/exercises/aufbau-proof/playground";
 import type { AufbauProofPrawitzStringId } from "../../worker/exercises/aufbau-proof-prawitz/strings";
 import type { PrawitzDiagnostic } from "../../worker/exercises/aufbau-proof-prawitz/translate";
 import { prawitzToAuf } from "../../worker/exercises/aufbau-proof-prawitz/translate";
@@ -794,6 +800,9 @@ function Editor(props: {
   /** Last focused node, or null before any focus; may no longer exist. */
   readonly focusedId: string | null;
   readonly goalFormula: string;
+  /** In a playground, the statement the derivation currently proves; `null`
+   *  for an ordinary exercise, whose goal is `goalFormula`. */
+  readonly proves: string | null;
   readonly onFocusItem: (id: string) => void;
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onRedo: () => void;
@@ -807,6 +816,7 @@ function Editor(props: {
 }): preact.JSX.Element {
   const { canRedo, canUndo, dispatch, doc, focusedId, goalFormula, t } =
     props;
+  const { proves } = props;
   const { onFocusItem, onNodeKeyDown, onRedo, onSelect, onUndo } = props;
   const { onToolbarEdit, registerNode, status } = props;
   const single =
@@ -827,7 +837,15 @@ function Editor(props: {
   return (
     <>
       <p class="pz-goal">
-        {t("Prove")} <code>{goalFormula}</code>
+        {proves === null ? (
+          <>
+            {t("Prove")} <code>{goalFormula}</code>
+          </>
+        ) : (
+          <>
+            {t("Proves")} <code>{proves}</code>
+          </>
+        )}
       </p>
       <div class="pz-toolbar">
         <button
@@ -972,7 +990,19 @@ function Editor(props: {
 // ---------------------------------------------------------------------------
 
 class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringId> {
-  private mm0 = "";
+  /** The frozen theory: with the goal appended for an ordinary exercise, and
+   *  bare for a playground, whose goal is appended per compile. */
+  private theory: { readonly mm0: string; readonly source: string | null } = {
+    mm0: "",
+    source: null,
+  };
+  /** A playground derives its goal from the root and its open assumptions;
+   *  see `aufbau-proof/playground.ts`. */
+  private playground = false;
+  /** The goal the last translation derived (playground only). */
+  private goal: PlaygroundGoal | null = null;
+  /** What the next compile runs against; `null` when there is nothing to. */
+  private compileMm0: string | null = null;
   /** Reads a node's text in the theory's language; passes it through where
    *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
@@ -1022,7 +1052,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     }
 
     const theory = proofTheoryText(data);
-    this.mm0 = theory.mm0;
+    this.theory = theory;
+    this.playground = data.playground === true;
     this.readFormula = proofFormulaReader(
       theory.source,
       "sentence",
@@ -1162,6 +1193,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     // *something* restorable (mmb stays empty, so it cannot grade correct).
     const first = this.doc.trees[0] ?? EMPTY_TREE;
     return {
+      ...(this.goal === null ? {} : { goal: this.goal }),
       mmb: this.mmb,
       proofText: this.proofText,
       tree: serialize(first, this.assumptionRule),
@@ -1514,6 +1546,13 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         focusedId={this.focusedId}
         goalFormula={this.goalFormula}
         onFocusItem={this.focusItem}
+        proves={
+          this.playground
+            ? this.goal === null
+              ? ""
+              : playgroundGoalText(this.theory.source, this.goal)
+            : null
+        }
         onNodeKeyDown={(event, id) => this.onTreeKeyDown(event, id)}
         onRedo={this.redo}
         onSelect={this.selectNode}
@@ -1537,6 +1576,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       this.lineSpans = [];
       this.structural = [];
       this.mmb = "";
+      this.goal = null;
+      this.compileMm0 = null;
       if (this.debounceHandle !== null) {
         clearTimeout(this.debounceHandle);
       }
@@ -1561,7 +1602,6 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     this.structural = translated.diagnostics;
     this.formulaProblems = translated.formulaProblems;
     this.mmb = "";
-    this.syncAnswer();
 
     // A node the language refused never reaches the compiler: what it would
     // send is the text the student typed, and the unification failure that
@@ -1572,6 +1612,9 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         this.debounceHandle = null;
       }
       this.compileToken += 1;
+      this.goal = null;
+      this.compileMm0 = null;
+      this.syncAnswer();
       this.setStatus({
         mark: "idle",
         markTitle: "",
@@ -1580,7 +1623,61 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       return;
     }
 
+    // The theory the certificate is compiled against, settled here so the
+    // goal line follows every edit rather than the debounced compile.
+    this.compileMm0 = this.compileTheory(
+      translated.statement,
+      single.formula.trim() === "",
+    );
+    this.syncAnswer();
+
+    if (this.compileMm0 === null) {
+      if (this.debounceHandle !== null) {
+        clearTimeout(this.debounceHandle);
+        this.debounceHandle = null;
+      }
+      this.compileToken += 1;
+      return;
+    }
+
     this.scheduleCompile();
+  }
+
+  /**
+   * What the derivation compiles against: the frozen text, or — in a
+   * playground — the frozen text plus the goal the root makes. `null` when
+   * there is nothing to compile: a playground whose root is empty, or whose
+   * statement's variables the theory cannot name (the mark says so).
+   */
+  private compileTheory(
+    statement: ReturnType<typeof prawitzToAuf>["statement"],
+    rootBlank: boolean,
+  ): string | null {
+    if (!this.playground) {
+      return this.theory.mm0;
+    }
+
+    const goal = rootBlank
+      ? null
+      : playgroundGoal(this.theory.source, statement);
+    this.goal = goal;
+
+    if (goal === null) {
+      this.setStatus(
+        rootBlank
+          ? { mark: "idle", markTitle: "", nodeErrors: {} }
+          : {
+              mark: "error",
+              markTitle: this.t(
+                "Could not work out what the last line states.",
+              ),
+              nodeErrors: this.structuralErrors(),
+            },
+      );
+      return null;
+    }
+
+    return playgroundTheoryText(this.theory, goal).mm0;
   }
 
   private scheduleCompile(): void {
@@ -1613,6 +1710,11 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   private async compile(): Promise<void> {
     const token = ++this.compileToken;
     const proof = this.proofText;
+    const mm0 = this.compileMm0;
+
+    if (mm0 === null) {
+      return;
+    }
 
     let compiler: LoadedCompiler;
     try {
@@ -1633,7 +1735,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
 
     let result: CompileResult;
     try {
-      result = compiler.compile(this.mm0, proof);
+      result = compiler.compile(mm0, proof);
     } catch {
       if (token !== this.compileToken) {
         return;

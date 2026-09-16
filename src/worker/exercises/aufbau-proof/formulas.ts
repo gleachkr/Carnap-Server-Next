@@ -54,6 +54,7 @@ import type {
   MathString,
   Scope,
   Statement,
+  Term,
 } from "@aufbau/syntax";
 import {
   parseSpec,
@@ -61,6 +62,7 @@ import {
   SurfaceLanguage,
   stripSyntaxAnnotations,
   surfaceVocabulary,
+  walkTerm,
 } from "@aufbau/syntax";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
@@ -76,8 +78,29 @@ import { roleIndex, sentenceSort } from "../../logic/specs/roles";
  */
 export type ProofFormulaShape = "sentence" | "sequent";
 
+/**
+ * One variable a reading met: a token from the sort's `@vars` pool, or a goal
+ * binder shadowing one. What a playground exercise (`playground.ts`) binds in
+ * the theorem it derives from the proof, since a statement's variables need
+ * declaring where a proof line's are bound for it.
+ */
+export interface ProofVariable {
+  readonly name: string;
+  readonly sort: string;
+}
+
+/**
+ * Surface text read to engine text. `variables` is every variable the term
+ * holds, deduplicated in first-occurrence order — and absent from a reading
+ * that never parsed, which is {@link ENGINE_TEXT}'s: text passed through
+ * holds whatever variables it holds, and nothing here has looked.
+ */
 export type ProofFormulaReading =
-  | { readonly ok: true; readonly text: string }
+  | {
+      readonly ok: true;
+      readonly text: string;
+      readonly variables?: readonly ProofVariable[];
+    }
   | { readonly ok: false; readonly errors: readonly SpecFormulaError[] };
 
 /** Surface text in, engine text out. */
@@ -214,8 +237,230 @@ export function proofFormulaReader(
       return { errors: formulaParseErrors(result.diagnostics), ok: false };
     }
 
-    return { ok: true, text: printTerm(language, result.term, "engine") };
+    return {
+      ok: true,
+      text: printTerm(language, result.term, "engine"),
+      variables: termVariables(result.term),
+    };
   };
+}
+
+/** The variables a term holds, deduplicated in first-occurrence order. */
+function termVariables(term: Term): readonly ProofVariable[] {
+  const seen = new Map<string, ProofVariable>();
+
+  walkTerm(term, (node) => {
+    if (node.kind === "variable" && !seen.has(node.name)) {
+      seen.set(node.name, { name: node.name, sort: node.sort });
+    }
+  });
+
+  return [...seen.values()];
+}
+
+/**
+ * The sort a whole *statement* — a proof line's `$ … $`, context and all —
+ * reads at: the sequent shape's sort, or, for a theory that names no role at
+ * all, the one sort it marks `provable`. `undefined` where even that is
+ * ambiguous.
+ *
+ * Reaching past the roles is deliberate and narrow. A theory that declares no
+ * `@syntax` — `gentzen-lk` — has lines nothing reads (#274), and a playground
+ * over it still has to learn which of a statement's tokens are variables so
+ * as to bind them; a file with exactly one provable sort has said which sort
+ * its statements are in, in MM0's own terms, and asking it that much is
+ * asking nothing it has not answered.
+ */
+function statementSort(read: ProofLanguage): string | undefined {
+  const bySequent = sortFor(read, "sequent");
+
+  if (bySequent !== undefined) {
+    return bySequent;
+  }
+
+  const provable = [...read.language.spec.sorts.values()].filter((sort) =>
+    sort.modifiers.includes("provable"),
+  );
+
+  return provable.length === 1 ? provable[0]?.name : undefined;
+}
+
+/**
+ * The union of several formulas' variables, first occurrence first, or `null`
+ * if any formula's are unknown — one unread formula is enough to make the
+ * whole statement's set unknowable. What a translator hands the playground
+ * for a line built from several formulas (a context and a conclusion).
+ */
+export function unionVariables(
+  perFormula: readonly (readonly ProofVariable[] | null)[],
+): readonly ProofVariable[] | null {
+  const seen = new Map<string, ProofVariable>();
+
+  for (const variables of perFormula) {
+    if (variables === null) {
+      return null;
+    }
+    for (const variable of variables) {
+      if (!seen.has(variable.name)) {
+        seen.set(variable.name, variable);
+      }
+    }
+  }
+
+  return [...seen.values()];
+}
+
+/**
+ * The theory's `@vars` pools, sort to tokens — the whole of what a playground
+ * goal may bind — or `null` where the text will not read as a spec.
+ */
+export function theoryVarsPools(
+  source: string | null | undefined,
+): ReadonlyMap<string, ReadonlySet<string>> | null {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+
+  if (read === null) {
+    return null;
+  }
+
+  const pools = new Map<string, ReadonlySet<string>>();
+
+  for (const sort of read.language.spec.sorts.values()) {
+    pools.set(sort.name, new Set(sort.vars));
+  }
+
+  return pools;
+}
+
+/**
+ * The variables a statement in *engine text* holds, or `null` where the
+ * theory cannot say.
+ *
+ * The fallback for a statement nobody read on the way in: a theory whose
+ * lines pass through as engine text ({@link ENGINE_TEXT}) hands the
+ * playground a last line it knows nothing about, and this reads that line
+ * once, at the statement's sort, with no goal in scope — so the only
+ * variables it can find are the `@vars` tokens, which is exactly the set a
+ * playground may bind. Read without the lints, since engine text is fully
+ * parenthesized by construction.
+ *
+ * Read in the library's *engine* mode — under the theory's own delimiters,
+ * the counterpart of `printTerm`'s engine mode — since that is the text this
+ * is handed: the surface delimiters would split what the engine keeps whole
+ * (Magnus's `P (snil)` into four names). Not the primary route even so: a
+ * statement that *was* read is answered from the reading that produced it,
+ * and this is asked only where there was none.
+ */
+export function statementVariables(
+  source: string | null | undefined,
+  statement: string,
+): readonly ProofVariable[] | null {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+  const sort = read === null ? undefined : statementSort(read);
+
+  if (read === null || sort === undefined) {
+    return null;
+  }
+
+  const result = read.language.parse(statement, {
+    lints: false,
+    mode: "engine",
+    scope: new Map(),
+    sort,
+  });
+
+  return result.ok ? termVariables(result.term) : null;
+}
+
+/**
+ * A statement in engine text, shown the way the theory's language would
+ * write it — or `null` where the language cannot read it back.
+ *
+ * What a playground shows above the proof and what its review names as the
+ * goal. The statement is engine text, so it is read in engine mode, at its
+ * sort, with `binders` in scope (a goal's own binders are what make its
+ * variables legible), and printed in display mode: the textbook's spellings,
+ * `¬P` for `(¬ (P (snil)))`. A sequent is
+ * split at its turnstile and its context at its join, so the pieces get the
+ * spacing a reader expects around `⊢` and `,` — the printer sets a
+ * judgement tight, having no convention for one — and the empty context is
+ * shown as nothing rather than as `_`.
+ *
+ * Only where the theory names a sort to read the shape at ({@link sortFor}):
+ * a theory with no roles has no display conventions either, and its
+ * statement — engine text the student typed — is better shown as typed
+ * than re-set by a printer with nothing to go on.
+ */
+export function statementDisplayText(
+  source: string | null | undefined,
+  statement: string,
+  binders: readonly ProofVariable[],
+): string | null {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+  const sort = read === null ? undefined : sortFor(read, "sequent");
+
+  if (read === null || sort === undefined) {
+    return null;
+  }
+
+  const { language } = read;
+  const result = language.parse(statement, {
+    lints: false,
+    mode: "engine",
+    scope: new Map(binders.map((binder) => [binder.name, binder.sort])),
+    sort,
+  });
+
+  if (!result.ok) {
+    return null;
+  }
+
+  const index = roleIndex(language);
+  const turnstile = index.termFor("turnstile");
+  const join = index.termFor("context-join");
+  const term = result.term;
+
+  if (
+    turnstile === null ||
+    term.kind !== "app" ||
+    term.term !== turnstile ||
+    term.args.length !== 2
+  ) {
+    return printTerm(language, term, "display");
+  }
+
+  const [context, conclusion] = term.args as readonly [Term, Term];
+  const formulas: string[] = [];
+  const collect = (node: Term): void => {
+    if (node.kind === "app" && node.term === join) {
+      for (const arg of node.args) {
+        collect(arg);
+      }
+      return;
+    }
+
+    // A nullary constructor at the context's own sort is the empty context.
+    if (node.kind === "app" && node.args.length === 0) {
+      return;
+    }
+
+    formulas.push(printTerm(language, node, "display"));
+  };
+
+  collect(context);
+
+  const contextText = formulas.join(
+    `${index.spellingFor("context-join") ?? ","} `,
+  );
+  const turnstileText = index.spellingFor("turnstile") ?? "⊢";
+  const conclusionText = printTerm(language, conclusion, "display");
+
+  return contextText.length === 0
+    ? `${turnstileText} ${conclusionText}`
+    : `${contextText} ${turnstileText} ${conclusionText}`;
 }
 
 /**
@@ -341,13 +586,22 @@ export function readNodeFormulas<
   root: Node,
   readFormula: ProofFormulaReader,
   shouldRead: (node: Node) => boolean = () => true,
-): { readonly problems: readonly NodeFormulaProblem[]; readonly root: Node } {
+): {
+  readonly problems: readonly NodeFormulaProblem[];
+  readonly root: Node;
+  /** The variables each read node's formula holds, by node id; `null` where
+   *  nothing read it. What a playground's statement is bound from. */
+  readonly variables: ReadonlyMap<string, readonly ProofVariable[] | null>;
+} {
   const problems: NodeFormulaProblem[] = [];
+  const variables = new Map<string, readonly ProofVariable[] | null>();
 
   const visit = (node: Node): Node => {
     const reading = shouldRead(node)
       ? readFormula(node.formula)
       : ({ ok: true, text: node.formula } as const);
+
+    variables.set(node.id, reading.ok ? (reading.variables ?? null) : null);
 
     if (!reading.ok) {
       for (const error of reading.errors) {
@@ -365,7 +619,9 @@ export function readNodeFormulas<
     } as Node;
   };
 
-  return { problems, root: visit(root) };
+  const read = visit(root);
+
+  return { problems, root: read, variables };
 }
 
 /**
@@ -404,7 +660,12 @@ export function theoryLanguageSource(
   theory: { readonly source: string },
   theoremDecl: string,
 ): string {
-  return `${theory.source}\n${theoremDecl}`;
+  // No declaration, no newline: a playground exercise appends its goal only
+  // once the proof has one, and until then the text is the theory's alone —
+  // the same bytes the join hands the widget, so the caches key alike.
+  return theoremDecl.length === 0
+    ? theory.source
+    : `${theory.source}\n${theoremDecl}`;
 }
 
 /**

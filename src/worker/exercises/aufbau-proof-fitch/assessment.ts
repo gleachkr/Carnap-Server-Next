@@ -23,6 +23,12 @@ import {
   proofRuleSpellings,
   proofTheoryText,
 } from "../aufbau-proof/formulas";
+import {
+  answerGoal,
+  isPlaygroundExercise,
+  playgroundGoalText,
+  verificationText,
+} from "../aufbau-proof/playground";
 import { verifyMmb } from "../aufbau-proof/verifier";
 import { renderAufbauProofFitchReview } from "./read-only-view";
 import type {
@@ -57,22 +63,32 @@ function fitchAnswerData(
  * on the goal and means nothing to a reader — least of all here, where it sits
  * beside the exercise id it is free to differ from.
  *
+ * A playground was asked nothing, and its goal is the one the answer derived
+ * — the statement the recorded verdict is about.
+ *
  * The name is still the fallback, as it was the whole of this line before, for
  * a declaration this artifact's text does not carry.
  */
 function reviewGoal(
   publicData: AufbauProofFitchPublicData | null,
+  answer: AufbauProofFitchAnswerData,
   declaration: ExerciseManifestItem,
 ): string {
   if (publicData === null) {
     return declaration.id;
   }
 
+  const theory = proofTheoryText(publicData);
+
+  if (isPlaygroundExercise(publicData)) {
+    return answer.goal === undefined
+      ? declaration.id
+      : playgroundGoalText(theory.source, answer.goal);
+  }
+
   return (
-    goalStatementText(
-      proofTheoryText(publicData).source,
-      publicData.goalName,
-    ) ?? publicData.goalName
+    goalStatementText(theory.source, publicData.goalName) ??
+    publicData.goalName
   );
 }
 
@@ -91,7 +107,7 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
 
   normalizeAnswer(
     envelope: AnswerEnvelope,
-    _declaration: ExerciseManifestItem,
+    declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
     if (envelope.kind !== this.answerKind) {
       return {
@@ -159,10 +175,29 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
       };
     }
 
+    // A playground's goal travels with the answer, since the artifact has
+    // none: without it there is nothing to verify the certificate against.
+    const goal = answerGoal(envelope.data);
+
+    if (isPlaygroundExercise(declaration.publicData) && goal === undefined) {
+      return {
+        diagnostics: [
+          diagnostic(
+            "malformed_answer_data",
+            "A playground proof answer needs the goal its proof derived.",
+            ["data", "goal"],
+          ),
+        ],
+        ok: false,
+        reason: "malformed",
+      };
+    }
+
     return {
       answer: {
         data: {
           fitchText: envelope.data.fitchText,
+          ...(goal === undefined ? {} : { goal }),
           proofText: envelope.data.proofText,
         } as unknown as JsonValue,
         kind: this.answerKind,
@@ -174,7 +209,7 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
   }
 
   async evaluate(
-    _answer: NormalizedAnswer,
+    answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
     context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
@@ -210,11 +245,21 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
 
     // The certificate is verified against the frozen mm0 — never the student's
     // Fitch text or the translated proof — so a valid MMB proving the declared
-    // goal is the definition of correct, however the proof was written.
-    const result = await verifyMmb(
-      proofTheoryText(declaration.publicData).mm0,
-      mmb,
-    );
+    // goal is the definition of correct, however the proof was written. A
+    // playground's goal is the answer's own, appended to the same frozen text
+    // once it has been checked (`verificationText`).
+    const theory = verificationText(declaration.publicData, answer.data);
+
+    if (!theory.ok) {
+      return {
+        ...base,
+        awardedScore: 0,
+        feedback: { diagnostics: [{ code: `playground_${theory.problem}` }] },
+        status: "invalid",
+      };
+    }
+
+    const result = await verifyMmb(theory.mm0, mmb);
 
     if (result.errored) {
       return {
@@ -246,7 +291,7 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
       details: [
         {
           label: context.i18n.t("Goal"),
-          value: reviewGoal(publicData, declaration),
+          value: reviewGoal(publicData, data, declaration),
         },
       ],
       elementHtml: renderAufbauProofFitchReview(

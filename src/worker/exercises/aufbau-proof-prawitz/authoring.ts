@@ -21,6 +21,9 @@ import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
   goalBinderWarnings,
+  PLAYGROUND_HEADER,
+  parsePlaygroundAttribute,
+  parsePlaygroundBody,
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
@@ -85,6 +88,7 @@ function starterStructuralDiagnostic(
 const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "options",
+  "playground",
   "system",
 ] as const;
 
@@ -109,6 +113,10 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
  * identical to the sibling proof types: the translated tree compiles to
  * `.auf` in the browser, and the resulting MMB certificate is verified
  * against this frozen mm0.
+ *
+ * With `playground`, the body has no goal line: nothing is frozen beside the
+ * theory, and the goal is whatever the submitted tree's root says, dependency
+ * context included (`aufbau-proof/playground.ts`).
  */
 export async function compileAufbauProofPrawitz(
   block: DirectiveBlock,
@@ -131,7 +139,11 @@ export async function compileAufbauProofPrawitz(
   );
   const notations = requireProofNotations(block, theory, diagnostics);
   const title = block.attrs.title?.trim();
-  const header = parseTheoremHeader(block, diagnostics);
+  const playground = parsePlaygroundAttribute(block, diagnostics);
+  const header = playground ? null : parseTheoremHeader(block, diagnostics);
+  const playgroundBody = playground
+    ? parsePlaygroundBody(block, diagnostics)
+    : null;
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
@@ -151,36 +163,55 @@ export async function compileAufbauProofPrawitz(
     id === null ||
     theory === undefined ||
     notations === null ||
-    header === null ||
-    header.goalFormula.length === 0
+    (header === null && playgroundBody === null) ||
+    (header !== null && header.goalFormula.length === 0)
   ) {
     return null;
   }
 
   const { assumptionRule, contextSymbol, sequentSpellings, sequentSymbol } =
     notations;
-  const goalLine = block.bodyStartLine + header.headerIndex;
+  const promptLines =
+    header?.promptLines ?? playgroundBody?.promptLines ?? [];
+  /** What the starter is read against: the goal, or a playground's absence of one. */
+  const scope = header ?? PLAYGROUND_HEADER;
+  let goal: { readonly goalEngineDecl?: string } = {};
 
-  // The goal's binders shadow the theory's own lexicon for the length of the
-  // exercise (#253), which is how a rule schema is written and also how a
-  // letter quietly stops meaning what the author thinks. Warnings, so the
-  // author decides.
-  diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
+  if (header !== null) {
+    const goalLine = block.bodyStartLine + header.headerIndex;
 
-  // The goal is read the way the lines are (`goalEngineDeclaration`): the
-  // engine is handed what it can parse, and what it cannot is the author's
-  // to hear about here rather than the widget's to refuse.
-  const goal = readGoalDeclaration(theory, header, goalLine, diagnostics);
+    // The goal's binders shadow the theory's own lexicon for the length of the
+    // exercise (#253), which is how a rule schema is written and also how a
+    // letter quietly stops meaning what the author thinks. Warnings, so the
+    // author decides.
+    diagnostics.push(...goalBinderWarnings(theory, header, goalLine));
 
-  if (goal === null) {
-    return null;
+    // The goal is read the way the lines are (`goalEngineDeclaration`): the
+    // engine is handed what it can parse, and what it cannot is the author's
+    // to hear about here rather than the widget's to refuse.
+    const read = readGoalDeclaration(theory, header, goalLine, diagnostics);
+
+    if (read === null) {
+      return null;
+    }
+
+    goal = read;
   }
 
   // An optional `----` + starter body pre-populates the editor. A starter that
   // fails to parse — or whose discharge structure the translator rejects —
   // fails the compile with author feedback, not the student's error banner.
   let starterTree: PrawitzProofNode | undefined;
-  const starter = extractStarterBody(block.bodyLines, header.headerIndex);
+  const starter =
+    header !== null
+      ? extractStarterBody(block.bodyLines, header.headerIndex)
+      : playgroundBody?.underlineIndex === null ||
+          playgroundBody?.underlineIndex === undefined
+        ? null
+        : {
+            starterBody: playgroundBody.starterBody,
+            underlineIndex: playgroundBody.underlineIndex,
+          };
   if (starter !== null && starter.starterBody.length > 0) {
     const lineFor = (bodyLine: number | null | undefined): number =>
       block.bodyStartLine +
@@ -188,7 +219,7 @@ export async function compileAufbauProofPrawitz(
         ? starter.underlineIndex
         : starter.underlineIndex + 1 + bodyLine);
 
-    const readRule = starterRuleReader(theory, header);
+    const readRule = starterRuleReader(theory, scope);
     const parsed = parsePrawitzStarter(
       starter.starterBody,
       assumptionRule,
@@ -208,11 +239,11 @@ export async function compileAufbauProofPrawitz(
 
     const translated = prawitzToAuf(
       parsed.tree,
-      header.goalName,
+      scope.goalName,
       assumptionRule,
       sequentSymbol,
       contextSymbol,
-      starterFormulaReader(theory, header, "sentence"),
+      starterFormulaReader(theory, scope, "sentence"),
       readRule,
     );
 
@@ -252,11 +283,13 @@ export async function compileAufbauProofPrawitz(
     assumptionRule,
     contextSymbol,
     ...goal,
-    goalDecl: header.theoremDecl,
-    goalFormula: header.goalFormula,
-    goalName: header.goalName,
+    ...(header === null
+      ? { playground: true }
+      : { goalDecl: header.theoremDecl }),
+    goalFormula: header?.goalFormula ?? "",
+    goalName: scope.goalName,
     options,
-    promptHtml: await renderMarkdownSource(header.promptLines.join("\n"), {
+    promptHtml: await renderMarkdownSource(promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,
     }),

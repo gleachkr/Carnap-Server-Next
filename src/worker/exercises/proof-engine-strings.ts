@@ -23,10 +23,20 @@ export function buildProofEngineStrings(i18n: Translator) {
     "Could not load the proof engine.": i18n.t(
       "Could not load the proof engine.",
     ),
+    /**
+     * A playground's mark when the proof has a last line but the theory
+     * cannot say which of its tokens are variables, so no goal can be
+     * declared for it (see `aufbau-proof/playground.ts`).
+     */
+    "Could not work out what the last line states.": i18n.t(
+      "Could not work out what the last line states.",
+    ),
     /** Fallback when a compiler diagnostic arrives with no readable message. */
     "Problem in the proof.": i18n.t("Problem in the proof."),
     /** Label on the goal row, before the sequent the student must derive. */
     Prove: i18n.t("Prove"),
+    /** The same row in a playground, before the sequent the proof derives. */
+    Proves: i18n.t("Proves"),
     /**
      * Accessible name of the read-only editor a marked proof is shown in. A
      * CodeMirror view has role `textbox` and no name of its own, so without this a

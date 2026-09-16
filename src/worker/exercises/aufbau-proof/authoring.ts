@@ -44,6 +44,7 @@ import {
   proofRuleReader,
   theoryLanguageSource,
 } from "./formulas";
+import { PLAYGROUND_GOAL_NAME } from "./playground";
 import type {
   AufbauProofOptions,
   CompiledAufbauProofPublicData,
@@ -500,10 +501,92 @@ export function extractStarterBody(
   return null;
 }
 
+/**
+ * The `playground` attribute: a proof exercise with no goal of its own, whose
+ * statement is whatever its proof proves (see `playground.ts`). A bare
+ * `{playground}` means true.
+ */
+export function parsePlaygroundAttribute(
+  block: DirectiveBlock,
+  diagnostics: CompilerDiagnostic[],
+): boolean {
+  return parseBooleanAttribute(
+    block.attrs.playground,
+    block.line,
+    "playground",
+    diagnostics,
+  );
+}
+
+/**
+ * The header a playground's starter is read against: the fixed goal name, and
+ * no declaration — nothing is appended to the theory until the proof has a
+ * last line. Shaped like {@link TheoremHeader} so the starter readers take it.
+ */
+export const PLAYGROUND_HEADER = {
+  goalName: PLAYGROUND_GOAL_NAME,
+  theoremDecl: "",
+} as const;
+
+/** A playground directive body: prose, then an optional `----` + starter. */
+export interface PlaygroundBody {
+  readonly promptLines: readonly string[];
+  readonly starterBody: string;
+  /** Index of the underline within `block.bodyLines`, or `null` without one. */
+  readonly underlineIndex: number | null;
+}
+
+/**
+ * Split a *playground* directive body: the prompt is everything above the
+ * first `----` underline, the starter everything below it; with no underline
+ * the whole body is prompt. There is no `theorem` header to find, and one
+ * present is refused rather than ignored: an author who wrote a goal and set
+ * `playground` has said two things, and the exercise should not quietly be
+ * the one they did not mean. (The converse holds too — a directive *without*
+ * `playground` and without a header is still `missing_theorem_header`, so a
+ * typo'd header never turns an exercise into a playground.)
+ */
+export function parsePlaygroundBody(
+  block: DirectiveBlock,
+  diagnostics: CompilerDiagnostic[],
+): PlaygroundBody | null {
+  const lines = block.bodyLines;
+
+  for (const [index, line] of lines.entries()) {
+    if (THEOREM_HEADER.test(line)) {
+      diagnostics.push(
+        diagnostic(
+          block.bodyStartLine + index,
+          "playground_declares_goal",
+          "A playground exercise takes its goal from the proof itself; remove the 'theorem …' header, or drop 'playground'.",
+        ),
+      );
+      return null;
+    }
+  }
+
+  const underlineIndex = lines.findIndex((line) => UNDERLINE.test(line));
+
+  if (underlineIndex === -1) {
+    return { promptLines: lines, starterBody: "", underlineIndex: null };
+  }
+
+  return {
+    promptLines: lines.slice(0, underlineIndex),
+    starterBody: lines
+      .slice(underlineIndex + 1)
+      .join("\n")
+      .trim(),
+    underlineIndex,
+  };
+}
+
 interface ProofBody {
   readonly goalName: string;
-  /** The MM0 theorem declaration, normalized to end with a single `;`. */
+  /** The MM0 theorem declaration, normalized to end with a single `;`;
+   *  empty for a playground, which declares its goal from the proof. */
   readonly theoremDecl: string;
+  readonly playground: boolean;
   readonly promptLines: readonly string[];
   readonly starterBody: string;
 }
@@ -517,8 +600,23 @@ interface ProofBody {
  */
 function parseProofBody(
   block: DirectiveBlock,
+  playground: boolean,
   diagnostics: CompilerDiagnostic[],
 ): ProofBody | null {
+  if (playground) {
+    const body = parsePlaygroundBody(block, diagnostics);
+
+    return body === null
+      ? null
+      : {
+          goalName: PLAYGROUND_GOAL_NAME,
+          playground: true,
+          promptLines: body.promptLines,
+          starterBody: body.starterBody,
+          theoremDecl: "",
+        };
+  }
+
   const header = parseTheoremHeader(block, diagnostics);
 
   if (header === null) {
@@ -561,6 +659,7 @@ function parseProofBody(
 
   return {
     goalName: header.goalName,
+    playground: false,
     promptLines: header.promptLines,
     starterBody,
     theoremDecl: header.theoremDecl,
@@ -859,6 +958,7 @@ export function requireSystem(
 const AUFBAU_PROOF_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
   "options",
+  "playground",
   "system",
 ] as const;
 
@@ -889,7 +989,8 @@ export async function compileAufbauProof(
     diagnostics,
   );
   const title = block.attrs.title?.trim();
-  const body = parseProofBody(block, diagnostics);
+  const playground = parsePlaygroundAttribute(block, diagnostics);
+  const body = parseProofBody(block, playground, diagnostics);
 
   if (id !== null) {
     validateExerciseId(block, id, diagnostics);
@@ -899,8 +1000,12 @@ export async function compileAufbauProof(
     return null;
   }
 
+  // A playground freezes no declaration: the join appends nothing, and the
+  // goal is whatever the submitted proof's last line says (`playground.ts`).
   const publicData: CompiledAufbauProofPublicData = {
-    goalDecl: body.theoremDecl,
+    ...(body.playground
+      ? { playground: true }
+      : { goalDecl: body.theoremDecl }),
     goalName: body.goalName,
     options,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
