@@ -1,0 +1,34 @@
+/*
+ * The content layer's small utilities, after the exercise chrome: the note on
+ * formula faces, and the classes everything else leans on. `.visually-hidden`
+ * restyles the one the exercise-group block declares, which is why this comes
+ * after it (see ./styles.ts).
+ */
+
+/* Formulas are set in --mono-font by the widget that shows them, each in its
+   own shadow styles. There was a `.formula, .proof-formula` rule here setting
+   them in Georgia italic; no markup has carried either class for as long as
+   the classes have existed, so it was a fourth opinion about the face that
+   nothing could act on. */
+
+.small {
+  color: var(--ink-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.muted {
+  color: var(--ink-muted);
+}
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}

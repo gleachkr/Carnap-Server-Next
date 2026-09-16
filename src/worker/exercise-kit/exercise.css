@@ -1,12 +1,10 @@
 /*
- * The content layer, continued: exercise chrome — prompts, the action bar, the
- * correctness mark, load failures — plus formula type and the small utilities
- * everything else leans on.
- *
- * Split from ./content.css rather than appended to it because the shared
- * exercise-group rules have to be spliced *between* the two: this file
- * restyles `.exercise-prompt` and `.visually-hidden`, which that block
- * declares. See ./styles.ts.
+ * The kit's stylesheet: the chrome every exercise shares on the page — the
+ * prompt, the status and rubric lines, the action bar `exercise-kit/actions.ts`
+ * emits, the correctness mark `exercise-kit/correctness-mark.ts` defines, and
+ * the load-failure notice. Served inside the content layer by
+ * `web/styles.ts`, after the exercise-group block: this file restyles
+ * `.exercise-prompt`, which that block declares.
  */
 
 .exercise-prompt {
@@ -196,34 +194,4 @@
   color: var(--red);
   font-size: 0.85rem;
   margin-top: 0.6rem;
-}
-
-/* Formulas are set in --mono-font by the widget that shows them, each in its
-   own shadow styles. There was a `.formula, .proof-formula` rule here setting
-   them in Georgia italic; no markup has carried either class for as long as
-   the classes have existed, so it was a fourth opinion about the face that
-   nothing could act on. */
-
-/* Utilities */
-
-.small {
-  color: var(--ink-muted);
-  font-size: 0.82rem;
-  line-height: 1.45;
-}
-
-.muted {
-  color: var(--ink-muted);
-}
-
-.visually-hidden {
-  border: 0;
-  clip: rect(0 0 0 0);
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  padding: 0;
-  position: absolute;
-  white-space: nowrap;
-  width: 1px;
 }
