@@ -19,6 +19,26 @@ export function escapeHtml(value: string): string {
     .replaceAll("'", "&#39;");
 }
 
+/**
+ * JSON safe to embed in a `<script type="application/json">` payload: `<`/`&`
+ * can't start a closing tag or an entity, and the two raw line separators are
+ * illegal in JS string literals.
+ *
+ * Here beside {@link escapeHtml} rather than in `web/`, because everything
+ * that emits a payload needs it — the content document, the UI-string blocks,
+ * and the exercise hydration carrier in the kit, which must not reach up into
+ * the web layer for it — and routing them all through `content-document.tsx`
+ * made a cycle once the scripts moved out into their own files.
+ */
+export function jsonScriptContent(value: unknown): string {
+  return JSON.stringify(value)
+    .replaceAll("&", "\\u0026")
+    .replaceAll("<", "\\u003c")
+    .replaceAll(">", "\\u003e")
+    .replaceAll(" ", "\\u2028")
+    .replaceAll(" ", "\\u2029");
+}
+
 export function contentRevisionAttribute(contentRevisionId?: string): string {
   if (contentRevisionId === undefined) {
     return "";

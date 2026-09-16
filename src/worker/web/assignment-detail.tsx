@@ -16,6 +16,7 @@ import {
   TRUTH_TABLE_KIND,
   TRUTH_TABLE_SCHEMA_VERSION,
 } from "../application/content/registry";
+import { jsonScriptContent } from "../application/content/render-support";
 import {
   componentAssetsForArtifact,
   createDefaultComponentRegistry,
@@ -137,7 +138,6 @@ import {
   artifactDocumentProps,
   renderContentDocument,
 } from "./content-document";
-import { jsonScriptContent } from "./json-script";
 import {
   assessmentModeLabel,
   assessmentModeOptions,

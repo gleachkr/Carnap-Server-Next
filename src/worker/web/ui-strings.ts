@@ -1,4 +1,5 @@
 import { buildDiagnosticStrings } from "../application/content/diagnostic-strings";
+import { jsonScriptContent } from "../application/content/render-support";
 import type { EvaluatorKind } from "../domain/assessment";
 import { buildExerciseActionsStrings } from "../exercise-kit/actions";
 import {
@@ -10,7 +11,6 @@ import {
   placeholders,
   type Translator,
 } from "../i18n/translator";
-import { jsonScriptContent } from "./json-script";
 import {
   evaluatorKindLabel,
   type ReviewState,

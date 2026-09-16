@@ -1,6 +1,6 @@
+import { jsonScriptContent } from "../application/content/render-support";
 import type { ExerciseFeedback } from "../domain/exercises";
 import type { JsonValue } from "../domain/json";
-import { jsonScriptContent } from "../web/json-script";
 import { keyedPublicData } from "./systems/join";
 
 /**

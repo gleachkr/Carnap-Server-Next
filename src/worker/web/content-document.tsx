@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
+import { jsonScriptContent } from "../application/content/render-support";
 import type {
   CompiledContentArtifact,
   CompiledSystems,
@@ -11,7 +12,6 @@ import contentDocumentStyles from "./content-document.css" with {
   type: "text",
 };
 import { I18nProvider } from "./i18n-context";
-import { jsonScriptContent } from "./json-script";
 import { CONTENT_SCRIPT_ASSET } from "./script-assets";
 import { CONTENT_STYLE_SHEET } from "./style-assets";
 import { CONTENT_STYLES } from "./styles";
