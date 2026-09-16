@@ -1,3 +1,6 @@
+import type { MultipleChoicePublicData } from "../../domain/content";
+import type { JsonValue } from "../../domain/json";
+
 export type {
   MultipleChoiceAnswerData,
   MultipleChoiceMode,
@@ -15,3 +18,29 @@ export const MULTIPLE_CHOICE_COMPONENT_METADATA = {
   component: "carnap-multiple-choice",
   componentVersion: "1",
 } as const;
+
+function isObject(value: JsonValue): value is Record<string, JsonValue> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function isMultipleChoicePublicData(
+  value: JsonValue,
+): value is JsonValue & MultipleChoicePublicData {
+  if (!isObject(value)) {
+    return false;
+  }
+
+  const options = value.options;
+
+  return (
+    (value.mode === "single" || value.mode === "multiple") &&
+    typeof value.promptHtml === "string" &&
+    Array.isArray(options) &&
+    options.every(
+      (option) =>
+        isObject(option) &&
+        typeof option.id === "string" &&
+        typeof option.html === "string",
+    )
+  );
+}

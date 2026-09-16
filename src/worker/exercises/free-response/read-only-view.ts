@@ -1,13 +1,12 @@
 import {
   escapeHtml,
   exerciseRootAttributes,
-  hasPromptHtml,
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
 import { exerciseGroupLabel, exerciseLegendHtml } from "../group";
-import { FREE_RESPONSE_KIND } from "./types";
+import { FREE_RESPONSE_KIND, isFreeResponsePublicData } from "./types";
 
 export function renderFreeResponse(
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
@@ -15,7 +14,7 @@ export function renderFreeResponse(
 ): string {
   if (
     node.exerciseKind !== FREE_RESPONSE_KIND ||
-    !hasPromptHtml(node.publicData)
+    !isFreeResponsePublicData(node.publicData)
   ) {
     return `<div data-component="${escapeHtml(node.render.component)}" data-exercise-id="${escapeHtml(node.exerciseId)}"></div>`;
   }

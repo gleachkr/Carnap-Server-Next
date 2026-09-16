@@ -1,3 +1,6 @@
+import type { FreeResponsePublicData } from "../../domain/content";
+import type { JsonValue } from "../../domain/json";
+
 export type {
   FreeResponseAnswerData,
   FreeResponsePrivateData,
@@ -15,3 +18,13 @@ export const FREE_RESPONSE_COMPONENT_METADATA = {
   component: "carnap-free-response",
   componentVersion: "1",
 } as const;
+
+function isObject(value: JsonValue): value is Record<string, JsonValue> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function isFreeResponsePublicData(
+  value: JsonValue,
+): value is JsonValue & FreeResponsePublicData {
+  return isObject(value) && typeof value.promptHtml === "string";
+}

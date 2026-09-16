@@ -17,10 +17,6 @@ import {
   TRUTH_TABLE_SCHEMA_VERSION,
 } from "../application/content/registry";
 import {
-  hasPromptHtml,
-  isMultipleChoicePublicData,
-} from "../application/content/render-support";
-import {
   componentAssetsForArtifact,
   createDefaultComponentRegistry,
   exerciseHydrationForArtifact,
@@ -90,6 +86,7 @@ import {
   AUFBAU_PROOF_TREE_SCHEMA_VERSION,
   isAufbauProofTreePublicData,
 } from "../exercises/aufbau-proof-tree/types";
+import { isFreeResponsePublicData } from "../exercises/free-response/types";
 import { exerciseGroupLabel } from "../exercises/group";
 import { isModelPublicData } from "../exercises/model/grading";
 import { renderModelElement } from "../exercises/model/read-only-view";
@@ -99,6 +96,8 @@ import {
   MODEL_SCHEMA_VERSION,
 } from "../exercises/model/types";
 import { renderMultipleChoiceElement } from "../exercises/multiple-choice/read-only-view";
+import { isMultipleChoicePublicData } from "../exercises/multiple-choice/types";
+import { isShortAnswerPublicData } from "../exercises/short-answer/types";
 import { exerciseStrings } from "../exercises/strings";
 import { renderTranslationElement } from "../exercises/translation/read-only-view";
 import {
@@ -820,28 +819,28 @@ function textSubmissionForm(
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
   title: string | null,
 ): Child | null {
-  if (!hasPromptHtml(node.publicData)) {
-    return null;
-  }
-
-  const publicData = node.publicData;
   const kind = node.exerciseKind;
-  const answerKind =
-    kind === FREE_RESPONSE_KIND
-      ? FREE_RESPONSE_ANSWER_KIND
-      : kind === SHORT_ANSWER_KIND
-        ? SHORT_ANSWER_ANSWER_KIND
-        : null;
-  const schemaVersion =
-    kind === FREE_RESPONSE_KIND
-      ? FREE_RESPONSE_SCHEMA_VERSION
-      : kind === SHORT_ANSWER_KIND
-        ? SHORT_ANSWER_SCHEMA_VERSION
+  // The two text kinds share this form; each vouches for its own payload.
+  const text =
+    kind === FREE_RESPONSE_KIND && isFreeResponsePublicData(node.publicData)
+      ? {
+          answerKind: FREE_RESPONSE_ANSWER_KIND,
+          publicData: node.publicData,
+          schemaVersion: FREE_RESPONSE_SCHEMA_VERSION,
+        }
+      : kind === SHORT_ANSWER_KIND && isShortAnswerPublicData(node.publicData)
+        ? {
+            answerKind: SHORT_ANSWER_ANSWER_KIND,
+            publicData: node.publicData,
+            schemaVersion: SHORT_ANSWER_SCHEMA_VERSION,
+          }
         : null;
 
-  if (answerKind === null || schemaVersion === null) {
+  if (text === null) {
     return null;
   }
+
+  const { answerKind, publicData, schemaVersion } = text;
 
   const i18n = submission.context.get("i18n");
   const label = exerciseGroupLabel(kind, title, i18n);

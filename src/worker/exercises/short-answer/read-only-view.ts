@@ -1,13 +1,12 @@
 import {
   escapeHtml,
   exerciseRootAttributes,
-  hasPromptHtml,
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
 import { exerciseGroupLabel, exerciseLegendHtml } from "../group";
-import { SHORT_ANSWER_KIND } from "./types";
+import { isShortAnswerPublicData, SHORT_ANSWER_KIND } from "./types";
 
 export function renderShortAnswer(
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
@@ -15,7 +14,7 @@ export function renderShortAnswer(
 ): string {
   if (
     node.exerciseKind !== SHORT_ANSWER_KIND ||
-    !hasPromptHtml(node.publicData)
+    !isShortAnswerPublicData(node.publicData)
   ) {
     return `<div data-component="${escapeHtml(node.render.component)}" data-exercise-id="${escapeHtml(node.exerciseId)}"></div>`;
   }

@@ -1,3 +1,6 @@
+import type { ShortAnswerPublicData } from "../../domain/content";
+import type { JsonValue } from "../../domain/json";
+
 export type {
   ShortAnswerAnswerData,
   ShortAnswerPrivateData,
@@ -15,3 +18,13 @@ export const SHORT_ANSWER_COMPONENT_METADATA = {
   component: "carnap-short-answer",
   componentVersion: "1",
 } as const;
+
+function isObject(value: JsonValue): value is Record<string, JsonValue> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function isShortAnswerPublicData(
+  value: JsonValue,
+): value is JsonValue & ShortAnswerPublicData {
+  return isObject(value) && typeof value.promptHtml === "string";
+}

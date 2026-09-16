@@ -1,9 +1,3 @@
-import type {
-  FreeResponsePublicData,
-  MultipleChoicePublicData,
-  ShortAnswerPublicData,
-} from "../../domain/content";
-import type { JsonValue } from "../../domain/json";
 import visuallyHiddenStyles from "./visually-hidden.css" with {
   type: "text",
 };
@@ -62,36 +56,4 @@ export interface ExerciseElementMeta {
  */
 export function exerciseRootAttributes(meta: ExerciseElementMeta): string {
   return ` class="exercise" data-component="${escapeHtml(meta.component)}" data-component-version="${escapeHtml(meta.componentVersion)}" data-exercise-id="${escapeHtml(meta.exerciseId)}" data-exercise-kind="${escapeHtml(meta.exerciseKind)}"${contentRevisionAttribute(meta.contentRevisionId)}`;
-}
-
-function isObject(value: JsonValue): value is Record<string, JsonValue> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-export function hasPromptHtml(
-  value: JsonValue,
-): value is JsonValue & (FreeResponsePublicData | ShortAnswerPublicData) {
-  return isObject(value) && typeof value.promptHtml === "string";
-}
-
-export function isMultipleChoicePublicData(
-  value: JsonValue,
-): value is JsonValue & MultipleChoicePublicData {
-  if (!isObject(value)) {
-    return false;
-  }
-
-  const options = value.options;
-
-  return (
-    (value.mode === "single" || value.mode === "multiple") &&
-    typeof value.promptHtml === "string" &&
-    Array.isArray(options) &&
-    options.every(
-      (option) =>
-        isObject(option) &&
-        typeof option.id === "string" &&
-        typeof option.html === "string",
-    )
-  );
 }

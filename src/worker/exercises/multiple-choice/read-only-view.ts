@@ -2,7 +2,6 @@ import {
   type ExerciseElementMeta,
   escapeHtml,
   exerciseRootAttributes,
-  isMultipleChoicePublicData,
   VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
@@ -19,7 +18,7 @@ import {
 } from "../group";
 import reviewStyles from "./review.css" with { type: "text" };
 import shadowStyles from "./shadow.css" with { type: "text" };
-import { MULTIPLE_CHOICE_KIND } from "./types";
+import { isMultipleChoicePublicData, MULTIPLE_CHOICE_KIND } from "./types";
 
 const MULTIPLE_CHOICE_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,

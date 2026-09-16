@@ -6,7 +6,6 @@ import {
   sameSet,
 } from "../../application/content/assessment-support";
 import type { AssessmentExerciseType } from "../../application/content/registry";
-import { isMultipleChoicePublicData } from "../../application/content/render-support";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -24,6 +23,7 @@ import type {
   MultipleChoicePrivateData,
 } from "./types";
 import {
+  isMultipleChoicePublicData,
   MULTIPLE_CHOICE_ANSWER_KIND,
   MULTIPLE_CHOICE_COMPONENT_METADATA,
   MULTIPLE_CHOICE_KIND,
