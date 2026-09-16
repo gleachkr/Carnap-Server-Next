@@ -16,7 +16,6 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
-import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   goalBinderWarnings,
   PLAYGROUND_HEADER,
@@ -26,12 +25,13 @@ import {
   parseTheoremHeader,
   readGoalDeclaration,
   requireProofNotations,
-  requireSystem,
   starterFormulaReader,
   starterRuleReader,
   unreadableStarterFormula,
-} from "../aufbau-proof/authoring";
-import { theoryLanguageSource } from "../aufbau-proof/formulas";
+} from "../../exercise-kit/proof/authoring";
+import { theoryLanguageSource } from "../../exercise-kit/proof/formulas";
+import type { SystemResolver } from "../../exercise-kit/systems/theory";
+import { requireSystem } from "../../exercise-kit/systems/theory";
 import { ruleCitationShapes } from "./citations";
 import { fitchToAuf } from "./translate";
 import type { AufbauProofFitchPublicData } from "./types";
@@ -69,7 +69,7 @@ const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
  *
  * With `playground`, the body has no goal line: prose, then optionally the
  * underline and a starter. Nothing is frozen beside the theory, and the goal
- * is whatever the submitted proof's last line says (`aufbau-proof/playground.ts`).
+ * is whatever the submitted proof's last line says (`exercise-kit/proof/playground.ts`).
  */
 export async function compileAufbauProofFitch(
   block: DirectiveBlock,

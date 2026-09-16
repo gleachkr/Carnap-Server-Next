@@ -2,8 +2,8 @@ import { afterAll, beforeEach, describe, expect, test } from "bun:test";
 import {
   ANSWER_RECORDED_EVENT,
   UNSAVED_ANSWER_ATTRIBUTE,
-} from "../../src/worker/exercises/answer-events";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration";
+} from "../../src/worker/exercise-kit/answer-events";
+import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
 import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
 
 /**

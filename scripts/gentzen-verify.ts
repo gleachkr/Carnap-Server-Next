@@ -18,7 +18,7 @@
 import { loadCompiler } from "@aufbau/compiler";
 
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { GENTZEN_CASES } from "../tests/helpers/gentzen-cases";
 import { GENTZEN_THEORY_MM0 } from "../tests/helpers/gentzen-theory";
 

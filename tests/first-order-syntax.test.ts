@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import type { Formula } from "../src/worker/exercises/first-order";
+import type { Formula } from "../src/worker/exercise-kit/formula";
 import {
   DEFAULT_LANGUAGE_ID,
   firstOrderLanguageFor,
   formulaToString,
   parseFormula,
-} from "../src/worker/exercises/first-order";
+} from "../src/worker/exercise-kit/formula";
 import {
   LANGUAGE_SPEC_SOURCES,
   languageFromSource,

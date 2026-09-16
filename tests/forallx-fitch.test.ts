@@ -4,7 +4,7 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import {
   proofRuleReader,
   proofRuleSpellings,
-} from "../src/worker/exercises/aufbau-proof/formulas";
+} from "../src/worker/exercise-kit/proof/formulas";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { FORALLX_CASES } from "./helpers/forallx-cases";
 import { FORALLX_DEMO_SOURCE } from "./helpers/forallx-demo";

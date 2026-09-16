@@ -32,12 +32,12 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import type { Formula } from "../../worker/exercises/first-order";
+import type { Formula } from "../../worker/exercise-kit/formula";
 import {
   firstOrderLanguageFor,
   formulaToString,
   parseFormula,
-} from "../../worker/exercises/first-order";
+} from "../../worker/exercise-kit/formula";
 import { buildEquivalenceCheck } from "../../worker/exercises/translation/logic/mm0";
 import { verbatimSolutionIndex } from "../../worker/exercises/translation/logic/solutions";
 import type { TranslationTestFailure } from "../../worker/exercises/translation/logic/tests";

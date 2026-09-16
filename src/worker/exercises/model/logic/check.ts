@@ -12,7 +12,7 @@
  * diagnostics), so wording stays with the callers.
  */
 
-import type { Formula } from "../../first-order";
+import type { Formula } from "../../../exercise-kit/formula";
 import type { FunctionRow } from "./fields";
 import {
   MAX_DOMAIN_SIZE,

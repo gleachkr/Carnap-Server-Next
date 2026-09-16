@@ -17,7 +17,6 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
-import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
   goalBinderWarnings,
@@ -27,13 +26,14 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
-  requireSystem,
   starterFormulaReader,
   starterRuleReader,
   unreadableStarterFormula,
-} from "../aufbau-proof/authoring";
+} from "../../exercise-kit/proof/authoring";
+import { parseProofTree } from "../../exercise-kit/proof/tree-parse";
+import type { SystemResolver } from "../../exercise-kit/systems/theory";
+import { requireSystem } from "../../exercise-kit/systems/theory";
 import { flattenProofTree } from "./flatten";
-import { parseProofTree } from "./parse";
 import type { AufbauProofTreePublicData, ProofTreeNode } from "./types";
 import {
   AUFBAU_PROOF_TREE_ANSWER_KIND,
@@ -63,7 +63,7 @@ const AUFBAU_PROOF_TREE_ATTRIBUTES = [
  *
  * With `playground`, the body has no goal line and the root is the student's
  * to write: nothing is frozen beside the theory, and the goal is whatever the
- * submitted tree's root says (`aufbau-proof/playground.ts`).
+ * submitted tree's root says (`exercise-kit/proof/playground.ts`).
  */
 export async function compileAufbauProofTree(
   block: DirectiveBlock,

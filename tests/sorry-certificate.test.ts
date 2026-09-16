@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { loadCompiler } from "@aufbau/compiler";
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 
 /**
  * The trust boundary against an admitted line. Since engine 0.0.9 a proof may

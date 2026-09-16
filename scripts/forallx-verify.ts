@@ -17,7 +17,7 @@
 // @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { FORALLX_CASES } from "../tests/helpers/forallx-cases";
 import { forallxExercise } from "../tests/helpers/forallx-theory";

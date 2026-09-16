@@ -1,5 +1,5 @@
+import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
 import type { Translator } from "../../i18n/translator";
-import { buildProofEngineStrings } from "../proof-engine-strings";
 
 /**
  * Interface text for the linear `.auf` proof widget: the shared proof-engine set

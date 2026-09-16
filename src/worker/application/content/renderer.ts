@@ -4,8 +4,13 @@ import type {
   ContentNode,
   ExerciseRenderSpec,
 } from "../../domain/content";
+import {
+  EXERCISE_HYDRATION_VERSION,
+  type ExerciseHydration,
+} from "../../exercise-kit/hydration";
+import { renderTheoryPanel } from "../../exercise-kit/proof/theory-panel";
+import { keyedPublicData } from "../../exercise-kit/systems/join";
 import { renderAufbauProof } from "../../exercises/aufbau-proof/read-only-view";
-import { renderTheoryPanel } from "../../exercises/aufbau-proof/theory-panel";
 import { AUFBAU_PROOF_COMPONENT_METADATA } from "../../exercises/aufbau-proof/types";
 import { renderAufbauProofFitch } from "../../exercises/aufbau-proof-fitch/read-only-view";
 import { AUFBAU_PROOF_FITCH_COMPONENT_METADATA } from "../../exercises/aufbau-proof-fitch/types";
@@ -15,10 +20,6 @@ import { renderAufbauProofTree } from "../../exercises/aufbau-proof-tree/read-on
 import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "../../exercises/aufbau-proof-tree/types";
 import { renderFreeResponse } from "../../exercises/free-response/read-only-view";
 import { FREE_RESPONSE_COMPONENT_METADATA } from "../../exercises/free-response/types";
-import {
-  EXERCISE_HYDRATION_VERSION,
-  type ExerciseHydration,
-} from "../../exercises/hydration";
 import { renderModel } from "../../exercises/model/read-only-view";
 import { MODEL_COMPONENT_METADATA } from "../../exercises/model/types";
 import { renderMultipleChoice } from "../../exercises/multiple-choice/read-only-view";
@@ -26,7 +27,6 @@ import { MULTIPLE_CHOICE_COMPONENT_METADATA } from "../../exercises/multiple-cho
 import { renderShortAnswer } from "../../exercises/short-answer/read-only-view";
 import { SHORT_ANSWER_COMPONENT_METADATA } from "../../exercises/short-answer/types";
 import { exerciseStrings } from "../../exercises/strings";
-import { keyedPublicData } from "../../exercises/systems";
 import { renderTranslation } from "../../exercises/translation/read-only-view";
 import { TRANSLATION_COMPONENT_METADATA } from "../../exercises/translation/types";
 import { renderTruthTable } from "../../exercises/truth-table/read-only-view";

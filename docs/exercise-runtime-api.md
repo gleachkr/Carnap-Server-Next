@@ -63,14 +63,14 @@ into the widget with `slot="exercise-actions"`. This lets the runtime find it
 and author CSS style it.
 
 Preview renderers use `exerciseActionsHtml` from
-`src/worker/exercises/actions.ts`. They show the same bar with Submit
+`src/worker/exercise-kit/actions.ts`. They show the same bar with Submit
 disabled. Local controls still work, but no enclosing form exists and
 nothing is saved.
 
 ## Correctness mark
 
 `.exercise-mark` displays the current verdict. Use the shared definitions in
-`src/worker/exercises/correctness-mark.ts`, not separate glyphs or labels.
+`src/worker/exercise-kit/correctness-mark.ts`, not separate glyphs or labels.
 
 | State | Display | Accessible name |
 | --- | --- | --- |
@@ -155,7 +155,7 @@ An element looks for hydration data in this order:
 3. The document's `data-exercise-hydration-map`, keyed by exercise ID, as
    used for previews.
 
-`ExerciseHydration` is defined in `src/worker/exercises/hydration.ts`:
+`ExerciseHydration` is defined in `src/worker/exercise-kit/hydration.ts`:
 
 - `version`: wire-format version, currently 1.
 - `mode`: `answer` or `review`.
@@ -165,7 +165,7 @@ An element looks for hydration data in this order:
 - `strings`: interface text translated for the viewer.
 
 Shared theory text is sent once per document. Exercise public data refers to
-it by system name; the helpers in `exercises/systems.ts` restore the full
+it by system name; the helpers in `exercise-kit/systems/join.ts` restore the full
 consumer shape, including theory and goal, where needed. Do not duplicate the
 whole theory in every widget payload.
 

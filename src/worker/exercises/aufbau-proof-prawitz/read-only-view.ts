@@ -5,15 +5,16 @@ import {
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
 import type { Translator } from "../../i18n/translator";
-import { previewExerciseActionsHtml } from "../actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
-import { reviewHydrationScript } from "../hydration";
 import shadowStyles from "./shadow.css" with { type: "text" };
+import { buildAufbauProofPrawitzStrings } from "./strings";
 import type { AufbauProofPrawitzPublicData, PrawitzProofNode } from "./types";
 import {
   AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
@@ -129,8 +130,7 @@ export function renderAufbauProofPrawitzReview(
   i18n: Translator,
 ): string {
   const hydration = reviewHydrationScript(
-    AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA.assetId,
-    i18n,
+    buildAufbauProofPrawitzStrings(i18n),
   );
 
   return `<carnap-aufbau-proof-prawitz data-exercise-id="${escapeHtml(review.exerciseId)}" data-review>

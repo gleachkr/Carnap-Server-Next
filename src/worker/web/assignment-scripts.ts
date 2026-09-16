@@ -1,12 +1,12 @@
 import {
   ANSWER_RECORDED_EVENT,
   UNSAVED_ANSWER_ATTRIBUTE,
-} from "../exercises/answer-events";
+} from "../exercise-kit/answer-events";
 import {
   CORRECTNESS_MARK_CLASS,
   CORRECTNESS_MARK_GLYPHS,
   CORRECTNESS_MARK_LABEL_ATTRIBUTES,
-} from "../exercises/correctness-mark";
+} from "../exercise-kit/correctness-mark";
 import {
   EXERCISE_UI_STRINGS_ATTRIBUTE,
   REVIEW_UI_STRINGS_ATTRIBUTE,
@@ -146,7 +146,7 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
   // The runtime only ever writes these two states, so it needs neither the
   // spinner nor the hover detail the client base class's setMark handles. A
   // widget that can grade itself in the browser overwrites whatever is set here
-  // as soon as it has a live verdict; see worker/exercises/correctness-mark.ts.
+  // as soon as it has a live verdict; see worker/exercise-kit/correctness-mark.ts.
   function setMark(form, state) {
     const mark = form.querySelector(".${CORRECTNESS_MARK_CLASS}");
 

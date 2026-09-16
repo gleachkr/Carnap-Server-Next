@@ -5,21 +5,18 @@ import {
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
 import type { Translator } from "../../i18n/translator";
-import { previewExerciseActionsHtml } from "../actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
-import { reviewHydrationScript } from "../hydration";
 import shadowStyles from "./shadow.css" with { type: "text" };
+import { buildAufbauProofStrings } from "./strings";
 import type { AufbauProofPublicData } from "./types";
-import {
-  AUFBAU_PROOF_COMPONENT_METADATA,
-  AUFBAU_PROOF_KIND,
-  isAufbauProofPublicData,
-} from "./types";
+import { AUFBAU_PROOF_KIND, isAufbauProofPublicData } from "./types";
 
 const AUFBAU_PROOF_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -89,7 +86,7 @@ export function renderAufbauProofReview(
           <style>${AUFBAU_PROOF_SHADOW_STYLES}</style>
           <pre class="proof-source">${escapeHtml(review.proofText)}</pre>
         </template>
-        ${reviewHydrationScript(AUFBAU_PROOF_COMPONENT_METADATA.assetId, i18n)}
+        ${reviewHydrationScript(buildAufbauProofStrings(i18n))}
       </carnap-aufbau-proof>`;
 }
 

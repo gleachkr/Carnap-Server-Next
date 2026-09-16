@@ -124,7 +124,7 @@ values, especially when they can choose the domain.
 
 ## Formula notation
 
-Parsing uses `@aufbau/syntax` and the shared core in `../first-order/`.
+Parsing uses `@aufbau/syntax` and the shared core in `../../exercise-kit/formula/`.
 Language source lives in `src/worker/logic/theories/`, not in per-type
 TypeScript tables. A forallx file supplies both the model language and the
 proof system used by other exercises.

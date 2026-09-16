@@ -15,9 +15,9 @@
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
-import type { PlaygroundGoal } from "../aufbau-proof/playground";
-import { isPlaygroundGoal } from "../aufbau-proof/playground";
-import type { AufbauProofOptions } from "../aufbau-proof/types";
+import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
+import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
 
 export const AUFBAU_PROOF_PRAWITZ_KIND = "aufbau-proof-prawitz@1";
 export const AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION = 1;
@@ -107,7 +107,7 @@ export interface PrawitzProofNode {
  *                      declaration is frozen, `goalFormula` is empty,
  *                      `goalName` is the fixed `playground`, and the answer
  *                      carries the statement its proof derived (see
- *                      `aufbau-proof/playground.ts`)
+ *                      `exercise-kit/proof/playground.ts`)
  */
 export interface AufbauProofPrawitzPublicData {
   readonly assumptionRule: string;
@@ -132,7 +132,7 @@ export interface AufbauProofPrawitzPublicData {
  * trusted for grading. The envelope the client submits carries one more field,
  * `mmb`, the base64 MMB certificate it compiled from the translated text — the
  * only thing graded, and not kept once `evaluate` has verified it; see
- * {@link ../aufbau-proof/certificate readCertificate}.
+ * {@link ../../exercise-kit/proof/certificate readCertificate}.
  */
 export interface AufbauProofPrawitzAnswerData {
   /** A playground's derived goal — what its certificate is verified against. */

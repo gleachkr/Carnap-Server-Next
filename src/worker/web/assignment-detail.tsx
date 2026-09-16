@@ -55,9 +55,14 @@ import type { CourseMembership, CourseStaffTier } from "../domain/courses";
 import type { ExerciseFeedback } from "../domain/exercises";
 import type { JsonValue } from "../domain/json";
 import type { User } from "../domain/users";
-import { exerciseActionsHtml } from "../exercises/actions";
+import { exerciseActionsHtml } from "../exercise-kit/actions";
+import {
+  EXERCISE_HYDRATION_VERSION,
+  type ExerciseHydration,
+  exerciseHydrationScript,
+} from "../exercise-kit/hydration";
+import { renderTheoryPanel } from "../exercise-kit/proof/theory-panel";
 import { renderAufbauProofElement } from "../exercises/aufbau-proof/read-only-view";
-import { renderTheoryPanel } from "../exercises/aufbau-proof/theory-panel";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
   AUFBAU_PROOF_KIND,
@@ -86,11 +91,6 @@ import {
   isAufbauProofTreePublicData,
 } from "../exercises/aufbau-proof-tree/types";
 import { exerciseGroupLabel } from "../exercises/group";
-import {
-  EXERCISE_HYDRATION_VERSION,
-  type ExerciseHydration,
-  exerciseHydrationScript,
-} from "../exercises/hydration";
 import { isModelPublicData } from "../exercises/model/grading";
 import { renderModelElement } from "../exercises/model/read-only-view";
 import {

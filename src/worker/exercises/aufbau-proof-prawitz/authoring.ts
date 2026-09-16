@@ -17,7 +17,6 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
-import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   extractStarterBody,
   goalBinderWarnings,
@@ -28,11 +27,12 @@ import {
   parseTheoremHeader,
   readGoalDeclaration,
   requireProofNotations,
-  requireSystem,
   starterFormulaReader,
   starterRuleReader,
   unreadableStarterFormula,
-} from "../aufbau-proof/authoring";
+} from "../../exercise-kit/proof/authoring";
+import type { SystemResolver } from "../../exercise-kit/systems/theory";
+import { requireSystem } from "../../exercise-kit/systems/theory";
 import { parsePrawitzStarter } from "./parse";
 import type { PrawitzDiagnosticCode } from "./translate";
 import { prawitzToAuf } from "./translate";
@@ -116,7 +116,7 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
  *
  * With `playground`, the body has no goal line: nothing is frozen beside the
  * theory, and the goal is whatever the submitted tree's root says, dependency
- * context included (`aufbau-proof/playground.ts`).
+ * context included (`exercise-kit/proof/playground.ts`).
  */
 export async function compileAufbauProofPrawitz(
   block: DirectiveBlock,

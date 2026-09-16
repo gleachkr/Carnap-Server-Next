@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import type { ProofFormulaShape } from "../src/worker/exercises/aufbau-proof/formulas";
+import type { ProofFormulaShape } from "../src/worker/exercise-kit/proof/formulas";
 import {
   ENGINE_TEXT,
   goalBinderScope,
@@ -10,12 +10,12 @@ import {
   proofFormulaReader,
   proofTheoryText,
   readNodeFormulas,
-} from "../src/worker/exercises/aufbau-proof/formulas";
+} from "../src/worker/exercise-kit/proof/formulas";
+import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
 import type { PrawitzProofNode } from "../src/worker/exercises/aufbau-proof-prawitz/types";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import type { ProofTreeNode } from "../src/worker/exercises/aufbau-proof-tree/types";
-import { withSystemText } from "../src/worker/exercises/systems";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
 import { FORALLX_CASES } from "./helpers/forallx-cases";
 import {

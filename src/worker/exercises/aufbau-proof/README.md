@@ -7,12 +7,15 @@ theory and goal. It does not grade the proof text or trust browser status.
 
 Tree, Fitch, and Prawitz proofs use the same compiler and verifier, with
 additional code to translate their input formats to linear proof scripts.
+The shared engine code — formula reading, the playground goal, the
+certificate and verifier, the theorem-header and starter helpers — lives in
+`src/worker/exercise-kit/proof/`; this folder holds only the linear type.
 
 ## Verification and storage
 
 The author selects a theory and declares a goal theorem. Compilation stores
 shared theory text once in the artifact's systems table and stores the goal
-with the exercise. `../systems.ts` joins them into `publicData.mm0` for the
+with the exercise. `../../exercise-kit/systems/join.ts` joins them into `publicData.mm0` for the
 widget and grader. The original source is also available for display and
 surface-language parsing.
 
@@ -88,7 +91,7 @@ preview. Remote-origin URLs are rejected. See the authoring reference's
   mode) to find the `@vars` tokens to bind. The widget shows it as "Proves",
   the answer carries it as `goal`, and the worker verifies the certificate
   against the theory plus the `theorem playground …` declaration it rebuilds
-  from that goal. See `playground.ts`.
+  from that goal. See `exercise-kit/proof/playground.ts`.
 
 On `aufbau-mm0`, `name` is required, `src` is optional, and `show` displays a
 collapsed source panel. The top-level compiler handles this block separately
@@ -119,11 +122,14 @@ verdict is about, and what the review names as the goal.
 ## Implementation
 
 - `types.ts`: constants, public/answer shapes, and guards.
-- `authoring.ts`: theory-block and proof compilation, theory resolution,
-  and goal parsing. `application/content/mm0.ts` provides shared diagnostics
-  and standalone theory-source validation.
-- `certificate.ts`: certificate decoding and storage-related helpers.
-- `verifier.ts`: `@aufbau/verifier` integration.
+- `authoring.ts`: the `:::aufbau-proof` directive compiler. The theory
+  block, system resolution and the goal header are the kit's
+  (`src/worker/exercise-kit/systems/theory.ts`,
+  `src/worker/exercise-kit/proof/authoring.ts`);
+  `application/content/mm0.ts` provides shared diagnostics and standalone
+  theory-source validation.
+- `src/worker/exercise-kit/proof/certificate.ts`: certificate decoding.
+- `src/worker/exercise-kit/proof/verifier.ts`: `@aufbau/verifier` integration.
 - `assessment.ts`: normalization, evaluation, and review.
 - `read-only-view.ts`: inert markup and review rendering.
 - `src/client/components/carnap-aufbau-proof-v1.ts`: editor element.

@@ -47,7 +47,8 @@ Prose supplies the prompt and the theorem line states the fixed goal.
 Without a starter, the editor begins with a root containing that goal.
 
 An optional `----` separator introduces a linear `.auf` starter.
-`parseProofTree` in `parse.ts` converts it into a tree. Each line may be cited
+`parseProofTree` in `src/worker/exercise-kit/proof/tree-parse.ts` converts it
+into a tree. Each line may be cited
 by at most one other line, and exactly one root must remain uncited. Shared
 subproofs would form a graph, not a tree, and produce
 `proof_is_not_a_tree`. Duplicate the derivation in each branch instead.
@@ -64,7 +65,7 @@ derived from the proof itself — the root node, which is the last line the flat
 statement in engine text), and the worker rebuilds the same
 `theorem playground …` declaration from the answer, checks its binders
 against the system's `@vars` pools, and verifies the certificate against the
-theory plus that declaration. See `aufbau-proof/playground.ts`, and the
+theory plus that declaration. See `exercise-kit/proof/playground.ts`, and the
 [authoring reference][authoring] for the shared rules.
 In a playground the root is editable and starts empty, and "Add hypothesis"
 is disabled, since the goal has no hypotheses to cite. Over a theory whose
@@ -96,13 +97,14 @@ converted to engine syntax, but without student-formula lints such as
 redundant-bracket checks. The compiled `goalEngineDecl` is used in `mm0`;
 original source is retained for display. Invalid goal syntax produces
 `invalid_goal_formula`. These conversions are implemented in
-`../aufbau-proof/formulas.ts`.
+`../../exercise-kit/proof/formulas.ts`.
 
 ## Implementation and tests
 
-- `types.ts`: `ProofTreeNode`, public/answer shapes, and guards.
+- `types.ts`: public/answer shapes and guards; re-exports `ProofTreeNode`.
 - `flatten.ts`: postorder traversal and generated-line mappings.
-- `parse.ts`: linear starter parsing and tree validation.
+- `src/worker/exercise-kit/proof/tree-parse.ts`: `ProofTreeNode`, linear
+  starter parsing and tree validation (shared with the Prawitz type).
 - `authoring.ts`: directive compilation and shared theory/goal handling.
 - `assessment.ts`: normalization, verification, and review.
 - `read-only-view.ts`: inert widget markup and read-only tree rendering.

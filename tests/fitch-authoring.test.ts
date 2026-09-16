@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { CompiledContentArtifact } from "../src/worker/domain/content";
-import { proofTheoryText } from "../src/worker/exercises/aufbau-proof/formulas";
+import { proofTheoryText } from "../src/worker/exercise-kit/proof/formulas";
 import {
   type AufbauProofFitchPublicData,
   isAufbauProofFitchPublicData,

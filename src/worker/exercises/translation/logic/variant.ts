@@ -6,7 +6,7 @@
  * prop exercise cannot be answered in a language its theory has no laws for.
  */
 
-import type { Formula } from "../../first-order";
+import type { Formula } from "../../../exercise-kit/formula";
 
 export function isPropositional(formula: Formula): boolean {
   switch (formula.type) {

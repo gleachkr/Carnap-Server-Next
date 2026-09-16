@@ -1,0 +1,32 @@
+# exercise-kit
+
+What the exercise types are built from, kept apart from the types themselves.
+
+`src/worker/exercises/<type>/` holds one exercise type per folder — its
+directive compiler, assessment, review rendering, shapes and strings. Anything
+two types share, or that the application and the client need without caring
+which type is asking, lives here instead. One rule: **a type imports the kit;
+the kit never imports a type.** `src/worker/exercises/` itself keeps only the
+glue that enumerates the types (`strings.ts`, `group.ts`).
+
+- `systems/` — the logic an exercise is set in. `theory.ts` compiles an
+  `:::aufbau-mm0` block, names a shipped theory by id, and defines the
+  `SystemResolver` every formula-reading type is handed; `attribute.ts` reads
+  a directive's `system=`; `join.ts` is the document's systems table and the
+  join that gives each exercise its copy of the text.
+- `proof/` — the proof engine's client-and-worker toolkit: surface-formula
+  reading (`formulas.ts`), the playground goal (`playground.ts`), the MMB
+  certificate and its verifier (`certificate.ts`, `verifier.ts`), the shared
+  authoring helpers (`authoring.ts`: theorem header, starters, `options=`,
+  playground body), the linear-body tree parser (`tree-parse.ts`, used by the
+  tree and Prawitz types), the `show` panel, and the engine's diagnostic
+  strings.
+- `formula/` — the formula tree the model, translation and (as a mirror)
+  truth-table types read: `parseFormula` over a language spec, the tree
+  shapes, and the language lookup.
+- the root files — the framework every interactive type plugs into: the action
+  bar (`actions.ts`), the hydration payload (`hydration.ts`), the correctness
+  mark, the answer events, and the help strings.
+
+Everything here is imported by the client bundles as well as the worker, so
+modules stay DOM-free and catalog-free unless their header says otherwise.

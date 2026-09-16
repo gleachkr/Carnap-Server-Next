@@ -14,13 +14,14 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
-import { readCertificate } from "./certificate";
+import { readCertificate } from "../../exercise-kit/proof/certificate";
 import {
   answerGoal,
   isPlaygroundExercise,
   playgroundGoalText,
   verificationText,
-} from "./playground";
+} from "../../exercise-kit/proof/playground";
+import { verifyMmb } from "../../exercise-kit/proof/verifier";
 import { renderAufbauProofReview } from "./read-only-view";
 import type { AufbauProofAnswerData } from "./types";
 import {
@@ -31,7 +32,6 @@ import {
   isAufbauProofAnswerData,
   isAufbauProofPublicData,
 } from "./types";
-import { verifyMmb } from "./verifier";
 
 const AUFBAU_PROOF_EVALUATOR_VERSION = "aufbau-proof-verifier@1";
 

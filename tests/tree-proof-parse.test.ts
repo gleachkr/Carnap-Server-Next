@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-
+import { parseProofTree } from "../src/worker/exercise-kit/proof/tree-parse";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
-import { parseProofTree } from "../src/worker/exercises/aufbau-proof-tree/parse";
 import type { ProofTreeNode } from "../src/worker/exercises/aufbau-proof-tree/types";
 import { GENTZEN_CASES } from "./helpers/gentzen-cases";
 

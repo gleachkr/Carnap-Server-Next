@@ -170,7 +170,7 @@ export interface TruthTablePublicData {
   /**
    * Which of the document's systems the formulas are written in, and
    * {@link source} the copy of its text the join fills in. See
-   * `exercises/systems.ts`. Absent in every table compiled before the attribute
+   * `exercise-kit/systems/join.ts`. Absent in every table compiled before the attribute
    * existed, which spoke `carnap-prop` and could speak nothing else.
    */
   readonly source?: string;

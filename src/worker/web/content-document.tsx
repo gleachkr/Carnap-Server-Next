@@ -5,7 +5,7 @@ import type {
   CompiledContentArtifact,
   CompiledSystems,
 } from "../domain/content";
-import type { ExerciseHydration } from "../exercises/hydration";
+import type { ExerciseHydration } from "../exercise-kit/hydration";
 import type { Translator } from "../i18n/translator";
 import contentDocumentStyles from "./content-document.css" with {
   type: "text",

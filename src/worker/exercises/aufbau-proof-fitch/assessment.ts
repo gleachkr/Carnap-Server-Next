@@ -14,7 +14,7 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
-import { readCertificate } from "../aufbau-proof/certificate";
+import { readCertificate } from "../../exercise-kit/proof/certificate";
 // The certificate is the trust boundary, so the Fitch type reuses the linear
 // type's verifier binding verbatim (verify against our frozen mm0, never the
 // student's Fitch text or the translated proof).
@@ -22,14 +22,14 @@ import {
   goalStatementText,
   proofRuleSpellings,
   proofTheoryText,
-} from "../aufbau-proof/formulas";
+} from "../../exercise-kit/proof/formulas";
 import {
   answerGoal,
   isPlaygroundExercise,
   playgroundGoalText,
   verificationText,
-} from "../aufbau-proof/playground";
-import { verifyMmb } from "../aufbau-proof/verifier";
+} from "../../exercise-kit/proof/playground";
+import { verifyMmb } from "../../exercise-kit/proof/verifier";
 import { renderAufbauProofFitchReview } from "./read-only-view";
 import type {
   AufbauProofFitchAnswerData,

@@ -2,7 +2,7 @@
  * `system=` for the three types that read a formula and interpret it.
  *
  * The four proof types resolve the same attribute through the same resolver
- * (see `aufbau-proof/authoring.ts`); what those three need on top of it is a
+ * (see `./theory.ts`); what those three need on top of it is a
  * *language*, and a requirement about it. Before this existed each carried its
  * own copy of the resolution and could only name a global by id, while the
  * proof types could only name a document-local block. One attribute, one
@@ -26,7 +26,7 @@
  * Neither was load-bearing. Both formula readers end their role dispatch in a
  * refusal, which fires at compile time on the author's own formula and names
  * the construct rather than the file — see `truth-table/logic/formula.ts` and
- * `first-order/formula.ts`. A property of a *language* was never the right
+ * `../formula/formula.ts`. A property of a *language* was never the right
  * thing to check, because the same node wants opposite readings in two types:
  * `F(a)` is structured for a model, which looks `a` up in an extension of `F`,
  * and opaque for a truth table, which gives it a column.
@@ -42,17 +42,17 @@ import type { SurfaceLanguage } from "@aufbau/syntax";
 import type {
   CompilerDiagnostic,
   DirectiveBlock,
-} from "../application/content/authoring-toolkit";
-import { diagnostic } from "../application/content/authoring-toolkit";
-import { languageFromSource } from "../logic/specs";
-import type { SystemResolver } from "./aufbau-proof/authoring";
+} from "../../application/content/authoring-toolkit";
+import { diagnostic } from "../../application/content/authoring-toolkit";
+import { languageFromSource } from "../../logic/specs";
+import type { SystemResolver } from "./theory";
 
 /**
  * The language an exercise is written in, and the name it is stored under.
  *
  * Both travel together because they are stored apart: `publicData.system` holds
  * the name, the document's systems table holds one copy of the text, and the
- * join (`exercises/systems.ts`) puts them back together for every reader.
+ * join (`./join.ts`) puts them back together for every reader.
  */
 export interface SystemLanguage {
   readonly language: SurfaceLanguage;

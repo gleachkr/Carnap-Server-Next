@@ -337,7 +337,7 @@ export function formulaToString(
  * The language a truth-table exercise is set in, or `null` where its stored
  * data no longer names one.
  *
- * The mirror of `first-order`'s reader. `source` is the language's own text,
+ * The mirror of the formula kit's reader (`exercise-kit/formula/`). `source` is the language's own text,
  * joined in from the document's systems table; `dialect` and the absence of
  * both fall back to what this type has always spoken.
  *

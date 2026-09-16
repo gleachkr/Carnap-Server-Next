@@ -85,7 +85,7 @@ derived from the proof itself — the root with its dependency context, which is
 statement in engine text), and the worker rebuilds the same
 `theorem playground …` declaration from the answer, checks its binders
 against the system's `@vars` pools, and verifies the certificate against the
-theory plus that declaration. See `aufbau-proof/playground.ts`, and the
+theory plus that declaration. See `exercise-kit/proof/playground.ts`, and the
 [authoring reference][authoring] for the shared rules.
 
 ## Formula parsing
@@ -104,7 +104,7 @@ Starters are parsed during authoring. Goals are converted to engine text as
 `goalEngineDecl`, using the turnstile result sort with a sentence fallback.
 Goal parsing omits stricter student lints but still rejects invalid syntax
 with `invalid_goal_formula`. Original source is kept for display. The shared
-implementation is `../aufbau-proof/formulas.ts`.
+implementation is `../../exercise-kit/proof/formulas.ts`.
 
 Discharge matching compares normalized formulas. Thus `~P` and `¬P` under
 the same label can identify the same assumption rather than producing
@@ -120,7 +120,8 @@ Review redraws the submitted tree.
 - `translate.ts`: scope/dependency analysis, `.auf` emission, line mappings,
   and structural diagnostics.
 - `parse.ts`: `parsePrawitzStarter` and `serializePrawitzStarter`, using the
-  general tree parser for structural work.
+  kit's tree parser (`src/worker/exercise-kit/proof/tree-parse.ts`) for
+  structural work.
 - `authoring.ts`: directive compilation, theory/goal handling, and starters.
 
 Worked cases are in `tests/helpers/prawitz-cases.ts`.

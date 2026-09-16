@@ -1,6 +1,6 @@
 import { buildDiagnosticStrings } from "../application/content/diagnostic-strings";
 import type { EvaluatorKind } from "../domain/assessment";
-import { buildExerciseActionsStrings } from "../exercises/actions";
+import { buildExerciseActionsStrings } from "../exercise-kit/actions";
 import {
   EXERCISE_STRING_ASSET_IDS,
   exerciseStrings,

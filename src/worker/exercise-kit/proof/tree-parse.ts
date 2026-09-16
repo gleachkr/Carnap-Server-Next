@@ -1,6 +1,6 @@
 /**
  * Parse a linear `.auf` proof body back into a proof *tree* — the inverse of
- * {@link ./flatten flattenProofTree}. Authors write a starter proof in the same
+ * the tree type's `flattenProofTree`. Authors write a starter proof in the same
  * line-per-node form the tree flattens to (`<label>: $ <formula> $ by <rule>
  * [<refs>]`), and this turns it into the {@link ProofTreeNode} the editor seeds
  * from. It is pure and DOM-free so the authoring compiler and its tests share it.
@@ -14,7 +14,39 @@
 
 import type { DiagnosticMessageId } from "../../application/content/diagnostic-strings";
 import type { TranslatableMessage } from "../../i18n/translator";
-import type { ProofTreeNode } from "./types";
+
+/**
+ * One node of a proof tree: a conclusion `formula` justified by a `rule` citing
+ * its child `premises` (visited before it when flattening, so every reference
+ * is backward — the `.auf` grammar forbids forward references). A leaf with
+ * `hyp` set is instead a reference to the goal theorem's `hyp`-th hypothesis; it
+ * contributes `#hyp` to its parent's citation list and emits no proof line of
+ * its own. `id` is a stable handle for editing and for attributing a compiler
+ * diagnostic back to the node that produced the offending line.
+ */
+export interface ProofTreeNode {
+  readonly formula: string;
+  readonly hyp?: number;
+  readonly id: string;
+  readonly premises: readonly ProofTreeNode[];
+  readonly rule: string;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+export function isProofTreeNode(value: unknown): value is ProofTreeNode {
+  return (
+    isObject(value) &&
+    typeof value.id === "string" &&
+    typeof value.formula === "string" &&
+    typeof value.rule === "string" &&
+    (value.hyp === undefined || typeof value.hyp === "number") &&
+    Array.isArray(value.premises) &&
+    value.premises.every(isProofTreeNode)
+  );
+}
 
 /**
  * One problem found while parsing, addressed to the author.

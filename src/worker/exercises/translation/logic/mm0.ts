@@ -35,8 +35,8 @@
  * rules that have to agree with it.
  */
 
+import type { Formula, Term } from "../../../exercise-kit/formula";
 import type { BinaryConnective } from "../../../logic/specs/connectives";
-import type { Formula, Term } from "../../first-order";
 import {
   buildTheory,
   connectiveForm,

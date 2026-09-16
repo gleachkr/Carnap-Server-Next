@@ -67,7 +67,7 @@ export function buildExerciseActionsStrings(i18n: Translator) {
  * Rendered by the server rather than added by the runtime so that it is on screen
  * in the first paint, and it carries the accessible name for all four of its
  * states because it is the one element every writer of the mark already has in
- * hand — see `exercises/correctness-mark.ts`.
+ * hand — see `./correctness-mark.ts`.
  *
  * `role="img"` and not a live region, on purpose. The status line beside it is
  * already `aria-live`, and the proof types recompute this mark on a debounce

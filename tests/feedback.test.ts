@@ -15,7 +15,7 @@ import {
   resolveExerciseFeedback,
   verdictSealed,
 } from "../src/worker/domain/feedback";
-import type { ExerciseHydrationOptions } from "../src/worker/exercises/hydration";
+import type { ExerciseHydrationOptions } from "../src/worker/exercise-kit/hydration";
 import { passthroughTranslator } from "../src/worker/i18n/translator";
 
 const NOW = "2026-08-07T12:00:00.000Z";

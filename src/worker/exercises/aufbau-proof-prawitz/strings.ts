@@ -1,7 +1,7 @@
+import { buildExerciseHelpStrings } from "../../exercise-kit/help-strings";
+import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
 import { placeholders, type Translator } from "../../i18n/translator";
 import { buildFormulaParserStrings } from "../../logic/specs/strings";
-import { buildExerciseHelpStrings } from "../help-strings";
-import { buildProofEngineStrings } from "../proof-engine-strings";
 
 /**
  * Interface text for the Prawitz-proof widget: the shared proof-engine set, the

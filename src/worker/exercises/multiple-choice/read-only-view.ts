@@ -10,8 +10,8 @@ import type {
   ContentNode,
   MultipleChoicePublicData,
 } from "../../domain/content";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
 import type { Translator } from "../../i18n/translator";
-import { previewExerciseActionsHtml } from "../actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,

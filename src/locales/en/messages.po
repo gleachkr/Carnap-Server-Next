@@ -544,7 +544,7 @@ msgstr "Answer could not be submitted"
 msgid "Answer submitted."
 msgstr "Answer submitted."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Answers are not recorded here."
 msgstr "Answers are not recorded here."
 
@@ -923,7 +923,7 @@ msgstr "Check"
 msgid "Check your email"
 msgstr "Check your email"
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Checking"
 msgstr "Checking"
 
@@ -958,7 +958,7 @@ msgstr "Clone course"
 msgid "Close"
 msgstr "Close"
 
-#: src/worker/exercises/help-strings.ts
+#: src/worker/exercise-kit/help-strings.ts
 msgid "Close help"
 msgstr "Close help"
 
@@ -1093,7 +1093,7 @@ msgstr "Copy failed"
 msgid "Copy these values from the LMS after it issues a client ID for the tool. Launches also require registering the LMS deployment ID on the platform."
 msgstr "Copy these values from the LMS after it issues a client ID for the tool. Launches also require registering the LMS deployment ID on the platform."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 #: src/worker/exercises/multiple-choice/assessment.ts
 msgid "Correct"
 msgstr "Correct"
@@ -1124,11 +1124,11 @@ msgstr "Correction note"
 msgid "Correction notes must be 2000 characters or fewer."
 msgstr "Correction notes must be 2000 characters or fewer."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Could not check"
 msgstr "Could not check"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Could not load the proof engine."
 msgstr "Could not load the proof engine."
 
@@ -1148,7 +1148,7 @@ msgstr "Could not parse the goal's formula “{formula}”: {detail}"
 msgid "Could not read the value of {field}."
 msgstr "Could not read the value of {field}."
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Could not work out what the last line states."
 msgstr "Could not work out what the last line states."
 
@@ -2070,7 +2070,7 @@ msgstr "Item links must look like item:<content-item-id>."
 msgid "Join course"
 msgstr "Join course"
 
-#: src/worker/exercises/help-strings.ts
+#: src/worker/exercise-kit/help-strings.ts
 msgid "Keyboard"
 msgstr "Keyboard"
 
@@ -2551,7 +2551,7 @@ msgstr "Not all premises are true in this model. Take another look at: {formulas
 msgid "Not allowed"
 msgstr "Not allowed"
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Not correct yet"
 msgstr "Not correct yet"
 
@@ -2878,7 +2878,7 @@ msgstr "Problem"
 msgid "Problem here."
 msgstr "Problem here."
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Problem in the proof."
 msgstr "Problem in the proof."
 
@@ -2906,11 +2906,11 @@ msgstr "Proof editor"
 msgid "Proof tree"
 msgstr "Proof tree"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Prove"
 msgstr "Prove"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Proves"
 msgstr "Proves"
 
@@ -3458,7 +3458,7 @@ msgstr "Submissions"
 msgid "Submissions are still open. Releasing grades now lets students keep working with feedback the others did not have."
 msgstr "Submissions are still open. Releasing grades now lets students keep working with feedback the others did not have."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Submit answer"
 msgstr "Submit answer"
 
@@ -3480,7 +3480,7 @@ msgstr "Submitted at {when} · {score}/{maxScore}."
 msgid "Submitted at {when}."
 msgstr "Submitted at {when}."
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Submitted proof"
 msgstr "Submitted proof"
 
@@ -3856,7 +3856,7 @@ msgstr "the proof engine could not read this starter"
 msgid "the proof engine could not read this theory or goal"
 msgstr "the proof engine could not read this theory or goal"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "The proof engine couldn't read this proof — check for unexpected characters."
 msgstr "The proof engine couldn't read this proof — check for unexpected characters."
 
@@ -3926,7 +3926,7 @@ msgstr "The verification check did not pass or has expired. Please try again."
 msgid "The verification service could not be reached. Please try again shortly."
 msgstr "The verification service could not be reached. Please try again shortly."
 
-#: src/worker/exercises/aufbau-proof/theory-panel.ts
+#: src/worker/exercise-kit/proof/theory-panel.ts
 #: src/worker/web/content.tsx
 msgid "Theory"
 msgstr "Theory"
@@ -4382,7 +4382,7 @@ msgstr "Updated"
 msgid "Upload revision"
 msgstr "Upload revision"
 
-#: src/worker/exercises/help-strings.ts
+#: src/worker/exercise-kit/help-strings.ts
 msgid "Usage and keyboard shortcuts"
 msgstr "Usage and keyboard shortcuts"
 

@@ -18,8 +18,8 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
-import type { SystemResolver } from "../aufbau-proof/authoring";
-import { parseSystem } from "../first-order/authoring";
+import { parseSystem } from "../../exercise-kit/formula/authoring";
+import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import type { ModelField, ModelTarget } from "./logic";
 import {
   formulaToString,

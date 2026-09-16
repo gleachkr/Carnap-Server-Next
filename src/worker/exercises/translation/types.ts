@@ -54,7 +54,7 @@ export interface TranslationPublicData {
   /**
    * Which of the document's systems the formulas are written in, and
    * {@link source} the copy of its text the join fills in. See
-   * `exercises/systems.ts`; between them they are what lets an exercise be set
+   * `exercise-kit/systems/join.ts`; between them they are what lets an exercise be set
    * in a language its own document declares, rather than only in one the server
    * ships.
    */
@@ -73,7 +73,7 @@ export interface TranslationPublicData {
  * one more field beside the index, `mmb`, the base64 MMB certifying
  * `text ↔ solutions[solutionIndex]`: the graded input for the equivalence
  * variants, verified in `evaluate` and not kept; see
- * {@link ../aufbau-proof/certificate readCertificate}.
+ * {@link ../../exercise-kit/proof/certificate readCertificate}.
  */
 export interface TranslationAnswerData {
   readonly solutionIndex?: number;

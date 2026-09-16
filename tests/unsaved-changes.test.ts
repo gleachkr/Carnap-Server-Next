@@ -5,7 +5,7 @@ import { warnBeforeDiscarding } from "../src/client/unsaved-changes";
 import {
   ANSWER_RECORDED_EVENT,
   UNSAVED_ANSWER_ATTRIBUTE,
-} from "../src/worker/exercises/answer-events";
+} from "../src/worker/exercise-kit/answer-events";
 import { EXERCISE_RUNTIME_SCRIPT } from "../src/worker/web/assignment-scripts";
 
 /**

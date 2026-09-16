@@ -13,8 +13,8 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import type { Formula, Term } from "../../first-order";
-import { termToString } from "../../first-order";
+import type { Formula, Term } from "../../../exercise-kit/formula";
+import { termToString } from "../../../exercise-kit/formula";
 
 export type ModelFieldKind =
   | "domain"

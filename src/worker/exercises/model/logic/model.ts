@@ -12,8 +12,8 @@
  * here is language-specific: a formula is a formula once parsed.
  */
 
+import type { Formula, Term } from "../../../exercise-kit/formula";
 import { applyBinaryConnective } from "../../../logic/specs/connectives";
-import type { Formula, Term } from "../../first-order";
 import { tupleKey } from "./fields";
 import { symbolKey } from "./signature";
 

@@ -6,15 +6,16 @@ import type {
   ContentSourceProfile,
   ExerciseManifestItem,
 } from "../../domain/content";
+import { withSystemSources } from "../../exercise-kit/systems/join";
 import type {
   AufbauTheory,
   SystemResolver,
-} from "../../exercises/aufbau-proof/authoring";
+} from "../../exercise-kit/systems/theory";
 import {
   builtInSystem,
   compileAufbauMm0,
-  compileAufbauProof,
-} from "../../exercises/aufbau-proof/authoring";
+} from "../../exercise-kit/systems/theory";
+import { compileAufbauProof } from "../../exercises/aufbau-proof/authoring";
 import { AUFBAU_PROOF_KIND } from "../../exercises/aufbau-proof/types";
 import { compileAufbauProofFitch } from "../../exercises/aufbau-proof-fitch/authoring";
 import { AUFBAU_PROOF_FITCH_KIND } from "../../exercises/aufbau-proof-fitch/types";
@@ -33,7 +34,6 @@ import { compileMultipleChoice } from "../../exercises/multiple-choice/authoring
 import { MULTIPLE_CHOICE_KIND } from "../../exercises/multiple-choice/types";
 import { compileShortAnswer } from "../../exercises/short-answer/authoring";
 import { SHORT_ANSWER_KIND } from "../../exercises/short-answer/types";
-import { withSystemSources } from "../../exercises/systems";
 import { compileTranslation } from "../../exercises/translation/authoring";
 import { TRANSLATION_KIND } from "../../exercises/translation/types";
 import { compileTruthTable } from "../../exercises/truth-table/authoring";

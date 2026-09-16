@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import { proofTheoryText } from "../src/worker/exercises/aufbau-proof/formulas";
+import { proofTheoryText } from "../src/worker/exercise-kit/proof/formulas";
 import type { AufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { isAufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";

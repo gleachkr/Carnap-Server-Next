@@ -544,7 +544,7 @@ msgstr "Antwort konnte nicht abgegeben werden"
 msgid "Answer submitted."
 msgstr "Antwort abgegeben."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Answers are not recorded here."
 msgstr "Antworten werden hier nicht erfasst."
 
@@ -923,7 +923,7 @@ msgstr "Prüfen"
 msgid "Check your email"
 msgstr "Prüfen Sie Ihre E-Mails"
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Checking"
 msgstr "Wird geprüft"
 
@@ -958,7 +958,7 @@ msgstr "Kurs duplizieren"
 msgid "Close"
 msgstr "Schließen"
 
-#: src/worker/exercises/help-strings.ts
+#: src/worker/exercise-kit/help-strings.ts
 msgid "Close help"
 msgstr "Hilfe schließen"
 
@@ -1093,7 +1093,7 @@ msgstr "Kopieren fehlgeschlagen"
 msgid "Copy these values from the LMS after it issues a client ID for the tool. Launches also require registering the LMS deployment ID on the platform."
 msgstr "Übernehmen Sie diese Werte aus dem LMS, nachdem es eine Client-ID für das Werkzeug ausgegeben hat. Für Starts muss außerdem die Deployment-ID des LMS bei der Plattform eingetragen sein."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 #: src/worker/exercises/multiple-choice/assessment.ts
 msgid "Correct"
 msgstr "Richtig"
@@ -1124,11 +1124,11 @@ msgstr "Hinweis zur Korrektur"
 msgid "Correction notes must be 2000 characters or fewer."
 msgstr "Hinweise zur Korrektur dürfen höchstens 2000 Zeichen lang sein."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Could not check"
 msgstr "Konnte nicht geprüft werden"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Could not load the proof engine."
 msgstr "Die Beweis-Engine konnte nicht geladen werden."
 
@@ -1148,7 +1148,7 @@ msgstr ""
 msgid "Could not read the value of {field}."
 msgstr "Der Wert von {field} konnte nicht gelesen werden."
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Could not work out what the last line states."
 msgstr "Was die letzte Zeile behauptet, ließ sich nicht ermitteln."
 
@@ -2070,7 +2070,7 @@ msgstr "Objektlinks müssen die Form item:<content-item-id> haben."
 msgid "Join course"
 msgstr "Kurs beitreten"
 
-#: src/worker/exercises/help-strings.ts
+#: src/worker/exercise-kit/help-strings.ts
 msgid "Keyboard"
 msgstr "Tastatur"
 
@@ -2551,7 +2551,7 @@ msgstr "In diesem Modell sind nicht alle Prämissen wahr. Sehen Sie sich das noc
 msgid "Not allowed"
 msgstr "Keine Berechtigung"
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Not correct yet"
 msgstr "Noch nicht richtig"
 
@@ -2878,7 +2878,7 @@ msgstr "Problem"
 msgid "Problem here."
 msgstr "Hier liegt ein Problem."
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Problem in the proof."
 msgstr "Problem im Beweis."
 
@@ -2906,11 +2906,11 @@ msgstr "Beweiseditor"
 msgid "Proof tree"
 msgstr "Beweisbaum"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Prove"
 msgstr "Zu zeigen"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Proves"
 msgstr "Zeigt"
 
@@ -3458,7 +3458,7 @@ msgstr "Abgaben"
 msgid "Submissions are still open. Releasing grades now lets students keep working with feedback the others did not have."
 msgstr "Abgaben sind noch möglich. Wenn Sie die Noten jetzt freigeben, können Studierende mit Rückmeldungen weiterarbeiten, die die anderen nicht hatten."
 
-#: src/worker/exercises/actions.ts
+#: src/worker/exercise-kit/actions.ts
 msgid "Submit answer"
 msgstr "Antwort abgeben"
 
@@ -3480,7 +3480,7 @@ msgstr "Abgegeben am {when} · {score}/{maxScore}."
 msgid "Submitted at {when}."
 msgstr "Abgegeben am {when}."
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Submitted proof"
 msgstr "Abgegebener Beweis"
 
@@ -3856,7 +3856,7 @@ msgstr "die Beweis-Engine konnte diese Vorlage nicht lesen"
 msgid "the proof engine could not read this theory or goal"
 msgstr "die Beweis-Engine konnte diese Theorie oder dieses Ziel nicht lesen"
 
-#: src/worker/exercises/proof-engine-strings.ts
+#: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "The proof engine couldn't read this proof — check for unexpected characters."
 msgstr "Die Beweis-Engine konnte diesen Beweis nicht lesen — prüfen Sie ihn auf unerwartete Zeichen."
 
@@ -3926,7 +3926,7 @@ msgstr ""
 msgid "The verification service could not be reached. Please try again shortly."
 msgstr ""
 
-#: src/worker/exercises/aufbau-proof/theory-panel.ts
+#: src/worker/exercise-kit/proof/theory-panel.ts
 #: src/worker/web/content.tsx
 msgid "Theory"
 msgstr "Theorie"
@@ -4382,7 +4382,7 @@ msgstr "Aktualisiert"
 msgid "Upload revision"
 msgstr "Revision hochladen"
 
-#: src/worker/exercises/help-strings.ts
+#: src/worker/exercise-kit/help-strings.ts
 msgid "Usage and keyboard shortcuts"
 msgstr "Bedienung und Tastenkürzel"
 

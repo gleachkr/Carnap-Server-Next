@@ -13,9 +13,18 @@
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
-import type { PlaygroundGoal } from "../aufbau-proof/playground";
-import { isPlaygroundGoal } from "../aufbau-proof/playground";
-import type { AufbauProofOptions } from "../aufbau-proof/types";
+import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
+import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
+import type { ProofTreeNode } from "../../exercise-kit/proof/tree-parse";
+import { isProofTreeNode } from "../../exercise-kit/proof/tree-parse";
+
+// The node shape is the kit's (`exercise-kit/proof/tree-parse.ts`), because the
+// Prawitz type parses its starters with the same tree parser; it is re-exported
+// here so this type's own modules and the client editor keep one import for
+// "the tree type's shapes".
+export type { ProofTreeNode };
+export { isProofTreeNode };
 
 export const AUFBAU_PROOF_TREE_KIND = "aufbau-proof-tree@1";
 export const AUFBAU_PROOF_TREE_SCHEMA_VERSION = 1;
@@ -26,23 +35,6 @@ export const AUFBAU_PROOF_TREE_COMPONENT_METADATA = {
   component: "carnap-aufbau-proof-tree",
   componentVersion: "1",
 } as const;
-
-/**
- * One node of a proof tree: a conclusion `formula` justified by a `rule` citing
- * its child `premises` (visited before it when flattening, so every reference
- * is backward — the `.auf` grammar forbids forward references). A leaf with
- * `hyp` set is instead a reference to the goal theorem's `hyp`-th hypothesis; it
- * contributes `#hyp` to its parent's citation list and emits no proof line of
- * its own. `id` is a stable handle for editing and for attributing a compiler
- * diagnostic back to the node that produced the offending line.
- */
-export interface ProofTreeNode {
-  readonly formula: string;
-  readonly hyp?: number;
-  readonly id: string;
-  readonly premises: readonly ProofTreeNode[];
-  readonly rule: string;
-}
 
 /**
  * Everything the widget and grader need, frozen at authoring time.
@@ -74,7 +66,7 @@ export interface ProofTreeNode {
  *                   declaration is frozen, `goalFormula` is empty (the root is
  *                   the student's to write), `goalName` is the fixed
  *                   `playground`, and the answer carries the statement its
- *                   proof derived (see `aufbau-proof/playground.ts`)
+ *                   proof derived (see `exercise-kit/proof/playground.ts`)
  */
 export interface AufbauProofTreePublicData {
   readonly goalDecl?: string;
@@ -96,7 +88,7 @@ export interface AufbauProofTreePublicData {
  * trusted for grading. The envelope the client submits carries one more field,
  * `mmb`, the base64 MMB certificate it compiled from the flattened text — the
  * only thing graded, and not kept once `evaluate` has verified it; see
- * {@link ../aufbau-proof/certificate readCertificate}.
+ * {@link ../../exercise-kit/proof/certificate readCertificate}.
  */
 export interface AufbauProofTreeAnswerData {
   /** A playground's derived goal — what its certificate is verified against. */
@@ -107,18 +99,6 @@ export interface AufbauProofTreeAnswerData {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-export function isProofTreeNode(value: unknown): value is ProofTreeNode {
-  return (
-    isObject(value) &&
-    typeof value.id === "string" &&
-    typeof value.formula === "string" &&
-    typeof value.rule === "string" &&
-    (value.hyp === undefined || typeof value.hyp === "number") &&
-    Array.isArray(value.premises) &&
-    value.premises.every(isProofTreeNode)
-  );
 }
 
 export function isAufbauProofTreePublicData(

@@ -30,13 +30,13 @@ import type {
   NodeFormulaProblem,
   ProofFormulaReader,
   ProofRuleReader,
-} from "../aufbau-proof/formulas";
+} from "../../exercise-kit/proof/formulas";
 import {
   ENGINE_RULE,
   ENGINE_TEXT,
   readNodeFormulas,
-} from "../aufbau-proof/formulas";
-import type { ProofStatement } from "../aufbau-proof/playground";
+} from "../../exercise-kit/proof/formulas";
+import type { ProofStatement } from "../../exercise-kit/proof/playground";
 import type { ProofTreeNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */

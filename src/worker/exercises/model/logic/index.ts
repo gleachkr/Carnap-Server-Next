@@ -1,7 +1,7 @@
 /**
  * The model type's logic core: finite models and the check. The first-order
  * syntax the formulas are written in lives one level up in
- * `exercises/first-order/` (it serves the translation type too) and is
+ * `exercise-kit/formula/` (it serves the translation type too) and is
  * re-exported here so the model's own modules read from one barrel.
  *
  * Every module here is DOM-free and free of any i18n import, because the client
@@ -14,7 +14,7 @@ export type {
   ParseError,
   ParseResult,
   Term,
-} from "../../first-order";
+} from "../../../exercise-kit/formula";
 export {
   DEFAULT_LANGUAGE_ID,
   firstOrderLanguageFor,
@@ -22,7 +22,7 @@ export {
   parseFormula,
   splitFormulaList,
   termToString,
-} from "../../first-order";
+} from "../../../exercise-kit/formula";
 export type {
   ModelInput,
   ModelProblem,

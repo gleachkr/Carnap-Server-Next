@@ -5,7 +5,7 @@ import {
   CORRECTNESS_MARK_GLYPHS,
   CORRECTNESS_MARK_LABEL_ATTRIBUTES,
   type CorrectnessMarkState,
-} from "../src/worker/exercises/correctness-mark";
+} from "../src/worker/exercise-kit/correctness-mark";
 import { dom } from "./helpers/dom";
 
 /**

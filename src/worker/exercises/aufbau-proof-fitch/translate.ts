@@ -55,7 +55,7 @@
  * write `Ax(F(x) -> G(x))` where the compiler needs `(∀ x ((F (x)) → (G (x))))`.
  * A theory that names no sentence sort passes them through untouched, which is
  * what every proof did before the reader existed. See
- * `aufbau-proof/formulas.ts` for the condition and what it is not.
+ * `exercise-kit/proof/formulas.ts` for the condition and what it is not.
  *
  * Rule names get the same treatment through `readRule`: a citation is
  * resolved to the name the engine declares (`∧I` to `and_intro`, where the
@@ -72,18 +72,18 @@
  * through `lineSpans`.
  */
 
-import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import type {
   ProofFormulaReader,
   ProofRuleReader,
   ProofVariable,
-} from "../aufbau-proof/formulas";
+} from "../../exercise-kit/proof/formulas";
 import {
   ENGINE_RULE,
   ENGINE_TEXT,
   unionVariables,
-} from "../aufbau-proof/formulas";
-import type { ProofStatement } from "../aufbau-proof/playground";
+} from "../../exercise-kit/proof/formulas";
+import type { ProofStatement } from "../../exercise-kit/proof/playground";
+import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 
 /** The header that separates the goal name from the proof body in `.auf`. */
 const HEADER_SEPARATOR = "\n----\n";

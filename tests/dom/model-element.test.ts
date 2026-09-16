@@ -2,9 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
 import { exerciseHydrationForArtifact } from "../../src/worker/application/content/renderer";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
-import { exerciseActionsHtml } from "../../src/worker/exercises/actions";
-import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercises/correctness-mark";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration";
+import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
+import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercise-kit/correctness-mark";
+import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
 import { renderModelElement } from "../../src/worker/exercises/model/read-only-view";
 import { buildModelStrings } from "../../src/worker/exercises/model/strings";
 import type {

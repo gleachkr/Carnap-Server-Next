@@ -1,6 +1,6 @@
+import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
 import { placeholders, type Translator } from "../../i18n/translator";
 import { buildFormulaParserStrings } from "../../logic/specs/strings";
-import { buildProofEngineStrings } from "../proof-engine-strings";
 import type { FitchDiagnosticCode } from "./translate";
 
 /**

@@ -16,7 +16,7 @@
  * letter included) or an identity.
  */
 
-import type { Formula } from "../../first-order";
+import type { Formula } from "../../../exercise-kit/formula";
 
 export type CountedFeature =
   | "atoms"

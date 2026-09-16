@@ -4,7 +4,7 @@ import { JSDOM } from "jsdom";
 import {
   CORRECTNESS_MARK_CLASS,
   CORRECTNESS_MARK_GLYPHS,
-} from "../../src/worker/exercises/correctness-mark";
+} from "../../src/worker/exercise-kit/correctness-mark";
 import { EXERCISE_RUNTIME_SCRIPT } from "../../src/worker/web/assignment-scripts";
 
 /**

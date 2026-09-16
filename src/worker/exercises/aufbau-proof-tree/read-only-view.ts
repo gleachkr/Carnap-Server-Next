@@ -5,15 +5,16 @@ import {
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
 import type { Translator } from "../../i18n/translator";
-import { previewExerciseActionsHtml } from "../actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
-import { reviewHydrationScript } from "../hydration";
 import shadowStyles from "./shadow.css" with { type: "text" };
+import { buildAufbauProofTreeStrings } from "./strings";
 import type { AufbauProofTreePublicData, ProofTreeNode } from "./types";
 import {
   AUFBAU_PROOF_TREE_COMPONENT_METADATA,
@@ -118,10 +119,7 @@ export function renderAufbauProofTreeReview(
   },
   i18n: Translator,
 ): string {
-  const hydration = reviewHydrationScript(
-    AUFBAU_PROOF_TREE_COMPONENT_METADATA.assetId,
-    i18n,
-  );
+  const hydration = reviewHydrationScript(buildAufbauProofTreeStrings(i18n));
 
   return `<carnap-aufbau-proof-tree data-exercise-id="${escapeHtml(review.exerciseId)}" data-review>
         <template shadowrootmode="open">

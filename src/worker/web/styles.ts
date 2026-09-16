@@ -1,4 +1,4 @@
-import { THEORY_PANEL_STYLES } from "../exercises/aufbau-proof/theory-panel";
+import { THEORY_PANEL_STYLES } from "../exercise-kit/proof/theory-panel";
 import { EXERCISE_GROUP_STYLES } from "../exercises/group";
 import chromeStyles from "./chrome.css" with { type: "text" };
 import contentStyles from "./content.css" with { type: "text" };

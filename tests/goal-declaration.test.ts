@@ -6,7 +6,7 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import {
   proofFormulaReader,
   proofTheoryText,
-} from "../src/worker/exercises/aufbau-proof/formulas";
+} from "../src/worker/exercise-kit/proof/formulas";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { isAufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";

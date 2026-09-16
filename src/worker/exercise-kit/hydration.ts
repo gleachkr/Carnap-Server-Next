@@ -1,9 +1,7 @@
 import type { ExerciseFeedback } from "../domain/exercises";
 import type { JsonValue } from "../domain/json";
-import type { Translator } from "../i18n/translator";
 import { jsonScriptContent } from "../web/json-script";
-import { exerciseStrings } from "./strings";
-import { keyedPublicData } from "./systems";
+import { keyedPublicData } from "./systems/join";
 
 /**
  * The per-exercise hydration payload — the single channel from the server
@@ -104,17 +102,21 @@ export function exerciseHydrationScript(
  * restore and no public render data to work from (the review renderer has
  * already drawn the submission server-side), so both are null; `mode` is what
  * every element asks to tell the two states apart.
+ *
+ * The type passes its own `strings` (its `build…Strings(i18n)`), rather than
+ * this looking them up by asset id: the lookup table enumerates every type,
+ * and a type's review should not need the list of all the others to name
+ * itself.
  */
 export function reviewHydrationScript(
-  assetId: string,
-  i18n: Translator,
+  strings: Readonly<Record<string, string>>,
 ): string {
   return exerciseHydrationScript({
     mode: "review",
     options: {},
     priorAnswer: null,
     publicData: null,
-    strings: exerciseStrings(assetId, i18n),
+    strings,
     version: EXERCISE_HYDRATION_VERSION,
   });
 }

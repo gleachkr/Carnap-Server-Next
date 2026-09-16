@@ -17,13 +17,13 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
-import type { SystemResolver } from "../aufbau-proof/authoring";
 import {
   formulaToString,
   parseFormula,
   splitFormulaList,
-} from "../first-order";
-import { parseSystem } from "../first-order/authoring";
+} from "../../exercise-kit/formula";
+import { parseSystem } from "../../exercise-kit/formula/authoring";
+import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import type { TranslationTest } from "./logic/tests";
 import { parseTranslationTests } from "./logic/tests";
 import { isPropositional } from "./logic/variant";

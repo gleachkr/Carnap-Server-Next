@@ -5,7 +5,7 @@ import {
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
-import { previewExerciseActionsHtml } from "../actions";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
 import { exerciseGroupLabel, exerciseLegendHtml } from "../group";
 import { SHORT_ANSWER_KIND } from "./types";
 

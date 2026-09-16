@@ -12,7 +12,7 @@ import {
   proofRuleReader,
   proofTheoryText,
   statementVariables,
-} from "../src/worker/exercises/aufbau-proof/formulas";
+} from "../src/worker/exercise-kit/proof/formulas";
 import {
   checkPlaygroundGoal,
   isPlaygroundGoal,
@@ -23,8 +23,8 @@ import {
   playgroundGoalText,
   playgroundTheoryText,
   verificationText,
-} from "../src/worker/exercises/aufbau-proof/playground";
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+} from "../src/worker/exercise-kit/proof/playground";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { AufbauProofFitchExerciseType } from "../src/worker/exercises/aufbau-proof-fitch/assessment";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";

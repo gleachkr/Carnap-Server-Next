@@ -5,14 +5,14 @@ import {
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
 import type { Translator } from "../../i18n/translator";
-import { previewExerciseActionsHtml } from "../actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
-import { reviewHydrationScript } from "../hydration";
 import {
   cellFillable,
   correctCells,
@@ -33,7 +33,7 @@ import type {
   TruthTableOptions,
   TruthTablePublicData,
 } from "./types";
-import { TRUTH_TABLE_COMPONENT_METADATA, TRUTH_TABLE_KIND } from "./types";
+import { TRUTH_TABLE_KIND } from "./types";
 
 const TRUTH_TABLE_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -804,10 +804,7 @@ export function renderTruthTableReview(
   reveal = true,
 ): string {
   const strings = buildTruthTableStrings(i18n);
-  const hydration = reviewHydrationScript(
-    TRUTH_TABLE_COMPONENT_METADATA.assetId,
-    i18n,
-  );
+  const hydration = reviewHydrationScript(strings);
   const table = resolveTable(publicData);
   const grade = gradeTruthTable(publicData, review.answer);
 

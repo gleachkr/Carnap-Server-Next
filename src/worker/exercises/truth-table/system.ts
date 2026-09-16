@@ -1,7 +1,7 @@
 /**
  * `system=` on a truth table.
  *
- * Everything is `../system-attribute.ts`; what is here is the default, which is
+ * Everything is `exercise-kit/systems/attribute.ts`; what is here is the default, which is
  * `carnap-prop`. Until `system=` existed this type spoke that language and
  * nothing else, for no reason beyond nobody having written the attribute.
  *
@@ -17,9 +17,9 @@ import type {
   CompilerDiagnostic,
   DirectiveBlock,
 } from "../../application/content/authoring-toolkit";
-import type { SystemResolver } from "../aufbau-proof/authoring";
-import type { SystemLanguage } from "../system-attribute";
-import { parseSystemAttribute } from "../system-attribute";
+import type { SystemLanguage } from "../../exercise-kit/systems/attribute";
+import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
+import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import { PROP_LANGUAGE_ID } from "./logic";
 
 /** The language this block's `system=` names, with any refusal reported. */

@@ -41,7 +41,7 @@ export const DEFAULT_LANGUAGE_ID = "forallx-calgary-2019";
  *
  * Two shapes arrive here, and the newer one is the reason this takes a payload
  * rather than a name. `source` is the language's own text, joined in from the
- * document's systems table (see `exercises/systems.ts`) — which is what lets an
+ * document's systems table (see `../systems/join.ts`) — which is what lets an
  * author set a model exercise in a language they declared themselves. `dialect`
  * is the older shape, a bare id resolved from the specs that ship, and it is
  * read for every artifact compiled before the table existed.

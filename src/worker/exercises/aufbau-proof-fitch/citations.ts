@@ -33,8 +33,8 @@
 
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { printTerm } from "@aufbau/syntax";
+import { theoryLanguage } from "../../exercise-kit/proof/formulas";
 import { roleIndex } from "../../logic/specs/roles";
-import { theoryLanguage } from "../aufbau-proof/formulas";
 import type { CitationSlot, RuleCitationShape } from "./translate";
 
 /** What one theory's classification needs to know, resolved once. */

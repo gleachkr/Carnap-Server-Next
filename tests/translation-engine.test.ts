@@ -24,12 +24,12 @@ import type { LoadedVerifier } from "@aufbau/verifier";
 import { loadVerifier } from "@aufbau/verifier";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import type { Formula } from "../src/worker/exercises/first-order";
+import type { Formula } from "../src/worker/exercise-kit/formula";
 import {
   DEFAULT_LANGUAGE_ID,
   firstOrderLanguageFor,
   parseFormula,
-} from "../src/worker/exercises/first-order";
+} from "../src/worker/exercise-kit/formula";
 import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
 import { buildEquivalenceCheck } from "../src/worker/exercises/translation/logic/mm0";
 import {

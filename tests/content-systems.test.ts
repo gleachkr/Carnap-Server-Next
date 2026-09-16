@@ -10,11 +10,11 @@ import type { JsonValue } from "../src/worker/domain/json";
 import {
   EXERCISE_HYDRATION_VERSION,
   exerciseHydrationScript,
-} from "../src/worker/exercises/hydration";
+} from "../src/worker/exercise-kit/hydration";
 import {
   keyedArtifact,
   withSystemText,
-} from "../src/worker/exercises/systems";
+} from "../src/worker/exercise-kit/systems/join";
 import { truthTableLanguage } from "../src/worker/exercises/truth-table/logic";
 import { resolveMessage } from "../src/worker/i18n/translator";
 import { THEORY_SOURCES } from "../src/worker/logic/theories";

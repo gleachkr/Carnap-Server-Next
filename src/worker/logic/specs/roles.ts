@@ -119,7 +119,7 @@ function sortsWithRole(lang: SurfaceLanguage, role: string): string[] {
  * argument of a list sort, with the empty list elided and the rest joined by
  * a comma or by nothing. Which sort that is, the spec says here; *how* its
  * lists are built it need not say, because a reader flattens any node of the
- * sort by structure (`readArguments` in `exercises/first-order/formula.ts`).
+ * sort by structure (`readArguments` in `exercise-kit/formula/formula.ts`).
  * A spec whose symbols all have fixed arity has no such sort, and `undefined`
  * is the right answer: nothing is a list, every binder is one argument.
  */

@@ -32,9 +32,9 @@ import type {
   CompiledContentArtifact,
   CompiledSystems,
   ContentNode,
-} from "../domain/content";
-import type { ExerciseManifestItem } from "../domain/exercises";
-import type { JsonValue } from "../domain/json";
+} from "../../domain/content";
+import type { ExerciseManifestItem } from "../../domain/exercises";
+import type { JsonValue } from "../../domain/json";
 
 /** The fields the join fills in, which are the fields consumers read. */
 interface SystemText {

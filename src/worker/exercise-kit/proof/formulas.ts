@@ -115,7 +115,7 @@ export type ProofFormulaReader = (text: string) => ProofFormulaReading;
  * and a page setting several from the same artifact parses it once each. That
  * is the price of the goal being part of the text rather than beside it, which
  * is also what {@link goalBinderScope} reads it back out of. The document's
- * systems table shares the theory itself (see `exercises/systems.ts`); what is
+ * systems table shares the theory itself (see `../systems/join.ts`); what is
  * not shared is the parse. Worth revisiting if a lesson ever gets big enough
  * for it to show; nothing measured says it does.
  */
@@ -652,7 +652,7 @@ export function theoryLanguage(
  * text and asks the spec what it can do with it, so an author's diagnostic and
  * the student's squiggle come from one text rather than from two decisions
  * that could disagree. It builds the same text `systemText` in
- * `exercises/systems.ts` builds at the join — the same source, the same
+ * `../systems/join.ts` builds at the join — the same source, the same
  * newline, the same declaration — since that is what the widget is handed
  * later, and the caches here are keyed on it.
  */

@@ -43,7 +43,7 @@ import {
 import type {
   ProofFormulaReader,
   ProofRuleReader,
-} from "../../worker/exercises/aufbau-proof/formulas";
+} from "../../worker/exercise-kit/proof/formulas";
 import {
   ENGINE_RULE,
   ENGINE_TEXT,
@@ -52,13 +52,13 @@ import {
   proofFormulaReader,
   proofRuleReader,
   proofTheoryText,
-} from "../../worker/exercises/aufbau-proof/formulas";
-import type { PlaygroundGoal } from "../../worker/exercises/aufbau-proof/playground";
+} from "../../worker/exercise-kit/proof/formulas";
+import type { PlaygroundGoal } from "../../worker/exercise-kit/proof/playground";
 import {
   playgroundGoal,
   playgroundGoalText,
   playgroundTheoryText,
-} from "../../worker/exercises/aufbau-proof/playground";
+} from "../../worker/exercise-kit/proof/playground";
 import { ruleCitationShapes } from "../../worker/exercises/aufbau-proof-fitch/citations";
 import {
   type AufbauProofFitchStringId,
@@ -366,14 +366,14 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     source: null,
   };
   /** A playground derives its goal from the proof's last line; see
-   *  `aufbau-proof/playground.ts`. */
+   *  `exercise-kit/proof/playground.ts`. */
   private playground = false;
   /** The goal the last translation derived (playground only). */
   private goal: PlaygroundGoal | null = null;
   /** The goal row's statement, live in a playground. */
   private statementView: HTMLElement | null = null;
   /** Reads a typed line in the theory's language; passes text through where
-   *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
+   *  the exercise was frozen without one. See `exercise-kit/proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
   /** Cited rule name to the engine's, from the theory's `@syntax alias` lines. */
   private readRule: ProofRuleReader = ENGINE_RULE;

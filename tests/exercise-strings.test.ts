@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import { exerciseHydrationForArtifact } from "../src/worker/application/content/renderer";
+import { buildExerciseHelpStrings } from "../src/worker/exercise-kit/help-strings";
 import { buildAufbauProofStrings } from "../src/worker/exercises/aufbau-proof/strings";
 import { AUFBAU_PROOF_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof/types";
 import {
@@ -13,7 +14,6 @@ import { buildAufbauProofPrawitzStrings } from "../src/worker/exercises/aufbau-p
 import { AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-prawitz/types";
 import { buildAufbauProofTreeStrings } from "../src/worker/exercises/aufbau-proof-tree/strings";
 import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-tree/types";
-import { buildExerciseHelpStrings } from "../src/worker/exercises/help-strings";
 import { exerciseStrings } from "../src/worker/exercises/strings";
 import { buildTruthTableStrings } from "../src/worker/exercises/truth-table/strings";
 import { TRUTH_TABLE_COMPONENT_METADATA } from "../src/worker/exercises/truth-table/types";

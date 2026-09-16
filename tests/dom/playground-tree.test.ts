@@ -1,12 +1,12 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
-import { exerciseActionsHtml } from "../../src/worker/exercises/actions";
+import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
+import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
+import { withSystemText } from "../../src/worker/exercise-kit/systems/join";
 import { renderAufbauProofTreeElement } from "../../src/worker/exercises/aufbau-proof-tree/read-only-view";
 import { buildAufbauProofTreeStrings } from "../../src/worker/exercises/aufbau-proof-tree/strings";
 import type { AufbauProofTreePublicData } from "../../src/worker/exercises/aufbau-proof-tree/types";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration";
-import { withSystemText } from "../../src/worker/exercises/systems";
 import { i18nFor } from "../../src/worker/i18n";
 import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
 

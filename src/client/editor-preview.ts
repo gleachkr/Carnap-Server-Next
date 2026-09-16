@@ -23,7 +23,7 @@ import {
   renderCompiledContent,
 } from "../worker/application/content/renderer";
 import type { CompiledContentArtifact } from "../worker/domain/content";
-import { proofTheoryText } from "../worker/exercises/aufbau-proof/formulas";
+import { proofTheoryText } from "../worker/exercise-kit/proof/formulas";
 import {
   AUFBAU_PROOF_KIND,
   type AufbauProofPublicData,

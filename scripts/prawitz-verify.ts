@@ -18,7 +18,7 @@
 // @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
 import { PRAWITZ_CASES } from "../tests/helpers/prawitz-cases";
 import { forallxExercise } from "../tests/helpers/forallx-theory";

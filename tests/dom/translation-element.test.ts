@@ -1,9 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
-import { exerciseActionsHtml } from "../../src/worker/exercises/actions";
-import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercises/correctness-mark";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercises/hydration";
+import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
+import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercise-kit/correctness-mark";
+import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
 import { renderTranslationElement } from "../../src/worker/exercises/translation/read-only-view";
 import { buildTranslationStrings } from "../../src/worker/exercises/translation/strings";
 import type {

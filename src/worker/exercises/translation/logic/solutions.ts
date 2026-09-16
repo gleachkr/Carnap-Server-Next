@@ -17,8 +17,8 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import type { Formula } from "../../first-order";
-import { formulaToString, parseFormula } from "../../first-order";
+import type { Formula } from "../../../exercise-kit/formula";
+import { formulaToString, parseFormula } from "../../../exercise-kit/formula";
 
 /**
  * The index of the first stored solution the formula matches verbatim, or

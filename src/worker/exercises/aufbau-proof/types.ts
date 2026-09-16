@@ -12,8 +12,10 @@
  * [[aufbau-engine-packages]].
  */
 
-import type { PlaygroundGoal } from "./playground";
-import { isPlaygroundGoal } from "./playground";
+import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import { isAufbauProofOptions } from "../../exercise-kit/proof/options";
+import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
+import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
 
 export const AUFBAU_PROOF_KIND = "aufbau-proof@1";
 export const AUFBAU_PROOF_SCHEMA_VERSION = 1;
@@ -26,18 +28,6 @@ export const AUFBAU_PROOF_COMPONENT_METADATA = {
 } as const;
 
 /**
- * Author toggles for the in-browser editor's assistance. Both default off so an
- * intro propositional-logic problem stays honest; an author teaching, say, ZFC
- * can switch them on.
- *   - `allowAuto`       expose the compiler's `auto?` / `apply?` proof search
- *   - `allowCompletion` expose LSP rule-name completion
- */
-export interface AufbauProofOptions {
-  readonly allowAuto: boolean;
-  readonly allowCompletion: boolean;
-}
-
-/**
  * Everything the widget and grader need, frozen at authoring time.
  *   - `goalDecl`    this exercise's own `theorem <goalName>: $ … $;`, which the
  *                   join appends to the system's text
@@ -45,14 +35,14 @@ export interface AufbauProofOptions {
  *                   `<goalName>` public-theorem-block header (see `docs/proof.md`)
  *   - `mm0`         the resolved theory text plus the appended goal declaration
  *                   — the sole verification input. **Filled by the join**, not
- *                   stored: see `exercises/systems.ts`. It is required here
+ *                   stored: see `exercise-kit/systems/join.ts`. It is required here
  *                   because this interface describes the payload as a consumer
  *                   receives it, which is always after the join; what the
  *                   compiler writes is {@link CompiledAufbauProofPublicData}.
  *   - `playground`  set when the exercise has no goal of its own: `goalDecl`
  *                   is absent, `goalName` is the fixed `playground`, and the
  *                   answer carries the statement its proof derived (see
- *                   `playground.ts`)
+ *                   `exercise-kit/proof/playground.ts`)
  *   - `promptHtml`  the rendered prose above the theorem header
  *   - `source`      the theory as written, `@syntax` intact, which the join
  *                   fills in beside `mm0`. This type's students write engine
@@ -103,16 +93,6 @@ export interface AufbauProofAnswerData {
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-export function isAufbauProofOptions(
-  value: unknown,
-): value is AufbauProofOptions {
-  return (
-    isObject(value) &&
-    typeof value.allowAuto === "boolean" &&
-    typeof value.allowCompletion === "boolean"
-  );
 }
 
 export function isAufbauProofPublicData(

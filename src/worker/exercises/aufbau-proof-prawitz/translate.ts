@@ -46,7 +46,7 @@
  * That happens before anything else here, which also means two assumptions
  * spelled differently but meaning the same thing answer to one discharge mark.
  * A theory that names no sentence sort passes every node through untouched —
- * see `aufbau-proof/formulas.ts`.
+ * see `exercise-kit/proof/formulas.ts`.
  *
  * Structural problems (a discharge mark no assumption answers to, mixed
  * formulas under one mark, an assumption with premises) are returned as
@@ -59,14 +59,14 @@ import type {
   NodeFormulaProblem,
   ProofFormulaReader,
   ProofRuleReader,
-} from "../aufbau-proof/formulas";
+} from "../../exercise-kit/proof/formulas";
 import {
   ENGINE_RULE,
   ENGINE_TEXT,
   readNodeFormulas,
   unionVariables,
-} from "../aufbau-proof/formulas";
-import type { ProofStatement } from "../aufbau-proof/playground";
+} from "../../exercise-kit/proof/formulas";
+import type { ProofStatement } from "../../exercise-kit/proof/playground";
 import type { PrawitzProofNode } from "./types";
 
 /** The header that separates the goal name from the proof body in `.auf`. */

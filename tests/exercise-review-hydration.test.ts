@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import type { ExerciseHydration } from "../src/worker/exercise-kit/hydration";
+import { EXERCISE_HYDRATION_VERSION } from "../src/worker/exercise-kit/hydration";
 import { renderAufbauProofReview } from "../src/worker/exercises/aufbau-proof/read-only-view";
 import { buildAufbauProofStrings } from "../src/worker/exercises/aufbau-proof/strings";
 import { renderAufbauProofFitchReview } from "../src/worker/exercises/aufbau-proof-fitch/read-only-view";
 import { buildAufbauProofFitchStrings } from "../src/worker/exercises/aufbau-proof-fitch/strings";
 import { renderAufbauProofTreeReview } from "../src/worker/exercises/aufbau-proof-tree/read-only-view";
 import { buildAufbauProofTreeStrings } from "../src/worker/exercises/aufbau-proof-tree/strings";
-import type { ExerciseHydration } from "../src/worker/exercises/hydration";
-import { EXERCISE_HYDRATION_VERSION } from "../src/worker/exercises/hydration";
 import { isTruthTablePublicData } from "../src/worker/exercises/truth-table/grading";
 import { renderTruthTableReview } from "../src/worker/exercises/truth-table/read-only-view";
 import { buildTruthTableStrings } from "../src/worker/exercises/truth-table/strings";

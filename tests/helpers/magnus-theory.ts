@@ -14,16 +14,16 @@ import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import type {
   ProofFormulaReader,
   ProofRuleReader,
-} from "../../src/worker/exercises/aufbau-proof/formulas";
+} from "../../src/worker/exercise-kit/proof/formulas";
 import {
   goalEngineDeclaration,
   proofFormulaReader,
   proofRuleReader,
   proofTheoryText,
-} from "../../src/worker/exercises/aufbau-proof/formulas";
+} from "../../src/worker/exercise-kit/proof/formulas";
+import { withSystemText } from "../../src/worker/exercise-kit/systems/join";
 import { ruleCitationShapes } from "../../src/worker/exercises/aufbau-proof-fitch/citations";
 import type { RuleCitationShape } from "../../src/worker/exercises/aufbau-proof-fitch/translate";
-import { withSystemText } from "../../src/worker/exercises/systems";
 import { THEORY_SOURCES } from "../../src/worker/logic/theories";
 
 const source = THEORY_SOURCES["forallx-magnus.mm0"];

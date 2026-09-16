@@ -109,7 +109,7 @@ derived from the proof itself — the last line with the assumptions still open 
 statement in engine text), and the worker rebuilds the same
 `theorem playground …` declaration from the answer, checks its binders
 against the system's `@vars` pools, and verifies the certificate against the
-theory plus that declaration. See `aufbau-proof/playground.ts`, and the
+theory plus that declaration. See `exercise-kit/proof/playground.ts`, and the
 [authoring reference][authoring] for the shared rules.
 
 ### Magnus reductio and citation shapes
@@ -143,7 +143,7 @@ Starters are parsed during authoring. Goal math strings are converted using
 the turnstile result sort, with a sentence-sort fallback, but without the
 stricter student lints. Invalid goal syntax produces `invalid_goal_formula`.
 `goalEngineDecl` supplies engine input; the authored declaration remains
-available for display. See `../aufbau-proof/formulas.ts`.
+available for display. See `../../exercise-kit/proof/formulas.ts`.
 
 ## Scope rendering
 

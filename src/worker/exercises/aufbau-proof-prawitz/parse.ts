@@ -1,7 +1,8 @@
 /**
  * Parse a linear starter body into a *Prawitz* proof tree — this type's
- * analogue of the tree type's {@link ../aufbau-proof-tree/parse parseProofTree},
- * which does all the structural work here too (line grammar, duplicate labels,
+ * analogue of the tree type's starter, over the kit's
+ * {@link ../../exercise-kit/proof/tree-parse parseProofTree}, which does all
+ * the structural work here too (line grammar, duplicate labels,
  * DAG/cycle/orphan rejection, single root). This module only adds the two
  * things a Prawitz node needs beyond a tree node:
  *
@@ -29,11 +30,13 @@
  * label comments. Tests pin the round-trip.
  */
 
-import type { ProofRuleReader } from "../aufbau-proof/formulas";
-import { ENGINE_RULE } from "../aufbau-proof/formulas";
-import type { ProofTreeParseIssue } from "../aufbau-proof-tree/parse";
-import { parseProofTree } from "../aufbau-proof-tree/parse";
-import type { ProofTreeNode } from "../aufbau-proof-tree/types";
+import type { ProofRuleReader } from "../../exercise-kit/proof/formulas";
+import { ENGINE_RULE } from "../../exercise-kit/proof/formulas";
+import type {
+  ProofTreeNode,
+  ProofTreeParseIssue,
+} from "../../exercise-kit/proof/tree-parse";
+import { parseProofTree } from "../../exercise-kit/proof/tree-parse";
 import { prawitzToAuf } from "./translate";
 import type { PrawitzProofNode } from "./types";
 

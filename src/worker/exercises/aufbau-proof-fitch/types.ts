@@ -14,9 +14,9 @@
  * See [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
-import type { PlaygroundGoal } from "../aufbau-proof/playground";
-import { isPlaygroundGoal } from "../aufbau-proof/playground";
-import type { AufbauProofOptions } from "../aufbau-proof/types";
+import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
+import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
 
 export const AUFBAU_PROOF_FITCH_KIND = "aufbau-proof-fitch@1";
 export const AUFBAU_PROOF_FITCH_SCHEMA_VERSION = 1;
@@ -87,7 +87,7 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *   - `playground`     set when the exercise has no goal of its own: no
  *                      declaration is frozen, `goalName` is the fixed
  *                      `playground`, and the answer carries the statement its
- *                      proof derived (see `aufbau-proof/playground.ts`)
+ *                      proof derived (see `exercise-kit/proof/playground.ts`)
  */
 export interface AufbauProofFitchPublicData {
   readonly assumptionRule: string;
@@ -111,7 +111,7 @@ export interface AufbauProofFitchPublicData {
  * neither is trusted for grading. The envelope the client submits carries one
  * more field, `mmb`, the base64 MMB certificate it compiled from the translated
  * text — the only thing graded, and not kept once `evaluate` has verified it;
- * see {@link ../aufbau-proof/certificate readCertificate}.
+ * see {@link ../../exercise-kit/proof/certificate readCertificate}.
  */
 export interface AufbauProofFitchAnswerData {
   readonly fitchText: string;

@@ -4,7 +4,7 @@ import type {
 } from "../../domain/content";
 import type { AppId } from "../../domain/ids";
 import type { JsonValue } from "../../domain/json";
-import { withSystemSources } from "../../exercises/systems";
+import { withSystemSources } from "../../exercise-kit/systems/join";
 import { deferred } from "../../i18n/deferred";
 import type { Translator } from "../../i18n/translator";
 import { AppHttpError } from "../errors";
@@ -309,7 +309,7 @@ export function parseContentArtifact(
   // The one place a stored artifact becomes a usable one: the table holds a
   // single copy of each system's text, and every consumer downstream — grading,
   // review, the server renderers — reads a `publicData` that already has its
-  // own copy spliced in. See `exercises/systems.ts`.
+  // own copy spliced in. See `exercise-kit/systems/join.ts`.
   return withSystemSources(compiled as unknown as CompiledContentArtifact);
 }
 

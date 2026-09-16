@@ -1,4 +1,4 @@
-import type { Translator } from "../i18n/translator";
+import type { Translator } from "../../i18n/translator";
 
 /**
  * The text the three proof widgets — linear `.auf`, Fitch, and tree — all show,
@@ -26,7 +26,7 @@ export function buildProofEngineStrings(i18n: Translator) {
     /**
      * A playground's mark when the proof has a last line but the theory
      * cannot say which of its tokens are variables, so no goal can be
-     * declared for it (see `aufbau-proof/playground.ts`).
+     * declared for it (see `./playground.ts`).
      */
     "Could not work out what the last line states.": i18n.t(
       "Could not work out what the last line states.",

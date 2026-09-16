@@ -85,7 +85,7 @@ export interface ModelPublicData {
   /**
    * Which of the document's systems the formulas are written in, and
    * {@link source} the copy of its text the join fills in. See
-   * `exercises/systems.ts`; between them they are what lets an exercise be set
+   * `exercise-kit/systems/join.ts`; between them they are what lets an exercise be set
    * in a language its own document declares, rather than only in one the server
    * ships.
    */

@@ -341,7 +341,7 @@ export function buildDiagnosticStrings(i18n: Translator) {
         placeholders("formula"),
       ),
 
-    // The shared first-order parser (`exercises/first-order/formula.ts`).
+    // The shared first-order parser (`exercise-kit/formula/formula.ts`).
     // It shares "Expected a formula.", "Expected a formula but found …",
     // "Unexpected character …" and "Unexpected …" with the propositional parser
     // above; these are the sentences only a first-order dialect can produce.
@@ -511,7 +511,7 @@ export function buildDiagnosticStrings(i18n: Translator) {
         placeholders("option"),
       ),
 
-    // The starter-tree parser (`aufbau-proof-tree/parse.ts`).
+    // The starter-tree parser (`exercise-kit/proof/tree-parse.ts`).
     "Could not parse “{line}”. Each starter line must read '<label>: $ <formula> $ by <rule> [<refs>]'.":
       i18n.t(
         "Could not parse “{line}”. Each starter line must read '<label>: $ <formula> $ by <rule> [<refs>]'.",

@@ -34,11 +34,12 @@
 import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
+import type { CorrectnessMarkState } from "../../worker/exercise-kit/correctness-mark";
 import type {
   NodeFormulaProblem,
   ProofFormulaReader,
   ProofRuleReader,
-} from "../../worker/exercises/aufbau-proof/formulas";
+} from "../../worker/exercise-kit/proof/formulas";
 import {
   ENGINE_RULE,
   ENGINE_TEXT,
@@ -46,20 +47,19 @@ import {
   proofFormulaReader,
   proofRuleReader,
   proofTheoryText,
-} from "../../worker/exercises/aufbau-proof/formulas";
-import type { PlaygroundGoal } from "../../worker/exercises/aufbau-proof/playground";
+} from "../../worker/exercise-kit/proof/formulas";
+import type { PlaygroundGoal } from "../../worker/exercise-kit/proof/playground";
 import {
   playgroundGoal,
   playgroundGoalText,
   playgroundTheoryText,
-} from "../../worker/exercises/aufbau-proof/playground";
+} from "../../worker/exercise-kit/proof/playground";
 import { flattenProofTree } from "../../worker/exercises/aufbau-proof-tree/flatten";
 import type { AufbauProofTreeStringId } from "../../worker/exercises/aufbau-proof-tree/strings";
 import type {
   AufbauProofTreePublicData,
   ProofTreeNode,
 } from "../../worker/exercises/aufbau-proof-tree/types";
-import type { CorrectnessMarkState } from "../../worker/exercises/correctness-mark";
 import {
   type CompileDiagnostic,
   loadProofCompiler,
@@ -700,14 +700,14 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     source: null,
   };
   /** A playground derives its goal from the root; see
-   *  `aufbau-proof/playground.ts`. */
+   *  `exercise-kit/proof/playground.ts`. */
   private playground = false;
   /** The goal the last flattening derived (playground only). */
   private goal: PlaygroundGoal | null = null;
   /** What the next compile runs against; `null` when there is nothing to. */
   private compileMm0: string | null = null;
   /** Reads a node's text in the theory's language; passes it through where
-   *  the exercise was frozen without one. See `aufbau-proof/formulas.ts`. */
+   *  the exercise was frozen without one. See `exercise-kit/proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
   /** Cited rule name to the engine's, from the theory's `@syntax alias` lines. */
   private readRule: ProofRuleReader = ENGINE_RULE;

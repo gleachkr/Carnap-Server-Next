@@ -21,14 +21,14 @@ import {
   proofFormulaReader,
   proofRuleReader,
   proofTheoryText,
-} from "../src/worker/exercises/aufbau-proof/formulas";
+} from "../src/worker/exercise-kit/proof/formulas";
 import {
   PLAYGROUND_GOAL_NAME,
   playgroundGoal,
   playgroundGoalText,
   playgroundTheoryText,
-} from "../src/worker/exercises/aufbau-proof/playground";
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+} from "../src/worker/exercise-kit/proof/playground";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { MAGNUS_CASES } from "../tests/helpers/magnus-cases";

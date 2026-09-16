@@ -11,7 +11,7 @@ import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import type { JsonValue } from "../domain/json";
 import { timestampNow } from "../domain/time";
-import { keyedArtifact } from "../exercises/systems";
+import { keyedArtifact } from "../exercise-kit/systems/join";
 import { deferred } from "../i18n/deferred";
 import type { TheoryResolver } from "../logic/theories";
 import { hostedTheoryRevisionId } from "../logic/theories";

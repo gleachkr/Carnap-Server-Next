@@ -5,15 +5,16 @@ import {
 } from "../../application/content/render-support";
 import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
+import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
 import type { Translator } from "../../i18n/translator";
-import { previewExerciseActionsHtml } from "../actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../group";
-import { reviewHydrationScript } from "../hydration";
 import shadowStyles from "./shadow.css" with { type: "text" };
+import { buildAufbauProofFitchStrings } from "./strings";
 import type { AufbauProofFitchPublicData } from "./types";
 import {
   AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
@@ -98,10 +99,7 @@ export function renderAufbauProofFitchReview(
   },
   i18n: Translator,
 ): string {
-  const hydration = reviewHydrationScript(
-    AUFBAU_PROOF_FITCH_COMPONENT_METADATA.assetId,
-    i18n,
-  );
+  const hydration = reviewHydrationScript(buildAufbauProofFitchStrings(i18n));
 
   return `<carnap-aufbau-proof-fitch data-exercise-id="${escapeHtml(review.exerciseId)}" data-review data-assumption-rule="${escapeHtml(review.assumptionRule)}" data-assumption-spellings="${escapeHtml(review.assumptionSpellings.join(" "))}">
         <template shadowrootmode="open">

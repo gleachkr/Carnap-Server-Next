@@ -232,7 +232,7 @@ export interface CompiledContentArtifact {
    * The MM0 every exercise in this document is set in, frozen once and keyed by
    * the name the exercise wrote. Absent in an artifact compiled before the
    * table existed, and in a document whose exercises are set in nothing; see
-   * `exercises/systems.ts` for the join that hands an exercise its copy.
+   * `exercise-kit/systems/join.ts` for the join that hands an exercise its copy.
    */
   readonly systems?: CompiledSystems;
 }

@@ -14,14 +14,14 @@ import type {
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
-import { readCertificate } from "../aufbau-proof/certificate";
-import { verifyMmb } from "../aufbau-proof/verifier";
-import type { Formula } from "../first-order";
+import type { Formula } from "../../exercise-kit/formula";
 import {
   firstOrderLanguageFor,
   formulaToString,
   parseFormula,
-} from "../first-order";
+} from "../../exercise-kit/formula";
+import { readCertificate } from "../../exercise-kit/proof/certificate";
+import { verifyMmb } from "../../exercise-kit/proof/verifier";
 import { buildEquivalenceCheck } from "./logic/mm0";
 import { verbatimSolutionIndex } from "./logic/solutions";
 import { runTranslationTests } from "./logic/tests";

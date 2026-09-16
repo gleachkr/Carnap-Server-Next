@@ -24,9 +24,9 @@ import {
   proofFormulaReader,
   proofRuleReader,
   proofTheoryText,
-} from "../src/worker/exercises/aufbau-proof/formulas";
+} from "../src/worker/exercise-kit/proof/formulas";
 import { AUFBAU_PROOF_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof/types";
-import { verifyMmb } from "../src/worker/exercises/aufbau-proof/verifier";
+import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { AUFBAU_PROOF_FITCH_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-fitch/types";
@@ -225,7 +225,7 @@ for (const node of compiled.artifact.document.nodes) {
   // The engine input, and the text the starter is read as surface formulas in.
   // Since #257 both are filled by the systems join, and the stripped `mm0` is
   // derived from `source`; only an artifact compiled before `source` existed
-  // has the one without the other. See `aufbau-proof/formulas`.
+  // has the one without the other. See `exercise-kit/proof/formulas`.
   const { mm0, source } = proofTheoryText(publicData);
   const label = `${node.exerciseId} (${node.render.assetId})`;
 

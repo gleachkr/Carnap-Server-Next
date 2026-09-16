@@ -3,18 +3,18 @@ import type { ExerciseFeedback } from "../../worker/domain/exercises";
 import {
   ANSWER_RECORDED_EVENT,
   UNSAVED_ANSWER_ATTRIBUTE,
-} from "../../worker/exercises/answer-events";
+} from "../../worker/exercise-kit/answer-events";
 import {
   CORRECTNESS_MARK_CLASS,
   CORRECTNESS_MARK_GLYPHS,
   CORRECTNESS_MARK_LABEL_ATTRIBUTES,
   type CorrectnessMarkState,
-} from "../../worker/exercises/correctness-mark";
+} from "../../worker/exercise-kit/correctness-mark";
 import type {
   ExerciseHydration,
   ExerciseHydrationMode,
-} from "../../worker/exercises/hydration";
-import { withSystemText } from "../../worker/exercises/systems";
+} from "../../worker/exercise-kit/hydration";
+import { withSystemText } from "../../worker/exercise-kit/systems/join";
 import { formatMessage } from "../../worker/i18n/translator";
 
 /**
@@ -629,7 +629,7 @@ export abstract class CarnapExerciseElement<
 
   /**
    * Set the exercise's correctness mark — the shared indicator in the action
-   * bar (see `worker/exercises/correctness-mark.ts`).
+   * bar (see `worker/exercise-kit/correctness-mark.ts`).
    *
    * A widget that can grade itself in the browser calls this with its own
    * verdict, which overrides whatever the runtime last wrote there from the
@@ -704,7 +704,7 @@ export abstract class CarnapExerciseElement<
    * What this widget's own Check has to say, on the line under the button row.
    *
    * The element is the server-rendered one in the shared action bar (see
-   * `exercises/actions.ts`), found the same way and for the same reasons as the
+   * `exercise-kit/actions.ts`), found the same way and for the same reasons as the
    * correctness mark above. Empty text clears the line, which the stylesheet then
    * hides — so "no verdict" and "no line" are one call, and a widget cannot leave
    * a stale sentence standing by forgetting to remove an attribute.
