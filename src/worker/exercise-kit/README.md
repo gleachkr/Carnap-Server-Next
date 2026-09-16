@@ -19,8 +19,7 @@ glue that enumerates the types (`strings.ts`, `group.ts`).
   certificate and its verifier (`certificate.ts`, `verifier.ts`), the shared
   authoring helpers (`authoring.ts`: theorem header, starters, `options=`,
   playground body), the linear-body tree parser (`tree-parse.ts`, used by the
-  tree and Prawitz types), the `show` panel, and the engine's diagnostic
-  strings.
+  tree and Prawitz types), and the engine's diagnostic strings.
 - `formula/` — the formula tree the model, translation and (as a mirror)
   truth-table types read: `parseFormula` over a language spec, the tree
   shapes, and the language lookup.

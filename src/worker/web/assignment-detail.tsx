@@ -26,6 +26,7 @@ import {
   exerciseHydrationForArtifact,
   renderCompiledContent,
 } from "../application/content/renderer";
+import { renderTheoryPanel } from "../application/content/theory-panel";
 import type { EffectiveAssignmentPolicy } from "../application/policies";
 import type { SubmissionHistoryEntry } from "../application/submissions";
 import {
@@ -61,7 +62,6 @@ import {
   type ExerciseHydration,
   exerciseHydrationScript,
 } from "../exercise-kit/hydration";
-import { renderTheoryPanel } from "../exercise-kit/proof/theory-panel";
 import { renderAufbauProofElement } from "../exercises/aufbau-proof/read-only-view";
 import {
   AUFBAU_PROOF_ANSWER_KIND,

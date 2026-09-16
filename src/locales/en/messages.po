@@ -3926,7 +3926,7 @@ msgstr "The verification check did not pass or has expired. Please try again."
 msgid "The verification service could not be reached. Please try again shortly."
 msgstr "The verification service could not be reached. Please try again shortly."
 
-#: src/worker/exercise-kit/proof/theory-panel.ts
+#: src/worker/application/content/theory-panel.ts
 #: src/worker/web/content.tsx
 msgid "Theory"
 msgstr "Theory"

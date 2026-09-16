@@ -8,7 +8,6 @@ import {
   EXERCISE_HYDRATION_VERSION,
   type ExerciseHydration,
 } from "../../exercise-kit/hydration";
-import { renderTheoryPanel } from "../../exercise-kit/proof/theory-panel";
 import { keyedPublicData } from "../../exercise-kit/systems/join";
 import { renderAufbauProof } from "../../exercises/aufbau-proof/read-only-view";
 import { AUFBAU_PROOF_COMPONENT_METADATA } from "../../exercises/aufbau-proof/types";
@@ -33,6 +32,7 @@ import { renderTruthTable } from "../../exercises/truth-table/read-only-view";
 import { TRUTH_TABLE_COMPONENT_METADATA } from "../../exercises/truth-table/types";
 import type { Translator } from "../../i18n/translator";
 import { contentRevisionAttribute, escapeHtml } from "./render-support";
+import { renderTheoryPanel } from "./theory-panel";
 
 export interface RenderCompiledContentOptions {
   readonly contentRevisionId?: string;

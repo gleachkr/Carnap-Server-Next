@@ -1,11 +1,16 @@
-import { escapeHtml } from "../../application/content/render-support";
 import type { ContentNode } from "../../domain/content";
 import type { Translator } from "../../i18n/translator";
+import { escapeHtml } from "./render-support";
 import theoryPanelStyles from "./theory-panel.css" with { type: "text" };
 
 /**
  * The read-only panel a shown `:::aufbau-mm0` block renders: the axioms and
  * notation in scope for the proof exercises below it, behind a disclosure.
+ *
+ * A `theory` node is a document node like a markdown one, not part of any
+ * exercise, which is why this sits beside the renderer rather than with the
+ * exercise types: `renderCompiledContent` and the assignment page are its only
+ * callers.
  *
  * Rendered here rather than at compile time because the summary names the thing
  * in words ("Theory: prop"), and compiled documents are stored — an author who

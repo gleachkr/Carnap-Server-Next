@@ -3926,7 +3926,7 @@ msgstr ""
 msgid "The verification service could not be reached. Please try again shortly."
 msgstr ""
 
-#: src/worker/exercise-kit/proof/theory-panel.ts
+#: src/worker/application/content/theory-panel.ts
 #: src/worker/web/content.tsx
 msgid "Theory"
 msgstr "Theorie"
