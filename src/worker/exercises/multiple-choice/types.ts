@@ -1,5 +1,7 @@
 import type { MultipleChoicePublicData } from "../../domain/content";
+import type { ExerciseCapabilities } from "../../domain/exercises";
 import type { JsonValue } from "../../domain/json";
+import type { Translator } from "../../i18n/translator";
 
 export type {
   MultipleChoiceAnswerData,
@@ -18,6 +20,17 @@ export const MULTIPLE_CHOICE_COMPONENT_METADATA = {
   component: "carnap-multiple-choice",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const MULTIPLE_CHOICE_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: true,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function multipleChoiceName(i18n: Translator): string {
+  return i18n.t("Multiple-choice question");
+}
 
 function isObject(value: JsonValue): value is Record<string, JsonValue> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

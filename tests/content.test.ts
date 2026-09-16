@@ -5,27 +5,28 @@ import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import { createDefaultAuthoringExerciseRegistry } from "../src/worker/application/content/authoring-registry";
 import {
   CONTENT_SANITIZE_SCHEMA,
   compileCarnapMarkdown,
 } from "../src/worker/application/content/compiler";
 import { compileTheorySource } from "../src/worker/application/content/mm0";
-import {
-  createDefaultExerciseKindRegistry,
-  FREE_RESPONSE_ANSWER_KIND,
-  FREE_RESPONSE_KIND,
-  MULTIPLE_CHOICE_ANSWER_KIND,
-  MultipleChoiceExerciseHandler,
-  SHORT_ANSWER_ANSWER_KIND,
-  SHORT_ANSWER_KIND,
-} from "../src/worker/application/content/registry";
+import { createDefaultExerciseRegistry } from "../src/worker/application/content/registry";
 import { renderCompiledContent } from "../src/worker/application/content/renderer";
 import type {
   CompiledContentArtifact,
   ExerciseManifestItem,
 } from "../src/worker/domain/content";
 import type { Env } from "../src/worker/env";
+import {
+  FREE_RESPONSE_ANSWER_KIND,
+  FREE_RESPONSE_KIND,
+} from "../src/worker/exercises/free-response/types";
+import { MULTIPLE_CHOICE_EXERCISE } from "../src/worker/exercises/multiple-choice";
+import { MULTIPLE_CHOICE_ANSWER_KIND } from "../src/worker/exercises/multiple-choice/types";
+import {
+  SHORT_ANSWER_ANSWER_KIND,
+  SHORT_ANSWER_KIND,
+} from "../src/worker/exercises/short-answer/types";
 import { i18nFor } from "../src/worker/i18n";
 import { passthroughTranslator } from "../src/worker/i18n/translator";
 import { sampleSource as starterTemplate } from "../src/worker/web/content";
@@ -677,7 +678,7 @@ Choose yes.
       await compileCarnapMarkdown(`::::short-answer{#term_1 answers="modus ponens|MP" points="2"}
 Name the rule.
 ::::`);
-    const registry = createDefaultExerciseKindRegistry();
+    const registry = createDefaultExerciseRegistry();
 
     if (!compiled.ok) {
       throw new Error("Expected successful compilation.");
@@ -716,7 +717,7 @@ Name the rule.
       await compileCarnapMarkdown(`::::free-response{#essay_1 points="5" rubric="Check for a cited rule."}
 Explain the proof.
 ::::`);
-    const registry = createDefaultExerciseKindRegistry();
+    const registry = createDefaultExerciseRegistry();
 
     if (!compiled.ok) {
       throw new Error("Expected successful compilation.");
@@ -918,7 +919,7 @@ Question?
   });
 
   test("every exercise directive refuses an attribute it does not know", async () => {
-    const registry = createDefaultAuthoringExerciseRegistry();
+    const registry = createDefaultExerciseRegistry();
     const names = registry.directiveNames();
 
     expect(names.length).toBe(10);
@@ -1038,7 +1039,7 @@ term wff: sort;
 
   test("multiple-choice normalization and evaluation are registry based", async () => {
     const compiled = await compileCarnapMarkdown(sampleSource());
-    const registry = createDefaultExerciseKindRegistry();
+    const registry = createDefaultExerciseRegistry();
 
     if (!compiled.ok) {
       throw new Error("Expected successful compilation.");
@@ -1084,7 +1085,7 @@ term wff: sort;
 
   test("preview rendering uses registered components", async () => {
     const compiled = await compileCarnapMarkdown(sampleSource());
-    const handler = new MultipleChoiceExerciseHandler();
+    const handler = MULTIPLE_CHOICE_EXERCISE;
 
     if (!compiled.ok) {
       throw new Error("Expected successful compilation.");

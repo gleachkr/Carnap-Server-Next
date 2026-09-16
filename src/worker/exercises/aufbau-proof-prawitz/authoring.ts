@@ -2,7 +2,6 @@ import type {
   CompiledExercise,
   CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -31,14 +30,15 @@ import {
   starterRuleReader,
   unreadableStarterFormula,
 } from "../../exercise-kit/proof/authoring";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import { requireSystem } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import { parsePrawitzStarter } from "./parse";
 import type { PrawitzDiagnosticCode } from "./translate";
 import { prawitzToAuf } from "./translate";
 import type { AufbauProofPrawitzPublicData, PrawitzProofNode } from "./types";
 import {
   AUFBAU_PROOF_PRAWITZ_ANSWER_KIND,
+  AUFBAU_PROOF_PRAWITZ_CAPABILITIES,
   AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
   AUFBAU_PROOF_PRAWITZ_KIND,
   AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
@@ -120,10 +120,9 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
  */
 export async function compileAufbauProofPrawitz(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, AUFBAU_PROOF_PRAWITZ_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -300,10 +299,7 @@ export async function compileAufbauProofPrawitz(
 
   return buildCompiledExercise({
     answerKind: AUFBAU_PROOF_PRAWITZ_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: AUFBAU_PROOF_PRAWITZ_CAPABILITIES,
     exam,
     feedback,
     id,

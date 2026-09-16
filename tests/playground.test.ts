@@ -25,7 +25,7 @@ import {
   verificationText,
 } from "../src/worker/exercise-kit/proof/playground";
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
-import { AufbauProofFitchExerciseType } from "../src/worker/exercises/aufbau-proof-fitch/assessment";
+import { AUFBAU_PROOF_FITCH_EXERCISE } from "../src/worker/exercises/aufbau-proof-fitch";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import {
@@ -458,7 +458,7 @@ describe("the worker's guard on a submitted goal", () => {
 });
 
 describe("the pipeline against the engine", () => {
-  const type = new AufbauProofFitchExerciseType();
+  const type = AUFBAU_PROOF_FITCH_EXERCISE;
 
   async function declaration(): Promise<ExerciseManifestItem> {
     return compileOne(

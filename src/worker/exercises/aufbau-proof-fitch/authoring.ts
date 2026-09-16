@@ -1,8 +1,6 @@
 import type {
   CompiledExercise,
-  CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -30,13 +28,14 @@ import {
   unreadableStarterFormula,
 } from "../../exercise-kit/proof/authoring";
 import { theoryLanguageSource } from "../../exercise-kit/proof/formulas";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import { requireSystem } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import { ruleCitationShapes } from "./citations";
 import { fitchToAuf } from "./translate";
 import type { AufbauProofFitchPublicData } from "./types";
 import {
   AUFBAU_PROOF_FITCH_ANSWER_KIND,
+  AUFBAU_PROOF_FITCH_CAPABILITIES,
   AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
   AUFBAU_PROOF_FITCH_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
@@ -73,10 +72,9 @@ const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
  */
 export async function compileAufbauProofFitch(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, AUFBAU_PROOF_FITCH_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -234,10 +232,7 @@ export async function compileAufbauProofFitch(
 
   return buildCompiledExercise({
     answerKind: AUFBAU_PROOF_FITCH_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: AUFBAU_PROOF_FITCH_CAPABILITIES,
     exam,
     feedback,
     id,

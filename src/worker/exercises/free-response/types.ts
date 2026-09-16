@@ -1,5 +1,7 @@
 import type { FreeResponsePublicData } from "../../domain/content";
+import type { ExerciseCapabilities } from "../../domain/exercises";
 import type { JsonValue } from "../../domain/json";
+import type { Translator } from "../../i18n/translator";
 
 export type {
   FreeResponseAnswerData,
@@ -18,6 +20,17 @@ export const FREE_RESPONSE_COMPONENT_METADATA = {
   component: "carnap-free-response",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const FREE_RESPONSE_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: false,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function freeResponseName(i18n: Translator): string {
+  return i18n.t("Free-response question");
+}
 
 function isObject(value: JsonValue): value is Record<string, JsonValue> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

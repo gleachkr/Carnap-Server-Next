@@ -3,11 +3,13 @@
 What the exercise types are built from, kept apart from the types themselves.
 
 `src/worker/exercises/<type>/` holds one exercise type per folder — its
-directive compiler, assessment, review rendering, shapes and strings. Anything
-two types share, or that the application and the client need without caring
-which type is asking, lives here instead. One rule: **a type imports the kit;
-the kit never imports a type.** `src/worker/exercises/` itself keeps only the
-glue that enumerates the types (`strings.ts`, `group.ts`).
+directive compiler, assessment, review rendering, shapes and strings — and
+exports it as one `ExerciseType` object from its `index.ts`. Anything two
+types share, or that the application and the client need without caring which
+type is asking, lives here instead. One rule: **a type imports the kit; the
+kit never imports a type.** `src/worker/exercises/index.ts` is the one list
+of the types; the registry in `application/content/registry.ts` is three
+lookups over it, and nothing else enumerates them.
 
 - `systems/` — the logic an exercise is set in. `theory.ts` compiles an
   `:::aufbau-mm0` block, names a shipped theory by id, and defines the
@@ -23,11 +25,13 @@ glue that enumerates the types (`strings.ts`, `group.ts`).
 - `formula/` — the formula tree the model, translation and (as a mirror)
   truth-table types read: `parseFormula` over a language spec, the tree
   shapes, and the language lookup.
-- the root files — the framework every type plugs into: the action bar
-  (`actions.ts`), the hydration payload (`hydration.ts`), the correctness
-  mark, the answer events, the help strings, the assessment helpers
-  (`assessment.ts`) the ten `assessment.ts` classes share, and the page
-  stylesheet for that chrome (`exercise.css`, served by `web/styles.ts`).
+- the root files — the framework every type plugs into: the `ExerciseType`
+  contract itself (`type.ts`), the action bar (`actions.ts`), the hydration
+  payload (`hydration.ts`), the named group every exercise renders as
+  (`group.ts`, `group.css`), the correctness mark, the answer events, the
+  help strings, the assessment helpers (`assessment.ts`) the ten per-type
+  `assessment.ts` objects share, and the page stylesheet for that chrome
+  (`exercise.css`, served by `web/styles.ts`).
 
 Everything here is imported by the client bundles as well as the worker, so
 modules stay DOM-free and catalog-free unless their header says otherwise.

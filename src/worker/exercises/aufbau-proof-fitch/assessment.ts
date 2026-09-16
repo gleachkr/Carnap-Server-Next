@@ -1,4 +1,4 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
+import { verifyMmb } from "#proof-verifier";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -26,7 +26,7 @@ import {
   playgroundGoalText,
   verificationText,
 } from "../../exercise-kit/proof/playground";
-import { verifyMmb } from "../../exercise-kit/proof/verifier";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import { renderAufbauProofFitchReview } from "./read-only-view";
 import type {
   AufbauProofFitchAnswerData,
@@ -34,8 +34,6 @@ import type {
 } from "./types";
 import {
   AUFBAU_PROOF_FITCH_ANSWER_KIND,
-  AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
-  AUFBAU_PROOF_FITCH_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
   DEFAULT_ASSUMPTION_RULE,
   isAufbauProofFitchAnswerData,
@@ -89,29 +87,17 @@ function reviewGoal(
   );
 }
 
-export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
-  readonly answerKind = AUFBAU_PROOF_FITCH_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = AUFBAU_PROOF_FITCH_KIND;
-  readonly schemaVersion = AUFBAU_PROOF_FITCH_SCHEMA_VERSION;
-
+export const AUFBAU_PROOF_FITCH_ASSESSMENT = {
   normalizeAnswer(
     envelope: AnswerEnvelope,
     declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== AUFBAU_PROOF_FITCH_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${AUFBAU_PROOF_FITCH_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -120,7 +106,7 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== AUFBAU_PROOF_FITCH_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -197,13 +183,13 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
           ...(goal === undefined ? {} : { goal }),
           proofText: envelope.data.proofText,
         } as unknown as JsonValue,
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: AUFBAU_PROOF_FITCH_ANSWER_KIND,
+        schemaVersion: AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
       },
       certificate,
       ok: true,
     };
-  }
+  },
 
   async evaluate(
     answer: NormalizedAnswer,
@@ -273,7 +259,7 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
       feedback: { verified: result.ok },
       status: result.ok ? "correct" : "incorrect",
     };
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -309,5 +295,5 @@ export class AufbauProofFitchExerciseType implements AssessmentExerciseType {
       ),
       summary: context.i18n.t("Aufbau Fitch proof"),
     };
-  }
-}
+  },
+} satisfies ExerciseAssessment;

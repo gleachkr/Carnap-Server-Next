@@ -1,4 +1,3 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -17,14 +16,13 @@ import {
   normalizeText,
   textAnswerReview,
 } from "../../exercise-kit/assessment";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import type {
   FreeResponseAnswerData,
   FreeResponsePrivateData,
 } from "./types";
 import {
   FREE_RESPONSE_ANSWER_KIND,
-  FREE_RESPONSE_COMPONENT_METADATA,
-  FREE_RESPONSE_KIND,
   FREE_RESPONSE_SCHEMA_VERSION,
 } from "./types";
 
@@ -40,19 +38,7 @@ function isFreeResponsePrivateData(
   );
 }
 
-export class FreeResponseExerciseType implements AssessmentExerciseType {
-  readonly answerKind = FREE_RESPONSE_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: false,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...FREE_RESPONSE_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = FREE_RESPONSE_KIND;
-  readonly schemaVersion = FREE_RESPONSE_SCHEMA_VERSION;
-
+export const FREE_RESPONSE_ASSESSMENT = {
   manualGradingSpec(declaration: ExerciseManifestItem): ManualGradingSpec {
     if (!isFreeResponsePrivateData(declaration.privateData)) {
       return {};
@@ -73,15 +59,15 @@ export class FreeResponseExerciseType implements AssessmentExerciseType {
         ],
       },
     };
-  }
+  },
 
   normalizeAnswer(envelope: AnswerEnvelope): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== FREE_RESPONSE_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${FREE_RESPONSE_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -90,7 +76,7 @@ export class FreeResponseExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== FREE_RESPONSE_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -125,12 +111,12 @@ export class FreeResponseExerciseType implements AssessmentExerciseType {
     return {
       answer: {
         data: data as unknown as JsonValue,
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: FREE_RESPONSE_ANSWER_KIND,
+        schemaVersion: FREE_RESPONSE_SCHEMA_VERSION,
       },
       ok: true,
     };
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -154,5 +140,5 @@ export class FreeResponseExerciseType implements AssessmentExerciseType {
     }
 
     return { ...review, rubricHtml };
-  }
-}
+  },
+} satisfies ExerciseAssessment;

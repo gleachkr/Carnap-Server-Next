@@ -2,7 +2,6 @@ import type {
   CompiledExercise,
   CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -17,9 +16,11 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type { ShortAnswerPrivateData, ShortAnswerPublicData } from "./types";
 import {
   SHORT_ANSWER_ANSWER_KIND,
+  SHORT_ANSWER_CAPABILITIES,
   SHORT_ANSWER_COMPONENT_METADATA,
   SHORT_ANSWER_KIND,
   SHORT_ANSWER_SCHEMA_VERSION,
@@ -71,9 +72,9 @@ const SHORT_ANSWER_ATTRIBUTES = [
 
 export async function compileShortAnswer(
   block: DirectiveBlock,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions } = context;
   validateAttributes(block, SHORT_ANSWER_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -105,10 +106,7 @@ export async function compileShortAnswer(
 
   return buildCompiledExercise({
     answerKind: SHORT_ANSWER_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: SHORT_ANSWER_CAPABILITIES,
     exam,
     feedback,
     id,

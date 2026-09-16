@@ -6,7 +6,7 @@ import type {
   ExerciseManifestItem,
   NormalizedAnswer,
 } from "../src/worker/domain/content";
-import { AufbauProofExerciseType } from "../src/worker/exercises/aufbau-proof/assessment";
+import { AUFBAU_PROOF_EXERCISE } from "../src/worker/exercises/aufbau-proof";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
   AUFBAU_PROOF_SCHEMA_VERSION,
@@ -93,7 +93,7 @@ function tamperBase64(base64: string): string {
   return btoa(out);
 }
 
-const handler = new AufbauProofExerciseType();
+const handler = AUFBAU_PROOF_EXERCISE;
 const context = { now: "2026-07-16T00:00:00.000Z" };
 
 /** The evaluator sees the certificate beside the answer, never inside it. */

@@ -1,8 +1,6 @@
 import type {
   CompiledExercise,
-  CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -16,12 +14,14 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type {
   FreeResponsePrivateData,
   FreeResponsePublicData,
 } from "./types";
 import {
   FREE_RESPONSE_ANSWER_KIND,
+  FREE_RESPONSE_CAPABILITIES,
   FREE_RESPONSE_COMPONENT_METADATA,
   FREE_RESPONSE_KIND,
   FREE_RESPONSE_SCHEMA_VERSION,
@@ -35,9 +35,9 @@ const FREE_RESPONSE_ATTRIBUTES = [
 
 export async function compileFreeResponse(
   block: DirectiveBlock,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions } = context;
   validateAttributes(block, FREE_RESPONSE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -70,10 +70,7 @@ export async function compileFreeResponse(
 
   return buildCompiledExercise({
     answerKind: FREE_RESPONSE_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: false,
-      supportsManualReview: true,
-    },
+    capabilities: FREE_RESPONSE_CAPABILITIES,
     exam,
     feedback,
     id,

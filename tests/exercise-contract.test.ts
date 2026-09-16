@@ -1,13 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import {
-  AssessmentExerciseRegistry,
-  type AssessmentExerciseType,
-  createDefaultExerciseKindRegistry,
-  MULTIPLE_CHOICE_ANSWER_KIND,
+  createDefaultExerciseRegistry,
+  ExerciseRegistry,
 } from "../src/worker/application/content/registry";
 import {
-  ComponentRegistry,
   componentAssetsForArtifact,
   renderCompiledContent,
 } from "../src/worker/application/content/renderer";
@@ -19,7 +16,10 @@ import type {
   NormalizedAnswer,
 } from "../src/worker/domain/content";
 import type { JsonValue } from "../src/worker/domain/json";
+import type { ExerciseType } from "../src/worker/exercise-kit/type";
+import { MULTIPLE_CHOICE_ANSWER_KIND } from "../src/worker/exercises/multiple-choice/types";
 import { i18nFor } from "../src/worker/i18n";
+import { SHOWCASE_DEMO_SOURCE } from "./helpers/showcase-demo";
 
 function isObject(value: JsonValue): value is Record<string, JsonValue> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -48,9 +48,8 @@ const fakeManifestItem: ExerciseManifestItem = {
   title: "Fake exercise",
 };
 
-const fakeExerciseType: AssessmentExerciseType = {
+const fakeExerciseType: ExerciseType = {
   answerKind: "fake-answer@1",
-  capabilities: fakeCapabilities,
   component: {
     assetId: "fake-widget-v1",
     capabilities: fakeCapabilities,
@@ -58,8 +57,18 @@ const fakeExerciseType: AssessmentExerciseType = {
     component: "fake-widget",
     componentVersion: "1",
   },
+  directiveName: "fake",
   kind: "fake-exercise@1",
   schemaVersion: 1,
+  compile() {
+    return Promise.resolve(null);
+  },
+  name() {
+    return "Fake exercise";
+  },
+  render(node) {
+    return `<fake-widget data-exercise-id="${node.exerciseId}"></fake-widget>`;
+  },
   async evaluate(
     answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
@@ -114,7 +123,7 @@ const fakeExerciseType: AssessmentExerciseType = {
 };
 
 async function assessSubmission(
-  registry: AssessmentExerciseRegistry,
+  registry: ExerciseRegistry,
   declaration: ExerciseManifestItem,
   envelope: AnswerEnvelope,
 ): Promise<AutomaticEvaluation | null> {
@@ -144,7 +153,7 @@ async function assessSubmission(
 
 describe("exercise contract", () => {
   test("a fake exercise type can be assessed without route changes", async () => {
-    const registry = new AssessmentExerciseRegistry();
+    const registry = new ExerciseRegistry();
 
     registry.register(fakeExerciseType);
 
@@ -165,7 +174,7 @@ describe("exercise contract", () => {
   });
 
   test("structural answer errors are distinct from incorrect answers", async () => {
-    const registry = new AssessmentExerciseRegistry();
+    const registry = new ExerciseRegistry();
 
     registry.register(fakeExerciseType);
 
@@ -186,7 +195,7 @@ describe("exercise contract", () => {
   });
 
   test("manual grading metadata is optional", () => {
-    const registry = new AssessmentExerciseRegistry();
+    const registry = new ExerciseRegistry();
 
     registry.register(fakeExerciseType);
 
@@ -194,7 +203,7 @@ describe("exercise contract", () => {
   });
 
   test("exercise packages return earned credit evidence, not scores", async () => {
-    const registry = new AssessmentExerciseRegistry();
+    const registry = new ExerciseRegistry();
 
     registry.register(fakeExerciseType);
 
@@ -212,7 +221,7 @@ describe("exercise contract", () => {
     expect(evaluation).not.toHaveProperty("finalScore");
   });
 
-  test("exercise island rendering uses component registry metadata", () => {
+  test("exercise island rendering uses the registered type's metadata", () => {
     const artifact: CompiledContentArtifact = {
       componentRegistryVersion: "component-registry-v1",
       document: {
@@ -231,14 +240,7 @@ describe("exercise contract", () => {
       manifestVersion: 1,
       sourceProfile: "carnap-markdown-v1",
     };
-    const components = new ComponentRegistry();
-
-    components.register({
-      metadata: fakeExerciseType.component,
-      render(node) {
-        return `<fake-widget data-exercise-id="${node.exerciseId}"></fake-widget>`;
-      },
-    });
+    const components = new ExerciseRegistry([fakeExerciseType]);
 
     expect(componentAssetsForArtifact(artifact, components)).toEqual([
       "fake-widget-v1",
@@ -283,7 +285,7 @@ describe("exercise contract", () => {
   });
 
   test("default registry normalizes a multiple-choice answer envelope", () => {
-    const registry = createDefaultExerciseKindRegistry();
+    const registry = createDefaultExerciseRegistry();
     const item: ExerciseManifestItem = {
       answerKind: MULTIPLE_CHOICE_ANSWER_KIND,
       capabilities: {
@@ -561,65 +563,68 @@ describe("the preview's action bar", () => {
 describe("the interactive submission path", () => {
   /**
    * Every widget that fills the shared action bar looks for `.exercise-actions`
-   * in **its own light DOM** — the bar is handed to the element renderer and
-   * projected through a slot. The generic submission form puts the bar beside
-   * the element instead, where the element cannot reach it, so a type with a
-   * widget needs its own branch in `submissionFormNode`.
+   * in **its own light DOM** — the submission form hands the bar to the type's
+   * renderer, which projects it through a slot. A renderer that laid the bar
+   * beside its element instead would leave it where the element cannot reach
+   * it, and the widget's own buttons would silently never appear.
    *
-   * Missing that branch hides well: the exercise renders, the fields work, the
-   * answer is recorded and graded — only the widget's own buttons are silently
-   * absent. It has now happened twice, which is why this is a test rather than a
-   * comment.
-   *
-   * Read off the per-type folders rather than a hand-kept list, so a type added
-   * later is covered without anyone remembering to come back here.
+   * Missing that hides well: the exercise renders, the fields work, the answer
+   * is recorded and graded — only the widget's buttons are absent. It happened
+   * twice when each type had its own form branch, which is why the form is now
+   * one function over `type.render` and this test checks every type's renderer
+   * honours the bar it is given. Read off the registry rather than a hand-kept
+   * list, so a type added later is covered without anyone remembering to come
+   * back here.
    */
-  test("every kind with a client element has its own submission form", async () => {
-    const page = await Bun.file(
-      "src/worker/web/assignment-detail.tsx",
-    ).text();
-    const glob = new Bun.Glob("src/worker/exercises/*/types.ts");
-    const interactive: string[] = [];
+  test("every type puts the action bar it is given inside the exercise", async () => {
+    const compiled = await compileCarnapMarkdown(SHOWCASE_DEMO_SOURCE);
 
-    for await (const path of glob.scan(".")) {
-      const source = await Bun.file(path).text();
+    if (!compiled.ok) {
+      throw new Error("the showcase lesson did not compile");
+    }
 
-      if (!source.includes("clientModule: true")) {
+    const registry = createDefaultExerciseRegistry();
+    const i18n = i18nFor("en");
+    const probe = '<div class="exercise-actions" data-probe></div>';
+    const covered = new Set<string>();
+
+    for (const node of compiled.artifact.document.nodes) {
+      if (node.kind !== "exercise" || covered.has(node.exerciseKind)) {
         continue;
       }
 
-      // The folder name, which by convention names the branch:
-      // `model` → `modelSubmissionForm`.
-      const folder = path.split("/").at(-2) ?? "";
+      covered.add(node.exerciseKind);
 
-      interactive.push(folder);
-    }
-
-    // Six interactive types today, and a floor so an empty scan cannot make
-    // this pass by finding nothing.
-    expect(interactive.length).toBeGreaterThanOrEqual(6);
-
-    // The dispatcher's own body, not the whole file: a per-kind form that exists
-    // but is never called is the same bug as one that was never written.
-    const dispatcher = /function submissionFormNode\([\s\S]*?\n}/.exec(
-      page,
-    )?.[0];
-
-    expect(
-      dispatcher,
-      "submissionFormNode is not where it was",
-    ).toBeDefined();
-
-    for (const folder of interactive) {
-      const camel = folder.replace(/-([a-z])/g, (_, letter: string) =>
-        letter.toUpperCase(),
-      );
+      const type = registry.typeFor(node.exerciseKind);
+      const html = type.render(node, { actions: probe, i18n }).trimEnd();
+      // The root the type renders: its custom element, or the text kinds'
+      // section. The bar has to sit inside it.
+      const closing = type.component.clientModule
+        ? `</${type.component.component}>`
+        : "</section>";
 
       expect(
-        dispatcher,
-        `${folder} has a client element, so submissionFormNode needs to call ${camel}SubmissionForm — otherwise the bar renders beside the element instead of inside it, and the widget's own buttons never appear`,
-      ).toContain(`${camel}SubmissionForm(`);
+        html.split(probe).length - 1,
+        `${type.directiveName} must render the supplied action bar exactly once`,
+      ).toBe(1);
+      expect(
+        html.endsWith(closing),
+        `${type.directiveName} should end with its root's closing tag`,
+      ).toBe(true);
+      expect(
+        html.indexOf(probe),
+        `${type.directiveName} laid the bar outside its root, where the widget cannot reach it`,
+      ).toBeLessThan(html.lastIndexOf(closing));
     }
+
+    // The showcase lesson is the one document with every type in it; a type
+    // it does not exercise is a type this test did not check.
+    expect([...covered].sort()).toEqual(
+      registry
+        .types()
+        .map((type) => type.kind)
+        .sort(),
+    );
   });
 
   /**

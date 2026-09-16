@@ -2,16 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { raw } from "hono/html";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import { createDefaultExerciseRegistry } from "../src/worker/application/content/registry";
 import {
   componentAssetsForArtifact,
   exerciseHydrationForArtifact,
   renderCompiledContent,
 } from "../src/worker/application/content/renderer";
 import type { CompiledContentArtifact } from "../src/worker/domain/content";
-import {
-  EXERCISE_STRING_ASSET_IDS,
-  exerciseStrings,
-} from "../src/worker/exercises/strings";
 import { DEFAULT_LOCALE, i18nFor } from "../src/worker/i18n";
 import type { Translator } from "../src/worker/i18n/translator";
 import { contentDocumentHtml } from "../src/worker/web/content-document";
@@ -104,11 +101,15 @@ describe("browser rebuild of the preview document", () => {
     for (const locale of [DEFAULT_LOCALE, "de"]) {
       const preview = previewFor(locale);
 
-      for (const assetId of EXERCISE_STRING_ASSET_IDS) {
+      const registry = createDefaultExerciseRegistry();
+
+      for (const type of registry.types()) {
+        const assetId = type.component.assetId;
+
         expect(
-          exerciseStrings(assetId, preview.i18n),
+          registry.strings(assetId, preview.i18n),
           `${assetId} in ${locale}`,
-        ).toEqual(exerciseStrings(assetId, i18nFor(locale)));
+        ).toEqual(registry.strings(assetId, i18nFor(locale)));
       }
     }
   });

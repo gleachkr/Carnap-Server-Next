@@ -1,3 +1,5 @@
+import type { ExerciseCapabilities } from "../../domain/exercises";
+import type { Translator } from "../../i18n/translator";
 /**
  * Constants and data shapes for the truth-table exercise type. DOM-free; the
  * grading core, authoring, assessment, view, and client element all share it.
@@ -12,6 +14,17 @@ export const TRUTH_TABLE_COMPONENT_METADATA = {
   component: "carnap-truth-table",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const TRUTH_TABLE_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: true,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function truthTableName(i18n: Translator): string {
+  return i18n.t("Truth table");
+}
 
 /**
  * The truth-table task shape:

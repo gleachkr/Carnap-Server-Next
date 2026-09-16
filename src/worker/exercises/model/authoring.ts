@@ -3,7 +3,6 @@ import type {
   CompiledExercise,
   CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -19,7 +18,7 @@ import {
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type { ModelField, ModelTarget } from "./logic";
 import {
   DEFAULT_LANGUAGE_ID,
@@ -41,6 +40,7 @@ import type {
 } from "./types";
 import {
   MODEL_ANSWER_KIND,
+  MODEL_CAPABILITIES,
   MODEL_COMPONENT_METADATA,
   MODEL_KIND,
   MODEL_SCHEMA_VERSION,
@@ -670,10 +670,9 @@ const MODEL_ATTRIBUTES = [
 
 export async function compileModel(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, MODEL_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -766,10 +765,7 @@ export async function compileModel(
 
   return buildCompiledExercise({
     answerKind: MODEL_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: MODEL_CAPABILITIES,
     exam,
     feedback,
     id,

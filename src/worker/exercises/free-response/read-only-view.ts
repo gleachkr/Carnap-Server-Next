@@ -2,11 +2,18 @@ import {
   escapeHtml,
   exerciseRootAttributes,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import { exerciseGroupLabel, exerciseLegendHtml } from "../group";
-import { FREE_RESPONSE_KIND, isFreeResponsePublicData } from "./types";
+import {
+  exerciseGroupLabel,
+  exerciseLegendHtml,
+} from "../../exercise-kit/group";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import {
+  FREE_RESPONSE_KIND,
+  freeResponseName,
+  isFreeResponsePublicData,
+} from "./types";
 
 export function renderFreeResponse(
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
@@ -31,7 +38,7 @@ export function renderFreeResponse(
   // and never reach a catalog.
   const i18n = context.i18n;
   const legend = exerciseLegendHtml(
-    exerciseGroupLabel(node.exerciseKind, context.title, i18n),
+    exerciseGroupLabel(freeResponseName(i18n), context.title),
   );
   const fieldId = `${node.exerciseId}-answer`;
 
@@ -45,6 +52,6 @@ export function renderFreeResponse(
           <label for="${escapeHtml(fieldId)}">${escapeHtml(i18n.t("Answer"))}</label>
           <textarea disabled id="${escapeHtml(fieldId)}"></textarea>
         </fieldset>
-        ${previewExerciseActionsHtml(i18n, false)}
+        ${context.actions ?? previewExerciseActionsHtml(i18n, false)}
       </section>`;
 }

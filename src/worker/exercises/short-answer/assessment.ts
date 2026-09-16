@@ -1,4 +1,3 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -18,11 +17,10 @@ import {
   normalizeText,
   textAnswerReview,
 } from "../../exercise-kit/assessment";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import type { ShortAnswerAnswerData, ShortAnswerPrivateData } from "./types";
 import {
   SHORT_ANSWER_ANSWER_KIND,
-  SHORT_ANSWER_COMPONENT_METADATA,
-  SHORT_ANSWER_KIND,
   SHORT_ANSWER_SCHEMA_VERSION,
 } from "./types";
 
@@ -47,26 +45,14 @@ function shortAnswerAnswerData(
   return answer.data as unknown as ShortAnswerAnswerData;
 }
 
-export class ShortAnswerExerciseType implements AssessmentExerciseType {
-  readonly answerKind = SHORT_ANSWER_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...SHORT_ANSWER_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = SHORT_ANSWER_KIND;
-  readonly schemaVersion = SHORT_ANSWER_SCHEMA_VERSION;
-
+export const SHORT_ANSWER_ASSESSMENT = {
   normalizeAnswer(envelope: AnswerEnvelope): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== SHORT_ANSWER_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${SHORT_ANSWER_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -75,7 +61,7 @@ export class ShortAnswerExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== SHORT_ANSWER_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -110,12 +96,12 @@ export class ShortAnswerExerciseType implements AssessmentExerciseType {
     return {
       answer: {
         data: data as unknown as JsonValue,
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: SHORT_ANSWER_ANSWER_KIND,
+        schemaVersion: SHORT_ANSWER_SCHEMA_VERSION,
       },
       ok: true,
     };
-  }
+  },
 
   async evaluate(
     answer: NormalizedAnswer,
@@ -164,7 +150,7 @@ export class ShortAnswerExerciseType implements AssessmentExerciseType {
       nominalMaxScore: declaration.nominalPoints,
       status: correct ? "correct" : "incorrect",
     };
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -172,5 +158,5 @@ export class ShortAnswerExerciseType implements AssessmentExerciseType {
     context: ExerciseReviewContext,
   ): ExerciseAnswerReview {
     return textAnswerReview(answer, context.i18n);
-  }
-}
+  },
+} satisfies ExerciseAssessment;

@@ -1,3 +1,5 @@
+import type { ExerciseCapabilities } from "../../domain/exercises";
+import type { Translator } from "../../i18n/translator";
 /**
  * Constants and data shapes for the Aufbau *Fitch* proof exercise type — a
  * textbook Fitch-style input modality (indentation marks subproofs) over the
@@ -27,6 +29,17 @@ export const AUFBAU_PROOF_FITCH_COMPONENT_METADATA = {
   component: "carnap-aufbau-proof-fitch",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const AUFBAU_PROOF_FITCH_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: true,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function aufbauProofFitchName(i18n: Translator): string {
+  return i18n.t("Fitch proof");
+}
 
 /**
  * What an artifact compiled before the theory said so is read with. A theory

@@ -1,4 +1,4 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
+import { verifyMmb } from "#proof-verifier";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -18,7 +18,7 @@ import {
   parseFormula,
 } from "../../exercise-kit/formula";
 import { readCertificate } from "../../exercise-kit/proof/certificate";
-import { verifyMmb } from "../../exercise-kit/proof/verifier";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import { buildEquivalenceCheck } from "./logic/mm0";
 import { verbatimSolutionIndex } from "./logic/solutions";
 import { runTranslationTests } from "./logic/tests";
@@ -29,8 +29,6 @@ import {
   isTranslationAnswerData,
   isTranslationPublicData,
   TRANSLATION_ANSWER_KIND,
-  TRANSLATION_COMPONENT_METADATA,
-  TRANSLATION_KIND,
   TRANSLATION_SCHEMA_VERSION,
 } from "./types";
 
@@ -73,29 +71,17 @@ function readSubmission(
   return parsed.formula;
 }
 
-export class TranslationExerciseType implements AssessmentExerciseType {
-  readonly answerKind = TRANSLATION_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...TRANSLATION_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = TRANSLATION_KIND;
-  readonly schemaVersion = TRANSLATION_SCHEMA_VERSION;
-
+export const TRANSLATION_ASSESSMENT = {
   normalizeAnswer(
     envelope: AnswerEnvelope,
     _declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== TRANSLATION_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${TRANSLATION_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -104,7 +90,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== TRANSLATION_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -162,13 +148,13 @@ export class TranslationExerciseType implements AssessmentExerciseType {
           text: data.text,
           ...(certified ? { solutionIndex: data.solutionIndex } : {}),
         } as unknown as JsonValue,
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: TRANSLATION_ANSWER_KIND,
+        schemaVersion: TRANSLATION_SCHEMA_VERSION,
       },
       ...(certified ? { certificate } : {}),
       ok: true,
     };
-  }
+  },
 
   async evaluate(
     answer: NormalizedAnswer,
@@ -266,7 +252,7 @@ export class TranslationExerciseType implements AssessmentExerciseType {
     }
 
     return result.ok ? correct() : incorrect("not-equivalent");
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -301,5 +287,5 @@ export class TranslationExerciseType implements AssessmentExerciseType {
       ),
       summary: i18n.t("Translation"),
     };
-  }
-}
+  },
+} satisfies ExerciseAssessment;

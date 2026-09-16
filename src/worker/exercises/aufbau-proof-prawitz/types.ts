@@ -1,3 +1,5 @@
+import type { ExerciseCapabilities } from "../../domain/exercises";
+import type { Translator } from "../../i18n/translator";
 /**
  * Constants and data shapes for the Aufbau *Prawitz* proof exercise type —
  * natural-deduction trees in Gentzen/Prawitz style, over the same sequent/ND
@@ -29,6 +31,17 @@ export const AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA = {
   component: "carnap-aufbau-proof-prawitz",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const AUFBAU_PROOF_PRAWITZ_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: true,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function aufbauProofPrawitzName(i18n: Translator): string {
+  return i18n.t("Prawitz proof");
+}
 
 /**
  * What an artifact compiled before the theory said so is read with. A theory

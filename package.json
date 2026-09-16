@@ -3,6 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#proof-verifier": {
+      "workerd": "./src/worker/exercise-kit/proof/verifier.ts",
+      "worker": "./src/worker/exercise-kit/proof/verifier.ts",
+      "browser": "./src/worker/exercise-kit/proof/verifier-absent.ts",
+      "default": "./src/worker/exercise-kit/proof/verifier.ts"
+    }
+  },
   "scripts": {
     "a11y:audit": "bun scripts/a11y-audit.mjs",
     "a11y:audit:dark": "bun scripts/a11y-audit.mjs --dark",

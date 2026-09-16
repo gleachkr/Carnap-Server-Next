@@ -4,16 +4,16 @@ import {
   exerciseRootAttributes,
   VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import type { Translator } from "../../i18n/translator";
-import { stringsResolver } from "../../i18n/translator";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
-} from "../group";
+} from "../../exercise-kit/group";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import type { Translator } from "../../i18n/translator";
+import { stringsResolver } from "../../i18n/translator";
 import type { ResolvedModel } from "./grading";
 import {
   isModelPublicData,
@@ -37,7 +37,7 @@ import type {
   ModelPublicData,
   ModelTurnstileGlyph,
 } from "./types";
-import { MODEL_KIND } from "./types";
+import { MODEL_KIND, modelName } from "./types";
 import { describeVerdict } from "./verdict-text";
 
 const MODEL_SHADOW_STYLES = [
@@ -249,7 +249,7 @@ export function renderModelElement(
   const resolved = resolveModel(publicData);
   const strings = stringsResolver(buildModelStrings(meta.i18n));
   const legend = exerciseLegendHtml(
-    exerciseGroupLabel(meta.exerciseKind, meta.title, meta.i18n),
+    exerciseGroupLabel(modelName(meta.i18n), meta.title),
   );
   const context: FieldRenderContext = {
     disabled: true,
@@ -366,6 +366,6 @@ export function renderModel(
     // A preview has no attempt to submit to, but it gets the same closing row a
     // student's copy has, with the button disabled: the shape the author is
     // writing towards, and the row this widget's own controls land in.
-    previewExerciseActionsHtml(context.i18n, true),
+    context.actions ?? previewExerciseActionsHtml(context.i18n, true),
   );
 }

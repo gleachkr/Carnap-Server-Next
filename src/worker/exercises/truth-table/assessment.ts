@@ -1,4 +1,3 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -12,6 +11,7 @@ import type {
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
 import { diagnostic, isObject } from "../../exercise-kit/assessment";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import {
   gradeTruthTable,
   isTruthTableAnswerData,
@@ -22,12 +22,7 @@ import {
 import { renderTruthTableReview } from "./read-only-view";
 import { buildTruthTableStrings } from "./strings";
 import type { TruthTableAnswerData } from "./types";
-import {
-  TRUTH_TABLE_ANSWER_KIND,
-  TRUTH_TABLE_COMPONENT_METADATA,
-  TRUTH_TABLE_KIND,
-  TRUTH_TABLE_SCHEMA_VERSION,
-} from "./types";
+import { TRUTH_TABLE_ANSWER_KIND, TRUTH_TABLE_SCHEMA_VERSION } from "./types";
 
 const TRUTH_TABLE_EVALUATOR_VERSION = "truth-table-evaluator@1";
 
@@ -101,29 +96,17 @@ function hasExpectedDimensions(
   });
 }
 
-export class TruthTableExerciseType implements AssessmentExerciseType {
-  readonly answerKind = TRUTH_TABLE_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...TRUTH_TABLE_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = TRUTH_TABLE_KIND;
-  readonly schemaVersion = TRUTH_TABLE_SCHEMA_VERSION;
-
+export const TRUTH_TABLE_ASSESSMENT = {
   normalizeAnswer(
     envelope: AnswerEnvelope,
     declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== TRUTH_TABLE_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${TRUTH_TABLE_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -132,7 +115,7 @@ export class TruthTableExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== TRUTH_TABLE_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -189,12 +172,12 @@ export class TruthTableExerciseType implements AssessmentExerciseType {
             ? {}
             : { validity: envelope.data.validity }),
         } as unknown as JsonValue,
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: TRUTH_TABLE_ANSWER_KIND,
+        schemaVersion: TRUTH_TABLE_SCHEMA_VERSION,
       },
       ok: true,
     };
-  }
+  },
 
   async evaluate(
     answer: NormalizedAnswer,
@@ -258,7 +241,7 @@ export class TruthTableExerciseType implements AssessmentExerciseType {
       },
       status,
     };
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -310,5 +293,5 @@ export class TruthTableExerciseType implements AssessmentExerciseType {
       ),
       summary,
     };
-  }
-}
+  },
+} satisfies ExerciseAssessment;

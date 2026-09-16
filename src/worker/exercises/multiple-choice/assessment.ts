@@ -1,4 +1,3 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -17,6 +16,7 @@ import {
   isStringArray,
   sameSet,
 } from "../../exercise-kit/assessment";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import { renderMultipleChoiceReview } from "./read-only-view";
 import type {
   MultipleChoiceAnswerData,
@@ -25,8 +25,6 @@ import type {
 import {
   isMultipleChoicePublicData,
   MULTIPLE_CHOICE_ANSWER_KIND,
-  MULTIPLE_CHOICE_COMPONENT_METADATA,
-  MULTIPLE_CHOICE_KIND,
   MULTIPLE_CHOICE_SCHEMA_VERSION,
 } from "./types";
 
@@ -79,29 +77,17 @@ function selectedOptionLabels(
   );
 }
 
-export class MultipleChoiceExerciseType implements AssessmentExerciseType {
-  readonly answerKind = MULTIPLE_CHOICE_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...MULTIPLE_CHOICE_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = MULTIPLE_CHOICE_KIND;
-  readonly schemaVersion = MULTIPLE_CHOICE_SCHEMA_VERSION;
-
+export const MULTIPLE_CHOICE_ASSESSMENT = {
   normalizeAnswer(
     envelope: AnswerEnvelope,
     declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== MULTIPLE_CHOICE_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${MULTIPLE_CHOICE_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -110,7 +96,7 @@ export class MultipleChoiceExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== MULTIPLE_CHOICE_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -224,12 +210,12 @@ export class MultipleChoiceExerciseType implements AssessmentExerciseType {
     return {
       answer: {
         data: { selectedOptionIds },
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: MULTIPLE_CHOICE_ANSWER_KIND,
+        schemaVersion: MULTIPLE_CHOICE_SCHEMA_VERSION,
       },
       ok: true,
     };
-  }
+  },
 
   async evaluate(
     answer: NormalizedAnswer,
@@ -271,7 +257,7 @@ export class MultipleChoiceExerciseType implements AssessmentExerciseType {
       nominalMaxScore: declaration.nominalPoints,
       status: correct ? "correct" : "incorrect",
     };
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -319,5 +305,5 @@ export class MultipleChoiceExerciseType implements AssessmentExerciseType {
       ),
       summary,
     };
-  }
-}
+  },
+} satisfies ExerciseAssessment;

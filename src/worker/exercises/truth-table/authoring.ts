@@ -2,7 +2,6 @@ import type {
   CompiledExercise,
   CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -18,7 +17,7 @@ import {
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import {
   correctCells,
   fillableCellCount,
@@ -48,6 +47,7 @@ import type {
 } from "./types";
 import {
   TRUTH_TABLE_ANSWER_KIND,
+  TRUTH_TABLE_CAPABILITIES,
   TRUTH_TABLE_COMPONENT_METADATA,
   TRUTH_TABLE_KIND,
   TRUTH_TABLE_SCHEMA_VERSION,
@@ -944,10 +944,9 @@ const TRUTH_TABLE_ATTRIBUTES = [
 
 export async function compileTruthTable(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, TRUTH_TABLE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -1059,10 +1058,7 @@ export async function compileTruthTable(
 
   return buildCompiledExercise({
     answerKind: TRUTH_TABLE_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: TRUTH_TABLE_CAPABILITIES,
     exam,
     feedback,
     id,

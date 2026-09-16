@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import { createDefaultExerciseRegistry } from "../src/worker/application/content/registry";
 import { exerciseHydrationForArtifact } from "../src/worker/application/content/renderer";
 import { buildExerciseHelpStrings } from "../src/worker/exercise-kit/help-strings";
 import { buildAufbauProofStrings } from "../src/worker/exercises/aufbau-proof/strings";
@@ -14,11 +15,13 @@ import { buildAufbauProofPrawitzStrings } from "../src/worker/exercises/aufbau-p
 import { AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-prawitz/types";
 import { buildAufbauProofTreeStrings } from "../src/worker/exercises/aufbau-proof-tree/strings";
 import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-tree/types";
-import { exerciseStrings } from "../src/worker/exercises/strings";
 import { buildTruthTableStrings } from "../src/worker/exercises/truth-table/strings";
 import { TRUTH_TABLE_COMPONENT_METADATA } from "../src/worker/exercises/truth-table/types";
 import { DEFAULT_LOCALE, i18nFor } from "../src/worker/i18n";
-import { passthroughTranslator } from "../src/worker/i18n/translator";
+import {
+  passthroughTranslator,
+  type Translator,
+} from "../src/worker/i18n/translator";
 
 /**
  * Widget strings cross a boundary no type can check by itself: the server fills
@@ -90,6 +93,12 @@ describe("widget string maps", () => {
     }
   });
 });
+
+const exerciseStrings = (
+  assetId: string,
+  i18n: Translator,
+): Readonly<Record<string, string>> =>
+  createDefaultExerciseRegistry().strings(assetId, i18n);
 
 describe("exerciseStrings", () => {
   test("resolves a widget's text in the viewer's language", () => {

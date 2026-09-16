@@ -1,8 +1,6 @@
 import type {
   CompiledExercise,
-  CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -31,12 +29,13 @@ import {
   unreadableStarterFormula,
 } from "../../exercise-kit/proof/authoring";
 import { parseProofTree } from "../../exercise-kit/proof/tree-parse";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import { requireSystem } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import { flattenProofTree } from "./flatten";
 import type { AufbauProofTreePublicData, ProofTreeNode } from "./types";
 import {
   AUFBAU_PROOF_TREE_ANSWER_KIND,
+  AUFBAU_PROOF_TREE_CAPABILITIES,
   AUFBAU_PROOF_TREE_COMPONENT_METADATA,
   AUFBAU_PROOF_TREE_KIND,
   AUFBAU_PROOF_TREE_SCHEMA_VERSION,
@@ -67,10 +66,9 @@ const AUFBAU_PROOF_TREE_ATTRIBUTES = [
  */
 export async function compileAufbauProofTree(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, AUFBAU_PROOF_TREE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -221,10 +219,7 @@ export async function compileAufbauProofTree(
 
   return buildCompiledExercise({
     answerKind: AUFBAU_PROOF_TREE_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: AUFBAU_PROOF_TREE_CAPABILITIES,
     exam,
     feedback,
     id,

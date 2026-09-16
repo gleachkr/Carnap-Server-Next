@@ -1,16 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import {
-  TRUTH_TABLE_ANSWER_KIND,
-  TRUTH_TABLE_KIND,
-  TRUTH_TABLE_SCHEMA_VERSION,
-  TruthTableExerciseHandler,
-} from "../src/worker/application/content/registry";
 import { renderCompiledContent } from "../src/worker/application/content/renderer";
 import type {
   CompiledContentArtifact,
   ExerciseManifestItem,
 } from "../src/worker/domain/content";
+import { TRUTH_TABLE_EXERCISE } from "../src/worker/exercises/truth-table";
 import {
   cellFillable,
   correctCells,
@@ -33,6 +28,11 @@ import type {
   TruthTableCheckMode,
   TruthTableOptions,
   TruthTablePublicData,
+} from "../src/worker/exercises/truth-table/types";
+import {
+  TRUTH_TABLE_ANSWER_KIND,
+  TRUTH_TABLE_KIND,
+  TRUTH_TABLE_SCHEMA_VERSION,
 } from "../src/worker/exercises/truth-table/types";
 import { i18nFor } from "../src/worker/i18n";
 import {
@@ -362,7 +362,7 @@ describe("truth-table compile", () => {
 });
 
 describe("truth-table assessment", () => {
-  const handler = new TruthTableExerciseHandler();
+  const handler = TRUTH_TABLE_EXERCISE;
 
   async function declaration(source: string): Promise<ExerciseManifestItem> {
     const artifact = await compileArtifact(source);
@@ -644,7 +644,7 @@ describe("truth-table counterexample", () => {
   });
 
   test("normalize preserves the index; out-of-range is rejected", async () => {
-    const handler = new TruthTableExerciseHandler();
+    const handler = TRUTH_TABLE_EXERCISE;
     const item = (await compileArtifact(directive("#cx4", "- P -> Q")))
       .manifest[0] as ExerciseManifestItem;
 
@@ -758,7 +758,7 @@ describe("truth-table counterexample", () => {
   });
 
   test("evaluate and review report counterexample validity", async () => {
-    const handler = new TruthTableExerciseHandler();
+    const handler = TRUTH_TABLE_EXERCISE;
     const item = (
       await compileArtifact(directive('#cx5 points="3"', "- P -> Q"))
     ).manifest[0] as ExerciseManifestItem;
@@ -1050,7 +1050,7 @@ describe("truth-table validity", () => {
   });
 
   test("normalize preserves the turnstile column; wrong length is rejected", async () => {
-    const handler = new TruthTableExerciseHandler();
+    const handler = TRUTH_TABLE_EXERCISE;
     const item = (
       await compileArtifact(
         directive('#v2 variant="validity"', "P, P -> Q :|-: Q"),

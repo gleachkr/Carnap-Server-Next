@@ -6,7 +6,7 @@ import type {
   ExerciseManifestItem,
   NormalizedAnswer,
 } from "../src/worker/domain/content";
-import { AufbauProofFitchExerciseType } from "../src/worker/exercises/aufbau-proof-fitch/assessment";
+import { AUFBAU_PROOF_FITCH_EXERCISE } from "../src/worker/exercises/aufbau-proof-fitch";
 import {
   AUFBAU_PROOF_FITCH_ANSWER_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
@@ -68,7 +68,7 @@ const FITCH_TEXT = [
   "b       :imp_elim 1 2",
 ].join("\n");
 
-const type = new AufbauProofFitchExerciseType();
+const type = AUFBAU_PROOF_FITCH_EXERCISE;
 
 async function declarationFor(): Promise<ExerciseManifestItem> {
   const compiled = await compileCarnapMarkdown(SOURCE);

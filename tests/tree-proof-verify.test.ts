@@ -7,7 +7,7 @@ import type {
   NormalizedAnswer,
 } from "../src/worker/domain/content";
 import type { JsonValue } from "../src/worker/domain/json";
-import { AufbauProofTreeExerciseType } from "../src/worker/exercises/aufbau-proof-tree/assessment";
+import { AUFBAU_PROOF_TREE_EXERCISE } from "../src/worker/exercises/aufbau-proof-tree";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import type { ProofTreeNode } from "../src/worker/exercises/aufbau-proof-tree/types";
 import {
@@ -90,7 +90,7 @@ function normalizedAnswer(): NormalizedAnswer {
   };
 }
 
-const handler = new AufbauProofTreeExerciseType();
+const handler = AUFBAU_PROOF_TREE_EXERCISE;
 const context = { now: "2026-07-18T00:00:00.000Z" };
 
 /** The evaluator sees the certificate beside the answer, never inside it. */

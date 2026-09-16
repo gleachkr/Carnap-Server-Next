@@ -2,18 +2,7 @@ import {
   escapeHtml,
   VISUALLY_HIDDEN_STYLES,
 } from "../application/content/render-support";
-import type { ExerciseKind } from "../domain/exercises";
-import type { Translator } from "../i18n/translator";
-import { AUFBAU_PROOF_KIND } from "./aufbau-proof/types";
-import { AUFBAU_PROOF_FITCH_KIND } from "./aufbau-proof-fitch/types";
-import { AUFBAU_PROOF_PRAWITZ_KIND } from "./aufbau-proof-prawitz/types";
-import { AUFBAU_PROOF_TREE_KIND } from "./aufbau-proof-tree/types";
-import { FREE_RESPONSE_KIND } from "./free-response/types";
 import groupStyles from "./group.css" with { type: "text" };
-import { MODEL_KIND } from "./model/types";
-import { MULTIPLE_CHOICE_KIND } from "./multiple-choice/types";
-import { SHORT_ANSWER_KIND } from "./short-answer/types";
-import { TRUTH_TABLE_KIND } from "./truth-table/types";
 
 /**
  * Every exercise, of every kind, is one named group: a `<fieldset>` whose
@@ -22,47 +11,11 @@ import { TRUTH_TABLE_KIND } from "./truth-table/types";
  * *which* exercise the field in front of them belongs to — otherwise a page of a
  * dozen exercises is a dozen fields all called "Answer".
  *
- * Dependency-free apart from the {@link Translator} type and `escapeHtml`, because
- * the per-type `read-only-view.ts` files reach this module and they are compiled
- * into the browser preview bundle.
+ * Dependency-free apart from `escapeHtml`, because the per-type
+ * `read-only-view.ts` files reach this module and they are compiled into the
+ * browser preview bundle. It does not know the types: the generic name for an
+ * untitled group is the type's own `name(i18n)`, which each renderer passes in.
  */
-
-/**
- * What a kind of exercise is called when its author gave it no title. Never
- * shown to sighted readers (see {@link exerciseGroupLabel}), so it names the kind
- * rather than the task: "Truth table", not "Fill in the truth table".
- *
- * The literals sit at the `i18n.t(...)` call sites because Lingui's extractor
- * reads string literals passed to a receiver *named* `i18n` — a lookup table of
- * bare strings would be silently absent from the catalog.
- */
-export function exerciseKindName(
-  kind: ExerciseKind,
-  i18n: Translator,
-): string {
-  switch (kind) {
-    case MULTIPLE_CHOICE_KIND:
-      return i18n.t("Multiple-choice question");
-    case SHORT_ANSWER_KIND:
-      return i18n.t("Short-answer question");
-    case FREE_RESPONSE_KIND:
-      return i18n.t("Free-response question");
-    case TRUTH_TABLE_KIND:
-      return i18n.t("Truth table");
-    case MODEL_KIND:
-      return i18n.t("Model");
-    case AUFBAU_PROOF_KIND:
-      return i18n.t("Proof");
-    case AUFBAU_PROOF_TREE_KIND:
-      return i18n.t("Proof tree");
-    case AUFBAU_PROOF_FITCH_KIND:
-      return i18n.t("Fitch proof");
-    case AUFBAU_PROOF_PRAWITZ_KIND:
-      return i18n.t("Prawitz proof");
-    default:
-      return i18n.t("Exercise");
-  }
-}
 
 export interface ExerciseGroupLabel {
   /** The legend's text. */
@@ -73,7 +26,7 @@ export interface ExerciseGroupLabel {
 
 /**
  * The name for one exercise group: the author's title when there is one, and
- * otherwise the generic kind name, hidden from sight.
+ * otherwise the generic kind name (`ExerciseType.name`), hidden from sight.
  *
  * The fallback is deliberately *not* the exercise id. An id is an authoring
  * handle — `tt_affirming`, `ex_3` — and printing it as a heading is worse than
@@ -82,15 +35,14 @@ export interface ExerciseGroupLabel {
  * it is just one only a screen reader hears, leaving the page visually unchanged.
  */
 export function exerciseGroupLabel(
-  kind: ExerciseKind,
+  kindName: string,
   title: string | null | undefined,
-  i18n: Translator,
 ): ExerciseGroupLabel {
   const authored = title?.trim() ?? "";
 
   return authored.length > 0
     ? { hidden: false, text: authored }
-    : { hidden: true, text: exerciseKindName(kind, i18n) };
+    : { hidden: true, text: kindName };
 }
 
 /** {@link exerciseGroupLabel} as markup, for the string-building renderers. */

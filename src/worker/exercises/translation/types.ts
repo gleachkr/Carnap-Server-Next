@@ -1,3 +1,5 @@
+import type { ExerciseCapabilities } from "../../domain/exercises";
+import type { Translator } from "../../i18n/translator";
 /**
  * Constants and data shapes for the translation exercise type. DOM-free; the
  * logic core, authoring, assessment, view, and client element all share it.
@@ -14,6 +16,17 @@ export const TRANSLATION_COMPONENT_METADATA = {
   component: "carnap-translation",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const TRANSLATION_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: true,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function translationName(i18n: Translator): string {
+  return i18n.t("Translation");
+}
 
 /**
  * The task shape, following Carnap's three `Translate` classes:

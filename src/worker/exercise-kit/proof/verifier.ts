@@ -9,6 +9,11 @@
  * relative path into node_modules so it stays a single source of truth with the
  * pinned dependency (no vendored binary). Its shape differs by runtime: workerd
  * hands back a `WebAssembly.Module`; Bun (tests) hands back the file path.
+ *
+ * Imported as `#proof-verifier`, never by path: `package.json` maps that name
+ * here for workerd and Bun and to `verifier-absent.ts` for a browser bundle,
+ * which is what keeps the wasm out of the preview bundle now that the
+ * registry the preview compiles with is the one the worker grades with.
  */
 import verifierWasm from "../../../../node_modules/@aufbau/verifier/verifier.wasm";
 

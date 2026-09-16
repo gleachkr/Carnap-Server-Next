@@ -17,6 +17,7 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type {
   MultipleChoiceMode,
   MultipleChoiceOptionPublicData,
@@ -25,6 +26,7 @@ import type {
 } from "./types";
 import {
   MULTIPLE_CHOICE_ANSWER_KIND,
+  MULTIPLE_CHOICE_CAPABILITIES,
   MULTIPLE_CHOICE_COMPONENT_METADATA,
   MULTIPLE_CHOICE_KIND,
   MULTIPLE_CHOICE_SCHEMA_VERSION,
@@ -205,9 +207,9 @@ function validateMultipleChoice(
 
 export async function compileMultipleChoice(
   block: DirectiveBlock,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions } = context;
   validateAttributes(block, MULTIPLE_CHOICE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -244,10 +246,7 @@ export async function compileMultipleChoice(
 
   return buildCompiledExercise({
     answerKind: MULTIPLE_CHOICE_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: MULTIPLE_CHOICE_CAPABILITIES,
     exam,
     feedback,
     id,

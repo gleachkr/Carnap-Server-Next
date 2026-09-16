@@ -4,21 +4,25 @@ import {
   exerciseRootAttributes,
   VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type {
   ContentNode,
   MultipleChoicePublicData,
 } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import type { Translator } from "../../i18n/translator";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
-} from "../group";
+} from "../../exercise-kit/group";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import type { Translator } from "../../i18n/translator";
 import reviewStyles from "./review.css" with { type: "text" };
 import shadowStyles from "./shadow.css" with { type: "text" };
-import { isMultipleChoicePublicData, MULTIPLE_CHOICE_KIND } from "./types";
+import {
+  isMultipleChoicePublicData,
+  MULTIPLE_CHOICE_KIND,
+  multipleChoiceName,
+} from "./types";
 
 const MULTIPLE_CHOICE_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -62,7 +66,7 @@ export function renderMultipleChoiceElement(
 ): string {
   const inputType = publicData.mode === "single" ? "radio" : "checkbox";
   const legend = exerciseLegendHtml(
-    exerciseGroupLabel(meta.exerciseKind, meta.title, meta.i18n),
+    exerciseGroupLabel(multipleChoiceName(meta.i18n), meta.title),
   );
   // Associated by `for`/`id` with the input as the label's *sibling*, so the
   // option's accessible name is exactly the authored prose and the row's layout
@@ -223,6 +227,6 @@ export function renderMultipleChoice(
     // A preview has no attempt to submit to, but it gets the same closing row a
     // student's copy has, with the button disabled: the shape the author is
     // writing towards, and the row this widget's own controls land in.
-    previewExerciseActionsHtml(context.i18n, true),
+    context.actions ?? previewExerciseActionsHtml(context.i18n, true),
   );
 }

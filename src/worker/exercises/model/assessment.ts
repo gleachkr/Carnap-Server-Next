@@ -1,4 +1,3 @@
-import type { AssessmentExerciseType } from "../../application/content/registry";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -11,6 +10,7 @@ import type {
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
 import { diagnostic, isObject } from "../../exercise-kit/assessment";
+import type { ExerciseAssessment } from "../../exercise-kit/type";
 import { stringsResolver } from "../../i18n/translator";
 import {
   effectiveAnswer,
@@ -22,12 +22,7 @@ import { checkModel } from "./logic";
 import { renderModelReview } from "./read-only-view";
 import { buildModelStrings } from "./strings";
 import type { ModelAnswerData } from "./types";
-import {
-  MODEL_ANSWER_KIND,
-  MODEL_COMPONENT_METADATA,
-  MODEL_KIND,
-  MODEL_SCHEMA_VERSION,
-} from "./types";
+import { MODEL_ANSWER_KIND, MODEL_SCHEMA_VERSION } from "./types";
 import { describeVerdict } from "./verdict-text";
 
 const MODEL_EVALUATOR_VERSION = "model-evaluator@1";
@@ -36,29 +31,17 @@ function modelAnswerData(answer: NormalizedAnswer): ModelAnswerData {
   return answer.data as unknown as ModelAnswerData;
 }
 
-export class ModelExerciseType implements AssessmentExerciseType {
-  readonly answerKind = MODEL_ANSWER_KIND;
-  readonly capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  readonly component = {
-    ...MODEL_COMPONENT_METADATA,
-    capabilities: this.capabilities,
-  };
-  readonly kind = MODEL_KIND;
-  readonly schemaVersion = MODEL_SCHEMA_VERSION;
-
+export const MODEL_ASSESSMENT = {
   normalizeAnswer(
     envelope: AnswerEnvelope,
     declaration: ExerciseManifestItem,
   ): AnswerNormalizationResult {
-    if (envelope.kind !== this.answerKind) {
+    if (envelope.kind !== MODEL_ANSWER_KIND) {
       return {
         diagnostics: [
           diagnostic(
             "wrong_answer_kind",
-            `Expected answer kind ${this.answerKind}.`,
+            `Expected answer kind ${MODEL_ANSWER_KIND}.`,
             ["kind"],
           ),
         ],
@@ -67,7 +50,7 @@ export class ModelExerciseType implements AssessmentExerciseType {
       };
     }
 
-    if (envelope.schemaVersion !== this.schemaVersion) {
+    if (envelope.schemaVersion !== MODEL_SCHEMA_VERSION) {
       return {
         diagnostics: [
           diagnostic(
@@ -133,12 +116,12 @@ export class ModelExerciseType implements AssessmentExerciseType {
           domain: submitted.domain,
           fields,
         } as unknown as JsonValue,
-        kind: this.answerKind,
-        schemaVersion: this.schemaVersion,
+        kind: MODEL_ANSWER_KIND,
+        schemaVersion: MODEL_SCHEMA_VERSION,
       },
       ok: true,
     };
-  }
+  },
 
   async evaluate(
     answer: NormalizedAnswer,
@@ -186,7 +169,7 @@ export class ModelExerciseType implements AssessmentExerciseType {
       awardedScore: verdict.ok ? declaration.nominalPoints : 0,
       status: verdict.ok ? "correct" : "incorrect",
     };
-  }
+  },
 
   reviewAnswer(
     answer: NormalizedAnswer,
@@ -243,5 +226,5 @@ export class ModelExerciseType implements AssessmentExerciseType {
       ),
       summary: reveal ? summary : i18n.t("Model"),
     };
-  }
-}
+  },
+} satisfies ExerciseAssessment;

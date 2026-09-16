@@ -2,7 +2,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": []
+    "types": [],
+    // Resolve `package.json` `imports` the way the browser build does, so this
+    // program sees `#proof-verifier` as the stub the bundle ships rather than
+    // the worker's wasm binding (which needs Bun's globals and is not for here).
+    "customConditions": ["browser"]
   },
   // `src/text-modules.d.ts` is outside this program's own directory and is
   // never imported, only included — see the note in it. The worker program

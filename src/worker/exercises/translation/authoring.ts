@@ -3,7 +3,6 @@ import type {
   CompiledExercise,
   CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -24,13 +23,14 @@ import {
   splitFormulaList,
 } from "../../exercise-kit/formula";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type { TranslationTest } from "./logic/tests";
 import { parseTranslationTests } from "./logic/tests";
 import { isPropositional } from "./logic/variant";
 import type { TranslationPublicData, TranslationVariant } from "./types";
 import {
   TRANSLATION_ANSWER_KIND,
+  TRANSLATION_CAPABILITIES,
   TRANSLATION_COMPONENT_METADATA,
   TRANSLATION_KIND,
   TRANSLATION_SCHEMA_VERSION,
@@ -245,10 +245,9 @@ const TRANSLATION_ATTRIBUTES = [
 
 export async function compileTranslation(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, TRANSLATION_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -313,10 +312,7 @@ export async function compileTranslation(
 
   return buildCompiledExercise({
     answerKind: TRANSLATION_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: TRANSLATION_CAPABILITIES,
     exam,
     feedback,
     id,

@@ -8,7 +8,11 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["bun-types"]
+    "types": ["bun-types"],
+    // Browser code resolves `package.json` `imports` as the browser build does
+    // (see tsconfig.client.json): `#proof-verifier` is the stub here, not the
+    // worker's wasm binding.
+    "customConditions": ["browser"]
   },
   // The client's ambient declarations as well as the tests: a test reaches its
   // subject by import, which drags the client module in but not the `declare

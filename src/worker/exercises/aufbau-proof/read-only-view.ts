@@ -3,20 +3,24 @@ import {
   escapeHtml,
   exerciseRootAttributes,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import { reviewHydrationScript } from "../../exercise-kit/hydration";
-import type { Translator } from "../../i18n/translator";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
-} from "../group";
+} from "../../exercise-kit/group";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import type { Translator } from "../../i18n/translator";
 import shadowStyles from "./shadow.css" with { type: "text" };
 import { buildAufbauProofStrings } from "./strings";
 import type { AufbauProofPublicData } from "./types";
-import { AUFBAU_PROOF_KIND, isAufbauProofPublicData } from "./types";
+import {
+  AUFBAU_PROOF_KIND,
+  aufbauProofName,
+  isAufbauProofPublicData,
+} from "./types";
 
 const AUFBAU_PROOF_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -52,7 +56,7 @@ export function renderAufbauProofElement(
         <template shadowrootmode="open">
           <style>${AUFBAU_PROOF_SHADOW_STYLES}</style>
           <fieldset aria-busy="true" class="exercise-group proof">
-            ${exerciseLegendHtml(exerciseGroupLabel(meta.exerciseKind, meta.title, meta.i18n))}
+            ${exerciseLegendHtml(exerciseGroupLabel(aufbauProofName(meta.i18n), meta.title))}
             <slot name="prompt"></slot>
             <pre class="proof-source">${escapeHtml(starterProofText(publicData))}</pre>
             <slot name="exercise-actions"></slot>
@@ -115,6 +119,6 @@ export function renderAufbauProof(
     // A preview has no attempt to submit to, but it gets the same closing row a
     // student's copy has, with the button disabled: the shape the author is
     // writing towards, and the row this widget's own controls land in.
-    previewExerciseActionsHtml(context.i18n, true),
+    context.actions ?? previewExerciseActionsHtml(context.i18n, true),
   );
 }

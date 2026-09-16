@@ -1,194 +1,27 @@
 import type {
   CompiledContentArtifact,
   ComponentRegistryMetadata,
-  ContentNode,
-  ExerciseRenderSpec,
 } from "../../domain/content";
 import {
   EXERCISE_HYDRATION_VERSION,
   type ExerciseHydration,
 } from "../../exercise-kit/hydration";
 import { keyedPublicData } from "../../exercise-kit/systems/join";
-import { renderAufbauProof } from "../../exercises/aufbau-proof/read-only-view";
-import { AUFBAU_PROOF_COMPONENT_METADATA } from "../../exercises/aufbau-proof/types";
-import { renderAufbauProofFitch } from "../../exercises/aufbau-proof-fitch/read-only-view";
-import { AUFBAU_PROOF_FITCH_COMPONENT_METADATA } from "../../exercises/aufbau-proof-fitch/types";
-import { renderAufbauProofPrawitz } from "../../exercises/aufbau-proof-prawitz/read-only-view";
-import { AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA } from "../../exercises/aufbau-proof-prawitz/types";
-import { renderAufbauProofTree } from "../../exercises/aufbau-proof-tree/read-only-view";
-import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "../../exercises/aufbau-proof-tree/types";
-import { renderFreeResponse } from "../../exercises/free-response/read-only-view";
-import { FREE_RESPONSE_COMPONENT_METADATA } from "../../exercises/free-response/types";
-import { renderModel } from "../../exercises/model/read-only-view";
-import { MODEL_COMPONENT_METADATA } from "../../exercises/model/types";
-import { renderMultipleChoice } from "../../exercises/multiple-choice/read-only-view";
-import { MULTIPLE_CHOICE_COMPONENT_METADATA } from "../../exercises/multiple-choice/types";
-import { renderShortAnswer } from "../../exercises/short-answer/read-only-view";
-import { SHORT_ANSWER_COMPONENT_METADATA } from "../../exercises/short-answer/types";
-import { exerciseStrings } from "../../exercises/strings";
-import { renderTranslation } from "../../exercises/translation/read-only-view";
-import { TRANSLATION_COMPONENT_METADATA } from "../../exercises/translation/types";
-import { renderTruthTable } from "../../exercises/truth-table/read-only-view";
-import { TRUTH_TABLE_COMPONENT_METADATA } from "../../exercises/truth-table/types";
 import type { Translator } from "../../i18n/translator";
-import { contentRevisionAttribute, escapeHtml } from "./render-support";
+import type { ExerciseRegistry } from "./registry";
+import { createDefaultExerciseRegistry } from "./registry";
 import { renderTheoryPanel } from "./theory-panel";
 
 export interface RenderCompiledContentOptions {
   readonly contentRevisionId?: string;
 }
 
-export interface ExerciseRenderContext {
-  readonly contentRevisionId?: string;
-  /**
-   * The viewer's language, for the widget's own chrome — its group name, its
-   * control labels. Required rather than optional: an omitted translator would
-   * fall back to English silently, which is the one i18n failure nothing else in
-   * the stack can observe.
-   */
-  readonly i18n: Translator;
-  /**
-   * The author's title for this exercise, when the caller knows it — the group's
-   * visible name. Absent on paths that render a node without its manifest entry;
-   * {@link exerciseGroupLabel} names the group generically in that case.
-   */
-  readonly title?: string | null;
-}
-
-export interface ComponentRenderer {
-  readonly metadata: ComponentRegistryMetadata;
-  render(
-    node: Extract<ContentNode, { readonly kind: "exercise" }>,
-    context: ExerciseRenderContext,
-  ): string;
-}
-
-export class ComponentRegistry {
-  private readonly renderers = new Map<string, ComponentRenderer>();
-
-  register(renderer: ComponentRenderer): void {
-    this.renderers.set(renderer.metadata.assetId, renderer);
-  }
-
-  metadataFor(render: ExerciseRenderSpec): ComponentRegistryMetadata | null {
-    return this.renderers.get(render.assetId)?.metadata ?? null;
-  }
-
-  renderExercise(
-    node: Extract<ContentNode, { readonly kind: "exercise" }>,
-    context: ExerciseRenderContext,
-  ): string {
-    const renderer = this.renderers.get(node.render.assetId);
-    const revisionAttribute = contentRevisionAttribute(
-      context.contentRevisionId,
-    );
-
-    if (renderer === undefined) {
-      return `<div data-component="${escapeHtml(node.render.component)}" data-component-version="${escapeHtml(node.render.componentVersion)}" data-exercise-id="${escapeHtml(node.exerciseId)}"${revisionAttribute}></div>`;
-    }
-
-    return renderer.render(node, context);
-  }
-}
-
-export function createDefaultComponentRegistry(): ComponentRegistry {
-  const registry = new ComponentRegistry();
-  const capabilities = {
-    supportsAutomaticEvaluation: true,
-    supportsManualReview: true,
-  };
-  const manualCapabilities = {
-    supportsAutomaticEvaluation: false,
-    supportsManualReview: true,
-  };
-
-  registry.register({
-    metadata: {
-      ...MULTIPLE_CHOICE_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderMultipleChoice,
-  });
-
-  registry.register({
-    metadata: {
-      ...FREE_RESPONSE_COMPONENT_METADATA,
-      capabilities: manualCapabilities,
-    },
-    render: renderFreeResponse,
-  });
-
-  registry.register({
-    metadata: {
-      ...SHORT_ANSWER_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderShortAnswer,
-  });
-
-  registry.register({
-    metadata: {
-      ...TRUTH_TABLE_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderTruthTable,
-  });
-
-  registry.register({
-    metadata: {
-      ...MODEL_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderModel,
-  });
-
-  registry.register({
-    metadata: {
-      ...AUFBAU_PROOF_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderAufbauProof,
-  });
-
-  registry.register({
-    metadata: {
-      ...AUFBAU_PROOF_TREE_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderAufbauProofTree,
-  });
-
-  registry.register({
-    metadata: {
-      ...AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderAufbauProofFitch,
-  });
-
-  registry.register({
-    metadata: {
-      ...AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderAufbauProofPrawitz,
-  });
-
-  registry.register({
-    metadata: {
-      ...TRANSLATION_COMPONENT_METADATA,
-      capabilities,
-    },
-    render: renderTranslation,
-  });
-
-  return registry;
-}
+export type { ExerciseRenderContext } from "../../exercise-kit/type";
 
 export function renderCompiledContent(
   artifact: CompiledContentArtifact,
   i18n: Translator,
-  registry = createDefaultComponentRegistry(),
+  registry: ExerciseRegistry = createDefaultExerciseRegistry(),
   options: RenderCompiledContentOptions = {},
 ): string {
   // The titles live in the manifest, not on the nodes: `exerciseTitle` is
@@ -228,7 +61,7 @@ export function renderCompiledContent(
  */
 export function componentAssetsForArtifact(
   artifact: CompiledContentArtifact,
-  registry = createDefaultComponentRegistry(),
+  registry: ExerciseRegistry = createDefaultExerciseRegistry(),
 ): string[] {
   return [
     ...new Set(
@@ -270,6 +103,7 @@ export function componentAssetsForArtifact(
 export function exerciseHydrationForArtifact(
   artifact: CompiledContentArtifact,
   i18n: Translator,
+  registry: ExerciseRegistry = createDefaultExerciseRegistry(),
 ): Record<string, ExerciseHydration> {
   const table: Record<string, ExerciseHydration> = {};
   // The setting alone, not the manifest entry it came off. This function builds
@@ -295,7 +129,7 @@ export function exerciseHydrationForArtifact(
       // beside this table and the element joins the two. Same reason as
       // `exerciseHydrationScript`, which does it for the interactive path.
       publicData: keyedPublicData(node.publicData),
-      strings: exerciseStrings(node.render.assetId, i18n),
+      strings: registry.strings(node.render.assetId, i18n),
       version: EXERCISE_HYDRATION_VERSION,
     };
   }

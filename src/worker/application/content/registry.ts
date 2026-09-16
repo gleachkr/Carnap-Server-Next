@@ -5,117 +5,91 @@ import type {
   ComponentRegistryMetadata,
   EvaluationContext,
   ExerciseAnswerReview,
-  ExerciseCapabilities,
   ExerciseKind,
   ExerciseManifestItem,
+  ExerciseRenderSpec,
   ExerciseReviewContext,
   ManualGradingSpec,
   NormalizedAnswer,
 } from "../../domain/content";
-import { AufbauProofExerciseType } from "../../exercises/aufbau-proof/assessment";
-import { AufbauProofFitchExerciseType } from "../../exercises/aufbau-proof-fitch/assessment";
-import { AufbauProofPrawitzExerciseType } from "../../exercises/aufbau-proof-prawitz/assessment";
-import { AufbauProofTreeExerciseType } from "../../exercises/aufbau-proof-tree/assessment";
-import { FreeResponseExerciseType } from "../../exercises/free-response/assessment";
-import { ModelExerciseType } from "../../exercises/model/assessment";
-import { MultipleChoiceExerciseType } from "../../exercises/multiple-choice/assessment";
-import { ShortAnswerExerciseType } from "../../exercises/short-answer/assessment";
-import { TranslationExerciseType } from "../../exercises/translation/assessment";
-import { TruthTableExerciseType } from "../../exercises/truth-table/assessment";
+import type {
+  ExerciseNode,
+  ExerciseRenderContext,
+  ExerciseType,
+} from "../../exercise-kit/type";
+import { EXERCISE_TYPES } from "../../exercises";
 import { deferred } from "../../i18n/deferred";
+import type { Translator } from "../../i18n/translator";
 import { badRequest } from "../errors";
+import { contentRevisionAttribute, escapeHtml } from "./render-support";
 
 /**
- * The assessment-side exercise registry: maps an exercise kind to its grading
- * behavior. The per-type logic lives under `src/worker/exercises/<type>/`; this
- * module registers the built-in types and re-exports their constants so existing
- * importers keep a stable surface. The authoring-side registry (the directive →
- * metadata map the content compiler uses) lives in `authoring-registry.ts` and
- * is kept separate so the compile/preview path never imports the grading layer.
+ * The exercise registry: every {@link ExerciseType}, reachable by each name it
+ * goes by. The compiler asks by directive name, grading asks by kind, and
+ * rendering asks by the client asset id a document node carries — three
+ * lookups over one list (`src/worker/exercises/index.ts`), rather than the
+ * three registries and four switches that used to each enumerate the types
+ * on their own.
+ *
+ * The grading conveniences below are what `SubmissionService` calls; they
+ * resolve the type from the manifest item and forward, so the service never
+ * holds a type in its hands. The render conveniences are what
+ * `renderCompiledContent` and the submission forms call, with one fallback:
+ * a node whose asset id no type claims renders as an empty placeholder rather
+ * than throwing, because a stored document is not made unreadable by a type
+ * that was later removed.
  */
+export class ExerciseRegistry {
+  private readonly ordered: ExerciseType[] = [];
+  private readonly byAssetId = new Map<string, ExerciseType>();
+  private readonly byDirective = new Map<string, ExerciseType>();
+  private readonly byKind = new Map<ExerciseKind, ExerciseType>();
 
-export { AufbauProofExerciseType as AufbauProofExerciseHandler } from "../../exercises/aufbau-proof/assessment";
-export {
-  FREE_RESPONSE_ANSWER_KIND,
-  FREE_RESPONSE_COMPONENT_METADATA,
-  FREE_RESPONSE_KIND,
-  FREE_RESPONSE_SCHEMA_VERSION,
-} from "../../exercises/free-response/types";
-export { ModelExerciseType as ModelExerciseHandler } from "../../exercises/model/assessment";
-export {
-  MODEL_ANSWER_KIND,
-  MODEL_COMPONENT_METADATA,
-  MODEL_KIND,
-  MODEL_SCHEMA_VERSION,
-} from "../../exercises/model/types";
-export { MultipleChoiceExerciseType as MultipleChoiceExerciseHandler } from "../../exercises/multiple-choice/assessment";
-export {
-  MULTIPLE_CHOICE_ANSWER_KIND,
-  MULTIPLE_CHOICE_COMPONENT_METADATA,
-  MULTIPLE_CHOICE_KIND,
-  MULTIPLE_CHOICE_SCHEMA_VERSION,
-} from "../../exercises/multiple-choice/types";
-export {
-  SHORT_ANSWER_ANSWER_KIND,
-  SHORT_ANSWER_COMPONENT_METADATA,
-  SHORT_ANSWER_KIND,
-  SHORT_ANSWER_SCHEMA_VERSION,
-} from "../../exercises/short-answer/types";
-export { TranslationExerciseType as TranslationExerciseHandler } from "../../exercises/translation/assessment";
-export {
-  TRANSLATION_ANSWER_KIND,
-  TRANSLATION_COMPONENT_METADATA,
-  TRANSLATION_KIND,
-  TRANSLATION_SCHEMA_VERSION,
-} from "../../exercises/translation/types";
-export { TruthTableExerciseType as TruthTableExerciseHandler } from "../../exercises/truth-table/assessment";
-export {
-  TRUTH_TABLE_ANSWER_KIND,
-  TRUTH_TABLE_COMPONENT_METADATA,
-  TRUTH_TABLE_KIND,
-  TRUTH_TABLE_SCHEMA_VERSION,
-} from "../../exercises/truth-table/types";
-export type {
-  AuthoringExerciseType,
-  ExerciseCompileDirective,
-} from "./authoring-registry";
-export {
-  AuthoringExerciseRegistry,
-  createDefaultAuthoringExerciseRegistry,
-} from "./authoring-registry";
-
-export interface AssessmentExerciseType {
-  readonly answerKind: string;
-  readonly capabilities: ExerciseCapabilities;
-  readonly component: ComponentRegistryMetadata;
-  readonly kind: ExerciseKind;
-  readonly schemaVersion: number;
-  evaluate?(
-    answer: NormalizedAnswer,
-    declaration: ExerciseManifestItem,
-    context: EvaluationContext,
-  ): Promise<AutomaticEvaluation>;
-  manualGradingSpec?(declaration: ExerciseManifestItem): ManualGradingSpec;
-  normalizeAnswer(
-    envelope: AnswerEnvelope,
-    declaration: ExerciseManifestItem,
-  ): AnswerNormalizationResult;
-  reviewAnswer?(
-    answer: NormalizedAnswer,
-    declaration: ExerciseManifestItem,
-    context: ExerciseReviewContext,
-  ): ExerciseAnswerReview;
-}
-
-export class AssessmentExerciseRegistry {
-  private readonly types = new Map<string, AssessmentExerciseType>();
-
-  register(type: AssessmentExerciseType): void {
-    this.types.set(type.kind, type);
+  constructor(types: readonly ExerciseType[] = []) {
+    for (const type of types) {
+      this.register(type);
+    }
   }
 
-  typeFor(kind: ExerciseKind): AssessmentExerciseType {
-    const type = this.types.get(kind);
+  register(type: ExerciseType): void {
+    this.ordered.push(type);
+    this.byAssetId.set(type.component.assetId, type);
+    this.byDirective.set(type.directiveName, type);
+    this.byKind.set(type.kind, type);
+  }
+
+  /** Every registered type, in registration order. */
+  types(): readonly ExerciseType[] {
+    return this.ordered;
+  }
+
+  /**
+   * Every directive an author may write. Exists for the sweep in
+   * `tests/content.test.ts` that compiles one of each with a made-up attribute:
+   * a type that forgets `validateAttributes` should fail a test, not silently
+   * start discarding its author's instructions again.
+   */
+  directiveNames(): readonly string[] {
+    return this.ordered.map((type) => type.directiveName);
+  }
+
+  typeForDirective(directiveName: string): ExerciseType {
+    const type = this.byDirective.get(directiveName);
+
+    if (type === undefined) {
+      throw badRequest(
+        "unsupported_exercise_directive",
+        deferred.i18n.t("Directive {directiveName} is not supported.", {
+          directiveName,
+        }),
+      );
+    }
+
+    return type;
+  }
+
+  typeFor(kind: ExerciseKind): ExerciseType {
+    const type = this.byKind.get(kind);
 
     if (type === undefined) {
       throw badRequest(
@@ -125,6 +99,11 @@ export class AssessmentExerciseRegistry {
     }
 
     return type;
+  }
+
+  /** The type that renders this asset, or null: rendering is lenient. */
+  typeForAssetId(assetId: string): ExerciseType | null {
+    return this.byAssetId.get(assetId) ?? null;
   }
 
   normalizeAnswer(
@@ -173,26 +152,42 @@ export class AssessmentExerciseRegistry {
     );
   }
 
-  componentMetadataFor(kind: ExerciseKind): ComponentRegistryMetadata {
-    return this.typeFor(kind).component;
+  metadataFor(render: ExerciseRenderSpec): ComponentRegistryMetadata | null {
+    return this.typeForAssetId(render.assetId)?.component ?? null;
+  }
+
+  renderExercise(node: ExerciseNode, context: ExerciseRenderContext): string {
+    const type = this.typeForAssetId(node.render.assetId);
+
+    if (type === null) {
+      const revisionAttribute = contentRevisionAttribute(
+        context.contentRevisionId,
+      );
+
+      return `<div data-component="${escapeHtml(node.render.component)}" data-component-version="${escapeHtml(node.render.componentVersion)}" data-exercise-id="${escapeHtml(node.exerciseId)}"${revisionAttribute}></div>`;
+    }
+
+    return type.render(node, context);
+  }
+
+  /**
+   * The widget's own interface text in the viewer's language, for the
+   * hydration payload. Empty for a type whose element shows no text of its
+   * own, and for an asset no type claims — the map is a lookup with an English
+   * fallback, so an absent entry costs nothing.
+   *
+   * Keyed by asset id rather than exercise kind because these strings belong
+   * to the *element* that shows them — the same keying that decides which
+   * bundle a document loads.
+   */
+  strings(
+    assetId: string,
+    i18n: Translator,
+  ): Readonly<Record<string, string>> {
+    return this.typeForAssetId(assetId)?.strings?.(i18n) ?? {};
   }
 }
 
-export const ExerciseKindRegistry = AssessmentExerciseRegistry;
-
-export function createDefaultExerciseKindRegistry(): AssessmentExerciseRegistry {
-  const registry = new AssessmentExerciseRegistry();
-
-  registry.register(new MultipleChoiceExerciseType());
-  registry.register(new FreeResponseExerciseType());
-  registry.register(new ShortAnswerExerciseType());
-  registry.register(new TruthTableExerciseType());
-  registry.register(new ModelExerciseType());
-  registry.register(new AufbauProofExerciseType());
-  registry.register(new AufbauProofTreeExerciseType());
-  registry.register(new AufbauProofFitchExerciseType());
-  registry.register(new AufbauProofPrawitzExerciseType());
-  registry.register(new TranslationExerciseType());
-
-  return registry;
+export function createDefaultExerciseRegistry(): ExerciseRegistry {
+  return new ExerciseRegistry(EXERCISE_TYPES);
 }

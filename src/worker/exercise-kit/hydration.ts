@@ -50,7 +50,7 @@ export interface ExerciseHydration {
    * The widget's own interface text, already resolved for the viewer's locale
    * and keyed by its English source text — so a client lookup that misses
    * (an older payload, a key the server does not know) degrades to readable
-   * English rather than to a key. See `exerciseStrings`, which fills it, and
+   * English rather than to a key. See `ExerciseRegistry.strings`, which fills it, and
    * the client base's `t()`, which reads it.
    *
    * This is how the widgets are translated without shipping an i18n runtime to

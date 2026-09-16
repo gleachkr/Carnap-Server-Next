@@ -1414,7 +1414,7 @@ msgstr "Detail"
 msgid "Details"
 msgstr "Details"
 
-#: src/worker/application/content/authoring-registry.ts
+#: src/worker/application/content/registry.ts
 msgid "Directive {directiveName} is not supported."
 msgstr "Die Direktive {directiveName} wird nicht unterstützt."
 
@@ -1670,7 +1670,6 @@ msgstr "Entschuldigte Übung"
 msgid "Excusing exercises is only available for graded assignments."
 msgstr "Übungen können nur bei bewerteten Aufgaben entschuldigt werden."
 
-#: src/worker/exercises/group.ts
 #: src/worker/web/gradebook.tsx
 msgid "Exercise"
 msgstr "Übung"
@@ -1835,7 +1834,7 @@ msgstr "Suchen Sie Personen über E-Mail-Adresse oder Namen, bevor Sie den Platt
 msgid "First seen"
 msgstr "Zuerst gesehen"
 
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/aufbau-proof-fitch/types.ts
 msgid "Fitch proof"
 msgstr "Fitch-Beweis"
 
@@ -1856,7 +1855,7 @@ msgstr "Formel"
 msgid "Formula {index} needs {expected} cell tokens; found {found}."
 msgstr "Formel {index} braucht {expected} Zellen-Tokens; gefunden: {found}."
 
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/free-response/types.ts
 msgid "Free-response question"
 msgstr "Freitext-Übung"
 
@@ -2303,8 +2302,8 @@ msgstr ""
 msgid "MM0 source"
 msgstr ""
 
-#: src/worker/exercises/group.ts
 #: src/worker/exercises/model/assessment.ts
+#: src/worker/exercises/model/types.ts
 msgid "Model"
 msgstr "Modell"
 
@@ -2324,7 +2323,7 @@ msgstr "Wechselt zwischen den Zeilen, ohne die Häkchen zu ändern"
 msgid "Multiple-choice mode must be single or multiple."
 msgstr "Der Multiple-Choice-Modus muss single oder multiple sein."
 
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/multiple-choice/types.ts
 msgid "Multiple-choice question"
 msgstr "Multiple-Choice-Übung"
 
@@ -2847,7 +2846,7 @@ msgstr "Übungspunktzahlen"
 msgid "Practice scores are recorded, and do not count toward the course total."
 msgstr "Übungspunkte werden erfasst und zählen nicht zur Gesamtpunktzahl des Kurses."
 
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/aufbau-proof-prawitz/types.ts
 msgid "Prawitz proof"
 msgstr "Prawitz-Beweis"
 
@@ -2893,7 +2892,7 @@ msgstr "Befördern Sie ein Mitglied zum Kurspersonal, indem Sie seine Rolle anhe
 #: src/worker/exercises/aufbau-proof-prawitz/assessment.ts
 #: src/worker/exercises/aufbau-proof-tree/assessment.ts
 #: src/worker/exercises/aufbau-proof/assessment.ts
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/aufbau-proof/types.ts
 msgid "Proof"
 msgstr "Beweis"
 
@@ -2902,7 +2901,7 @@ msgid "Proof editor"
 msgstr "Beweiseditor"
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/aufbau-proof-tree/types.ts
 msgid "Proof tree"
 msgstr "Beweisbaum"
 
@@ -3328,7 +3327,7 @@ msgstr ""
 msgid "Sharing updated."
 msgstr ""
 
-#: src/worker/exercises/group.ts
+#: src/worker/exercises/short-answer/types.ts
 msgid "Short-answer question"
 msgstr "Kurzantwort-Übung"
 
@@ -4252,6 +4251,7 @@ msgid "Total"
 msgstr "Gesamt"
 
 #: src/worker/exercises/translation/assessment.ts
+#: src/worker/exercises/translation/types.ts
 msgid "Translation"
 msgstr "Übersetzung"
 
@@ -4264,8 +4264,8 @@ msgstr "wahr"
 msgid "True"
 msgstr "Wahr"
 
-#: src/worker/exercises/group.ts
 #: src/worker/exercises/truth-table/assessment.ts
+#: src/worker/exercises/truth-table/types.ts
 msgid "Truth table"
 msgstr "Wahrheitstafel"
 

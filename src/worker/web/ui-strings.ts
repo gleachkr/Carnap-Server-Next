@@ -2,10 +2,7 @@ import { buildDiagnosticStrings } from "../application/content/diagnostic-string
 import { jsonScriptContent } from "../application/content/render-support";
 import type { EvaluatorKind } from "../domain/assessment";
 import { buildExerciseActionsStrings } from "../exercise-kit/actions";
-import {
-  EXERCISE_STRING_ASSET_IDS,
-  exerciseStrings,
-} from "../exercises/strings";
+import { EXERCISE_TYPES } from "../exercises";
 import {
   formatMessage,
   placeholders,
@@ -81,7 +78,7 @@ function translatedStrings(
  *
  * For a browser that re-runs server render code. The editor's preview bundle
  * rebuilds the whole content document on every keystroke, through the same
- * `contentDocumentHtml` and `exerciseStrings` the server render used — and those
+ * `contentDocumentHtml` and `ExerciseRegistry.strings` the server render used — and those
  * ask for their prose through a `Translator`. Handing them this one is what
  * keeps a rebuild in the page's language: it used to pass
  * `passthroughTranslator`, so an author's first keystroke turned every widget
@@ -254,8 +251,8 @@ function buildPreviewStrings(i18n: Translator): void {
   // Every widget's text, not only the types the author has written so far: the
   // payload is fixed when the page is served, and the next keystroke can add an
   // exercise of any type.
-  for (const assetId of EXERCISE_STRING_ASSET_IDS) {
-    exerciseStrings(assetId, i18n);
+  for (const type of EXERCISE_TYPES) {
+    type.strings?.(i18n);
   }
 
   // The content document's own sentence, listed again here because a payload has

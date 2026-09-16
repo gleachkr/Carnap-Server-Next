@@ -140,33 +140,44 @@ describe("the exercise import boundary", () => {
   });
 
   /**
-   * The root of `exercises/` holds only the glue that enumerates the types
-   * (`strings.ts`, `group.ts` today), and that glue may see a type only through
-   * its declared surface: the kind constants and metadata in `types.ts`, and
-   * the widget text in `strings.ts`. Reaching further — into a type's
-   * authoring, assessment or rendering — would make the glue a second home for
-   * that type's logic.
-   *
-   * This rule tightens once every type exports one object from its `index.ts`
-   * (#309): from then on the root reaches each type through that index alone.
+   * The root of `exercises/` is one file, `index.ts`, and it reaches each type
+   * through that type's own `index.ts` alone — the one `ExerciseType` object a
+   * folder exports. Reaching further, into a type's authoring, assessment or
+   * rendering, would make the root a second home for that type's logic; it
+   * happened to `strings.ts` and `group.ts`, which enumerated every type by
+   * hand until #309 folded them into the object.
    */
-  test("the root glue sees a type only through its declared surface", async () => {
+  test("the root sees a type only through its index", async () => {
     const edges = await edgesUnder(EXERCISES);
     const glue = edges.filter((edge) => isRootGlue(edge.from));
-    const reaching = glue.filter((edge) => {
-      if (typeFolder(edge.target) === null) {
-        return false;
-      }
+    const reaching = glue.filter(
+      (edge) =>
+        typeFolder(edge.target) !== null &&
+        edge.target !== `${EXERCISES}/${typeFolder(edge.target)}`,
+    );
 
-      const file = posix.basename(edge.target);
-
-      return file !== "types" && file !== "strings";
-    });
-
-    expect(glue.length).toBeGreaterThan(10);
+    expect(glue.length).toBe(11);
     expect(
       describeEdges(reaching),
-      "a root glue file is reading past a type's types.ts/strings.ts — keep the glue to enumerating what each type declares",
+      "the root is reading past a type's index.ts — whatever it wants belongs on that type's ExerciseType object",
+    ).toEqual([]);
+  });
+
+  /**
+   * The verifier binds a wasm module the worker instantiates and no browser
+   * bundle should carry; `package.json` maps `#proof-verifier` to it under
+   * `workerd` and to a stub under `browser`. A relative import would step
+   * around that map and put the wasm back in the preview bundle as an asset.
+   */
+  test("the verifier is reached only through #proof-verifier", async () => {
+    const edges = await edgesUnder("src");
+    const direct = edges.filter((edge) =>
+      edge.target.endsWith(`${KIT}/proof/verifier`),
+    );
+
+    expect(
+      describeEdges(direct),
+      'import { verifyMmb } from "#proof-verifier" instead — the bare specifier is what lets the browser build swap in the stub',
     ).toEqual([]);
   });
 

@@ -30,7 +30,7 @@ import {
   firstOrderLanguageFor,
   parseFormula,
 } from "../src/worker/exercise-kit/formula";
-import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
+import { TRANSLATION_EXERCISE } from "../src/worker/exercises/translation";
 import { buildEquivalenceCheck } from "../src/worker/exercises/translation/logic/mm0";
 import {
   TRANSLATION_ANSWER_KIND,
@@ -491,7 +491,7 @@ describe("the exercise type grades a searched certificate", () => {
     text: string,
     mmb: Uint8Array | null,
   ): Promise<string> {
-    const type = new TranslationExerciseType();
+    const type = TRANSLATION_EXERCISE;
     const normalized = type.normalizeAnswer(
       {
         data: {

@@ -2,7 +2,6 @@ import type {
   CompiledExercise,
   CompilerDiagnostic,
   DirectiveBlock,
-  MarkdownRenderOptions,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
@@ -24,11 +23,12 @@ import {
   UNDERLINE,
 } from "../../exercise-kit/proof/authoring";
 import { PLAYGROUND_GOAL_NAME } from "../../exercise-kit/proof/playground";
-import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import { requireSystem } from "../../exercise-kit/systems/theory";
+import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type { CompiledAufbauProofPublicData } from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
+  AUFBAU_PROOF_CAPABILITIES,
   AUFBAU_PROOF_COMPONENT_METADATA,
   AUFBAU_PROOF_KIND,
   AUFBAU_PROOF_SCHEMA_VERSION,
@@ -136,10 +136,9 @@ const AUFBAU_PROOF_ATTRIBUTES = [
  */
 export async function compileAufbauProof(
   block: DirectiveBlock,
-  resolveSystem: SystemResolver,
-  diagnostics: CompilerDiagnostic[],
-  renderOptions: MarkdownRenderOptions,
+  context: ExerciseCompileContext,
 ): Promise<CompiledExercise | null> {
+  const { diagnostics, renderOptions, resolveSystem } = context;
   validateAttributes(block, AUFBAU_PROOF_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
@@ -183,10 +182,7 @@ export async function compileAufbauProof(
 
   return buildCompiledExercise({
     answerKind: AUFBAU_PROOF_ANSWER_KIND,
-    capabilities: {
-      supportsAutomaticEvaluation: true,
-      supportsManualReview: true,
-    },
+    capabilities: AUFBAU_PROOF_CAPABILITIES,
     exam,
     feedback,
     id,

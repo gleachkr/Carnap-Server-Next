@@ -1,25 +1,10 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
-
-import {
-  FREE_RESPONSE_ANSWER_KIND,
-  FREE_RESPONSE_KIND,
-  FREE_RESPONSE_SCHEMA_VERSION,
-  MULTIPLE_CHOICE_ANSWER_KIND,
-  MULTIPLE_CHOICE_KIND,
-  MULTIPLE_CHOICE_SCHEMA_VERSION,
-  SHORT_ANSWER_ANSWER_KIND,
-  SHORT_ANSWER_KIND,
-  SHORT_ANSWER_SCHEMA_VERSION,
-  TRUTH_TABLE_ANSWER_KIND,
-  TRUTH_TABLE_KIND,
-  TRUTH_TABLE_SCHEMA_VERSION,
-} from "../application/content/registry";
+import { createDefaultExerciseRegistry } from "../application/content/registry";
 import { jsonScriptContent } from "../application/content/render-support";
 import {
   componentAssetsForArtifact,
-  createDefaultComponentRegistry,
   exerciseHydrationForArtifact,
   renderCompiledContent,
 } from "../application/content/renderer";
@@ -54,61 +39,21 @@ import type { ExerciseFeedback } from "../domain/exercises";
 import type { JsonValue } from "../domain/json";
 import type { User } from "../domain/users";
 import { exerciseActionsHtml } from "../exercise-kit/actions";
+import { exerciseGroupLabel } from "../exercise-kit/group";
 import {
   EXERCISE_HYDRATION_VERSION,
   type ExerciseHydration,
   exerciseHydrationScript,
 } from "../exercise-kit/hydration";
-import { renderAufbauProofElement } from "../exercises/aufbau-proof/read-only-view";
+import type { ExerciseType } from "../exercise-kit/type";
 import {
-  AUFBAU_PROOF_ANSWER_KIND,
-  AUFBAU_PROOF_KIND,
-  AUFBAU_PROOF_SCHEMA_VERSION,
-  isAufbauProofPublicData,
-} from "../exercises/aufbau-proof/types";
-import { renderAufbauProofFitchElement } from "../exercises/aufbau-proof-fitch/read-only-view";
+  FREE_RESPONSE_KIND,
+  isFreeResponsePublicData,
+} from "../exercises/free-response/types";
 import {
-  AUFBAU_PROOF_FITCH_ANSWER_KIND,
-  AUFBAU_PROOF_FITCH_KIND,
-  AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
-  isAufbauProofFitchPublicData,
-} from "../exercises/aufbau-proof-fitch/types";
-import { renderAufbauProofPrawitzElement } from "../exercises/aufbau-proof-prawitz/read-only-view";
-import {
-  AUFBAU_PROOF_PRAWITZ_ANSWER_KIND,
-  AUFBAU_PROOF_PRAWITZ_KIND,
-  AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
-  isAufbauProofPrawitzPublicData,
-} from "../exercises/aufbau-proof-prawitz/types";
-import { renderAufbauProofTreeElement } from "../exercises/aufbau-proof-tree/read-only-view";
-import {
-  AUFBAU_PROOF_TREE_ANSWER_KIND,
-  AUFBAU_PROOF_TREE_KIND,
-  AUFBAU_PROOF_TREE_SCHEMA_VERSION,
-  isAufbauProofTreePublicData,
-} from "../exercises/aufbau-proof-tree/types";
-import { isFreeResponsePublicData } from "../exercises/free-response/types";
-import { exerciseGroupLabel } from "../exercises/group";
-import { isModelPublicData } from "../exercises/model/grading";
-import { renderModelElement } from "../exercises/model/read-only-view";
-import {
-  MODEL_ANSWER_KIND,
-  MODEL_KIND,
-  MODEL_SCHEMA_VERSION,
-} from "../exercises/model/types";
-import { renderMultipleChoiceElement } from "../exercises/multiple-choice/read-only-view";
-import { isMultipleChoicePublicData } from "../exercises/multiple-choice/types";
-import { isShortAnswerPublicData } from "../exercises/short-answer/types";
-import { exerciseStrings } from "../exercises/strings";
-import { renderTranslationElement } from "../exercises/translation/read-only-view";
-import {
-  isTranslationPublicData,
-  TRANSLATION_ANSWER_KIND,
-  TRANSLATION_KIND,
-  TRANSLATION_SCHEMA_VERSION,
-} from "../exercises/translation/types";
-import { isTruthTablePublicData } from "../exercises/truth-table/grading";
-import { renderTruthTableElement } from "../exercises/truth-table/read-only-view";
+  isShortAnswerPublicData,
+  SHORT_ANSWER_KIND,
+} from "../exercises/short-answer/types";
 import type { AppBindings } from "../http";
 import { splitAtValue, type Translator, VALUE } from "../i18n/translator";
 import {
@@ -167,6 +112,9 @@ import {
   userDisplayMeta,
   userDisplayName,
 } from "./users";
+
+/** The types, for the forms: which element a node gets, and what it posts as. */
+const exercises = createDefaultExerciseRegistry();
 
 type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 
@@ -689,7 +637,7 @@ function exerciseHydration(
       feedback === undefined || feedback === "full" ? {} : { feedback },
     priorAnswer: priorState?.submission.answer ?? null,
     publicData: node.publicData,
-    strings: exerciseStrings(
+    strings: exercises.strings(
       node.render.assetId,
       submission.context.get("i18n"),
     ),
@@ -764,86 +712,66 @@ const ExerciseFormShell: FC<{
   );
 };
 
-function multipleChoiceSubmissionForm(
+/**
+ * The form for a type with a client element.
+ *
+ * The element renders its chrome into a Declarative Shadow Root (inert until it
+ * upgrades); the prompt is slotted from light DOM so author CSS and the
+ * document's math font still reach it. The element's own controls — Check, a
+ * counterexample, Help — share the light-DOM action bar the element fills on
+ * upgrade, and every such widget looks for `.exercise-actions` in **its own
+ * light DOM**. That is why the bar is handed to the type's renderer here
+ * rather than laid beside the element: beside it, the element cannot reach it,
+ * and its buttons silently never appear. `tests/exercise-contract.test.ts`
+ * checks that every type puts the bar it is given inside what it renders.
+ */
+function elementSubmissionForm(
+  type: ExerciseType,
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
   title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== MULTIPLE_CHOICE_KIND ||
-    !isMultipleChoicePublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
+): Child {
   return (
     <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={MULTIPLE_CHOICE_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={MULTIPLE_CHOICE_SCHEMA_VERSION}
-      />
-      {/* The element renders its options into a Declarative Shadow Root (inert
-          until it upgrades); the prompt and labels are slotted from light DOM
-          so author CSS and the document's math font still reach them. The
-          submit button + status are slotted into the card's foot (see
-          exerciseActionsHtml). */}
+      <input name="answerKind" type="hidden" value={type.answerKind} />
+      <input name="schemaVersion" type="hidden" value={type.schemaVersion} />
       {raw(
-        renderMultipleChoiceElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
+        type.render(node, {
+          actions: exerciseActions(submission, node),
+          contentRevisionId: submission.contentRevisionId,
+          i18n: submission.context.get("i18n"),
+          title,
+        }),
       )}
     </ExerciseFormShell>
   );
 }
 
+/**
+ * The form for the two text kinds, which have no element: a native field the
+ * server renders, usable with JavaScript off. Each kind vouches for its own
+ * payload before the form is built.
+ */
 function textSubmissionForm(
+  type: ExerciseType,
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
   title: string | null,
 ): Child | null {
   const kind = node.exerciseKind;
-  // The two text kinds share this form; each vouches for its own payload.
-  const text =
-    kind === FREE_RESPONSE_KIND && isFreeResponsePublicData(node.publicData)
-      ? {
-          answerKind: FREE_RESPONSE_ANSWER_KIND,
-          publicData: node.publicData,
-          schemaVersion: FREE_RESPONSE_SCHEMA_VERSION,
-        }
-      : kind === SHORT_ANSWER_KIND && isShortAnswerPublicData(node.publicData)
-        ? {
-            answerKind: SHORT_ANSWER_ANSWER_KIND,
-            publicData: node.publicData,
-            schemaVersion: SHORT_ANSWER_SCHEMA_VERSION,
-          }
-        : null;
+  const publicData =
+    (kind === FREE_RESPONSE_KIND &&
+      isFreeResponsePublicData(node.publicData)) ||
+    (kind === SHORT_ANSWER_KIND && isShortAnswerPublicData(node.publicData))
+      ? node.publicData
+      : null;
 
-  if (text === null) {
+  if (publicData === null) {
     return null;
   }
 
-  const { answerKind, publicData, schemaVersion } = text;
-
   const i18n = submission.context.get("i18n");
-  const label = exerciseGroupLabel(kind, title, i18n);
+  const label = exerciseGroupLabel(type.name(i18n), title);
   // Unique per document, and safe as an id: `EXERCISE_ID_PATTERN` admits
   // anything HTML admits as an id, which is what `for` matches against —
   // exactly, with no escaping — and refuses the whitespace that would keep the
@@ -852,8 +780,8 @@ function textSubmissionForm(
 
   return (
     <ExerciseFormShell node={node} submission={submission}>
-      <input name="answerKind" type="hidden" value={answerKind} />
-      <input name="schemaVersion" type="hidden" value={schemaVersion} />
+      <input name="answerKind" type="hidden" value={type.answerKind} />
+      <input name="schemaVersion" type="hidden" value={type.schemaVersion} />
       {/* The box the eight widget kinds get from their custom element. A text
           exercise has no element, so its section is the exercise here — the same
           `<section class="exercise">` the no-submission renderer builds, holding
@@ -890,368 +818,26 @@ function textSubmissionForm(
   );
 }
 
-function truthTableSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== TRUTH_TABLE_KIND ||
-    !isTruthTablePublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={TRUTH_TABLE_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={TRUTH_TABLE_SCHEMA_VERSION}
-      />
-      {/* The element renders its grid into a Declarative Shadow Root (inert
-          until it upgrades); the prompt is slotted from light DOM so author CSS
-          and the document's math font still reach it. The Check / counterexample
-          / submit controls share the light-DOM action bar the element fills on
-          upgrade. */}
-      {raw(
-        renderTruthTableElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
-function modelSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== MODEL_KIND ||
-    !isModelPublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input name="answerKind" type="hidden" value={MODEL_ANSWER_KIND} />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={MODEL_SCHEMA_VERSION}
-      />
-      {/* The element renders its fields into a Declarative Shadow Root (inert
-          until it upgrades); the prompt is slotted from light DOM so author CSS
-          and the document's math font still reach it. Check and submit share the
-          light-DOM action bar the element fills on upgrade — which is the whole
-          reason this branch exists rather than the generic one: there the bar is
-          a sibling of the element, and the element cannot reach it. */}
-      {raw(
-        renderModelElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
-function translationSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== TRANSLATION_KIND ||
-    !isTranslationPublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={TRANSLATION_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={TRANSLATION_SCHEMA_VERSION}
-      />
-      {/* Same arrangement as the model above: the element's chrome lives in a
-          Declarative Shadow Root, the prompt is slotted from light DOM, and
-          Check and submit share the light-DOM action bar the element fills on
-          upgrade. */}
-      {raw(
-        renderTranslationElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
-function aufbauProofSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== AUFBAU_PROOF_KIND ||
-    !isAufbauProofPublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={AUFBAU_PROOF_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={AUFBAU_PROOF_SCHEMA_VERSION}
-      />
-      {/* The element renders the inert proof source into a Declarative Shadow
-          Root, then upgrades into the editor; the prompt is slotted from light
-          DOM so author CSS and the document's math font still reach it. The
-          submit button + status are slotted into the card's foot (see
-          exerciseActionsHtml). */}
-      {raw(
-        renderAufbauProofElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
-function aufbauProofTreeSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== AUFBAU_PROOF_TREE_KIND ||
-    !isAufbauProofTreePublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={AUFBAU_PROOF_TREE_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={AUFBAU_PROOF_TREE_SCHEMA_VERSION}
-      />
-      {/* The element renders the inert goal seed into a Declarative Shadow Root,
-          then upgrades into the tree editor; the prompt is slotted from light
-          DOM so author CSS and the document's math font still reach it. The
-          submit button + status are slotted into the card's foot (see
-          exerciseActionsHtml). */}
-      {raw(
-        renderAufbauProofTreeElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
-function aufbauProofFitchSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== AUFBAU_PROOF_FITCH_KIND ||
-    !isAufbauProofFitchPublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={AUFBAU_PROOF_FITCH_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={AUFBAU_PROOF_FITCH_SCHEMA_VERSION}
-      />
-      {/* The element renders the inert Fitch source into a Declarative Shadow
-          Root, then upgrades into the CodeMirror editor with the subproof
-          scope-lines; the prompt is slotted from light DOM so author CSS and
-          the document's math font still reach it. The submit button + status are
-          slotted into the card's foot (see exerciseActionsHtml). */}
-      {raw(
-        renderAufbauProofFitchElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
-function aufbauProofPrawitzSubmissionForm(
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  if (
-    node.exerciseKind !== AUFBAU_PROOF_PRAWITZ_KIND ||
-    !isAufbauProofPrawitzPublicData(node.publicData)
-  ) {
-    return null;
-  }
-
-  const publicData = node.publicData;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input
-        name="answerKind"
-        type="hidden"
-        value={AUFBAU_PROOF_PRAWITZ_ANSWER_KIND}
-      />
-      <input
-        name="schemaVersion"
-        type="hidden"
-        value={AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION}
-      />
-      {/* The element renders the inert goal seed into a Declarative Shadow Root,
-          then upgrades into the Prawitz workspace; the prompt is slotted from
-          light DOM so author CSS and the document's math font still reach it.
-          The submit button + status are slotted into the card's foot (see
-          exerciseActionsHtml). */}
-      {raw(
-        renderAufbauProofPrawitzElement(
-          publicData,
-          {
-            component: node.render.component,
-            componentVersion: node.render.componentVersion,
-            contentRevisionId: submission.contentRevisionId,
-            exerciseId: node.exerciseId,
-            exerciseKind: node.exerciseKind,
-            i18n: submission.context.get("i18n"),
-            title,
-          },
-          exerciseActions(submission, node),
-        ),
-      )}
-    </ExerciseFormShell>
-  );
-}
-
+/**
+ * The submission form for one exercise, by what its type renders with: a
+ * client element gets {@link elementSubmissionForm}, a native field gets
+ * {@link textSubmissionForm}. Null for a node no type claims, which the caller
+ * renders read-only instead.
+ */
 function submissionFormNode(
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
   title: string | null,
 ): Child | null {
-  return (
-    multipleChoiceSubmissionForm(submission, node, title) ??
-    truthTableSubmissionForm(submission, node, title) ??
-    modelSubmissionForm(submission, node, title) ??
-    translationSubmissionForm(submission, node, title) ??
-    aufbauProofSubmissionForm(submission, node, title) ??
-    aufbauProofTreeSubmissionForm(submission, node, title) ??
-    aufbauProofFitchSubmissionForm(submission, node, title) ??
-    aufbauProofPrawitzSubmissionForm(submission, node, title) ??
-    textSubmissionForm(submission, node, title)
-  );
+  const type = exercises.typeForAssetId(node.render.assetId);
+
+  if (type === null) {
+    return null;
+  }
+
+  return type.component.clientModule
+    ? elementSubmissionForm(type, submission, node, title)
+    : textSubmissionForm(type, submission, node, title);
 }
 
 function renderAssignmentContent(
@@ -1269,8 +855,6 @@ function renderAssignmentContent(
       }),
     );
   }
-
-  const registry = createDefaultComponentRegistry();
 
   return (
     <>
@@ -1290,7 +874,7 @@ function renderAssignmentContent(
         return (
           submissionFormNode(submission, node, manifestItem?.title ?? null) ??
           raw(
-            registry.renderExercise(node, {
+            exercises.renderExercise(node, {
               contentRevisionId: detail.contentRevision.id,
               i18n,
               title: manifestItem?.title ?? null,

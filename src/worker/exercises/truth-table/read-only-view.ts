@@ -3,16 +3,16 @@ import {
   escapeHtml,
   exerciseRootAttributes,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import { reviewHydrationScript } from "../../exercise-kit/hydration";
-import type { Translator } from "../../i18n/translator";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
-} from "../group";
+} from "../../exercise-kit/group";
+import { reviewHydrationScript } from "../../exercise-kit/hydration";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import type { Translator } from "../../i18n/translator";
 import {
   cellFillable,
   correctCells,
@@ -33,7 +33,7 @@ import type {
   TruthTableOptions,
   TruthTablePublicData,
 } from "./types";
-import { TRUTH_TABLE_KIND } from "./types";
+import { TRUTH_TABLE_KIND, truthTableName } from "./types";
 
 const TRUTH_TABLE_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -626,7 +626,7 @@ export function renderTruthTableElement(
       ceSelect ? ceSelectHead(strings) : "",
     )}</thead><tbody>${rows}</tbody>`,
     exerciseLegendHtml(
-      exerciseGroupLabel(meta.exerciseKind, meta.title, meta.i18n),
+      exerciseGroupLabel(truthTableName(meta.i18n), meta.title),
     ),
     "",
     strings["Arrow keys move between cells. Space or Enter changes one."],
@@ -894,6 +894,6 @@ export function renderTruthTable(
     // A preview has no attempt to submit to, but it gets the same closing row a
     // student's copy has, with the button disabled: the shape the author is
     // writing towards, and the row this widget's own controls land in.
-    previewExerciseActionsHtml(context.i18n, true),
+    context.actions ?? previewExerciseActionsHtml(context.i18n, true),
   );
 }

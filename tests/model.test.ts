@@ -1,16 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import {
-  MODEL_ANSWER_KIND,
-  MODEL_KIND,
-  MODEL_SCHEMA_VERSION,
-  ModelExerciseHandler,
-} from "../src/worker/application/content/registry";
 import { renderCompiledContent } from "../src/worker/application/content/renderer";
 import type {
   CompiledContentArtifact,
   ExerciseManifestItem,
 } from "../src/worker/domain/content";
+import { MODEL_EXERCISE } from "../src/worker/exercises/model";
 import {
   effectiveAnswer,
   resolveModel,
@@ -23,6 +18,11 @@ import type {
   ModelAnswerData,
   ModelCheckMode,
   ModelPublicData,
+} from "../src/worker/exercises/model/types";
+import {
+  MODEL_ANSWER_KIND,
+  MODEL_KIND,
+  MODEL_SCHEMA_VERSION,
 } from "../src/worker/exercises/model/types";
 import { i18nFor } from "../src/worker/i18n";
 import { passthroughTranslator } from "../src/worker/i18n/translator";
@@ -72,7 +72,7 @@ function envelope(data: ModelAnswerData) {
   };
 }
 
-const handler = new ModelExerciseHandler();
+const handler = MODEL_EXERCISE;
 
 async function score(
   source: string,

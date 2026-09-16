@@ -2,7 +2,7 @@ import { THEORY_PANEL_STYLES } from "../application/content/theory-panel";
 import exerciseStyles from "../exercise-kit/exercise.css" with {
   type: "text",
 };
-import { EXERCISE_GROUP_STYLES } from "../exercises/group";
+import { EXERCISE_GROUP_STYLES } from "../exercise-kit/group";
 import chromeStyles from "./chrome.css" with { type: "text" };
 import contentStyles from "./content.css" with { type: "text" };
 import { MATH_FONT_FACE } from "./math-font";

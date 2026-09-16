@@ -15,33 +15,10 @@ import {
   builtInSystem,
   compileAufbauMm0,
 } from "../../exercise-kit/systems/theory";
-import { compileAufbauProof } from "../../exercises/aufbau-proof/authoring";
-import { AUFBAU_PROOF_KIND } from "../../exercises/aufbau-proof/types";
-import { compileAufbauProofFitch } from "../../exercises/aufbau-proof-fitch/authoring";
-import { AUFBAU_PROOF_FITCH_KIND } from "../../exercises/aufbau-proof-fitch/types";
-import { compileAufbauProofPrawitz } from "../../exercises/aufbau-proof-prawitz/authoring";
-import { AUFBAU_PROOF_PRAWITZ_KIND } from "../../exercises/aufbau-proof-prawitz/types";
-import { compileAufbauProofTree } from "../../exercises/aufbau-proof-tree/authoring";
-import { AUFBAU_PROOF_TREE_KIND } from "../../exercises/aufbau-proof-tree/types";
-import { compileFreeResponse } from "../../exercises/free-response/authoring";
-import { FREE_RESPONSE_KIND } from "../../exercises/free-response/types";
-import {
-  compileModel,
-  modelDataBodyLines,
-} from "../../exercises/model/authoring";
-import { MODEL_KIND } from "../../exercises/model/types";
-import { compileMultipleChoice } from "../../exercises/multiple-choice/authoring";
-import { MULTIPLE_CHOICE_KIND } from "../../exercises/multiple-choice/types";
-import { compileShortAnswer } from "../../exercises/short-answer/authoring";
-import { SHORT_ANSWER_KIND } from "../../exercises/short-answer/types";
-import { compileTranslation } from "../../exercises/translation/authoring";
-import { TRANSLATION_KIND } from "../../exercises/translation/types";
-import { compileTruthTable } from "../../exercises/truth-table/authoring";
-import { TRUTH_TABLE_KIND } from "../../exercises/truth-table/types";
+import type { ExerciseType } from "../../exercise-kit/type";
+import { modelDataBodyLines } from "../../exercises/model/authoring";
 import type { TheoryResolver } from "../../logic/theories";
 import { BUILT_IN_SYSTEM_IDS } from "../../logic/theories";
-import type { AuthoringExerciseRegistry } from "./authoring-registry";
-import { createDefaultAuthoringExerciseRegistry } from "./authoring-registry";
 import type {
   CompilerDiagnostic,
   DirectiveBlock,
@@ -58,6 +35,8 @@ import {
   renderMarkdownChildren,
 } from "./authoring-toolkit";
 import { createMathCompiler, type MathFailure } from "./math";
+import type { ExerciseRegistry } from "./registry";
+import { createDefaultExerciseRegistry } from "./registry";
 
 export type { CompilerDiagnostic } from "./authoring-toolkit";
 export { CONTENT_SANITIZE_SCHEMA } from "./authoring-toolkit";
@@ -473,7 +452,7 @@ function referencedSystems(
  * until theories could be hosted.
  */
 export interface CompileMarkdownOptions {
-  readonly authoringRegistry?: AuthoringExerciseRegistry;
+  readonly registry?: ExerciseRegistry;
   /**
    * How a `src=` this site serves from the *database* is answered — the
    * instructor-hosted half of the theory URL namespace. Built-ins never reach
@@ -488,8 +467,7 @@ export async function compileCarnapMarkdown(
   sourceText: string,
   options: CompileMarkdownOptions = {},
 ): Promise<CompileMarkdownResult> {
-  const authoringRegistry =
-    options.authoringRegistry ?? createDefaultAuthoringExerciseRegistry();
+  const registry = options.registry ?? createDefaultExerciseRegistry();
   // One read per path per document. A lesson naming its course's theory in
   // five blocks is the ordinary shape, and each of those blocks would
   // otherwise be its own database round trip for bytes that cannot have
@@ -683,12 +661,10 @@ export async function compileCarnapMarkdown(
       collectNestedDirectiveDiagnostics(nested, diagnostics, dataLines);
     }
 
-    let exerciseKind: string;
+    let type: ExerciseType;
 
     try {
-      exerciseKind = authoringRegistry.typeForDirective(
-        block.name,
-      ).exerciseKind;
+      type = registry.typeForDirective(block.name);
     } catch {
       diagnostics.push(
         diagnostic(
@@ -701,63 +677,11 @@ export async function compileCarnapMarkdown(
       continue;
     }
 
-    const compiled =
-      exerciseKind === MULTIPLE_CHOICE_KIND
-        ? await compileMultipleChoice(block, diagnostics, renderOptions)
-        : exerciseKind === FREE_RESPONSE_KIND
-          ? await compileFreeResponse(block, diagnostics, renderOptions)
-          : exerciseKind === SHORT_ANSWER_KIND
-            ? await compileShortAnswer(block, diagnostics, renderOptions)
-            : exerciseKind === TRUTH_TABLE_KIND
-              ? await compileTruthTable(
-                  block,
-                  resolveSystem,
-                  diagnostics,
-                  renderOptions,
-                )
-              : exerciseKind === MODEL_KIND
-                ? await compileModel(
-                    block,
-                    resolveSystem,
-                    diagnostics,
-                    renderOptions,
-                  )
-                : exerciseKind === AUFBAU_PROOF_KIND
-                  ? await compileAufbauProof(
-                      block,
-                      resolveSystem,
-                      diagnostics,
-                      renderOptions,
-                    )
-                  : exerciseKind === AUFBAU_PROOF_TREE_KIND
-                    ? await compileAufbauProofTree(
-                        block,
-                        resolveSystem,
-                        diagnostics,
-                        renderOptions,
-                      )
-                    : exerciseKind === AUFBAU_PROOF_FITCH_KIND
-                      ? await compileAufbauProofFitch(
-                          block,
-                          resolveSystem,
-                          diagnostics,
-                          renderOptions,
-                        )
-                      : exerciseKind === AUFBAU_PROOF_PRAWITZ_KIND
-                        ? await compileAufbauProofPrawitz(
-                            block,
-                            resolveSystem,
-                            diagnostics,
-                            renderOptions,
-                          )
-                        : exerciseKind === TRANSLATION_KIND
-                          ? await compileTranslation(
-                              block,
-                              resolveSystem,
-                              diagnostics,
-                              renderOptions,
-                            )
-                          : null;
+    const compiled = await type.compile(block, {
+      diagnostics,
+      renderOptions,
+      resolveSystem,
+    });
 
     if (compiled === null) {
       continue;

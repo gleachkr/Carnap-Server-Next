@@ -2,11 +2,18 @@ import {
   escapeHtml,
   exerciseRootAttributes,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import { exerciseGroupLabel, exerciseLegendHtml } from "../group";
-import { isShortAnswerPublicData, SHORT_ANSWER_KIND } from "./types";
+import {
+  exerciseGroupLabel,
+  exerciseLegendHtml,
+} from "../../exercise-kit/group";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import {
+  isShortAnswerPublicData,
+  SHORT_ANSWER_KIND,
+  shortAnswerName,
+} from "./types";
 
 export function renderShortAnswer(
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
@@ -31,7 +38,7 @@ export function renderShortAnswer(
   // and never reach a catalog.
   const i18n = context.i18n;
   const legend = exerciseLegendHtml(
-    exerciseGroupLabel(node.exerciseKind, context.title, i18n),
+    exerciseGroupLabel(shortAnswerName(i18n), context.title),
   );
   const fieldId = `${node.exerciseId}-answer`;
 
@@ -45,6 +52,6 @@ export function renderShortAnswer(
           <label for="${escapeHtml(fieldId)}">${escapeHtml(i18n.t("Answer"))}</label>
           <input disabled id="${escapeHtml(fieldId)}">
         </fieldset>
-        ${previewExerciseActionsHtml(i18n, false)}
+        ${context.actions ?? previewExerciseActionsHtml(i18n, false)}
       </section>`;
 }

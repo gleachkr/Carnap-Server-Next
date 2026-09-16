@@ -1,3 +1,5 @@
+import type { ExerciseCapabilities } from "../../domain/exercises";
+import type { Translator } from "../../i18n/translator";
 /**
  * Constants and data shapes for the Aufbau *tree* proof exercise type — a
  * tree-shaped input modality over the same engine as {@link
@@ -35,6 +37,17 @@ export const AUFBAU_PROOF_TREE_COMPONENT_METADATA = {
   component: "carnap-aufbau-proof-tree",
   componentVersion: "1",
 } as const;
+
+/** What grading can do for this type; declared once, copied onto each manifest item. */
+export const AUFBAU_PROOF_TREE_CAPABILITIES: ExerciseCapabilities = {
+  supportsAutomaticEvaluation: true,
+  supportsManualReview: true,
+};
+
+/** The generic group name for an untitled exercise of this type. */
+export function aufbauProofTreeName(i18n: Translator): string {
+  return i18n.t("Proof tree");
+}
 
 /**
  * Everything the widget and grader need, frozen at authoring time.

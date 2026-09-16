@@ -12,7 +12,7 @@ import type {
   AnswerEnvelope,
   ExerciseManifestItem,
 } from "../src/worker/domain/content";
-import { TranslationExerciseType } from "../src/worker/exercises/translation/assessment";
+import { TRANSLATION_EXERCISE } from "../src/worker/exercises/translation";
 import type { TranslationSubmission } from "../src/worker/exercises/translation/types";
 import {
   isTranslationPublicData,
@@ -57,7 +57,7 @@ async function statusFor(
   item: ExerciseManifestItem,
   data: TranslationSubmission,
 ): Promise<string> {
-  const type = new TranslationExerciseType();
+  const type = TRANSLATION_EXERCISE;
   const normalized = type.normalizeAnswer(envelope(data), item);
   if (!normalized.ok) {
     throw new Error("normalization failed");
@@ -243,7 +243,7 @@ What is the missing premise?
 describe("review", () => {
   test("shows the submission in logical symbols, asserting nothing", async () => {
     const item = await manifestItem(PROP_EXERCISE);
-    const type = new TranslationExerciseType();
+    const type = TRANSLATION_EXERCISE;
     const normalized = type.normalizeAnswer(
       envelope({ text: "Q/\\P" }),
       item,

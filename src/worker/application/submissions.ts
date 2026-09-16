@@ -35,8 +35,8 @@ import {
   manifestPointsOf,
 } from "./content/artifact";
 import {
-  type AssessmentExerciseRegistry,
-  createDefaultExerciseKindRegistry,
+  createDefaultExerciseRegistry,
+  type ExerciseRegistry,
 } from "./content/registry";
 import { AppHttpError, badRequest } from "./errors";
 import { GradebookService } from "./gradebook";
@@ -47,7 +47,7 @@ import {
 import type { AppStores } from "./stores";
 
 export interface SubmissionServiceOptions {
-  readonly exerciseRegistry?: AssessmentExerciseRegistry;
+  readonly exerciseRegistry?: ExerciseRegistry;
   readonly now?: () => Date;
   readonly stores: AppStores;
 }
@@ -242,11 +242,11 @@ function effectiveEvaluation(
 }
 
 export class SubmissionService {
-  private readonly exerciseRegistry: AssessmentExerciseRegistry;
+  private readonly exerciseRegistry: ExerciseRegistry;
 
   constructor(private readonly options: SubmissionServiceOptions) {
     this.exerciseRegistry =
-      options.exerciseRegistry ?? createDefaultExerciseKindRegistry();
+      options.exerciseRegistry ?? createDefaultExerciseRegistry();
   }
 
   async submit(

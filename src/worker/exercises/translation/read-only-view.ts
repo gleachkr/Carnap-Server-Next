@@ -3,21 +3,25 @@ import {
   escapeHtml,
   exerciseRootAttributes,
 } from "../../application/content/render-support";
-import type { ExerciseRenderContext } from "../../application/content/renderer";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
-import type { Translator } from "../../i18n/translator";
-import { stringsResolver } from "../../i18n/translator";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
   exerciseGroupLabel,
   exerciseLegendHtml,
-} from "../group";
+} from "../../exercise-kit/group";
+import type { ExerciseRenderContext } from "../../exercise-kit/type";
+import type { Translator } from "../../i18n/translator";
+import { stringsResolver } from "../../i18n/translator";
 import reviewStyles from "./review.css" with { type: "text" };
 import shadowStyles from "./shadow.css" with { type: "text" };
 import { buildTranslationStrings } from "./strings";
 import type { TranslationPublicData } from "./types";
-import { isTranslationPublicData, TRANSLATION_KIND } from "./types";
+import {
+  isTranslationPublicData,
+  TRANSLATION_KIND,
+  translationName,
+} from "./types";
 
 const TRANSLATION_SHADOW_STYLES = [
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -44,7 +48,7 @@ export function renderTranslationElement(
 ): string {
   const strings = stringsResolver(buildTranslationStrings(meta.i18n));
   const legend = exerciseLegendHtml(
-    exerciseGroupLabel(meta.exerciseKind, meta.title, meta.i18n),
+    exerciseGroupLabel(translationName(meta.i18n), meta.title),
   );
   const inputId = "translation-input";
 
@@ -121,6 +125,6 @@ export function renderTranslation(
     },
     // A preview has no attempt to submit to, but it gets the same closing row
     // a student's copy has, with the button disabled.
-    previewExerciseActionsHtml(context.i18n, true),
+    context.actions ?? previewExerciseActionsHtml(context.i18n, true),
   );
 }
