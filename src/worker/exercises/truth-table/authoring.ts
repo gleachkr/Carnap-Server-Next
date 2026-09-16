@@ -17,6 +17,7 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
+import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import {
   correctCells,
@@ -29,10 +30,10 @@ import {
 import {
   formulaToString,
   MAX_TABLE_ATOMS,
+  PROP_LANGUAGE_ID,
   parseFormula,
   truthTableLanguage,
 } from "./logic";
-import { parseSystem } from "./system";
 import type {
   TruthTableCellValue,
   TruthTableCheckMode,
@@ -420,8 +421,9 @@ function parseFormulaList(
   const lang = truthTableLanguage({ source: system });
   const formulas: string[] = [];
 
-  // A language that did not resolve is already reported by `parseSystem`;
-  // piling a parse error onto every formula would only bury it.
+  // A language that did not resolve is already reported by
+  // `parseSystemAttribute`; piling a parse error onto every formula would
+  // only bury it.
   if (lang === null) {
     return formulas;
   }
@@ -949,7 +951,9 @@ export async function compileTruthTable(
   validateAttributes(block, TRUTH_TABLE_ATTRIBUTES, diagnostics);
 
   const id = requireAttribute(block, "id", diagnostics);
-  const system = parseSystem(block, resolveSystem, diagnostics);
+  const system = parseSystemAttribute(block, resolveSystem, diagnostics, {
+    defaultId: PROP_LANGUAGE_ID,
+  });
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
   const fill = parseFillScope(block.attrs.fill, block.line, diagnostics);

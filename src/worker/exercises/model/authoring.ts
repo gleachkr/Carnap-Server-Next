@@ -18,10 +18,11 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import type { ExerciseFeedback } from "../../domain/exercises";
-import { parseSystem } from "../../exercise-kit/formula/authoring";
+import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import type { ModelField, ModelTarget } from "./logic";
 import {
+  DEFAULT_LANGUAGE_ID,
   formulaToString,
   modelSignature,
   parseDomain,
@@ -678,7 +679,12 @@ export async function compileModel(
   const id = requireAttribute(block, "id", diagnostics);
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
-  const { language, system } = parseSystem(block, resolveSystem, diagnostics);
+  const { language, system } = parseSystemAttribute(
+    block,
+    resolveSystem,
+    diagnostics,
+    { defaultId: DEFAULT_LANGUAGE_ID },
+  );
   const flags = parseOptionFlags(
     block.attrs.options,
     block.line,

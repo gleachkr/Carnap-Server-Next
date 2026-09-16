@@ -18,11 +18,12 @@ import {
   validateExerciseId,
 } from "../../application/content/authoring-toolkit";
 import {
+  DEFAULT_LANGUAGE_ID,
   formulaToString,
   parseFormula,
   splitFormulaList,
 } from "../../exercise-kit/formula";
-import { parseSystem } from "../../exercise-kit/formula/authoring";
+import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { SystemResolver } from "../../exercise-kit/systems/theory";
 import type { TranslationTest } from "./logic/tests";
 import { parseTranslationTests } from "./logic/tests";
@@ -253,7 +254,12 @@ export async function compileTranslation(
   const id = requireAttribute(block, "id", diagnostics);
   const points = parsePoints(block.attrs.points, block.line, diagnostics);
   const variant = parseVariant(block.attrs.variant, block.line, diagnostics);
-  const { language, system } = parseSystem(block, resolveSystem, diagnostics);
+  const { language, system } = parseSystemAttribute(
+    block,
+    resolveSystem,
+    diagnostics,
+    { defaultId: DEFAULT_LANGUAGE_ID },
+  );
   const flags = parseOptionFlags(
     block.attrs.options,
     block.line,
