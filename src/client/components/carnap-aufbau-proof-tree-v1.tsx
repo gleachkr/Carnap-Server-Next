@@ -75,6 +75,7 @@ import {
   mountHelpTrigger,
   openHelpDialog,
 } from "./help-dialog";
+import goalStyles from "./proof-goal.css" with { type: "text" };
 import "../vendor/proofml.mjs";
 
 // The ProofML display elements are custom tags, not standard HTML; declare them
@@ -380,7 +381,9 @@ function docReducer(doc: Doc, action: Action): Doc {
 // Presentation (Preact).
 // ---------------------------------------------------------------------------
 
-const SHADOW_STYLES = [shadowStyles, HELP_DIALOG_STYLES].join("\n");
+const SHADOW_STYLES = [shadowStyles, goalStyles, HELP_DIALOG_STYLES].join(
+  "\n",
+);
 
 /**
  * What the `(?)` in the toolbar opens: how the editor works, and every key it
@@ -626,9 +629,10 @@ function Editor(props: {
   return (
     <>
       {proves === null ? null : (
-        <p class="tree-goal">
-          {t("Proves")} <code>{proves}</code>
-        </p>
+        <div class="proof-goal">
+          <span class="proof-goal-label">{t("Proves")}</span>{" "}
+          <span class="proof-goal-statement">{proves}</span>
+        </div>
       )}
       <div class="tree-toolbar">
         <button

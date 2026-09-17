@@ -20,15 +20,6 @@
   cursor: default;
   opacity: 0.55;
 }
-.pz-goal {
-  color: var(--ink-muted, #5f7388);
-  font-size: 0.85rem;
-  margin: 0.4rem 0 0;
-}
-.pz-goal code {
-  color: var(--ink, #16324a);
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
-}
 /* The forest lays its trees side by side; each is its own derivation. */
 .prawitz-canvas {
   align-items: flex-end;

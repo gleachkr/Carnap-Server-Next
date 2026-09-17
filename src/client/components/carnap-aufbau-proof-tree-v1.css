@@ -76,13 +76,3 @@
   outline: 2px solid var(--blue, #0b66d8);
   outline-offset: 2px;
 }
-/* A playground's live statement: what the tree currently proves. */
-.tree-goal {
-  color: var(--ink-muted, #5f7388);
-  font-size: 0.85rem;
-  margin: 0.4rem 0 0;
-}
-.tree-goal code {
-  color: var(--ink, #16324a);
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
-}

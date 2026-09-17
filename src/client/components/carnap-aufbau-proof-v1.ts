@@ -43,6 +43,7 @@ import {
 } from "../proof-compiler";
 import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-v1.css" with { type: "text" };
+import goalStyles from "./proof-goal.css" with { type: "text" };
 
 const DEBOUNCE_MS = 400;
 
@@ -120,7 +121,7 @@ function bodyFromProofText(proofText: string): string {
   return underline === -1 ? proofText : lines.slice(underline + 1).join("\n");
 }
 
-const SHADOW_STYLES = shadowStyles;
+const SHADOW_STYLES = [shadowStyles, goalStyles].join("\n");
 
 class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   /** The frozen theory: with the goal appended for an ordinary exercise, and
@@ -181,7 +182,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     // A playground's row says what the proof *proves*, and follows the proof.
     label.textContent = this.t(this.playground ? "Proves" : "Prove");
     const decl = document.createElement("span");
-    decl.className = "proof-goal-decl";
+    decl.className = "proof-goal-statement";
     decl.textContent = this.playground ? "" : goalDeclaration(data.mm0);
     this.statementView = decl;
     goal.append(label, decl);

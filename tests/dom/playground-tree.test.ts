@@ -189,7 +189,7 @@ describe("a playground tree", () => {
       "theorem playground {a: name}: $ ((F (a)) ⊢ (F (a))) $;",
     );
     expect(proof).toStartWith("playground\n----\n");
-    expect(mounted.root.querySelector(".tree-goal")?.textContent).toBe(
+    expect(mounted.root.querySelector(".proof-goal")?.textContent).toBe(
       "Proves Fa ⊢ Fa",
     );
 
@@ -210,6 +210,6 @@ describe("a playground tree", () => {
     );
 
     expect(rootField(mounted).classList.contains("tree-fixed")).toBe(true);
-    expect(mounted.root.querySelector(".tree-goal")).toBeNull();
+    expect(mounted.root.querySelector(".proof-goal")).toBeNull();
   });
 });

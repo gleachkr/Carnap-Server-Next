@@ -79,6 +79,7 @@ import { CarnapExerciseElement, register, withoutCertificate } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-fitch-v1.css" with {
   type: "text",
 };
+import goalStyles from "./proof-goal.css" with { type: "text" };
 
 const DEBOUNCE_MS = 400;
 
@@ -356,7 +357,7 @@ const scopeGuides = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
-const SHADOW_STYLES = shadowStyles;
+const SHADOW_STYLES = [shadowStyles, goalStyles].join("\n");
 
 class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   /** The frozen theory: with the goal appended for an ordinary exercise, and
