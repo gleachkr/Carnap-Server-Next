@@ -586,7 +586,7 @@ const SHORTCUTS: readonly {
     keys: ["h"],
   },
   {
-    action: "Delete the line and everything above it",
+    action: "Delete the line and move its premises down to the focused row",
     icon: "delete",
     keys: ["Del"],
   },

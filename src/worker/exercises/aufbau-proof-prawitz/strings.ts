@@ -131,8 +131,10 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
     "Leave the field and go back to the line": i18n.t(
       "Leave the field and go back to the line",
     ),
-    "Delete the line and everything above it": i18n.t(
-      "Delete the line and everything above it",
+    /** Help: what Delete does — the inverse of Apply rule below, not the
+     *  tree editor's subtree removal. */
+    "Delete the line and move its premises down to the focused row": i18n.t(
+      "Delete the line and move its premises down to the focused row",
     ),
     "Open this help": i18n.t("Open this help"),
     /** Structural diagnostic: `discharge_formula_mismatch`. */

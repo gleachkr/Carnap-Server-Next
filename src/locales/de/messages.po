@@ -1381,10 +1381,13 @@ msgstr "Löschen"
 msgid "Delete draft"
 msgstr "Entwurf löschen"
 
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Delete the line and everything above it"
 msgstr "Löscht die Zeile und alles darüber"
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Delete the line and move its premises down to the focused row"
+msgstr "Löscht die Zeile und rückt ihre Prämissen in die fokussierte Zeile nach"
 
 #: src/worker/web/courses.tsx
 msgid "Delivery failed."

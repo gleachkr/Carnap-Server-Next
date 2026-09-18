@@ -1381,10 +1381,13 @@ msgstr "Delete"
 msgid "Delete draft"
 msgstr "Delete draft"
 
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Delete the line and everything above it"
 msgstr "Delete the line and everything above it"
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Delete the line and move its premises down to the focused row"
+msgstr "Delete the line and move its premises down to the focused row"
 
 #: src/worker/web/courses.tsx
 msgid "Delivery failed."
