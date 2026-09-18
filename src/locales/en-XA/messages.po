@@ -432,6 +432,10 @@ msgstr ""
 msgid "Add hypothesis"
 msgstr ""
 
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add hypothesis (h)"
+msgstr ""
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Add manual evaluation"
 msgstr ""
@@ -442,6 +446,10 @@ msgstr ""
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Add premise"
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add premise (p)"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
@@ -1350,6 +1358,7 @@ msgid "CSV of the whole course's grades"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Delete (Del)"
 msgstr ""
 

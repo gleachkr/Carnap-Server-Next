@@ -1,0 +1,50 @@
+/*
+ * The tree and Prawitz editors' toolbar: a row of icon-only buttons over the
+ * proof, with a hairline between the structural edits and undo/redo. Appended
+ * to each editor's shadow styles. The glyphs are strokes in currentColor, so
+ * the button's colour — the accent, or the muted ink once disabled — is the
+ * whole of what colours them, and an author's theme reaches them through the
+ * tokens the button reads.
+ */
+
+.proof-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0.2rem;
+}
+.proof-toolbar button {
+  align-items: center;
+  background: var(--_field-bg);
+  border: 1px solid var(--_border);
+  border-radius: 0.3rem;
+  color: var(--_accent-text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  justify-content: center;
+  /* Square-ish: the glyph is the only content, and a row of them reads as a
+     row when each has the same footprint. */
+  min-width: 2rem;
+  padding: 0.28rem 0.45rem;
+}
+.proof-toolbar button:hover:not(:disabled) {
+  border-color: var(--_accent);
+}
+.proof-toolbar button:disabled {
+  color: var(--_text-muted);
+  cursor: default;
+  opacity: 0.55;
+}
+.proof-toolbar-sep {
+  background: var(--_divider);
+  height: 1.3rem;
+  width: 1px;
+}
+.toolbar-icon {
+  display: block;
+  flex: none;
+  height: 18px;
+  width: 18px;
+}

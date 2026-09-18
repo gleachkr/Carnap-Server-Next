@@ -17,11 +17,21 @@
  */
 
 import helpDialogStyles from "./help-dialog.css" with { type: "text" };
+import { createToolbarIcon, type ToolbarIconName } from "./toolbar-icons";
 
-/** One row of the key table: the keys as written, and what they do. */
+/**
+ * One row of the key table: the keys as written, what they do, and — for an
+ * action that also has a toolbar button — the glyph on that button.
+ */
 export interface HelpShortcut {
   /** What the keys do, in the viewer's language. */
   readonly action: string;
+  /**
+   * The toolbar button's glyph, when there is one. The toolbars show no words
+   * (see `toolbar-icons.ts` for why), so this table is where a glyph and its
+   * meaning are first seen side by side.
+   */
+  readonly icon?: ToolbarIconName;
   /**
    * The keys themselves, one `<kbd>` each. Not translated and not translatable:
    * `Enter` and `Ctrl-Z` are what is printed on the key, and a widget that
@@ -111,6 +121,17 @@ export function createHelpDialog(
 
     for (const shortcut of content.shortcuts) {
       const term = document.createElement("dt");
+
+      // Every row gets the cell, so the keys line up whether or not the
+      // action has a button.
+      const glyph = document.createElement("span");
+      glyph.className = "help-shortcut-icon";
+
+      if (shortcut.icon !== undefined) {
+        glyph.appendChild(createToolbarIcon(shortcut.icon));
+      }
+
+      term.appendChild(glyph);
 
       for (const key of shortcut.keys) {
         const glyph = document.createElement("kbd");

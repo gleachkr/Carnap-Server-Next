@@ -432,6 +432,10 @@ msgstr "Deployment hinzufügen"
 msgid "Add hypothesis"
 msgstr "Hypothese hinzufügen"
 
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add hypothesis (h)"
+msgstr ""
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Add manual evaluation"
 msgstr "Manuelle Bewertung speichern"
@@ -443,6 +447,10 @@ msgstr "Mitgliedschaft hinzufügen"
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Add premise"
 msgstr "Prämisse hinzufügen"
+
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Add premise (p)"
+msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 msgid "Add premise above"
@@ -1350,6 +1358,7 @@ msgid "CSV of the whole course's grades"
 msgstr "CSV der Noten des gesamten Kurses"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Delete (Del)"
 msgstr "Löschen (Entf)"
 

@@ -76,6 +76,8 @@ import {
   openHelpDialog,
 } from "./help-dialog";
 import goalStyles from "./proof-goal.css" with { type: "text" };
+import { ToolbarIcon } from "./toolbar-icon";
+import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import "../vendor/proofml.mjs";
 
 // The ProofML display elements are custom tags, not standard HTML; declare them
@@ -381,9 +383,12 @@ function docReducer(doc: Doc, action: Action): Doc {
 // Presentation (Preact).
 // ---------------------------------------------------------------------------
 
-const SHADOW_STYLES = [shadowStyles, goalStyles, HELP_DIALOG_STYLES].join(
-  "\n",
-);
+const SHADOW_STYLES = [
+  shadowStyles,
+  goalStyles,
+  TOOLBAR_STYLES,
+  HELP_DIALOG_STYLES,
+].join("\n");
 
 /**
  * What the `(?)` in the toolbar opens: how the editor works, and every key it
@@ -397,17 +402,26 @@ const SHADOW_STYLES = [shadowStyles, goalStyles, HELP_DIALOG_STYLES].join(
  */
 const SHORTCUTS: readonly {
   readonly action: AufbauProofTreeStringId;
+  readonly icon?: ToolbarIconName;
   readonly keys: readonly string[];
 }[] = [
   { action: "Move between lines", keys: ["↑", "↓", "←", "→"] },
   { action: "Edit the line's formula", keys: ["Enter"] },
   { action: "Edit the line's rule", keys: ["r"] },
   { action: "Leave the field and go back to the line", keys: ["Esc"] },
-  { action: "Add a premise above the line", keys: ["p"] },
-  { action: "Add a hypothesis above the line", keys: ["h"] },
-  { action: "Delete the line and everything above it", keys: ["Del"] },
-  { action: "Undo", keys: ["Ctrl-Z"] },
-  { action: "Redo", keys: ["Ctrl-Y"] },
+  { action: "Add a premise above the line", icon: "add-above", keys: ["p"] },
+  {
+    action: "Add a hypothesis above the line",
+    icon: "add-assumption-above",
+    keys: ["h"],
+  },
+  {
+    action: "Delete the line and everything above it",
+    icon: "delete",
+    keys: ["Del"],
+  },
+  { action: "Undo", icon: "undo", keys: ["Ctrl-Z"] },
+  { action: "Redo", icon: "redo", keys: ["Ctrl-Y"] },
   { action: "Open this help", keys: ["?"] },
 ];
 
@@ -634,43 +648,55 @@ function Editor(props: {
           <span class="proof-goal-statement">{proves}</span>
         </div>
       )}
-      <div class="tree-toolbar">
+      {/* Icon-only: the name is the aria-label, the tooltip adds the key,
+          and the help dialog's legend is where the glyphs are explained. See
+          toolbar-icons.ts for why there are no words here. */}
+      <div class="proof-toolbar tree-toolbar">
         <button
+          aria-label={t("Add premise")}
           disabled={!canBranch}
           onClick={() => onToolbarEdit({ hyp: null, type: "addPremise" })}
+          title={t("Add premise (p)")}
           type="button"
         >
-          {t("Add premise")}
+          <ToolbarIcon name="add-above" />
         </button>
         <button
+          aria-label={t("Add hypothesis")}
           disabled={!canHypothesis}
           onClick={() => onToolbarEdit({ hyp: 1, type: "addPremise" })}
+          title={t("Add hypothesis (h)")}
           type="button"
         >
-          {t("Add hypothesis")}
+          <ToolbarIcon name="add-assumption-above" />
         </button>
         <button
+          aria-label={t("Delete")}
           disabled={!canDelete}
           onClick={() => onToolbarEdit({ type: "delete" })}
+          title={t("Delete (Del)")}
           type="button"
         >
-          {t("Delete")}
+          <ToolbarIcon name="delete" />
         </button>
+        <span aria-hidden="true" class="proof-toolbar-sep" />
         <button
+          aria-label={t("Undo")}
           disabled={!canUndo}
           onClick={onUndo}
           title={t("Undo (Ctrl-Z)")}
           type="button"
         >
-          {t("Undo")}
+          <ToolbarIcon name="undo" />
         </button>
         <button
+          aria-label={t("Redo")}
           disabled={!canRedo}
           onClick={onRedo}
           title={t("Redo (Ctrl-Y)")}
           type="button"
         >
-          {t("Redo")}
+          <ToolbarIcon name="redo" />
         </button>
       </div>
       {/* The role is on the scroll container; the items are the treeitems. */}
@@ -827,6 +853,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       shortcuts: SHORTCUTS.map((shortcut) => ({
         action: this.t(shortcut.action),
         keys: shortcut.keys,
+        ...(shortcut.icon === undefined ? {} : { icon: shortcut.icon }),
       })),
       title: this.t("Using the proof tree editor"),
     });

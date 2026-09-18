@@ -19,7 +19,7 @@ import { dom, domDocument } from "../helpers/dom";
 
 // After `helpers/dom` has installed the globals: the module builds elements
 // through the document it finds on `globalThis`.
-const { mountHelpTrigger } = await import(
+const { createHelpDialog, mountHelpTrigger } = await import(
   "../../src/client/components/help-dialog"
 );
 
@@ -83,5 +83,51 @@ describe("mountHelpTrigger", () => {
       mountHelpTrigger(host, "Usage and keyboard shortcuts", () => {}),
     ).toBe(null);
     expect(host.querySelector(".help-trigger")).toBeNull();
+  });
+});
+
+/**
+ * The legend. The tree and Prawitz toolbars show glyphs and no words, so the
+ * key table is where a glyph is first seen beside its meaning: a row whose
+ * action has a button draws that button's icon ahead of its keys. The icon
+ * is decoration — the row's text names the action — and the cell is present
+ * on every row so the keys stay a column.
+ */
+describe("createHelpDialog", () => {
+  test("draws the toolbar glyph beside the keys of an action that has one", () => {
+    const dialog = createHelpDialog({
+      close: "Close help",
+      intro: [],
+      keyboard: "Keyboard",
+      shortcuts: [
+        { action: "Move between lines", keys: ["↑", "↓"] },
+        {
+          action: "Add a premise above the line",
+          icon: "add-above",
+          keys: ["p"],
+        },
+      ],
+      title: "Using the proof tree editor",
+    });
+    const rows = Array.from(dialog.querySelectorAll(".help-shortcuts dt"));
+
+    expect(rows).toHaveLength(2);
+
+    const [keysOnly, withIcon] = rows as [Element, Element];
+
+    // Both rows carry the cell; only the second has anything in it.
+    expect(keysOnly.querySelector(".help-shortcut-icon")).not.toBeNull();
+    expect(keysOnly.querySelector("svg")).toBeNull();
+
+    const icon = withIcon.querySelector(".help-shortcut-icon svg");
+
+    expect(icon?.getAttribute("aria-hidden")).toBe("true");
+    expect(icon?.querySelectorAll("path").length).toBeGreaterThan(0);
+    expect(icon?.querySelector("g")?.getAttribute("stroke")).toBe(
+      "currentColor",
+    );
+    expect(
+      Array.from(withIcon.querySelectorAll("kbd")).map((k) => k.textContent),
+    ).toEqual(["p"]);
   });
 });

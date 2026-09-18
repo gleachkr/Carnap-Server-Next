@@ -88,8 +88,24 @@
   margin: 0;
 }
 .help-shortcuts dt {
+  align-items: center;
   display: flex;
   gap: 0.25rem;
+}
+/* The toolbar glyph beside the keys, so the legend reads glyph · keys · what
+   it does. Drawn in the muted ink: this is a picture of the button, not the
+   button. The cell is present on every row, empty where the action has no
+   button, so the keys column stays a column. */
+.help-shortcut-icon {
+  color: var(--_text-muted);
+  display: flex;
+  flex: none;
+  margin-right: 0.2rem;
+  width: 18px;
+}
+.help-shortcut-icon .toolbar-icon {
+  height: 18px;
+  width: 18px;
 }
 .help-shortcuts kbd {
   background: var(--_field-bg);

@@ -84,6 +84,8 @@ import {
   openHelpDialog,
 } from "./help-dialog";
 import goalStyles from "./proof-goal.css" with { type: "text" };
+import { ToolbarIcon } from "./toolbar-icon";
+import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import "../vendor/proofml.mjs";
 
 declare module "preact" {
@@ -523,9 +525,12 @@ function docReducer(doc: Doc, action: Action): Doc {
 // Presentation (Preact).
 // ---------------------------------------------------------------------------
 
-const SHADOW_STYLES = [shadowStyles, goalStyles, HELP_DIALOG_STYLES].join(
-  "\n",
-);
+const SHADOW_STYLES = [
+  shadowStyles,
+  goalStyles,
+  TOOLBAR_STYLES,
+  HELP_DIALOG_STYLES,
+].join("\n");
 
 /**
  * What the `(?)` in the toolbar opens: how the workspace works, and every key it
@@ -542,6 +547,7 @@ const SHADOW_STYLES = [shadowStyles, goalStyles, HELP_DIALOG_STYLES].join(
  */
 const SHORTCUTS: readonly {
   readonly action: AufbauProofPrawitzStringId;
+  readonly icon?: ToolbarIconName;
   readonly keys: readonly string[];
 }[] = [
   {
@@ -555,13 +561,21 @@ const SHORTCUTS: readonly {
   // both. See the `l` case in `onTreeKeyDown`.
   { action: "Edit the line's label or discharge marks", keys: ["l"] },
   { action: "Leave the field and go back to the line", keys: ["Esc"] },
-  { action: "New assumption", keys: ["a"] },
-  { action: "Apply rule below", keys: ["b"] },
-  { action: "Add premise above", keys: ["p"] },
-  { action: "Add assumption above", keys: ["h"] },
-  { action: "Delete the line and everything above it", keys: ["Del"] },
-  { action: "Undo", keys: ["Ctrl-Z"] },
-  { action: "Redo", keys: ["Ctrl-Y"] },
+  { action: "New assumption", icon: "new-assumption", keys: ["a"] },
+  { action: "Apply rule below", icon: "apply-below", keys: ["b"] },
+  { action: "Add premise above", icon: "add-above", keys: ["p"] },
+  {
+    action: "Add assumption above",
+    icon: "add-assumption-above",
+    keys: ["h"],
+  },
+  {
+    action: "Delete the line and everything above it",
+    icon: "delete",
+    keys: ["Del"],
+  },
+  { action: "Undo", icon: "undo", keys: ["Ctrl-Z"] },
+  { action: "Redo", icon: "redo", keys: ["Ctrl-Y"] },
   { action: "Open this help", keys: ["?"] },
 ];
 
@@ -845,23 +859,29 @@ function Editor(props: {
         </span>{" "}
         <span class="proof-goal-statement">{proves ?? goalFormula}</span>
       </div>
-      <div class="pz-toolbar">
+      {/* Icon-only: the name is the aria-label, the tooltip adds the key,
+          and the help dialog's legend is where the glyphs are explained. See
+          toolbar-icons.ts for why there are no words here. */}
+      <div class="proof-toolbar pz-toolbar">
         <button
+          aria-label={t("New assumption")}
           onClick={() => onToolbarEdit({ type: "addAssumption" })}
           title={t("New assumption (a)")}
           type="button"
         >
-          {t("New assumption")}
+          <ToolbarIcon name="new-assumption" />
         </button>
         <button
+          aria-label={t("Apply rule below")}
           disabled={!canApply}
           onClick={() => onToolbarEdit({ type: "applyBelow" })}
           title={t("Apply rule below (b)")}
           type="button"
         >
-          {t("Apply rule below")}
+          <ToolbarIcon name="apply-below" />
         </button>
         <button
+          aria-label={t("Add premise above")}
           disabled={!canGrow}
           onClick={() =>
             onToolbarEdit({ assumption: false, type: "addAbove" })
@@ -869,9 +889,10 @@ function Editor(props: {
           title={t("Add premise above (p)")}
           type="button"
         >
-          {t("Add premise above")}
+          <ToolbarIcon name="add-above" />
         </button>
         <button
+          aria-label={t("Add assumption above")}
           disabled={!canGrow}
           onClick={() =>
             onToolbarEdit({ assumption: true, type: "addAbove" })
@@ -879,31 +900,35 @@ function Editor(props: {
           title={t("Add assumption above (h)")}
           type="button"
         >
-          {t("Add assumption above")}
+          <ToolbarIcon name="add-assumption-above" />
         </button>
         <button
+          aria-label={t("Delete")}
           disabled={!canDelete}
           onClick={() => onToolbarEdit({ type: "delete" })}
           title={t("Delete (Del)")}
           type="button"
         >
-          {t("Delete")}
+          <ToolbarIcon name="delete" />
         </button>
+        <span aria-hidden="true" class="proof-toolbar-sep" />
         <button
+          aria-label={t("Undo")}
           disabled={!canUndo}
           onClick={onUndo}
           title={t("Undo (Ctrl-Z)")}
           type="button"
         >
-          {t("Undo")}
+          <ToolbarIcon name="undo" />
         </button>
         <button
+          aria-label={t("Redo")}
           disabled={!canRedo}
           onClick={onRedo}
           title={t("Redo (Ctrl-Y)")}
           type="button"
         >
-          {t("Redo")}
+          <ToolbarIcon name="redo" />
         </button>
       </div>
       {/* The tree semantics only apply while there is something in the tree:
@@ -1114,6 +1139,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       shortcuts: SHORTCUTS.map((shortcut) => ({
         action: this.t(shortcut.action),
         keys: shortcut.keys,
+        ...(shortcut.icon === undefined ? {} : { icon: shortcut.icon }),
       })),
       title: this.t("Using the Prawitz proof editor"),
     });

@@ -33,7 +33,11 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
     /** Help: what `h` does. */
     "Add a premise above the line": i18n.t("Add a premise above the line"),
     "Add hypothesis": i18n.t("Add hypothesis"),
+    /** Tooltip naming the button's key, like `Undo (Ctrl-Z)`. */
+    "Add hypothesis (h)": i18n.t("Add hypothesis (h)"),
     "Add premise": i18n.t("Add premise"),
+    /** Tooltip naming the button's key, like `Undo (Ctrl-Z)`. */
+    "Add premise (p)": i18n.t("Add premise (p)"),
     Delete: i18n.t(
       "Delete (proof line)",
       {},
@@ -43,6 +47,8 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
         message: "Delete",
       },
     ),
+    /** Tooltip naming the Delete button's key, like `Undo (Ctrl-Z)`. */
+    "Delete (Del)": i18n.t("Delete (Del)"),
     /** Help: what Delete does. */
     "Delete the line and everything above it": i18n.t(
       "Delete the line and everything above it",

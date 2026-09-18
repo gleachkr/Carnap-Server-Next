@@ -174,7 +174,9 @@ describe("a playground tree", () => {
       mounted.root.querySelectorAll<HTMLButtonElement>(
         ".tree-toolbar button",
       ),
-    ).find((button) => button.textContent === "Add hypothesis");
+    ).find(
+      (button) => button.getAttribute("aria-label") === "Add hypothesis",
+    );
     expect(hypothesis?.disabled).toBe(true);
     // Nothing to prove yet: no compile, no goal in the answer.
     expect(compile).toHaveBeenCalledTimes(0);

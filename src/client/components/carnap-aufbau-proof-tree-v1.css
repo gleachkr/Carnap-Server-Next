@@ -1,25 +1,4 @@
-.tree-toolbar {
-  align-items: center;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0.6rem 0 0.2rem;
-}
-.tree-toolbar button {
-  background: var(--_field-bg);
-  border: 1px solid var(--_border);
-  border-radius: 0.3rem;
-  color: var(--_accent-text);
-  cursor: pointer;
-  font: inherit;
-  font-size: 0.78rem;
-  padding: 0.2rem 0.55rem;
-}
-.tree-toolbar button:disabled {
-  color: var(--_text-muted);
-  cursor: default;
-  opacity: 0.55;
-}
+/* The toolbar is styled by toolbar-icons.css, shared with the Prawitz editor. */
 .tree-edit {
   border-bottom: 1px dashed transparent;
   /* The formula face, whose contextual ligatures turn typed connectives like
