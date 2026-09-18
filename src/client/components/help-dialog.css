@@ -8,11 +8,11 @@
  */
 
 .help-dialog {
-  background: var(--surface, #fbf7ef);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_surface);
+  border: 1px solid var(--_border);
   border-radius: 6px;
-  box-shadow: 0 18px 44px rgb(16 34 53 / 0.22);
-  color: var(--ink, #16324a);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--_shadow) 22%, transparent);
+  color: var(--_text);
   font-size: 0.85rem;
   margin: 0;
   max-width: min(28rem, calc(100vw - 1rem));
@@ -28,11 +28,11 @@
   flex-direction: column;
 }
 .help-dialog::backdrop {
-  background: rgb(16 34 53 / 0.28);
+  background: color-mix(in srgb, var(--_shadow) 28%, transparent);
 }
 .help-dialog-header {
   align-items: baseline;
-  border-bottom: 1px solid var(--rule-soft, #e5ded3);
+  border-bottom: 1px solid var(--_divider);
   display: flex;
   flex: 0 0 auto;
   gap: 1rem;
@@ -46,7 +46,7 @@
 .help-dialog-close {
   background: transparent;
   border: 0;
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
   cursor: pointer;
   font: inherit;
   font-size: 1.2rem;
@@ -54,7 +54,7 @@
   padding: 0 0.2rem;
 }
 .help-dialog-close:hover {
-  color: var(--ink, #16324a);
+  color: var(--_text);
 }
 /* A long key table scrolls inside the panel rather than growing past the
    bottom of the reader's view, where nothing could scroll it into sight. The
@@ -70,7 +70,7 @@
   margin: 0 0 0.55rem;
 }
 .help-dialog-heading {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -92,8 +92,8 @@
   gap: 0.25rem;
 }
 .help-shortcuts kbd {
-  background: var(--control-surface, #fbf7ef);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_field-bg);
+  border: 1px solid var(--_border);
   border-radius: 0.25rem;
   font-family: ui-monospace, monospace;
   font-size: 0.78rem;

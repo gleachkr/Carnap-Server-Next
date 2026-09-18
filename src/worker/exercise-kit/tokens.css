@@ -1,0 +1,116 @@
+/*
+ * The exercise tokens: the one styling surface an author's `:::style` sheet
+ * has into a widget's shadow root, and the only colours and faces a widget
+ * stylesheet may read.
+ *
+ * A widget's chrome is served into a shadow root so author CSS cannot reach
+ * it by selector, but custom properties inherit across that boundary, and for
+ * a long time the widgets read the page palette straight — `--control-surface`,
+ * `--ink`, `--blue-strong` — with the light hex repeated as a fallback at
+ * every site. That made the palette the styling contract by accident: its
+ * names describe paper and ink, not what an exercise does with them, and they
+ * are ours to rename. So the widgets now read tokens named for their role in
+ * an exercise, `--exercise-*`, and the page maps each one onto the palette in
+ * `web/content.css` — no visual change in the ordinary case, and an author
+ * who wants a white field or a different accent sets one token and every
+ * widget on the page follows.
+ *
+ * Each token is read exactly once, here, into a private `--_` twin that
+ * carries its default; every rule in every widget stylesheet reads the twin
+ * and nothing else. One declaration per default is what makes a default
+ * changeable, and a widget rule with no fallback of its own is what stops a
+ * stale copy of the light value from surfacing under dark. The block is
+ * served into every shadow root (`group.ts` folds it into
+ * `EXERCISE_GROUP_SHADOW_STYLES`; the review widgets add it themselves), and
+ * `tests/a11y/tokens.test.ts` holds every one of these rules.
+ *
+ * The defaults are what a widget looks like when nothing set its tokens: a
+ * content document rendered with `cssReset`, where no stylesheet of ours is
+ * loaded at all. Fills, rules and the muted inks are tints of `currentColor`,
+ * so they follow whatever text colour the author's page gives them, on any
+ * ground, in either scheme. The hues cannot be neutral — a verdict has to be
+ * green or red, an accent has to be something — so those are `light-dark()`
+ * pairs borrowed from the palette, keyed on `color-scheme` like everything
+ * else. An author who resets the stylesheet and sets colours of their own
+ * owns the contrast of the result.
+ */
+:host {
+  /* The inks: the widget's own text, its secondary text (labels, inference
+     names, a blank cell's dash), and the faint ink of a disabled control. */
+  --_text: var(--exercise-text, currentColor);
+  --_text-muted: var(
+    --exercise-text-muted,
+    color-mix(in srgb, currentColor 72%, transparent)
+  );
+  --_text-faint: var(
+    --exercise-text-faint,
+    color-mix(in srgb, currentColor 45%, transparent)
+  );
+  /* The fills: an opaque sheet for a panel that has to cover what is under it
+     (the help dialog); the fill of a control — an input, a select, a cell, a
+     toolbar button, a key cap; and the recessed fill of something that is not
+     a control — a locked given, a hovered field, a source listing before its
+     editor loads. `Canvas` is the system colour the browser paints its own
+     page in, which follows `color-scheme`. */
+  --_surface: var(--exercise-surface, Canvas);
+  --_field-bg: var(
+    --exercise-field-bg,
+    color-mix(in srgb, currentColor 5%, transparent)
+  );
+  --_inset-bg: var(
+    --exercise-inset-bg,
+    color-mix(in srgb, currentColor 8%, transparent)
+  );
+  /* The lines: the edge of a control, and a hairline dividing content — a
+     table's axes, a dialog's header. */
+  --_border: var(
+    --exercise-border,
+    color-mix(in srgb, currentColor 28%, transparent)
+  );
+  --_divider: var(
+    --exercise-divider,
+    color-mix(in srgb, currentColor 16%, transparent)
+  );
+  /* The accent, in its three uses: as a mark (a focus ring, a field's
+     underline, a pressed dot's fill), as text (a toolbar button, a chosen
+     option — which needs more contrast than a mark), and as a wash behind a
+     selected or unfilled field. --_on-accent is text on the filled accent. */
+  --_accent: var(--exercise-accent, light-dark(#0b66d8, #5b9bef));
+  --_accent-text: var(--exercise-accent-text, light-dark(#074f9f, #8fbcff));
+  --_accent-bg: var(
+    --exercise-accent-bg,
+    color-mix(in srgb, var(--_accent) 12%, transparent)
+  );
+  --_on-accent: var(--exercise-on-accent, light-dark(#ffffff, #17140f));
+  /* The verdicts, each with the wash it sits on in the correctness mark. */
+  --_correct: var(--exercise-correct, light-dark(#1b7048, #46b87c));
+  --_correct-bg: var(
+    --exercise-correct-bg,
+    color-mix(in srgb, var(--_correct) 12%, transparent)
+  );
+  --_incorrect: var(--exercise-incorrect, light-dark(#b42318, #f58a7c));
+  --_incorrect-bg: var(
+    --exercise-incorrect-bg,
+    color-mix(in srgb, var(--_incorrect) 12%, transparent)
+  );
+  /* The colour a truth table draws its main column and a claimed
+     counterexample row in — always at a low alpha, at the use site. */
+  --_highlight: var(--exercise-highlight, light-dark(#9a6400, #c9a043));
+  /* What the help dialog casts, at whatever alpha the rule wants. */
+  --_shadow: var(--exercise-shadow, light-dark(#102235, #000000));
+  /* The face for everything that is language rather than prose about it:
+     formulas, cells, the proof editors. Ligatures are on, by design — see
+     --mono-font in web/content.css. */
+  --_mono-font: var(
+    --exercise-mono-font,
+    "Fira Code",
+    ui-monospace,
+    monospace
+  );
+  /* The scope lines a Fitch proof draws down its subproofs: structural ink,
+     only slightly lighter than the formulas. */
+  --_scope-line: var(
+    --exercise-scope-line,
+    color-mix(in srgb, currentColor 72%, transparent)
+  );
+}

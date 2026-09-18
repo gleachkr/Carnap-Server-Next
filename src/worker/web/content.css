@@ -39,11 +39,12 @@
  * tests/a11y/contrast.test.ts holds every one of these pairings, in both
  * halves.
  *
- * Shadow-DOM styles may write var(--token, <fallback>), because a content
- * document rendered with cssReset has no stylesheet of ours at all and the
- * fallback is then the widget's only color. Every such fallback must repeat
- * the light half here exactly; tests/a11y/tokens.test.ts enforces it, which
- * is what stops a stale fallback from pinning a light color under dark.
+ * The exercise widgets do not read these. They read the `--exercise-*`
+ * tokens the block after this one maps onto them, through the defaults the
+ * exercise kit declares (`exercise-kit/tokens.css`), so that an author has a
+ * named surface to restyle and a renamed palette token breaks nothing in a
+ * shadow root. Elsewhere a `var(--token, <fallback>)` must repeat the light
+ * half exactly; tests/a11y/tokens.test.ts enforces both rules.
  */
 :root {
   /* Surfaces, from the ground the page sits on up to a control's own fill.
@@ -110,7 +111,8 @@
     color-mix(in srgb, var(--blue) 9%, transparent)
   );
   /* The scope lines a Fitch proof draws down its subproofs. Relative to the
-     text it accompanies, so it follows the palette on its own. */
+     text it accompanies, so it follows the palette on its own; the widget
+     reads it as --exercise-scope-line. */
   --fitch-scope: color-mix(in srgb, currentColor 72%, transparent);
   --logo-font: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
   /* Fira Code sits in the body stack, after every sans face and before the
@@ -167,6 +169,45 @@
      standalone content document, which has no shell to sit inside. */
   --page-measure: calc(85rem - 2 * var(--shell-gutter));
   color-scheme: light dark;
+}
+
+/*
+ * The exercise tokens, mapped onto the palette. This is the whole of what the
+ * exercise widgets — the shadow roots of the eight interactive kinds and the
+ * three review widgets, and the kit's own chrome in the light DOM (the action
+ * bar, the correctness mark, the legend, the two text kinds' fields) — take
+ * from the page: each `--exercise-*` token names a role in an exercise, the
+ * kit declares its default (`exercise-kit/tokens.css`), and this block says
+ * which palette colour plays that role here. The names are the styling
+ * contract an author's `:::style` sheet writes against, documented under the
+ * style directive in docs/carnap-markdown-v1.md; the palette's names are not.
+ *
+ * Every token the kit declares is mapped here and nothing is mapped that the
+ * kit does not declare — tests/a11y/tokens.test.ts holds both — so a token
+ * added on one side without the other fails the build rather than silently
+ * falling to its default on the page.
+ */
+:root {
+  --exercise-text: var(--ink);
+  --exercise-text-muted: var(--ink-muted);
+  --exercise-text-faint: var(--ink-faint);
+  --exercise-surface: var(--surface);
+  --exercise-field-bg: var(--control-surface);
+  --exercise-inset-bg: var(--surface-soft);
+  --exercise-border: var(--rule);
+  --exercise-divider: var(--rule-soft);
+  --exercise-accent: var(--blue);
+  --exercise-accent-text: var(--blue-strong);
+  --exercise-accent-bg: var(--blue-soft);
+  --exercise-on-accent: var(--on-accent);
+  --exercise-correct: var(--green);
+  --exercise-correct-bg: var(--green-soft);
+  --exercise-incorrect: var(--red);
+  --exercise-incorrect-bg: var(--red-soft);
+  --exercise-highlight: var(--gold);
+  --exercise-shadow: var(--shadow-color);
+  --exercise-mono-font: var(--mono-font);
+  --exercise-scope-line: var(--fitch-scope);
 }
 
 * {
@@ -697,9 +738,16 @@ mrow.math-enclose-strike-down {
 
 /* A submitted answer, as the grader or the student reviews it: a soft box
    of labeled values (selected options, response text, the correct answer
-   for instructors). */
+   for instructors).
+
+   The box is one of the warm fills plain --ink-muted misses AA on (4.39:1),
+   so the muted exercise token is remapped to the stronger ink for everything
+   inside it — the review widgets' shadow roots included, which is the point
+   of a token: the widget says "muted text" and the page, which knows what
+   ground it put the widget on, says which ink that is here. */
 
 .answer-review {
+  --exercise-text-muted: var(--ink-muted-strong);
   background: var(--surface-soft);
   border: 1px solid var(--rule-soft);
   border-radius: 4px;

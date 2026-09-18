@@ -12,11 +12,12 @@
   padding: 0;
 }
 
-/* The review list renders on the submission card's --surface-soft fill, which
-   is one of the warm ones plain --ink-muted misses AA on (4.39:1). */
+/* The review list renders on the answer-review box's warm fill, where the
+   page remaps the muted token to its stronger ink (see `.answer-review` in
+   web/content.css); this rule only says the text is muted. */
 .mc-review-option {
   align-items: baseline;
-  color: var(--ink-muted-strong, #4d5f72);
+  color: var(--_text-muted);
   display: flex;
   gap: 0.5rem;
 }
@@ -34,9 +35,9 @@
 }
 
 .mc-review-option[data-correct] .mc-review-mark {
-  color: var(--green, #1b7048);
+  color: var(--_correct);
 }
 
 .mc-review-option[data-incorrect] .mc-review-mark {
-  color: var(--red, #b42318);
+  color: var(--_incorrect);
 }

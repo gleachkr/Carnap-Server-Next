@@ -1,5 +1,5 @@
 .proof-editor {
-  border: 1px solid var(--rule, #d8d0c3);
+  border: 1px solid var(--_border);
   border-radius: 0.4rem;
   overflow: hidden;
 }
@@ -15,7 +15,7 @@
   opacity: 0.5;
 }
 .proof-editor .cm-content {
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-size: 0.9rem;
   /* Roomier lines so the scope struts read as a Fitch diagram and the
      assumption rule has clear air under each hypothesis. */
@@ -25,7 +25,7 @@
    black. It ships both colours and picks between them from the
    EditorView.darkTheme facet rather than from the OS, so a view that never
    sets that facet gets the black one in both schemes and the caret vanishes
-   into the dark surface. Taking it from the ink token follows the palette
+   into the dark surface. Taking it from the text token follows the palette
    instead, and needs no facet reconfigured when the preference changes.
 
    The extra .cm-editor in the selector is load-bearing. CodeMirror mounts its
@@ -33,7 +33,7 @@
    root's own style element, so its rule wins every tie on specificity alone.
    Its selector is two classes; this one is three. */
 .proof-editor .cm-editor .cm-content {
-  caret-color: var(--ink, #16324a);
+  caret-color: var(--_text);
 }
 /* The bubble a diagnostic is read in. CodeMirror's base theme paints it
    #f5f5f5 from a rule scoped to &light, and &light is selected by the
@@ -49,17 +49,17 @@
    CodeMirror's adopted stylesheet is applied after this shadow root's own
    style element, so its two-class rule wins every tie. Three classes wins. */
 .proof-editor .cm-editor .cm-tooltip {
-  background: var(--surface-soft, #f8f2e8);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_inset-bg);
+  border: 1px solid var(--_border);
   border-radius: 0.3rem;
-  color: var(--ink, #16324a);
+  color: var(--_text);
   font-family: system-ui, sans-serif;
   font-size: 0.82rem;
 }
 /* The severity bar down the left of each message, which the base theme draws
-   in a raw #d11 that neither palette uses. */
+   in a raw #d11 that no palette of ours uses. */
 .proof-editor .cm-editor .cm-diagnostic-error {
-  border-left-color: var(--red, #b42318);
+  border-left-color: var(--_incorrect);
 }
 /* The compiler separates a diagnostic's context lines (theorem, line, rule,
    inference path) with newlines; without this they collapse into one run-on. */

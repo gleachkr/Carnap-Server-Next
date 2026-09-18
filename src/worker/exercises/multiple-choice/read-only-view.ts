@@ -14,6 +14,7 @@ import {
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../../exercise-kit/group";
+import { EXERCISE_TOKEN_STYLES } from "../../exercise-kit/tokens";
 import type { ExerciseRenderContext } from "../../exercise-kit/type";
 import type { Translator } from "../../i18n/translator";
 import reviewStyles from "./review.css" with { type: "text" };
@@ -101,6 +102,7 @@ export function renderMultipleChoiceElement(
 }
 
 const MULTIPLE_CHOICE_REVIEW_STYLES = [
+  EXERCISE_TOKEN_STYLES,
   VISUALLY_HIDDEN_STYLES,
   reviewStyles,
 ].join("\n");

@@ -10,6 +10,7 @@ import {
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../../exercise-kit/group";
+import { EXERCISE_TOKEN_STYLES } from "../../exercise-kit/tokens";
 import type { ExerciseRenderContext } from "../../exercise-kit/type";
 import type { Translator } from "../../i18n/translator";
 import { stringsResolver } from "../../i18n/translator";
@@ -68,7 +69,9 @@ export function renderTranslationElement(
       </carnap-translation>`;
 }
 
-const TRANSLATION_REVIEW_STYLES = reviewStyles;
+const TRANSLATION_REVIEW_STYLES = [EXERCISE_TOKEN_STYLES, reviewStyles].join(
+  "\n",
+);
 
 export interface TranslationReview {
   /** The submission in logical symbols — or as typed, when it won't parse. */

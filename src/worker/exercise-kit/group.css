@@ -5,9 +5,12 @@
  *
  * The fieldset itself is reset to nothing: a border around a truth table or a
  * CodeMirror editor reads as a second card inside the card, and the exercise is
- * already separated from its neighbours by `.exercise`'s margins. Palette tokens
- * carry literal fallbacks because the shadow roots of a preview iframe may resolve
- * them against a document that never set them.
+ * already separated from its neighbours by `.exercise`'s margins.
+ *
+ * The one colour is read both ways because the sheet is served both ways: in a
+ * shadow root the kit's `tokens.css` has declared the private twin, and in the
+ * light DOM — where this sheet is only ever served alongside `web/content.css`
+ * — the twin is unset and the exercise token itself resolves.
  */
 
 .exercise-group {
@@ -18,7 +21,7 @@
 }
 
 .exercise-legend {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted, var(--exercise-text-muted));
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.06em;

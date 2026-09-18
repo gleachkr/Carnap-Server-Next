@@ -11,6 +11,7 @@ import {
   exerciseGroupLabel,
   exerciseLegendHtml,
 } from "../../exercise-kit/group";
+import { EXERCISE_TOKEN_STYLES } from "../../exercise-kit/tokens";
 import type { ExerciseRenderContext } from "../../exercise-kit/type";
 import type { Translator } from "../../i18n/translator";
 import { stringsResolver } from "../../i18n/translator";
@@ -278,7 +279,7 @@ export function renderModelElement(
       </carnap-model>`;
 }
 
-const MODEL_REVIEW_STYLES = reviewStyles;
+const MODEL_REVIEW_STYLES = [EXERCISE_TOKEN_STYLES, reviewStyles].join("\n");
 
 export interface ModelReview {
   readonly answer: ModelAnswerData;

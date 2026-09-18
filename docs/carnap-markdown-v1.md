@@ -1262,9 +1262,72 @@ Target elements or existing structural classes such as `.exercise`,
 `.exercise-check-status`. There is no general author syntax for assigning
 classes. `.exercise` is on each exercise's outer box.
 
-Shadow-root controls are isolated from author CSS. Slotted prompts, action
-bars, and option labels remain styleable, but internal widget controls do
-not. Print long lessons from the fullscreen view.
+Shadow-root controls are isolated from author CSS selectors. Slotted
+prompts, action bars, and option labels remain styleable by selector, but a
+widget's internal controls — a truth table's cells, a model's fields, a proof
+editor — are reached only through the exercise tokens below. Print long
+lessons from the fullscreen view.
+
+### Exercise tokens
+
+Every colour and typeface an exercise draws with is a CSS custom property
+named `--exercise-*`. Set one on `:root` and every exercise on the page
+follows — the widget's interior inside its shadow root, and the Submit
+button, action bar, and correctness mark outside it alike:
+
+```md
+:::style
+:root {
+  --exercise-field-bg: #ffffff;
+  --exercise-accent: #8b1e3f;
+  --exercise-accent-text: #6e1732;
+}
+:::
+```
+
+| Token | What it colours |
+| --- | --- |
+| `--exercise-text` | a widget's own text |
+| `--exercise-text-muted` | secondary text: labels, inference names, a blank cell |
+| `--exercise-text-faint` | a disabled control's text |
+| `--exercise-surface` | an opaque panel (the help dialog) |
+| `--exercise-field-bg` | a control's fill: inputs, cells, toolbar and action buttons |
+| `--exercise-inset-bg` | a recessed fill: a locked given, a hovered field, a disabled button |
+| `--exercise-border` | a control's edge |
+| `--exercise-divider` | a hairline inside content: a table's axes, a dialog header |
+| `--exercise-accent` | a focus ring, a field's underline, a pressed dot |
+| `--exercise-accent-text` | the accent as text: a toolbar button, a chosen option |
+| `--exercise-accent-bg` | a wash behind a selected or unfilled field, a hovered button |
+| `--exercise-on-accent` | text on a filled accent |
+| `--exercise-correct`, `--exercise-correct-bg` | a correct verdict and its wash |
+| `--exercise-incorrect`, `--exercise-incorrect-bg` | an incorrect verdict and its wash |
+| `--exercise-highlight` | a truth table's main column and claimed row (drawn at low alpha) |
+| `--exercise-shadow` | what the help dialog casts |
+| `--exercise-mono-font` | the face for formulas, cells, and proof editors |
+| `--exercise-scope-line` | a Fitch proof's subproof lines |
+
+These are the whole of the contract: nothing else set in a style block
+reaches a widget's interior, and the palette the default stylesheet is built
+from (`--surface`, `--ink`, and the rest) is not part of it and may be
+renamed. Without a style block each token takes its value from that palette,
+in both colour schemes.
+
+**If you set colours, set `color-scheme` too.** The default stylesheet
+follows the reader's operating-system preference: under a dark desktop the
+palette, the tokens, and the browser's own form controls all switch to dark.
+A style block that paints the page white without saying so leaves cream text
+and charcoal editors on it for those readers. One declaration pins the whole
+document to the scheme your colours were chosen for:
+
+```md
+:::style
+:root { color-scheme: light; background: #fff; color: #1a1a1a; }
+:::
+```
+
+A stylesheet that provides both schemes writes `color-scheme: light dark`
+and gives each colour as a `light-dark(light, dark)` pair, as the default
+stylesheet does.
 
 ### Linking external stylesheets
 
@@ -1289,9 +1352,15 @@ browser, so the external server must remain reachable.
 face declarations. Use it when supplying a complete document design.
 It can be empty, contain CSS, or also use `src`.
 
-Supply any needed document and light-DOM exercise styles yourself. Widget
-shadow-root styles remain isolated and may use their fallback values; reset
-does not give author CSS access to those internals.
+Supply any needed document and light-DOM exercise styles yourself: the
+action bar, Submit button, and correctness mark are unstyled elements until
+you style them. Widget interiors keep their own layout and take the exercise
+tokens' defaults — tints of the surrounding text colour for fills and rules,
+and fixed hues for the accent and verdicts, keyed on `color-scheme` — until
+you set the tokens above; a reset stylesheet that sets its own colours owns
+the contrast of the result. The font faces go with the stylesheet: formulas
+fall back to the system monospace, and the ligatures that draw `->` as `→`
+stop unless you link Fira Code yourself.
 
 `reset` and `src` are the only style attributes. Unknown style attributes
 produce `invalid_style_attributes`.

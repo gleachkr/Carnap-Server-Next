@@ -3,6 +3,7 @@ import {
   VISUALLY_HIDDEN_STYLES,
 } from "../application/content/render-support";
 import groupStyles from "./group.css" with { type: "text" };
+import { EXERCISE_TOKEN_STYLES } from "./tokens";
 
 /**
  * Every exercise, of every kind, is one named group: a `<fieldset>` whose
@@ -59,16 +60,20 @@ export const EXERCISE_GROUP_STYLES = groupStyles;
 /**
  * {@link EXERCISE_GROUP_STYLES} for a widget's **shadow root**, which inherits no
  * page CSS: it ships the rule that hides the generic legend alongside the group
- * itself, so a widget cannot render the group without the means to hide its name.
+ * itself, so a widget cannot render the group without the means to hide its name
+ * — and the exercise tokens' defaults (`tokens.css`), so it cannot render the
+ * group without the colours its own rules read.
  *
- * That coupling is the fix for a shipped bug — the three proof widgets
+ * The first coupling is the fix for a shipped bug — the three proof widgets
  * interpolated the group styles alone, so every *untitled* proof printed "PROOF" /
  * "PROOF TREE" / "FITCH PROOF" above its editor: `visually-hidden` with nothing in
  * the root to act on it. `tests/exercise-contract.test.ts` now checks every shadow
- * root that emits the class also carries the rule.
+ * root that emits the class also carries the rule, and that every root carries
+ * the token block.
  *
  * The page stylesheet keeps its own independent `.visually-hidden` (used app-wide),
  * so `EXERCISE_GROUP_STYLES` stays free of it there.
  */
-export const EXERCISE_GROUP_SHADOW_STYLES = `${VISUALLY_HIDDEN_STYLES}
+export const EXERCISE_GROUP_SHADOW_STYLES = `${EXERCISE_TOKEN_STYLES}
+${VISUALLY_HIDDEN_STYLES}
 ${EXERCISE_GROUP_STYLES}`;

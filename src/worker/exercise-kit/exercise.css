@@ -1,10 +1,17 @@
 /*
  * The kit's stylesheet: the chrome every exercise shares on the page — the
  * prompt, the status and rubric lines, the action bar `exercise-kit/actions.ts`
- * emits, the correctness mark `exercise-kit/correctness-mark.ts` defines, and
- * the load-failure notice. Served inside the content layer by
- * `web/styles.ts`, after the exercise-group block: this file restyles
- * `.exercise-prompt`, which that block declares.
+ * emits, the correctness mark `exercise-kit/correctness-mark.ts` defines, the
+ * two text kinds' native fields, and the load-failure notice. Served inside
+ * the content layer by `web/styles.ts`, after the exercise-group block: this
+ * file restyles `.exercise-prompt`, which that block declares.
+ *
+ * Every colour here is an exercise token (`tokens.css`), read directly: this
+ * sheet is only ever served alongside `web/content.css`, which maps each token
+ * onto the palette, so unlike a shadow root it never needs the defaults. The
+ * point of reading the tokens rather than the palette is that an author who
+ * sets `--exercise-field-bg` or `--exercise-accent` restyles a widget's
+ * interior and its Submit button with one declaration.
  */
 
 .exercise-prompt {
@@ -21,7 +28,7 @@
 
 .exercise-status,
 .exercise-rubric {
-  color: var(--ink-muted);
+  color: var(--exercise-text-muted);
   font-size: 0.82rem;
   margin-top: 0.6rem;
 }
@@ -41,10 +48,14 @@
 
 /* The action buttons: quiet and small, so they read as part of the exercise
    rather than page-level calls to action. The warm rule border keeps them
-   recessive until hover brings the blue forward. */
+   recessive until hover brings the blue forward. Fill and ink are restated
+   from the tokens rather than left to the page's `button` rule, so that the
+   tokens are the whole of what colours them. */
 .exercise-submit,
 .exercise-actions button {
-  border-color: var(--rule);
+  background: var(--exercise-field-bg);
+  border-color: var(--exercise-border);
+  color: var(--exercise-accent);
   font-size: 0.82rem;
   font-weight: 600;
   min-height: 0;
@@ -53,9 +64,18 @@
 
 .exercise-submit:hover,
 .exercise-actions button:hover {
-  background: var(--blue-soft);
-  border-color: var(--blue);
-  color: var(--blue-strong);
+  background: var(--exercise-accent-bg);
+  border-color: var(--exercise-accent);
+  color: var(--exercise-accent-text);
+}
+
+/* The same recessed, faint look the page gives any dead control (see
+   `button:disabled` in web/content.css), in the exercise's own tokens. */
+.exercise-submit:disabled,
+.exercise-actions button:disabled {
+  background: var(--exercise-inset-bg);
+  border-color: var(--exercise-border);
+  color: var(--exercise-text-faint);
 }
 
 /* The base form-button margin-top would push controls down inside the bar's
@@ -99,13 +119,13 @@
 }
 
 .exercise-actions .exercise-check-status[data-state="correct"] {
-  color: var(--green, #1b7048);
+  color: var(--exercise-correct);
   font-weight: 600;
 }
 
 /* The counterexample toggle, pressed. */
 .exercise-actions .tt-ce[aria-pressed="true"] {
-  border-color: var(--blue);
+  border-color: var(--exercise-accent);
   border-width: 2px;
 }
 
@@ -128,9 +148,9 @@
    is the one about the work the reader is looking at. */
 .exercise-mark {
   align-items: center;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--exercise-border);
   border-radius: 999px;
-  color: var(--ink-muted);
+  color: var(--exercise-text-muted);
   display: inline-flex;
   flex: none;
   /* Named rather than inherited: the mark sits in a monospace toolbar in two
@@ -149,15 +169,19 @@
 }
 
 .exercise-mark[data-state="ok"] {
-  background: var(--green-soft);
-  border-color: color-mix(in srgb, var(--green) 45%, transparent);
-  color: var(--green);
+  background: var(--exercise-correct-bg);
+  border-color: color-mix(in srgb, var(--exercise-correct) 45%, transparent);
+  color: var(--exercise-correct);
 }
 
 .exercise-mark[data-state="error"] {
-  background: var(--red-soft);
-  border-color: color-mix(in srgb, var(--red) 40%, transparent);
-  color: var(--red);
+  background: var(--exercise-incorrect-bg);
+  border-color: color-mix(
+    in srgb,
+    var(--exercise-incorrect) 40%,
+    transparent
+  );
+  color: var(--exercise-incorrect);
   /* The specific problem is the title; the cursor is what says to hover. */
   cursor: help;
 }
@@ -191,7 +215,23 @@
 
 /* Shown when an interactive exercise's bundle fails to upgrade it in time. */
 .exercise-load-error {
-  color: var(--red);
+  color: var(--exercise-incorrect);
   font-size: 0.85rem;
   margin-top: 0.6rem;
+}
+
+/* The two text kinds answer in a native field in the light DOM. It takes the
+   page's `input`/`textarea` rule for its shape and reads the exercise tokens
+   for its colours, so a field in a free-response exercise and a field inside
+   the model widget's shadow root answer to the same declaration. */
+.exercise-group input,
+.exercise-group textarea {
+  background: var(--exercise-field-bg);
+  border-color: var(--exercise-border);
+  color: var(--exercise-text);
+}
+
+.exercise-group input:focus,
+.exercise-group textarea:focus {
+  border-color: var(--exercise-accent);
 }

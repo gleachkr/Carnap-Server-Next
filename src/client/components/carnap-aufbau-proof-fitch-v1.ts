@@ -94,12 +94,12 @@ const SCOPE_MAX_DEPTH = 8;
 const TICK_OVERHANG_CHARS = 3;
 
 /**
- * Colour of the Fitch scope-lines. Drawn in the editor's own text colour so the
- * bars read as structural ink, only slightly lighter than the formulas — not the
- * faint `--rule` divider tone. An instructor theme can override `--fitch-scope`.
+ * Colour of the Fitch scope-lines: the exercise token for them, which defaults
+ * to the editor's own text colour at a slight fade so the bars read as
+ * structural ink, only slightly lighter than the formulas — not the faint
+ * divider tone. An author's `:::style` sets `--exercise-scope-line`.
  */
-const SCOPE_COLOR =
-  "var(--fitch-scope, color-mix(in srgb, currentColor 72%, transparent))";
+const SCOPE_COLOR = "var(--_scope-line)";
 
 function utf8Length(codePoint: number): number {
   if (codePoint < 0x80) {

@@ -10,8 +10,8 @@
   align-items: center;
   display: flex;
   flex-wrap: wrap;
-  /* Fira Code first (loaded as a web font) so connective ligatures render. */
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  /* The formula face, so connective ligatures render. */
+  font-family: var(--_mono-font);
   font-size: 0.9rem;
   gap: 0.4rem;
   margin: 0.5rem 0 0.4rem;

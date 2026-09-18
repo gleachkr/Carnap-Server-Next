@@ -2,9 +2,9 @@
  * Shadow-DOM chrome for the truth-table element, server-rendered into its
  * Declarative Shadow Root so it is isolated from author `:::style` CSS and needs
  * no JS to render. The prompt is slotted from light DOM so author CSS and the
- * document's math font
- * still reach it; the grid chrome cannot be. Custom properties (`--blue-strong`,
- * `--green`, `--red`, `--ink-muted`) inherit across the boundary.
+ * document's math font still reach it; the grid chrome cannot be. Colours come
+ * from the exercise tokens (`exercise-kit/tokens.css`), which inherit across
+ * the boundary.
  */
 
 /* Block, not grid: the run-in legend floats, and floats do not apply to grid
@@ -25,22 +25,22 @@
  * the values under them; the values are a column of T and F that has to read
  * as a column.
  *
- * Ligatures come with the face (see --mono-font), so a heading holding `->`
- * is drawn `→`. This is the grid where that shows most, and it is deliberate.
- * It is a substitution at the glyph level and nothing else: the heading's text
- * is still the two characters, and so is the `aria-label` on every cell in the
- * column under it, so what is read aloud and what is copied out are both the
- * spelling the language declares.
+ * Ligatures come with the face (see --mono-font in web/content.css), so a
+ * heading holding `->` is drawn `→`. This is the grid where that shows most,
+ * and it is deliberate. It is a substitution at the glyph level and nothing
+ * else: the heading's text is still the two characters, and so is the
+ * `aria-label` on every cell in the column under it, so what is read aloud and
+ * what is copied out are both the spelling the language declares.
  */
 table.tt {
   border-collapse: collapse;
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-variant-numeric: tabular-nums;
 }
 
 .tt th,
 .tt td {
-  border: 1px solid var(--rule, #d8d0c3);
+  border: 1px solid var(--_border);
   min-width: 2rem;
   padding: 0.2rem 0.4rem;
   text-align: center;
@@ -50,13 +50,13 @@ table.tt {
    formulas (.tt-sep): both mark a division of the table itself rather than the
    grid of its cells, so they should read alike. */
 .tt thead th {
-  border-bottom: 2px solid var(--ink, #16324a);
+  border-bottom: 2px solid var(--_text);
   font-weight: 600;
 }
 
 .tt .tt-paren {
   border-inline: 0;
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
   min-width: 0;
   padding-inline: 0.1rem;
 }
@@ -67,19 +67,19 @@ table.tt {
  * the first and last cell of every row.
  */
 .tt tr > :first-child {
-  border-inline-start: 1px solid var(--rule, #d8d0c3);
+  border-inline-start: 1px solid var(--_border);
 }
 
 .tt tr > :last-child {
-  border-inline-end: 1px solid var(--rule, #d8d0c3);
+  border-inline-end: 1px solid var(--_border);
 }
 
 .tt .tt-sep {
-  border-left: 2px solid var(--ink, #16324a);
+  border-left: 2px solid var(--_text);
 }
 
 .tt .tt-main {
-  background: color-mix(in srgb, var(--gold, #9a6400) 12%, transparent);
+  background: color-mix(in srgb, var(--_highlight) 12%, transparent);
   font-weight: 600;
 }
 
@@ -88,8 +88,8 @@ table.tt {
 }
 
 .tt-cell {
-  background: var(--surface, #fbf7ef);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_field-bg);
+  border: 1px solid var(--_border);
   border-radius: 3px;
   color: inherit;
   cursor: pointer;
@@ -107,12 +107,12 @@ table.tt {
    change. Drawn outside the border so it reads against the filled and the
    marked states alike. */
 .tt-cell:focus-visible {
-  outline: 2px solid var(--blue-strong, #074f9f);
+  outline: 2px solid var(--_accent-text);
   outline-offset: 2px;
 }
 
 .tt-cell[data-tt-value=""] {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
 }
 
 /*
@@ -133,25 +133,25 @@ table.tt {
 }
 
 .tt-given {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
 }
 
 .tt-correct {
-  color: var(--green, #1b7048);
+  color: var(--_correct);
   font-weight: 600;
 }
 
 .tt-incorrect {
-  color: var(--red, #b42318);
+  color: var(--_incorrect);
   font-weight: 600;
 }
 
 .tt-cell.tt-correct {
-  border-color: var(--green, #1b7048);
+  border-color: var(--_correct);
 }
 
 .tt-cell.tt-incorrect {
-  border-color: var(--red, #b42318);
+  border-color: var(--_incorrect);
 }
 
 /* The Check / counterexample controls live in the shared light-DOM action bar
@@ -174,7 +174,7 @@ table.tt {
 }
 
 .tt-ce-radio {
-  accent-color: var(--blue-strong, #074f9f);
+  accent-color: var(--_accent-text);
   cursor: pointer;
   margin: 0;
 }
@@ -183,15 +183,15 @@ table.tt {
    the rest of the table is their own work, filled in as usual, and dimming it
    would make the grid they are reading from harder to read. */
 .tt tr.tt-ce-row > * {
-  background: color-mix(in srgb, var(--gold, #9a6400) 14%, transparent);
+  background: color-mix(in srgb, var(--_highlight) 14%, transparent);
 }
 
 .tt-ce-note {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
   margin: 0.75rem 0 0;
 }
 
 .tt-ce-note[data-state="correct"] {
-  color: var(--green, #1b7048);
+  color: var(--_correct);
   font-weight: 600;
 }

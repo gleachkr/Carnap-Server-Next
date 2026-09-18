@@ -32,9 +32,13 @@ lookups over it, and nothing else enumerates them.
   help strings, the authoring helpers (`authoring.ts`: the directive block,
   the common attribute parsers, the manifest assembly) the ten per-type
   `authoring.ts` files are built from, the assessment helpers
-  (`assessment.ts`) the ten per-type `assessment.ts` objects share, and the
+  (`assessment.ts`) the ten per-type `assessment.ts` objects share, the
   page stylesheet for that chrome (`exercise.css`, served by
-  `web/styles.ts`).
+  `web/styles.ts`), and the exercise tokens (`tokens.css`, `tokens.ts`) —
+  the `--exercise-*` custom properties that are the only colours and faces a
+  widget stylesheet reads, each declared once there with its default, mapped
+  onto the palette in `web/content.css`, and documented as the author's
+  styling surface under the style directive in `docs/carnap-markdown-v1.md`.
 
 The kit sits on the consuming side of a few `application/content/` leaves —
 the Markdown pipeline (`markdown.ts`, which a type's `authoring.ts`

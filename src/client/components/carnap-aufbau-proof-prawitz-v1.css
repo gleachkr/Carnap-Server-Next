@@ -6,17 +6,17 @@
   margin: 0.6rem 0 0.2rem;
 }
 .pz-toolbar button {
-  background: var(--control-surface, #fbf7ef);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_field-bg);
+  border: 1px solid var(--_border);
   border-radius: 0.3rem;
-  color: var(--blue-strong, #074f9f);
+  color: var(--_accent-text);
   cursor: pointer;
   font: inherit;
   font-size: 0.78rem;
   padding: 0.2rem 0.55rem;
 }
 .pz-toolbar button:disabled {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
   cursor: default;
   opacity: 0.55;
 }
@@ -42,35 +42,35 @@
      Also: min-width has no effect on a non-replaced inline box, so the 1ch
      floor below only starts applying here. */
   display: inline-block;
-  /* Fira Code first (loaded as a web font) so its contextual ligatures turn
-     typed connectives like -> and <-> into → and ↔ in the rendered proof. */
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  /* The formula face, whose contextual ligatures turn typed connectives like
+     -> and <-> into → and ↔ in the rendered proof. */
+  font-family: var(--_mono-font);
   min-width: 1ch;
   outline: none;
   padding: 0 0.1rem;
   white-space: pre;
 }
 .pz-edit:focus {
-  border-bottom-color: var(--blue, #0b66d8);
+  border-bottom-color: var(--_accent);
 }
 .pz-edit.is-selected {
-  background: var(--blue-soft, #eaf3ff);
+  background: var(--_accent-bg);
 }
 .pz-edit.is-error {
-  border-bottom: 1px wavy var(--red, #b42318);
-  text-decoration: underline wavy var(--red, #b42318);
+  border-bottom: 1px wavy var(--_incorrect);
+  text-decoration: underline wavy var(--_incorrect);
 }
 .pz-edit:not(.is-selected):not(.is-empty):hover {
-  background: var(--surface-soft, #f8f2e8);
+  background: var(--_inset-bg);
 }
 /* An unfilled field: a tinted, comfortably-clickable box. */
 .pz-edit.is-empty {
-  background: var(--blue-soft, #eaf3ff);
+  background: var(--_accent-bg);
   border-bottom-color: transparent;
   border-radius: 0.2rem;
   min-height: 1.15em;
   min-width: 2.6ch;
-  outline: 1px dashed var(--blue, #0b66d8);
+  outline: 1px dashed var(--_accent);
   outline-offset: 1px;
 }
 .pz-rule.is-empty {
@@ -105,7 +105,7 @@ sup .pz-edit.is-empty {
   display: inline-block;
 }
 .pz-bracket {
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
 }
 /* An assumption has no inference line above it. ProofML puts a border-top on
    any proposition whose forest is uninhabited (its zero-premise-rule line);
@@ -126,7 +126,7 @@ sup .pz-edit.is-empty {
    the UA's modality heuristic hides the ring after mouse-first input, and
    Esc out of a field is precisely when it must appear. */
 .pz-node:focus {
-  outline: 2px solid var(--blue, #0b66d8);
+  outline: 2px solid var(--_accent);
   outline-offset: 2px;
 }
 /* The assumption label hangs off the node's top-right corner instead of
@@ -151,9 +151,9 @@ sup .pz-edit.is-empty {
 .pz-pick {
   align-items: center;
   background: transparent;
-  border: 1.5px solid var(--rule, #d8d0c3);
+  border: 1.5px solid var(--_border);
   border-radius: 50%;
-  color: var(--on-accent, #ffffff);
+  color: var(--_on-accent);
   cursor: pointer;
   display: flex;
   font: inherit;
@@ -174,9 +174,9 @@ sup .pz-edit.is-empty {
   position: absolute;
 }
 .pz-pick:hover {
-  border-color: var(--blue, #0b66d8);
+  border-color: var(--_accent);
 }
 .pz-pick[aria-pressed="true"] {
-  background: var(--blue, #0b66d8);
-  border-color: var(--blue, #0b66d8);
+  background: var(--_accent);
+  border-color: var(--_accent);
 }

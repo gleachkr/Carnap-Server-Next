@@ -2,16 +2,16 @@
  * Shadow-DOM chrome styles for the model element, server-rendered into its
  * Declarative Shadow Root. The shadow boundary isolates them from author
  * `:::style` CSS; the prompt is slotted from light DOM so author CSS and the
- * document's math font still reach it. Custom properties inherit across the
- * boundary, so the palette tokens resolve to the content document's values —
- * which is also why nothing here is a hex literal.
+ * document's math font still reach it. Colours come from the exercise tokens
+ * (`exercise-kit/tokens.css`), which inherit across the boundary — which is
+ * also why nothing here is a hex literal.
  */
 
 /* The sentences the model has to satisfy, and — below — the names of the
    things it interprets. Both are the language's own text rather than prose
    about it, so both are set in the formula face. */
 .model-goal {
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-size: 1.05rem;
   margin-bottom: 0.75rem;
 }
@@ -29,7 +29,7 @@
 }
 
 .model-label {
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-weight: 560;
   min-width: 6ch;
 }
@@ -38,12 +38,12 @@
    student types into these is the model's own vocabulary — a domain, an
    extension like `a,b` — not prose about it. */
 .model-input {
-  background: var(--control-surface, #fbf7ef);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_field-bg);
+  border: 1px solid var(--_border);
   border-radius: 3px;
   color: inherit;
   font: inherit;
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   min-width: 12ch;
   padding: 0.15rem 0.35rem;
 }
@@ -54,12 +54,12 @@
 }
 
 .model-select {
-  background: var(--control-surface, #fbf7ef);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_field-bg);
+  border: 1px solid var(--_border);
   border-radius: 3px;
   color: inherit;
   font: inherit;
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   padding: 0.1rem 0.25rem;
 }
 
@@ -70,7 +70,7 @@
 }
 
 .model-warning {
-  color: var(--red, #b42318);
+  color: var(--_incorrect);
   font-weight: 600;
 }
 
@@ -92,7 +92,7 @@
 
 .model-function-table {
   border-collapse: collapse;
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-variant-numeric: tabular-nums;
 }
 
@@ -105,12 +105,12 @@
 /* The two argument axes, ruled off the way a textbook value table is. */
 .model-function-table thead td,
 .model-function-table thead th {
-  border-bottom: 1px solid var(--rule-soft, #e5ded3);
+  border-bottom: 1px solid var(--_divider);
   font-weight: 560;
 }
 
 .model-function-table th[scope="row"] {
-  border-right: 1px solid var(--rule-soft, #e5ded3);
+  border-right: 1px solid var(--_divider);
   font-weight: 560;
   text-align: right;
   white-space: nowrap;
@@ -118,11 +118,11 @@
 
 /* A locked given is part of the exercise. Muting the control says so more
    plainly than the browser's own disabled styling, which on a select is
-   nearly invisible against this palette. Marked on the control rather than
+   nearly invisible against these fills. Marked on the control rather than
    the row: a function's given may fix some cells of its table and leave the
    rest to the student. */
 .model-input[data-locked],
 .model-select[data-locked] {
-  background: var(--surface-soft, #f8f2e8);
+  background: var(--_inset-bg);
   border-style: dashed;
 }

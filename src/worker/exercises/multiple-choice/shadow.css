@@ -3,9 +3,8 @@
  * into its Declarative Shadow Root. The shadow boundary isolates them so author
  * `:::style` CSS cannot reach the chrome; the prompt and option labels are
  * slotted from light DOM, so author CSS and the document's math font still
- * reach
- * them. Custom properties (e.g. `--blue-strong`) inherit across the boundary, so
- * palette tokens resolve to the content document's values.
+ * reach them. Colours come from the exercise tokens (`exercise-kit/tokens.css`),
+ * which inherit across the boundary.
  */
 
 .mc-options {
@@ -27,6 +26,6 @@
 
 /* The element marks the chosen option once it enhances. */
 .mc-option[data-selected] {
-  color: var(--blue-strong);
+  color: var(--_accent-text);
   font-weight: 600;
 }

@@ -10,7 +10,7 @@
  */
 
 .proof-tree-canvas {
-  --border-color: var(--ink, #16324a);
+  --border-color: var(--_text);
   --inference-size: 0.72rem;
   margin: 0.85rem 0 0;
   overflow-x: auto;
@@ -23,11 +23,11 @@
    server-rendered tree used to be set in STIX Two Math, so a reader watched
    the proof change typeface as the page came alive. */
 proof-proposition {
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-size: 1.02rem;
 }
 
 proof-inference {
-  color: var(--ink-muted, #5f7388);
+  color: var(--_text-muted);
   font-family: ui-sans-serif, system-ui, sans-serif;
 }

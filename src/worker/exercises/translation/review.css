@@ -4,14 +4,14 @@
  */
 
 .translation-review-display {
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-size: 1.05rem;
   margin: 0;
 }
 
 .translation-review-source {
-  color: var(--ink-muted, #5f7388);
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  color: var(--_text-muted);
+  font-family: var(--_mono-font);
   font-size: 0.9em;
   margin: 0.25rem 0 0;
 }

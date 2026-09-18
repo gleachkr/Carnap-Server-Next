@@ -488,6 +488,23 @@ describe("every exercise names itself", () => {
       expect(root).toContain(".visually-hidden {");
     }
   });
+
+  test("every shadow root carries the exercise tokens' defaults", async () => {
+    const html = await render();
+    const roots =
+      html.match(/<template shadowrootmode="open">[\s\S]*?<\/template>/g) ??
+      [];
+
+    expect(roots.length).toBeGreaterThan(0);
+
+    // A widget's rules read the private `--_` twins and nothing else, and the
+    // twins are declared in one block (`exercise-kit/tokens.css`). A root served
+    // without it has no colours at all — every fill and rule falls to the
+    // browser's initial value — so the block has to travel with the root.
+    for (const root of roots) {
+      expect(root).toContain("--_text: var(--exercise-text,");
+    }
+  });
 });
 
 /**
@@ -713,7 +730,7 @@ describe("the interactive submission path", () => {
       "@codemirror/view",
     )) {
       if (
-        !/\.[a-z-]+ \.cm-editor \.cm-content \{\s*caret-color: var\(--ink/.test(
+        !/\.[a-z-]+ \.cm-editor \.cm-content \{\s*caret-color: var\(--_text\)/.test(
           styles,
         )
       ) {
@@ -723,7 +740,7 @@ describe("the interactive submission path", () => {
 
     expect(
       offenders,
-      "a widget embedding CodeMirror needs `.<wrapper> .cm-editor .cm-content { caret-color: var(--ink, …) }` in its shadow styles — without the property the caret is black in dark mode, and without the third class CodeMirror's own adopted stylesheet outranks it",
+      "a widget embedding CodeMirror needs `.<wrapper> .cm-editor .cm-content { caret-color: var(--_text) }` in its shadow styles — without the property the caret is black in dark mode, and without the third class CodeMirror's own adopted stylesheet outranks it",
     ).toEqual([]);
   });
 
@@ -749,7 +766,7 @@ describe("the interactive submission path", () => {
       "@codemirror/lint",
     )) {
       if (
-        !/\.[a-z-]+ \.cm-editor \.cm-tooltip \{[^}]*\bbackground: var\(--/.test(
+        !/\.[a-z-]+ \.cm-editor \.cm-tooltip \{[^}]*\bbackground: var\(--_/.test(
           styles,
         )
       ) {
@@ -759,7 +776,7 @@ describe("the interactive submission path", () => {
 
     expect(
       offenders,
-      "a widget showing CodeMirror diagnostics needs `.<wrapper> .cm-editor .cm-tooltip { background: var(--…) }` in its shadow styles — hung on `.cm-tooltip-lint` the rule matches nothing, and with only two classes CodeMirror's own adopted stylesheet outranks it",
+      "a widget showing CodeMirror diagnostics needs `.<wrapper> .cm-editor .cm-tooltip { background: var(--_…) }` in its shadow styles — hung on `.cm-tooltip-lint` the rule matches nothing, and with only two classes CodeMirror's own adopted stylesheet outranks it",
     ).toEqual([]);
   });
 });

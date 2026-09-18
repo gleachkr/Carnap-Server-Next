@@ -7,10 +7,10 @@
  */
 
 .proof-source {
-  background: var(--surface-soft, #f8f2e8);
-  border: 1px solid var(--rule, #d8d0c3);
+  background: var(--_inset-bg);
+  border: 1px solid var(--_border);
   border-radius: 0.4rem;
-  font-family: var(--mono-font, "Fira Code", ui-monospace, monospace);
+  font-family: var(--_mono-font);
   font-size: 0.9rem;
   line-height: 1.5;
   margin: 0.75rem 0 0;
