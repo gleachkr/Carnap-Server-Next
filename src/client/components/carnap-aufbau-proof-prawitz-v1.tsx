@@ -385,6 +385,17 @@ function newDerived(premises: readonly PNode[]): PNode {
   };
 }
 
+/**
+ * Can a premise go above this line? Any derived line, and an unlabelled
+ * assumption, which `addAbove` turns into a derived line — so a proof can be
+ * grown upward from the blank workspace's one assumption, as it can in the
+ * tree editor. A labelled assumption is refused: the label names a discharge
+ * the student has set up, and a derived line has nowhere to carry it.
+ */
+function canGrowAbove(node: PNode): boolean {
+  return !node.isAssumption || node.label.trim().length === 0;
+}
+
 /** Every selected id is the root of a forest tree (the applyBelow guard). */
 function selectionIsRoots(doc: Doc): boolean {
   return (
@@ -480,12 +491,17 @@ function docReducer(doc: Doc, action: Action): Doc {
     case "addAbove": {
       const id = doc.selected.length === 1 ? doc.selected[0] : undefined;
       const located = id === undefined ? null : locate(doc.trees, id);
-      if (located === null || located.node.isAssumption) {
+      if (located === null || !canGrowAbove(located.node)) {
         return doc;
       }
       const child = action.assumption ? newAssumption() : newDerived([]);
+      // An assumption grown above becomes a derived line — the conclusion of
+      // the inference its new premise begins — which is what deleting a
+      // derived line undoes. Nothing else changes: an unlabelled assumption
+      // has an empty rule and discharge already.
       const trees = replaceNode(doc.trees, located.node.id, (node) => ({
         ...node,
+        isAssumption: false,
         premises: [...node.premises, child],
       }));
       // Selection stays on the parent so repeated adds stack siblings in place.
@@ -583,6 +599,7 @@ const INTRO_IDS: readonly AufbauProofPrawitzStringId[] = [
   "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove.",
   "To apply a rule, tick the dot under each premise in the order the rule takes them, then Apply rule below. The ticked trees become the premises of one new line.",
   "To discharge an assumption, give it a label and write the same label on the rule that discharges it. Both boxes appear on a line once it is selected.",
+  "Add premise above grows a line upward instead. On an assumption it makes the assumption a derived line; a labelled assumption stays as it is, since its label names a discharge.",
 ];
 
 /**
@@ -848,7 +865,7 @@ function Editor(props: {
       ? focusedId
       : (doc.selected[0] ?? doc.trees[0]?.id);
   const canApply = selectionIsRoots(doc);
-  const canGrow = single !== null && !single.node.isAssumption;
+  const canGrow = single !== null && canGrowAbove(single.node);
   const canDelete = single !== null;
 
   return (
@@ -1498,7 +1515,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         break;
       case "p":
       case "P":
-        if (!node.isAssumption) {
+        if (canGrowAbove(node)) {
           event.preventDefault();
           // These grow/delete act on the selection; aim them at the focused
           // line so the keys keep meaning "here", as they did when focus and
@@ -1509,7 +1526,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         break;
       case "h":
       case "H":
-        if (!node.isAssumption) {
+        if (canGrowAbove(node)) {
           event.preventDefault();
           this.selectNode(nodeId, false);
           this.dispatch({ assumption: true, type: "addAbove" });

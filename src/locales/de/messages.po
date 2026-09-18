@@ -460,6 +460,10 @@ msgstr "Prämisse darüber hinzufügen"
 msgid "Add premise above (p)"
 msgstr "Prämisse darüber hinzufügen (p)"
 
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Add premise above grows a line upward instead. On an assumption it makes the assumption a derived line; a labelled assumption stays as it is, since its label names a discharge."
+msgstr "Prämisse darüber hinzufügen lässt eine Zeile stattdessen nach oben wachsen. Aus einer Annahme wird dabei eine abgeleitete Zeile; eine markierte Annahme bleibt, wie sie ist, denn ihre Marke benennt eine Entlastung."
+
 #: src/worker/web/courses.tsx
 msgid "Add staff"
 msgstr "Lehrpersonal hinzufügen"

@@ -460,6 +460,10 @@ msgstr ""
 msgid "Add premise above (p)"
 msgstr ""
 
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "Add premise above grows a line upward instead. On an assumption it makes the assumption a derived line; a labelled assumption stays as it is, since its label names a discharge."
+msgstr ""
+
 #: src/worker/web/courses.tsx
 msgid "Add staff"
 msgstr ""

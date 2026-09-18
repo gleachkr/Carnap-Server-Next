@@ -111,6 +111,12 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
       i18n.t(
         "To discharge an assumption, give it a label and write the same label on the rule that discharges it. Both boxes appear on a line once it is selected.",
       ),
+    /** Help: the fourth orientation paragraph — growing upward, and what
+     *  that does to an assumption. */
+    "Add premise above grows a line upward instead. On an assumption it makes the assumption a derived line; a labelled assumption stays as it is, since its label names a discharge.":
+      i18n.t(
+        "Add premise above grows a line upward instead. On an assumption it makes the assumption a derived line; a labelled assumption stays as it is, since its label names a discharge.",
+      ),
     /** Help: one per key row, in the order the table lists them. */
     "Move between lines, leaving the ticks alone": i18n.t(
       "Move between lines, leaving the ticks alone",
