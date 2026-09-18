@@ -36,6 +36,18 @@
 .tree-rule.is-empty {
   min-width: 3.4ch;
 }
+/* A field with no child nodes at all has no line box, so its baseline is
+   its bottom edge and the box rides high on the line: in Firefox a fresh
+   empty node pokes up out of its own focus ring, which then hangs below it
+   over the inference line (Chromium gives an empty editable a line box of
+   its own, and so never showed it). A zero-width space restores real text
+   metrics; the Prawitz editor does the same. Only the freshly-rendered
+   state needs it: after type-then-delete the browser leaves its own
+   placeholder <br> behind, and with any child present :empty stops
+   matching. */
+.tree-edit:empty::before {
+  content: "\200B";
+}
 /* The read-only goal is still a selection target (add premises to it). */
 .tree-fixed {
   cursor: pointer;
