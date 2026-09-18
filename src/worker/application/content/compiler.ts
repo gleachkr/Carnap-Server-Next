@@ -20,6 +20,7 @@ import type { ExerciseType } from "../../exercise-kit/type";
 import { modelDataBodyLines } from "../../exercises/model/authoring";
 import type { TheoryResolver } from "../../logic/theories";
 import { BUILT_IN_SYSTEM_IDS } from "../../logic/theories";
+import { type CompilerDiagnostic, diagnostic } from "./diagnostics";
 import {
   createFootnoteNumbering,
   directiveBlockFromNode,
@@ -29,14 +30,13 @@ import {
   type MarkdownNode,
   markdownParser,
   renderMarkdownChildren,
-} from "./authoring-toolkit";
-import { type CompilerDiagnostic, diagnostic } from "./diagnostics";
+} from "./markdown";
 import { createMathCompiler, type MathFailure } from "./math";
 import type { ExerciseRegistry } from "./registry";
 import { createDefaultExerciseRegistry } from "./registry";
 
-export { CONTENT_SANITIZE_SCHEMA } from "./authoring-toolkit";
 export type { CompilerDiagnostic } from "./diagnostics";
+export { CONTENT_SANITIZE_SCHEMA } from "./markdown";
 
 export type CompileMarkdownResult =
   | {

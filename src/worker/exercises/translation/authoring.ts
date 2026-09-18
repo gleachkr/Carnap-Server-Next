@@ -1,9 +1,9 @@
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import { renderMarkdownSource } from "../../application/content/authoring-toolkit";
 import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../../application/content/diagnostics";
+import { renderMarkdownSource } from "../../application/content/markdown";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,

@@ -5,7 +5,7 @@ import type { DiagnosticMessageId } from "./diagnostic-strings";
  * What the compiler says when it refuses, or hesitates over, an author's
  * source — the shape of one complaint and the two ways of raising one.
  *
- * A leaf module: the Markdown pipeline (`authoring-toolkit.ts`, `mm0.ts`,
+ * A leaf module: the Markdown pipeline (`markdown.ts`, `mm0.ts`,
  * `compiler.ts`), the exercise kit's directive helpers, every type's
  * `authoring.ts`, and the browser's editor preview all report through it,
  * and it depends on nothing but the message catalog's id type. The wording

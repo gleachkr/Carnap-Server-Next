@@ -35,7 +35,7 @@
  * rather than about what an exercise wants from it.
  *
  * Kept out of the exercise barrels deliberately: those are imported by the
- * client elements, and the authoring toolkit has no business in their bundles.
+ * client elements, and the Markdown pipeline has no business in their bundles.
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";

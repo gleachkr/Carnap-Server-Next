@@ -4,12 +4,12 @@ import { EditorState } from "@codemirror/state";
 import type { Root } from "mdast";
 
 import { markdownLanguage } from "../src/client/markdown-editor";
+import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import {
   inlineMathKind,
   markdownParser,
   renderMarkdownSource,
-} from "../src/worker/application/content/authoring-toolkit";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+} from "../src/worker/application/content/markdown";
 import { styledMathText } from "../src/worker/application/content/math-variants";
 import { resolveMessage } from "../src/worker/i18n/translator";
 

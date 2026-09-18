@@ -9,7 +9,7 @@
  * tree instead.
  *
  * The server parses the same documents with `remark-directive`
- * (`authoring-toolkit.ts`), and the two must agree about what a directive is,
+ * (`markdown.ts`), and the two must agree about what a directive is,
  * because one of them decides what the compiler sees and the other decides what
  * the author is shown. This follows micromark's container tokenizer: three or
  * more colons, then a name, then an optional `[label]` and `{attributes}`, then

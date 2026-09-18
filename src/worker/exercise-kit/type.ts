@@ -1,5 +1,5 @@
-import type { MarkdownRenderOptions } from "../application/content/authoring-toolkit";
 import type { CompilerDiagnostic } from "../application/content/diagnostics";
+import type { MarkdownRenderOptions } from "../application/content/markdown";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,

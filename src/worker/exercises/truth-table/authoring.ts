@@ -1,8 +1,8 @@
-import { renderMarkdownSource } from "../../application/content/authoring-toolkit";
 import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../../application/content/diagnostics";
+import { renderMarkdownSource } from "../../application/content/markdown";
 import type { ExerciseFeedback } from "../../domain/exercises";
 import {
   buildCompiledExercise,

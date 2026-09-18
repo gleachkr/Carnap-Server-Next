@@ -3,7 +3,7 @@ import { ensureSyntaxTree, foldable } from "@codemirror/language";
 import { EditorState } from "@codemirror/state";
 
 import { markdownLanguage } from "../src/client/markdown-editor";
-import { markdownParser } from "../src/worker/application/content/authoring-toolkit";
+import { markdownParser } from "../src/worker/application/content/markdown";
 import { FORALLX_DEMO_SOURCE } from "./helpers/forallx-demo";
 import { GENTZEN_DEMO_SOURCE } from "./helpers/gentzen-demo";
 import { PRAWITZ_DEMO_SOURCE } from "./helpers/prawitz-demo";

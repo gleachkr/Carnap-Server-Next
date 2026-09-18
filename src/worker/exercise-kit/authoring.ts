@@ -1,9 +1,9 @@
-import type { MarkdownNode } from "../application/content/authoring-toolkit";
 import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../application/content/diagnostics";
 import { sha256Id, stableJson } from "../application/content/hash";
+import type { MarkdownNode } from "../application/content/markdown";
 import type {
   ContentNode,
   ExerciseCapabilities,
@@ -24,7 +24,7 @@ import type { JsonValue } from "../domain/json";
  * these shapes: it cuts a {@link DirectiveBlock} out of the Markdown tree and
  * takes a {@link CompiledExercise} back. The Markdown pipeline itself — the
  * parser, the sanitizer, the prompt renderers — stays with the application in
- * `authoring-toolkit.ts`; a type imports both, and this module reads only the
+ * `markdown.ts`; a type imports both, and this module reads only the
  * tree's node type from there.
  */
 

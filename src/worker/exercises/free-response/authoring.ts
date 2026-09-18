@@ -1,7 +1,7 @@
 import {
   renderInlineMarkdown,
   renderMarkdownChildren,
-} from "../../application/content/authoring-toolkit";
+} from "../../application/content/markdown";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,

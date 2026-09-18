@@ -1,8 +1,8 @@
-import { renderMarkdownChildren } from "../../application/content/authoring-toolkit";
 import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../../application/content/diagnostics";
+import { renderMarkdownChildren } from "../../application/content/markdown";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,

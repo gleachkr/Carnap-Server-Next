@@ -10,7 +10,7 @@
  * That last part is why this exists rather than being nice to have. The dialect
  * only reads a single `$` as opening a formula when it touches its content on
  * both sides, so `it cost $5 and then $10` stays prose (see `inlineMathKind` in
- * `authoring-toolkit.ts`). Implemented here to the same rule, the highlighting
+ * `markdown.ts`). Implemented here to the same rule, the highlighting
  * *is* the explanation: the sentence about money stays the colour of prose, and
  * a formula the author expected to be one and did not close correctly does too.
  * A test pins the two parsers to each other rather than to this file's opinion.

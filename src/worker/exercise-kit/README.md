@@ -37,7 +37,7 @@ lookups over it, and nothing else enumerates them.
   `web/styles.ts`).
 
 The kit sits on the consuming side of a few `application/content/` leaves —
-the Markdown pipeline (`authoring-toolkit.ts`, which a type's `authoring.ts`
+the Markdown pipeline (`markdown.ts`, which a type's `authoring.ts`
 renders its prompt through), the diagnostic envelope (`diagnostics.ts`) and
 its string catalog, the declaration hash, the theory-block compiler, and the
 render helpers. None of them knows what an exercise is; the directive

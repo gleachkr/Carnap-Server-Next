@@ -1,12 +1,12 @@
 import {
-  type MarkdownRenderOptions,
-  renderInlineMarkdown,
-  renderMarkdownSource,
-} from "../../application/content/authoring-toolkit";
-import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../../application/content/diagnostics";
+import {
+  type MarkdownRenderOptions,
+  renderInlineMarkdown,
+  renderMarkdownSource,
+} from "../../application/content/markdown";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,
