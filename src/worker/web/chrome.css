@@ -1522,13 +1522,16 @@ a.score-uncounted {
 
 /* The halves give up their own frame entirely — the track is the frame. A
    link is laid out as a box so that it fills its half the way a button
-   does, rather than sitting on the surrounding text's baseline. */
+   does, rather than sitting on the surrounding text's baseline. The half
+   you are not on is muted, but with the stronger muted ink: the track is
+   --surface-soft, one of the warm fills plain --ink-muted misses AA on
+   (4.39:1 — see docs/a11y.md). */
 .segmented > :is(a, button) {
   align-items: center;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 4px;
-  color: var(--ink-muted);
+  color: var(--ink-muted-strong);
   display: inline-flex;
   font-weight: 600;
   justify-content: center;
