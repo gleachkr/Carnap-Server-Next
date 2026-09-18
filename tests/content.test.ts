@@ -2219,29 +2219,14 @@ describe("content source downloads", () => {
     });
   });
 
-  test("the library offers each item's newest source, and nothing for an item with none", async () => {
+  test("the library lists items without a download; the source is a revision's", async () => {
     await withStorage(async (_storage, env) => {
       const author = await login(env, "library-downloader@example.test");
       const item = await createContent(env, author);
-      const first = await appRequest(
-        createTestApp(),
-        `/content/${item.item.id}/revisions`,
-        jsonRequest({ sourceText: sampleSource("older_q") }, author),
-        env,
-      );
-      const second = await appRequest(
+      await appRequest(
         createTestApp(),
         `/content/${item.item.id}/revisions`,
         jsonRequest({ sourceText: sampleSource("newer_q") }, author),
-        env,
-      );
-      const firstBody = (await first.json()) as ContentRevisionResponse;
-      const secondBody = (await second.json()) as ContentRevisionResponse;
-
-      await appRequest(
-        createTestApp(),
-        "/content",
-        jsonRequest({ title: "Nothing written yet" }, author),
         env,
       );
 
@@ -2254,17 +2239,12 @@ describe("content source downloads", () => {
       const html = await page.text();
 
       expect(page.status).toBe(200);
-      // The source an author wants is the current one.
-      expect(html).toContain(
-        `href="/content/revisions/${secondBody.revision.id}/source"`,
-      );
-      expect(html).not.toContain(
-        `href="/content/revisions/${firstBody.revision.id}/source"`,
-      );
-      // Exactly one download on the page: the item nobody has written a
-      // revision of has no source to offer and draws no link at all.
-      expect(html.split('/source"').length - 1).toBe(1);
-      expect(html).toContain("Download the source of Truth tables");
+      expect(html).toContain(`href="/content/${item.item.id}"`);
+      // An item is a title over a history, and "its source" would have to
+      // mean the newest revision by a rule the page could not show; the
+      // downloads are on the item's page, one per revision.
+      expect(html).not.toContain('/source"');
+      expect(html).not.toContain("Download the source of");
     });
   });
 

@@ -297,10 +297,6 @@ async function libraryPage(context: Context<AppBindings>): Promise<Response> {
       libraryNotices(context.get("i18n")),
       new URL(context.req.url),
     ),
-    // What each row's download would hand over. An item created a minute ago
-    // and never written to has no revision and no entry here, and the listing
-    // draws no download for it.
-    latestRevisionIds: await service.latestRevisionIds(actor, items),
   });
 }
 

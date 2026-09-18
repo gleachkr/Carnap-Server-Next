@@ -115,11 +115,15 @@ Which option is correct?
 }
 
 /**
- * The download beside a listed piece of content: its Markdown source, as a
- * file, for an author who would rather edit it in their own editor and upload
- * the result. A link rather than a form because it takes nothing and changes
- * nothing; the server sends it as an attachment, and the `download` attribute
- * says so in the markup too.
+ * The download beside a listed revision: its source, as a file, for an author
+ * who would rather edit it in their own editor and upload the result. A link
+ * rather than a form because it takes nothing and changes nothing; the server
+ * sends it as an attachment, and the `download` attribute says so in the
+ * markup too.
+ *
+ * On revisions and not on the library's items, because a download is of a
+ * fixed thing: the item is a title over a history, and which revision "the
+ * item's source" meant was a rule (the newest) a reader had no way to see.
  *
  * The label names what is being downloaded, because a column of identical
  * "Download" links tells a reader listening to the page which row they are on
@@ -178,7 +182,8 @@ const ArchiveToggle: FC<{
 /**
  * The library's rows, active or archived: the same table either way, with
  * the date column saying when the item was last written or when it was put
- * away, and the actions column offering the download and the way across.
+ * away, and the actions column offering the way across. Downloads are on the
+ * item's page, one per revision.
  */
 const ItemsTable: FC<{
   /** Whether this is the archived drawer's table, or the active one. */
@@ -189,15 +194,7 @@ const ItemsTable: FC<{
    * different facts, and the first sentence would be a lie under the second. */
   readonly hasArchived: boolean;
   readonly items: readonly ContentItem[];
-  readonly latestRevisionIds: ReadonlyMap<string, string>;
-}> = ({
-  archived,
-  canAuthor,
-  context,
-  hasArchived,
-  items,
-  latestRevisionIds,
-}) => {
+}> = ({ archived, canAuthor, context, hasArchived, items }) => {
   const i18n = useI18n();
 
   if (items.length === 0) {
@@ -225,14 +222,15 @@ const ItemsTable: FC<{
           <SortHeader
             label={archived ? i18n.t("Archived") : i18n.t("Updated")}
           />
-          <th scope="col">{i18n.t("Actions")}</th>
+          {/* Archiving needs the permission that made the item, as sharing
+              does; an author who has lost it is not offered a control the
+              server would refuse, and with nothing to put in it the column
+              is not drawn. */}
+          {canAuthor ? <th scope="col">{i18n.t("Actions")}</th> : null}
         </tr>
       </thead>
       <tbody>
         {items.map((item) => {
-          // The source an author would want is the current one, which is the
-          // newest revision. An item with none is a title and nothing else.
-          const revisionId = latestRevisionIds.get(item.id);
           const when = archived ? (item.archivedAt ?? "") : item.updatedAt;
 
           return (
@@ -245,22 +243,11 @@ const ItemsTable: FC<{
               <td data-sort-value={when}>
                 {when.length === 0 ? null : <Time value={when} />}
               </td>
-              <td>
-                {revisionId === undefined ? null : (
-                  <SourceDownload
-                    href={`/content/revisions/${revisionId}/source`}
-                    label={i18n.t("Download the source of {name}", {
-                      name: item.title,
-                    })}
-                  />
-                )}
-                {/* Archiving needs the permission that made the item, as
-                    sharing does; an author who has lost it is not offered
-                    a control the server would refuse. */}
-                {canAuthor ? (
+              {canAuthor ? (
+                <td>
                   <ArchiveToggle context={context} item={item} />
-                ) : null}
-              </td>
+                </td>
+              ) : null}
             </tr>
           );
         })}
@@ -864,8 +851,6 @@ export function renderContentLibrary(
   model: {
     readonly canAuthor: boolean;
     readonly items: readonly ContentItem[];
-    /** Item id → the revision a download of that item would hand over. */
-    readonly latestRevisionIds: ReadonlyMap<string, string>;
     readonly notices: readonly string[];
   },
 ): Response {
@@ -907,7 +892,6 @@ export function renderContentLibrary(
           context={context}
           hasArchived={archivedItems.length > 0}
           items={activeItems}
-          latestRevisionIds={model.latestRevisionIds}
         />
       </Sheet>
       {archivedItems.length > 0 ? (
@@ -935,7 +919,6 @@ export function renderContentLibrary(
               context={context}
               hasArchived
               items={archivedItems}
-              latestRevisionIds={model.latestRevisionIds}
             />
           </div>
         </details>
