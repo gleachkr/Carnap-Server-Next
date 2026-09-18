@@ -466,7 +466,8 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       ? ""
       : goalText(theory, this.goalName);
     this.statementView = statement;
-    goal.append(label, statement);
+    // The space is for text readers; the row's gap draws the visible one.
+    goal.append(label, " ", statement);
     container.insertBefore(goal, actionsSlot);
 
     const host = document.createElement("div");

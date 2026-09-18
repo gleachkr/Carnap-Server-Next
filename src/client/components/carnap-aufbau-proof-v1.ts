@@ -185,7 +185,8 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     decl.className = "proof-goal-statement";
     decl.textContent = this.playground ? "" : goalDeclaration(data.mm0);
     this.statementView = decl;
-    goal.append(label, decl);
+    // The space is for text readers; the row's gap draws the visible one.
+    goal.append(label, " ", decl);
     container.insertBefore(goal, actionsSlot);
 
     const host = document.createElement("div");

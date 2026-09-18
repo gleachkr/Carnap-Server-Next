@@ -11,6 +11,11 @@
  * starter is *expected* to fail to compile; the script checks the intended
  * solution instead, which is what makes it a fair thing to assign.
  *
+ * The two playgrounds have no goal of their own: their starters are lowered
+ * the same way, then the goal is read off the lowered proof and appended to
+ * the theory before compiling, which is what the widget and the worker both
+ * do (`exercise-kit/proof/playground`).
+ *
  * Not part of `bun run check` / `bun test` because the compiler is untyped and
  * client-only. Run it after touching the lesson, the theory, or the translator:
  *
@@ -25,6 +30,13 @@ import {
   proofRuleReader,
   proofTheoryText,
 } from "../src/worker/exercise-kit/proof/formulas";
+import {
+  isPlaygroundExercise,
+  lastProofStatement,
+  playgroundGoal,
+  playgroundTheoryText,
+  type ProofStatement,
+} from "../src/worker/exercise-kit/proof/playground";
 import { AUFBAU_PROOF_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof/types";
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
@@ -92,10 +104,17 @@ interface Lowering {
     readonly formula: string;
   }[];
   readonly proofText: string;
+  readonly statement: ProofStatement | null;
+}
+
+/** A starter lowered to `.auf`, with the last line's statement for a playground. */
+interface Lowered {
+  readonly proofText: string;
+  readonly statement: ProofStatement | null;
 }
 
 /** The lowered `.auf`, or `null` and the reason it could not be produced. */
-function lowered(translation: Lowering): string | null {
+function lowered(translation: Lowering): Lowered | null {
   if ((translation.diagnostics ?? []).length > 0) {
     console.log(`    structural: ${JSON.stringify(translation.diagnostics)}`);
     return null;
@@ -110,7 +129,7 @@ function lowered(translation: Lowering): string | null {
     return null;
   }
 
-  return translation.proofText;
+  return { proofText: translation.proofText, statement: translation.statement };
 }
 
 /**
@@ -127,9 +146,16 @@ function lower(
   assetId: string,
   publicData: Record<string, string & Record<string, unknown>>,
   source: string | null,
-): string | null {
+): Lowered | null {
   if (assetId === AUFBAU_PROOF_COMPONENT_METADATA.assetId) {
-    return `${publicData.goalName}\n----\n${publicData.starterBody}`;
+    // Linear lines are engine text already; nothing has read them, so the
+    // statement's variables are left for `playgroundGoal` to find.
+    const text = lastProofStatement(publicData.starterBody);
+
+    return {
+      proofText: `${publicData.goalName}\n----\n${publicData.starterBody}`,
+      statement: text === null ? null : { text, variables: null },
+    };
   }
 
   if (assetId === AUFBAU_PROOF_FITCH_COMPONENT_METADATA.assetId) {
@@ -226,13 +252,14 @@ for (const node of compiled.artifact.document.nodes) {
   // Since #257 both are filled by the systems join, and the stripped `mm0` is
   // derived from `source`; only an artifact compiled before `source` existed
   // has the one without the other. See `exercise-kit/proof/formulas`.
-  const { mm0, source } = proofTheoryText(publicData);
+  const theory = proofTheoryText(publicData);
+  const { mm0, source } = theory;
   const label = `${node.exerciseId} (${node.render.assetId})`;
 
   if (UNFINISHED_IDS.has(node.exerciseId)) {
     const starter = lower(node.render.assetId, publicData, source);
     const starterVerifies =
-      starter !== null && (await verify(mm0, starter, true));
+      starter !== null && (await verify(mm0, starter.proofText, true));
 
     if (starterVerifies) {
       console.log(
@@ -267,9 +294,37 @@ for (const node of compiled.artifact.document.nodes) {
     continue;
   }
 
-  const proofText = lower(node.render.assetId, publicData, source);
+  const starter = lower(node.render.assetId, publicData, source);
 
-  if (proofText === null || !(await verify(mm0, proofText))) {
+  if (starter === null) {
+    console.log(`✗ ${label}`);
+    failed += 1;
+    continue;
+  }
+
+  if (isPlaygroundExercise(publicData)) {
+    const goal =
+      starter.statement === null
+        ? null
+        : playgroundGoal(source, starter.statement);
+
+    if (goal === null) {
+      console.log(`✗ ${label} — could not work out what the starter states`);
+      failed += 1;
+      continue;
+    }
+
+    if (!(await verify(playgroundTheoryText(theory, goal).mm0, starter.proofText))) {
+      console.log(`✗ ${label}`);
+      failed += 1;
+      continue;
+    }
+
+    console.log(`✓ ${label} — proves ${goal.statement}`);
+    continue;
+  }
+
+  if (!(await verify(mm0, starter.proofText))) {
     console.log(`✗ ${label}`);
     failed += 1;
     continue;

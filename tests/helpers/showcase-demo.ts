@@ -7,8 +7,9 @@
  *
  * Shared by `tests/showcase-demo.test.ts` (which compiles it, so a directive that
  * changes shape breaks a test rather than a demo) and `scripts/seed-showcase-demo.ts`.
- * The four worked proofs are engine-verified by `scripts/showcase-verify.ts`; the
- * last two Fitch exercises are deliberately unfinished.
+ * The four worked proofs and the two playground starters are engine-verified by
+ * `scripts/showcase-verify.ts`; the two Fitch exercises before the playgrounds
+ * are deliberately unfinished.
  */
 export const SHOWCASE_DEMO_SOURCE = `# A tour of the exercise types
 
@@ -597,6 +598,70 @@ From \`P\` and \`P → Q\`, infer \`Q\`. What is this rule called?
 From \`P\` and \`P → Q\`, infer \`Q\`. What is this rule called? Nothing here will
 tell you whether you are right — but the answer will not save until you are.
 :::
+
+## 19. A playground
+
+All four proof directives also take a boolean \`playground\` attribute. A
+playground has no \`theorem\` line: the student builds whatever derivation they
+like, and the exercise checks that every step is justified. The statement it
+proves is read off the proof itself — the last line of a Fitch proof, with the
+assumptions still open at it; the root of a tree or Prawitz derivation, with
+its undischarged assumptions — and the widget shows it live as **Proves**. That
+statement is the goal the certificate is verified against and the goal the
+review page names, so a playground is scored like any other exercise. The body
+is the prompt, then an optional \`----\` and a starter, as before, just without
+the header. (A \`theorem\` line in a playground is an error, and a proof
+exercise without \`playground\` still needs one, so a forgotten header never
+turns an exercise into a playground by accident.)
+
+\`\`\`md
+:::aufbau-proof-fitch{system="forallx" id="pf_scratch" title="Fitch scratch space" playground points="1"}
+Prove anything you like from these two premises, or delete them and start
+somewhere else. Watch the **Proves** line follow the last line of the proof and
+the assumptions still open at it.
+----
+∀ x (F(x) → G(x))   :AS
+F(a)                :AS
+:::
+\`\`\`
+
+:::aufbau-proof-fitch{system="forallx" id="pf_scratch" title="Fitch scratch space" playground points="1"}
+Prove anything you like from these two premises, or delete them and start
+somewhere else. Watch the **Proves** line follow the last line of the proof and
+the assumptions still open at it.
+----
+∀ x (F(x) → G(x))   :AS
+F(a)                :AS
+:::
+
+The same works in the tree and Prawitz editors, where the root is the
+student's to write (and the tree editor's **Add hypothesis** is greyed out,
+since there are no goal premises to cite). Here the derivation starts from a
+single assumption, and the **Proves** line loses its left-hand side once that
+assumption is discharged:
+
+\`\`\`md
+:::aufbau-proof-prawitz{system="forallx" id="pz_scratch" title="Prawitz scratch space" playground}
+Take the assumption apart with \`∧E\` (twice), put it back together the other
+way round with \`∧I\`, then discharge it with \`→I\`. Once it is discharged,
+nothing is left of the turnstile in **Proves**.
+----
+a1: $ F(a) ∧ G(a) ⊢ F(a) ∧ G(a) $ by AS []
+:::
+\`\`\`
+
+:::aufbau-proof-prawitz{system="forallx" id="pz_scratch" title="Prawitz scratch space" playground}
+Take the assumption apart with \`∧E\` (twice), put it back together the other
+way round with \`∧I\`, then discharge it with \`→I\`. Once it is discharged,
+nothing is left of the turnstile in **Proves**.
+----
+a1: $ F(a) ∧ G(a) ⊢ F(a) ∧ G(a) $ by AS []
+:::
+
+The names in a playground's statement (\`a\` above, from the system's \`@vars\`
+pools) are bound automatically; nothing else can be, so a playground always
+proves a concrete sentence or sequent in the system's own vocabulary, never a
+schema over metavariables like the \`P\` of the exercises before this one.
 
 ## What else the format does
 

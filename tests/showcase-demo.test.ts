@@ -77,6 +77,8 @@ describe("showcase demo lesson", () => {
       "pf_yours",
       "pf_sealed",
       "sa_commit",
+      "pf_scratch",
+      "pz_scratch",
     ]);
 
     const kinds = new Set(
@@ -107,7 +109,7 @@ describe("showcase demo lesson", () => {
     const exercises = compiled.artifact.document.nodes.filter(
       (node) => node.kind === "exercise",
     );
-    expect(exercises).toHaveLength(19);
+    expect(exercises).toHaveLength(21);
   });
 
   test("the closing Fitch exercise is left for the student to finish", async () => {
@@ -127,6 +129,31 @@ describe("showcase demo lesson", () => {
 
     const publicData = node.publicData as { readonly starterBody?: unknown };
     expect(publicData.starterBody).toBe("¬ ¬ P    :AS");
+  });
+
+  test("the two scratch spaces are playgrounds, not exercises with a hidden goal", async () => {
+    const compiled = await compileCarnapMarkdown(SHOWCASE_DEMO_SOURCE);
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) {
+      return;
+    }
+
+    for (const id of ["pf_scratch", "pz_scratch"]) {
+      const node = compiled.artifact.document.nodes.find(
+        (entry) => entry.kind === "exercise" && entry.exerciseId === id,
+      );
+      expect(node?.kind, id).toBe("exercise");
+      if (node?.kind !== "exercise") {
+        continue;
+      }
+
+      // The goal is the proof's to state: nothing is frozen for it here.
+      expect(node.publicData, id).toMatchObject({ playground: true });
+      expect(
+        (node.publicData as { readonly goalDecl?: unknown }).goalDecl,
+        id,
+      ).toBeUndefined();
+    }
   });
 
   test("the demo shows a sealed exercise, and it really is sealed", async () => {
