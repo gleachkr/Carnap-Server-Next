@@ -143,6 +143,12 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   private mmb = "";
   private compileToken = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | null = null;
+  /** The compile now running, if any — what a submit waits on. */
+  private inFlight: Promise<void> | null = null;
+  /** The exercise's `allow-sorry`: an admitted line is a warning, not an error. */
+  private allowSorry = false;
+  /** Whether the last compile stood only by admitting lines (see `compile`). */
+  private admitted = false;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -156,6 +162,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
 
     this.theory = proofTheoryText(data);
     this.playground = data.playground === true;
+    this.allowSorry = data.allowSorry === true;
     this.goalName = data.goalName;
 
     const container = root.querySelector<HTMLElement>(".proof");
@@ -224,12 +231,57 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     });
 
     this.proofText = this.assemble(initialBody);
+    this.gateSubmit((event) => this.gate(event));
     // JS owns the widget now; the SSR markup's "still loading" flag would
     // otherwise stand for the life of the page.
     container.removeAttribute("aria-busy");
     this.dataset.enhanced = "true";
     this.syncAnswer();
     this.scheduleCompile();
+  }
+
+  /**
+   * The submit gate. A compile still pending or running would leave this
+   * submission without its certificate — and, with `allow-sorry`, without
+   * knowing whether it may go at all — so it is settled first and the submit
+   * sent again. Then, outside an exam, a proof that stands only by admitting
+   * lines is held back and the reader told why: it would score nothing, and
+   * the point of allowing `sorry!` was to let them see the rest check, not to
+   * hand in the gaps. On an exam it goes as it stands, for nothing.
+   */
+  private gate(event: Event): void {
+    const settling = this.settleCompile();
+    if (settling !== null) {
+      this.holdSubmit(event, settling);
+      return;
+    }
+    if (this.admitted && !this.exam) {
+      event.preventDefault();
+      this.setCheckStatus(
+        this.t(
+          "A proof with lines admitted with sorry! cannot be submitted.",
+        ),
+      );
+    }
+  }
+
+  /** Run a pending compile now; the promise to wait on, or null if settled. */
+  private settleCompile(): Promise<void> | null {
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+      this.startCompile();
+    }
+    return this.inFlight;
+  }
+
+  private startCompile(): void {
+    const run = this.compile().finally(() => {
+      if (this.inFlight === run) {
+        this.inFlight = null;
+      }
+    });
+    this.inFlight = run;
   }
 
   protected getAnswer(): unknown {
@@ -307,9 +359,15 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     if (this.debounceHandle !== null) {
       clearTimeout(this.debounceHandle);
     }
+    // A submit held for the old text was for the old text, and so was what
+    // the status line said of it.
+    this.dropHold();
+    this.admitted = false;
+    this.setCheckStatus("");
     this.setMark("working");
     this.debounceHandle = setTimeout(() => {
-      void this.compile();
+      this.debounceHandle = null;
+      this.startCompile();
     }, DEBOUNCE_MS);
   }
 
@@ -364,22 +422,43 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
       return;
     }
 
-    const verdict = readCompileResult(result);
+    const verdict = readCompileResult(result, {
+      allowSorry: this.allowSorry,
+    });
+    this.proofText = proof;
+    this.admitted = verdict.admitted;
     if (verdict.certificate !== null) {
       this.mmb = bytesToBase64(verdict.certificate);
-      this.proofText = proof;
       this.setMark("ok");
     } else {
       this.mmb = "";
-      this.proofText = proof;
       this.setMark("idle");
     }
 
     // The verdict lives on the action bar's correctness mark; specific problems
     // surface inline as editor squiggles with hover detail (empty on success —
-    // this clears them).
+    // this clears them). An admitted proof also gets the status line: the mark
+    // says nothing, and what it is not saying deserves a sentence.
     this.applyDiagnostics(verdict.problems, proof);
+    this.setCheckStatus(this.admittedStatus());
     this.syncAnswer();
+  }
+
+  /**
+   * What the status line says of a proof that stands only by admitting lines:
+   * that the rest checks, and what the admissions cost here. Detail, so
+   * withheld under `terse` and `none` like the squiggles beside it; empty for
+   * any other proof, which clears the line.
+   */
+  private admittedStatus(): string {
+    if (!this.admitted || !this.showsDetail) {
+      return "";
+    }
+    return this.t(
+      this.exam
+        ? "Every other line checks; lines admitted with sorry! do not score."
+        : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
+    );
   }
 
   /**

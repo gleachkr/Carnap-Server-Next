@@ -42,6 +42,10 @@ export function aufbauProofName(i18n: Translator): string {
 
 /**
  * Everything the widget and grader need, frozen at authoring time.
+ *   - `allowSorry`  set when a line may be admitted with `sorry!`: the
+ *                   widget marks such a line as a warning, not an error,
+ *                   and (outside an exam) will not submit the proof while
+ *                   one stands; it never scores either way
  *   - `goalDecl`    this exercise's own `theorem <goalName>: $ … $;`, which the
  *                   join appends to the system's text
  *   - `goalName`    the theorem name; the student's proof body attaches to a
@@ -67,6 +71,7 @@ export function aufbauProofName(i18n: Translator): string {
  *   - `system`      which of the document's systems this exercise is set in
  */
 export interface AufbauProofPublicData {
+  readonly allowSorry?: boolean;
   readonly goalDecl?: string;
   readonly goalName: string;
   readonly mm0: string;

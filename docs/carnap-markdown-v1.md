@@ -655,7 +655,14 @@ Browser success state and submitted proof text are not trusted for grading.
 
 The engine's `sorry!` justification admits a line without a rule. Exercises
 reject it: the widget reports a problem and sends no certificate, and server
-verification rejects certificates containing such admissions.
+verification rejects certificates containing such admissions. With the
+boolean `allow-sorry` attribute (on any of the four proof directives) an
+admitted line is shown as a warning instead of an error, and once every other
+line checks the widget says so — but the proof is still not correct, and
+never scores. Outside an exam the widget will not submit a proof with
+admitted lines, and says why; on an exam it submits, for zero. The attribute
+is for practice: a student can see that the shape of a proof is right before
+every gap in it is filled.
 
 `aufbau-proof` is the linear proof-script editor. Its body contains a prompt,
 a `theorem` declaration, a `----` separator, and a starter proof body. The
@@ -1305,6 +1312,7 @@ button, action bar, and correctness mark outside it alike:
 | `--exercise-on-accent` | text on a filled accent |
 | `--exercise-correct`, `--exercise-correct-bg` | a correct verdict and its wash |
 | `--exercise-incorrect`, `--exercise-incorrect-bg` | an incorrect verdict and its wash |
+| `--exercise-warning` | a proof line admitted with `sorry!` under `allow-sorry` |
 | `--exercise-highlight` | a truth table's main column and claimed row (drawn at low alpha) |
 | `--exercise-shadow` | what the help dialog casts |
 | `--exercise-mono-font` | the face for formulas, cells, and proof editors |
@@ -1439,7 +1447,8 @@ Common groups include:
 - **Theories and proofs:** `missing_name`, `empty_theory`, `duplicate_theory`,
   `unknown_theory_src`, `remote_theory_src`, `unknown_theory`,
   `missing_theorem_header`, `missing_proof_underline`, `unknown_proof_option`,
-  `invalid_goal_formula`, `playground_declares_goal`, `proof_is_not_a_tree`.
+  `invalid_allow_sorry`, `invalid_goal_formula`, `playground_declares_goal`,
+  `proof_is_not_a_tree`.
 - **Other content:** `invalid_style_attributes`, `invalid_style_src`,
   `invalid_item_link`, `invalid_math`.
 

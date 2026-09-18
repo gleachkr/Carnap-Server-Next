@@ -1,7 +1,10 @@
 import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
 import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
+import {
+  EXERCISE_HYDRATION_VERSION,
+  type ExerciseHydrationOptions,
+} from "../../src/worker/exercise-kit/hydration";
 import { withSystemText } from "../../src/worker/exercise-kit/systems/join";
 import { renderAufbauProofTreeElement } from "../../src/worker/exercises/aufbau-proof-tree/read-only-view";
 import { buildAufbauProofTreeStrings } from "../../src/worker/exercises/aufbau-proof-tree/strings";
@@ -101,12 +104,13 @@ export interface MountedTree {
 export function mountTree(
   publicData: AufbauProofTreePublicData,
   priorAnswer: AufbauProofTreeAnswerData | null = null,
+  options: ExerciseHydrationOptions = {},
 ): MountedTree {
   const i18n = i18nFor("en");
   const actions = exerciseActionsHtml(i18n, { slotted: true });
   const hydration = {
     mode: "answer",
-    options: {},
+    options,
     priorAnswer,
     publicData,
     strings: buildAufbauProofTreeStrings(i18n),
@@ -176,6 +180,13 @@ export async function until(
 export function treeRootField(mounted: MountedTree): HTMLElement {
   return mounted.root.querySelector(
     ".proof-tree-canvas > proof-tree > proof-proposition .tree-edit",
+  ) as HTMLElement;
+}
+
+/** The root node's rule field, under its inference line. */
+export function treeRootRule(mounted: MountedTree): HTMLElement {
+  return mounted.root.querySelector(
+    ".proof-tree-canvas > proof-tree > proof-inference .tree-rule",
   ) as HTMLElement;
 }
 

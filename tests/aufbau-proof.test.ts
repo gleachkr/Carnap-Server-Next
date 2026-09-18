@@ -179,6 +179,49 @@ l1: $ top $ by top_i []
     });
   });
 
+  test("allow-sorry is frozen on the exercise, and only when set", async () => {
+    // The widget reads it to soften an admitted line to a warning and to hold
+    // the proof back; the grader never reads it, since an admitted line never
+    // scores either way (`tests/sorry-certificate.test.ts`).
+    const allowed = await compileCarnapMarkdown(
+      proofSource(`:::aufbau-proof{system="prop" id="p1" allow-sorry}
+theorem thm_top: $ top $
+----
+l1: $ top $ by sorry!
+:::`),
+    );
+    expect(allowed.ok).toBe(true);
+    if (!allowed.ok) {
+      return;
+    }
+    expect(proofPublicData(allowed.artifact, "p1").allowSorry).toBe(true);
+
+    const plain = await compileCarnapMarkdown(
+      proofSource(`:::aufbau-proof{system="prop" id="p1"}
+theorem thm_top: $ top $
+----
+l1: $ top $ by top_i []
+:::`),
+    );
+    expect(plain.ok).toBe(true);
+    if (!plain.ok) {
+      return;
+    }
+    expect(proofPublicData(plain.artifact, "p1")).not.toHaveProperty(
+      "allowSorry",
+    );
+
+    expect(
+      await diagnosticsFor(
+        proofSource(`:::aufbau-proof{system="prop" id="p1" allow-sorry="sometimes"}
+theorem thm_top: $ top $
+----
+l1: $ top $ by top_i []
+:::`),
+      ),
+    ).toContain("invalid_allow_sorry");
+  });
+
   test("an unknown option flag is rejected", async () => {
     expect(
       await diagnosticsFor(

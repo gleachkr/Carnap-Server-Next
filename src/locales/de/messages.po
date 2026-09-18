@@ -257,6 +257,10 @@ msgstr "Ein Prawitz-Beweis hat keine „#n“-Hypothesenblätter — schreiben S
 msgid "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal."
 msgstr "Eine Beweisübung braucht eine Zeile 'theorem <name>: $ … $', die das Ziel deklariert."
 
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "A proof with lines admitted with sorry! cannot be submitted."
+msgstr "Ein Beweis mit durch sorry! zugelassenen Zeilen kann nicht eingereicht werden."
+
 #: src/worker/application/gradebook.ts
 msgid "A reading records no scores, so it has no gradebook."
 msgstr "Eine Lektüre erfasst keine Punktzahlen und hat daher kein Notenbuch."
@@ -1656,6 +1660,14 @@ msgstr "Alle Kurse, in denen Sie eingeschrieben sind, wurden archiviert."
 #: src/worker/exercises/model/strings.ts
 msgid "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
 msgstr "In diesem Modell haben alle Formeln denselben Wahrheitswert; es ist also kein Gegenbeispiel zur Äquivalenz."
+
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Every other line checks; a proof with lines admitted with sorry! cannot be submitted."
+msgstr "Alle übrigen Zeilen sind korrekt; ein Beweis mit durch sorry! zugelassenen Zeilen kann nicht eingereicht werden."
+
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Every other line checks; lines admitted with sorry! do not score."
+msgstr "Alle übrigen Zeilen sind korrekt; durch sorry! zugelassene Zeilen bringen keine Punkte."
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "Every proof line needs a justification: '<formula> :<rule> <refs>'."

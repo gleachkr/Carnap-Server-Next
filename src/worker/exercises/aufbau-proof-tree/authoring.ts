@@ -19,6 +19,7 @@ import {
   extractStarterBody,
   goalBinderWarnings,
   PLAYGROUND_HEADER,
+  parseAllowSorryAttribute,
   parsePlaygroundAttribute,
   parsePlaygroundBody,
   parseProofOptions,
@@ -44,6 +45,7 @@ import {
 /** What `::::aufbau-proof-tree{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_TREE_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
+  "allow-sorry",
   "options",
   "playground",
   "system",
@@ -84,6 +86,7 @@ export async function compileAufbauProofTree(
   );
   const title = block.attrs.title?.trim();
   const playground = parsePlaygroundAttribute(block, diagnostics);
+  const allowSorry = parseAllowSorryAttribute(block, diagnostics);
   const header = playground ? null : parseTheoremHeader(block, diagnostics);
   const playgroundBody = playground
     ? parsePlaygroundBody(block, diagnostics)
@@ -206,6 +209,7 @@ export async function compileAufbauProofTree(
     ...(header === null
       ? { playground: true }
       : { goalDecl: header.theoremDecl }),
+    ...(allowSorry ? { allowSorry: true } : {}),
     goalFormula: header?.goalFormula ?? "",
     goalName: scope.goalName,
     options,

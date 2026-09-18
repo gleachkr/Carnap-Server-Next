@@ -15,6 +15,7 @@ import {
 import {
   goalBinderWarnings,
   PLAYGROUND_HEADER,
+  parseAllowSorryAttribute,
   parsePlaygroundAttribute,
   parsePlaygroundBody,
   parseProofOptions,
@@ -45,6 +46,7 @@ const UNDERLINE = /^\s*-{3,}\s*$/;
 /** What `::::aufbau-proof-fitch{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
+  "allow-sorry",
   "options",
   "playground",
   "system",
@@ -89,6 +91,7 @@ export async function compileAufbauProofFitch(
   const title = block.attrs.title?.trim();
   const notations = requireProofNotations(block, theory, diagnostics);
   const playground = parsePlaygroundAttribute(block, diagnostics);
+  const allowSorry = parseAllowSorryAttribute(block, diagnostics);
   const header = playground ? null : parseTheoremHeader(block, diagnostics);
   const playgroundBody = playground
     ? parsePlaygroundBody(block, diagnostics)
@@ -217,6 +220,7 @@ export async function compileAufbauProofFitch(
     ...(header === null
       ? { playground: true }
       : { goalDecl: header.theoremDecl }),
+    ...(allowSorry ? { allowSorry: true } : {}),
     goalName: scope.goalName,
     options,
     promptHtml: await renderMarkdownSource(promptLines.join("\n"), {

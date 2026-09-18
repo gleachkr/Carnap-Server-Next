@@ -96,8 +96,17 @@ export interface CompileDiagnostic {
  * compile that admits a line with `sorry!` still returns `ok` and an MMB, but
  * that MMB carries a `Sorry` instruction the verifier refuses, so handing it to
  * the server would only turn a green mark here into a red one there. A student
- * proof never admits a line; an admitted line is a problem at that line, and
- * the engine's warning is promoted to say so.
+ * proof never scores with an admitted line, whatever the exercise allows.
+ *
+ * What the student is *told* about one is the exercise's call. By default an
+ * admitted line is a problem at that line, and the engine's warning is
+ * promoted to say so; `admitted` stays false, because to that exercise the
+ * line is an error like any other and gets an error's treatment. With
+ * `allowSorry` the warning stays a warning, listed in `problems` with its
+ * severity intact, and `admitted` says the proof is one of those: every line
+ * checks except the ones the student has admitted. (The engine reports
+ * admissions only on a compile with no errors, so `admitted` never
+ * accompanies an error.)
  *
  * Every other warning is dropped. Since `@aufbau/compiler@0.0.9` a clean
  * compile carries its warnings, and the ones the engine has are not about the
@@ -108,14 +117,25 @@ export interface CompileDiagnostic {
  * is noise the student cannot act on.
  */
 export interface CompileVerdict {
+  /** Whether the proof stands only by admitting lines with `sorry!`, where
+   *  the exercise allows it. */
+  readonly admitted: boolean;
   readonly certificate: Uint8Array | null;
   /** The diagnostics a student should see, errors first as the engine lists them. */
   readonly problems: readonly CompileDiagnostic[];
 }
 
+export interface CompileReadOptions {
+  /** The exercise's `allow-sorry`: an admitted line is a warning, not an error. */
+  readonly allowSorry?: boolean;
+}
+
 const ADMITTED_LINE = "SorryLine";
 
-export function readCompileResult(result: CompileResult): CompileVerdict {
+export function readCompileResult(
+  result: CompileResult,
+  options: CompileReadOptions = {},
+): CompileVerdict {
   const problems: CompileDiagnostic[] = [];
   let admitted = false;
 
@@ -136,8 +156,12 @@ export function readCompileResult(result: CompileResult): CompileVerdict {
       if (record.severity === "warning" && !isAdmission) {
         continue;
       }
+      let severity: CompileDiagnostic["severity"] = "error";
       if (isAdmission) {
         admitted = true;
+        severity = options.allowSorry === true ? "warning" : "error";
+      } else if (record.severity === "info") {
+        severity = "info";
       }
 
       problems.push({
@@ -145,8 +169,7 @@ export function readCompileResult(result: CompileResult): CompileVerdict {
         ...(typeof record.message === "string"
           ? { message: record.message }
           : {}),
-        severity:
-          record.severity === "info" && !isAdmission ? "info" : "error",
+        severity,
         ...(typeof record.spanEnd === "number"
           ? { spanEnd: record.spanEnd }
           : {}),
@@ -162,5 +185,9 @@ export function readCompileResult(result: CompileResult): CompileVerdict {
       ? result.mmbBytes
       : null;
 
-  return { certificate, problems };
+  return {
+    admitted: admitted && options.allowSorry === true,
+    certificate,
+    problems,
+  };
 }

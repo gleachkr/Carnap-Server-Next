@@ -204,6 +204,7 @@
   --exercise-correct-bg: var(--green-soft);
   --exercise-incorrect: var(--red);
   --exercise-incorrect-bg: var(--red-soft);
+  --exercise-warning: var(--gold);
   --exercise-highlight: var(--gold);
   --exercise-shadow: var(--shadow-color);
   --exercise-mono-font: var(--mono-font);

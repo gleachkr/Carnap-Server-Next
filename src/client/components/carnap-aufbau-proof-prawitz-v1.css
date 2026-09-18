@@ -39,6 +39,11 @@
   border-bottom: 1px wavy var(--_incorrect);
   text-decoration: underline wavy var(--_incorrect);
 }
+/* A rule admitted with sorry!, where the exercise allows it. */
+.pz-edit.is-warning {
+  border-bottom: 1px wavy var(--_warning);
+  text-decoration: underline wavy var(--_warning);
+}
 .pz-edit:not(.is-selected):not(.is-empty):hover {
   background: var(--_inset-bg);
 }

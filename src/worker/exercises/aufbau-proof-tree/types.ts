@@ -51,6 +51,10 @@ export function aufbauProofTreeName(i18n: Translator): string {
 
 /**
  * Everything the widget and grader need, frozen at authoring time.
+ *   - `allowSorry`  set when a line may be admitted with `sorry!`: the
+ *                   widget marks such a line as a warning, not an error,
+ *                   and (outside an exam) will not submit the proof while
+ *                   one stands; it never scores either way
  *   - `goalFormula` the goal's conclusion (inside `$ … $`), seeding the tree's
  *                   read-only root node
  *   - `goalName`    the theorem name the root proves
@@ -82,6 +86,7 @@ export function aufbauProofTreeName(i18n: Translator): string {
  *                   proof derived (see `exercise-kit/proof/playground.ts`)
  */
 export interface AufbauProofTreePublicData {
+  readonly allowSorry?: boolean;
   readonly goalDecl?: string;
   readonly goalEngineDecl?: string;
   readonly goalFormula: string;

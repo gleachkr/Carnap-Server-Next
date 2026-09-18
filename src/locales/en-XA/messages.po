@@ -257,6 +257,10 @@ msgstr ""
 msgid "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal."
 msgstr ""
 
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "A proof with lines admitted with sorry! cannot be submitted."
+msgstr ""
+
 #: src/worker/application/gradebook.ts
 msgid "A reading records no scores, so it has no gradebook."
 msgstr ""
@@ -1655,6 +1659,14 @@ msgstr ""
 
 #: src/worker/exercises/model/strings.ts
 msgid "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
+msgstr ""
+
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Every other line checks; a proof with lines admitted with sorry! cannot be submitted."
+msgstr ""
+
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Every other line checks; lines admitted with sorry! do not score."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts

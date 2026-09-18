@@ -57,6 +57,10 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
 
 /**
  * Everything the widget and grader need, frozen at authoring time.
+ *   - `allowSorry`     set when a line may be admitted with `sorry!`: the
+ *                      widget marks such a line as a warning, not an error,
+ *                      and (outside an exam) will not submit the proof while
+ *                      one stands; it never scores either way
  *   - `assumptionRule` the theory's assumption axiom (`ax` by default): the
  *                      translator treats a line citing it with no premises as an
  *                      assumption, adding its formula to the active context
@@ -103,6 +107,7 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *                      proof derived (see `exercise-kit/proof/playground.ts`)
  */
 export interface AufbauProofFitchPublicData {
+  readonly allowSorry?: boolean;
   readonly assumptionRule: string;
   readonly contextSymbol?: string;
   readonly goalDecl?: string;

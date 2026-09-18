@@ -35,7 +35,6 @@ import type {
   ExerciseAnswerReview,
 } from "../domain/content";
 import type { CourseMembership, CourseStaffTier } from "../domain/courses";
-import type { ExerciseFeedback } from "../domain/exercises";
 import type { JsonValue } from "../domain/json";
 import type { User } from "../domain/users";
 import { exerciseActionsHtml } from "../exercise-kit/actions";
@@ -43,6 +42,7 @@ import { exerciseGroupLabel } from "../exercise-kit/group";
 import {
   EXERCISE_HYDRATION_VERSION,
   type ExerciseHydration,
+  type ExerciseHydrationOptions,
   exerciseHydrationScript,
 } from "../exercise-kit/hydration";
 import type { ExerciseType } from "../exercise-kit/type";
@@ -194,12 +194,15 @@ export interface InlineSubmissionContext {
   readonly context: Context<AppBindings>;
   readonly courseId: string;
   /**
-   * How much each exercise may tell this student, already resolved against this
-   * assignment (see `resolveExerciseFeedback`). Keyed by exercise id, because
-   * the content nodes this view walks carry the author's public render data but
-   * not the manifest entry the setting lives on.
+   * Each exercise's server-decided render options — how much it may tell this
+   * student, and whether it is an exam — already resolved against this
+   * assignment (see `resolveExerciseFeedback` and `resolveExerciseExam`).
+   * Keyed by exercise id, because the content nodes this view walks carry the
+   * author's public render data but not the manifest entry the settings live
+   * on. Only what differs from the defaults is present, so an ordinary
+   * exercise's entry is empty.
    */
-  readonly feedbackByExercise: ReadonlyMap<string, ExerciseFeedback>;
+  readonly optionsByExercise: ReadonlyMap<string, ExerciseHydrationOptions>;
   readonly runtimeState: ExerciseRuntimeState;
 }
 
@@ -627,14 +630,10 @@ function exerciseHydration(
   submission: InlineSubmissionContext,
 ): ExerciseHydration {
   const priorState = submission.runtimeState[node.exerciseId];
-  const feedback = submission.feedbackByExercise.get(node.exerciseId);
 
   return {
     mode: "answer",
-    // Absent when it resolves to `full`, which is what a widget assumes anyway
-    // — no reason to put the default in every payload on the page.
-    options:
-      feedback === undefined || feedback === "full" ? {} : { feedback },
+    options: submission.optionsByExercise.get(node.exerciseId) ?? {},
     priorAnswer: priorState?.submission.answer ?? null,
     publicData: node.publicData,
     strings: exercises.strings(

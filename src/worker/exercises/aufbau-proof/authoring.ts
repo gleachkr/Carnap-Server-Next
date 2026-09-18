@@ -16,6 +16,7 @@ import {
   validateExerciseId,
 } from "../../exercise-kit/authoring";
 import {
+  parseAllowSorryAttribute,
   parsePlaygroundAttribute,
   parsePlaygroundBody,
   parseProofOptions,
@@ -122,6 +123,7 @@ function parseProofBody(
 /** What `::::aufbau-proof{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
+  "allow-sorry",
   "options",
   "playground",
   "system",
@@ -154,6 +156,7 @@ export async function compileAufbauProof(
   );
   const title = block.attrs.title?.trim();
   const playground = parsePlaygroundAttribute(block, diagnostics);
+  const allowSorry = parseAllowSorryAttribute(block, diagnostics);
   const body = parseProofBody(block, playground, diagnostics);
 
   if (id !== null) {
@@ -170,6 +173,7 @@ export async function compileAufbauProof(
     ...(body.playground
       ? { playground: true }
       : { goalDecl: body.theoremDecl }),
+    ...(allowSorry ? { allowSorry: true } : {}),
     goalName: body.goalName,
     options,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {

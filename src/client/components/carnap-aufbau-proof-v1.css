@@ -58,6 +58,9 @@
 .proof-editor .cm-editor .cm-diagnostic-error {
   border-left-color: var(--_incorrect);
 }
+.proof-editor .cm-editor .cm-diagnostic-warning {
+  border-left-color: var(--_warning);
+}
 /* The compiler separates a diagnostic's context lines (theorem, line, rule,
    inference path) with newlines; without this they collapse into one run-on. */
 .proof-editor .cm-editor .cm-diagnostic {

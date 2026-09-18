@@ -12,7 +12,9 @@ import { readCompileResult } from "../../src/client/proof-compiler";
  * worker's verifier — the trust boundary — refuses it. The reader withholds
  * the certificate and shows the line as a problem, so a student sees the
  * same verdict here as the server would give, rather than a green mark that
- * turns red on submit. `sorry!` is not something an exercise offers.
+ * turns red on submit. An exercise with `allow-sorry` softens the problem to
+ * a warning and says the proof is admitted; the certificate is withheld all
+ * the same, since the verifier would refuse it all the same.
  *
  * The results here are shaped by hand: `@aufbau/compiler` is mocked for the
  * whole `bun test` run by `proof-compiler.test.ts`, so the real engine cannot
@@ -45,6 +47,9 @@ describe("readCompileResult", () => {
     const verdict = readCompileResult(admitted());
 
     expect(verdict.certificate).toBeNull();
+    // An error like any other, to this exercise — not an admission it makes
+    // anything of.
+    expect(verdict.admitted).toBe(false);
     // The problem keeps the engine's wording and span, and is an error to
     // the student: something to fix, not a note.
     expect(verdict.problems).toEqual([
@@ -59,6 +64,23 @@ describe("readCompileResult", () => {
     ]);
   });
 
+  test("with allow-sorry the admission is a warning, and still no certificate", () => {
+    const verdict = readCompileResult(admitted(), { allowSorry: true });
+
+    expect(verdict.certificate).toBeNull();
+    expect(verdict.admitted).toBe(true);
+    expect(verdict.problems).toEqual([
+      {
+        error: "SorryLine",
+        message:
+          "proof line is admitted with sorry!; the theorem is not verified",
+        severity: "warning",
+        spanEnd: 36,
+        spanStart: 11,
+      },
+    ]);
+  });
+
   test("keeps the certificate of a proof that proves the goal", () => {
     const verdict = readCompileResult({
       diagnostics: [],
@@ -67,6 +89,7 @@ describe("readCompileResult", () => {
     });
 
     expect(verdict.certificate).toBe(CERTIFICATE);
+    expect(verdict.admitted).toBe(false);
     expect(verdict.problems).toEqual([]);
   });
 

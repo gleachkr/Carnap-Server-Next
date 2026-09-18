@@ -115,6 +115,19 @@ theorem thm_top: $ top $
     });
   });
 
+  test("allow-sorry is frozen on the exercise (see aufbau-proof.test.ts)", async () => {
+    const compiled = await compileCarnapMarkdown(
+      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" allow-sorry}
+theorem thm_top: $ top $
+:::`),
+    );
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) {
+      return;
+    }
+    expect(prawitzPublicData(compiled.artifact, "p1").allowSorry).toBe(true);
+  });
+
   test("the assumption axiom the translator keys on is the theory's `role assumption`", async () => {
     const compiled = await compileCarnapMarkdown(
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}

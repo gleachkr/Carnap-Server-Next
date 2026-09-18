@@ -204,6 +204,9 @@ interface Status {
   readonly mark: CorrectnessMarkState;
   readonly markTitle: string;
   readonly nodeErrors: Readonly<Record<string, string>>;
+  /** Rules admitted with `sorry!`, where the exercise allows it: drawn on the
+   *  rule field, since that is where the admission is. */
+  readonly nodeWarnings: Readonly<Record<string, string>>;
 }
 
 type Action =
@@ -611,6 +614,7 @@ function EditableField(props: {
   readonly ariaLabel?: string;
   readonly className: string;
   readonly error?: string | undefined;
+  readonly warning?: string | undefined;
   readonly onInput: (text: string) => void;
   readonly onSelect: () => void;
   readonly selected: boolean;
@@ -634,6 +638,9 @@ function EditableField(props: {
     props.selected ? "is-selected" : "",
     props.value.trim().length === 0 ? "is-empty" : "",
     props.error !== undefined ? "is-error" : "",
+    props.error === undefined && props.warning !== undefined
+      ? "is-warning"
+      : "",
   ]
     .filter((cls) => cls.length > 0)
     .join(" ");
@@ -667,7 +674,7 @@ function EditableField(props: {
       // Kept out of the tab order: the enclosing treeitem carries the roving
       // focus; a field is entered by click or by a shortcut on its node.
       tabIndex={-1}
-      title={props.error}
+      title={props.error ?? props.warning}
     />
   );
 }
@@ -678,6 +685,7 @@ function NodeView(props: {
   readonly focusId: string | undefined;
   readonly node: PNode;
   readonly nodeErrors: Readonly<Record<string, string>>;
+  readonly nodeWarnings: Readonly<Record<string, string>>;
   readonly onFocusItem: (id: string) => void;
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onSelect: (id: string, additive: boolean) => void;
@@ -685,7 +693,7 @@ function NodeView(props: {
   readonly selected: readonly string[];
   readonly t: Translate;
 }): preact.JSX.Element {
-  const { dispatch, focusId, node, nodeErrors, t } = props;
+  const { dispatch, focusId, node, nodeErrors, nodeWarnings, t } = props;
   const { onFocusItem, onNodeKeyDown, onSelect, registerNode, selected } =
     props;
   const isSelected = selected.includes(node.id);
@@ -723,6 +731,7 @@ function NodeView(props: {
               focusId={focusId}
               node={child}
               nodeErrors={nodeErrors}
+              nodeWarnings={nodeWarnings}
               onFocusItem={onFocusItem}
               onNodeKeyDown={onNodeKeyDown}
               onSelect={onSelect}
@@ -807,6 +816,7 @@ function NodeView(props: {
             onSelect={() => select()}
             selected={false}
             value={node.rule}
+            warning={nodeWarnings[node.id]}
           />
           <sup>
             <EditableField
@@ -984,6 +994,7 @@ function Editor(props: {
                 focusId={focusId}
                 node={tree}
                 nodeErrors={status.nodeErrors}
+                nodeWarnings={status.nodeWarnings}
                 onFocusItem={onFocusItem}
                 onNodeKeyDown={onNodeKeyDown}
                 onSelect={onSelect}
@@ -1057,7 +1068,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   /** The theory's context separator, on the same terms as `sequentSymbol`. */
   private contextSymbol = ",";
   private doc: Doc = { selected: [], trees: [] };
-  private status: Status = { mark: "idle", markTitle: "", nodeErrors: {} };
+  private status: Status = {
+    mark: "idle",
+    markTitle: "",
+    nodeErrors: {},
+    nodeWarnings: {},
+  };
   private readonly localize: Translate = (id, values) => this.t(id, values);
   private past: Doc[] = [];
   private future: Doc[] = [];
@@ -1078,6 +1094,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   private mmb = "";
   private compileToken = 0;
   private debounceHandle: ReturnType<typeof setTimeout> | null = null;
+  /** The compile now running, if any — what a submit waits on. */
+  private inFlight: Promise<void> | null = null;
+  /** The exercise's `allow-sorry`: an admitted line is a warning, not an error. */
+  private allowSorry = false;
+  /** Whether the last compile stood only by admitting lines (see `compile`). */
+  private admitted = false;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -1094,6 +1116,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     const theory = proofTheoryText(data);
     this.theory = theory;
     this.playground = data.playground === true;
+    this.allowSorry = data.allowSorry === true;
     this.readFormula = proofFormulaReader(
       theory.source,
       "sentence",
@@ -1171,8 +1194,67 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       this.showHelp,
     );
 
+    this.gateSubmit((event) => this.gate(event));
     this.dataset.enhanced = "true";
     this.onModelChanged();
+  }
+
+  /**
+   * The submit gate: settle a pending compile first (the certificate, and
+   * under `allow-sorry` the answer to whether the proof may go, both come out
+   * of it), then hold back a proof that stands only by admitting lines unless
+   * this is an exam. The linear widget's `gate` says why.
+   */
+  private gate(event: Event): void {
+    const settling = this.settleCompile();
+    if (settling !== null) {
+      this.holdSubmit(event, settling);
+      return;
+    }
+    if (this.admitted && !this.exam) {
+      event.preventDefault();
+      this.setCheckStatus(
+        this.t(
+          "A proof with lines admitted with sorry! cannot be submitted.",
+        ),
+      );
+    }
+  }
+
+  /** Run a pending compile now; the promise to wait on, or null if settled. */
+  private settleCompile(): Promise<void> | null {
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+      this.startCompile();
+    }
+    return this.inFlight;
+  }
+
+  private startCompile(): void {
+    const run = this.compile().finally(() => {
+      if (this.inFlight === run) {
+        this.inFlight = null;
+      }
+    });
+    this.inFlight = run;
+  }
+
+  /**
+   * What the status line says of a proof that stands only by admitting lines:
+   * that the rest checks, and what the admissions cost here. Detail, so
+   * withheld under `terse` and `none` like the warnings beside it; empty for
+   * any other proof, which clears the line.
+   */
+  private admittedStatus(): string {
+    if (!this.admitted || !this.showsDetail) {
+      return "";
+    }
+    return this.t(
+      this.exam
+        ? "Every other line checks; lines admitted with sorry! do not score."
+        : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
+    );
   }
 
   disconnectedCallback(): void {
@@ -1608,6 +1690,11 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   }
 
   private onModelChanged(): void {
+    // A submit held for the old forest was for the old forest, and so was
+    // what the status line said of it.
+    this.dropHold();
+    this.admitted = false;
+    this.setCheckStatus("");
     // Translation (and hence compiling) needs a single derivation; while the
     // forest is split, the answer's proofText stays empty and the mark idle.
     const single =
@@ -1624,7 +1711,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       }
       this.compileToken += 1;
       this.formulaProblems = [];
-      this.setStatus({ mark: "idle", markTitle: "", nodeErrors: {} });
+      this.setStatus({
+        mark: "idle",
+        markTitle: "",
+        nodeErrors: {},
+        nodeWarnings: {},
+      });
       this.syncAnswer();
       return;
     }
@@ -1660,6 +1752,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         mark: "idle",
         markTitle: "",
         nodeErrors: this.structuralErrors(),
+        nodeWarnings: {},
       });
       return;
     }
@@ -1706,13 +1799,14 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     if (goal === null) {
       this.setStatus(
         rootBlank
-          ? { mark: "idle", markTitle: "", nodeErrors: {} }
+          ? { mark: "idle", markTitle: "", nodeErrors: {}, nodeWarnings: {} }
           : {
               mark: "error",
               markTitle: this.t(
                 "Could not work out what the last line states.",
               ),
               nodeErrors: this.structuralErrors(),
+              nodeWarnings: {},
             },
       );
       return null;
@@ -1727,7 +1821,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     }
     this.setStatus({ mark: "working" });
     this.debounceHandle = setTimeout(() => {
-      void this.compile();
+      this.debounceHandle = null;
+      this.startCompile();
     }, DEBOUNCE_MS);
   }
 
@@ -1786,6 +1881,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
         mark: "idle",
         markTitle: "",
         nodeErrors: this.structuralErrors(),
+        nodeWarnings: {},
       });
       this.syncAnswer();
       return;
@@ -1795,22 +1891,37 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       return;
     }
 
-    const verdict = readCompileResult(result);
+    const verdict = readCompileResult(result, {
+      allowSorry: this.allowSorry,
+    });
+    const problems = this.collectNodeProblems(verdict.problems, proof);
     const nodeErrors = {
-      ...this.collectNodeErrors(verdict.problems, proof),
+      ...problems.nodeErrors,
       ...this.structuralErrors(),
     };
+    const nodeWarnings = problems.nodeWarnings;
+    // Structural problems the translator found are errors the compiler never
+    // saw, so the proof stands on more than its admissions.
+    this.admitted = verdict.admitted && this.structural.length === 0;
     if (
       verdict.certificate !== null &&
       this.structural.length === 0 &&
       this.formulaProblems.length === 0
     ) {
       this.mmb = bytesToBase64(verdict.certificate);
-      this.setStatus({ mark: "ok", markTitle: "", nodeErrors });
+      this.setStatus({ mark: "ok", markTitle: "", nodeErrors, nodeWarnings });
     } else {
       this.mmb = "";
-      this.setStatus({ mark: "idle", markTitle: "", nodeErrors });
+      this.setStatus({
+        mark: "idle",
+        markTitle: "",
+        nodeErrors,
+        nodeWarnings,
+      });
     }
+    // An admitted proof also gets the status line: the mark says nothing, and
+    // what it is not saying deserves a sentence.
+    this.setCheckStatus(this.admittedStatus());
     this.syncAnswer();
   }
 
@@ -1842,21 +1953,25 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   /**
    * Attribute each compiler diagnostic (a UTF-8 byte span into the translated
    * proof) to the tree node whose generated line contains it, via the
-   * translator's line map.
+   * translator's line map: errors on the formula, warnings (a rule admitted
+   * with `sorry!`) on the rule.
    */
-  private collectNodeErrors(
+  private collectNodeProblems(
     problems: readonly CompileDiagnostic[],
     proof: string,
-  ): Record<string, string> {
-    // Every node error is a reason, and `terse` and `none` withhold reasons.
-    // Caught here rather than at the three call sites so a fourth cannot miss
-    // it; the compile itself still runs, because the certificate depends on it.
+  ): Pick<Status, "nodeErrors" | "nodeWarnings"> {
+    // Every node problem is a reason, and `terse` and `none` withhold reasons.
+    // Caught here rather than at the call sites so another cannot miss it;
+    // the compile itself still runs, because the certificate depends on it.
     if (!this.showsDetail) {
-      return {};
+      return { nodeErrors: {}, nodeWarnings: {} };
     }
 
     const fallbackId = this.doc.trees[0]?.id ?? "";
-    const messages = new Map<string, string[]>();
+    const messages = {
+      error: new Map<string, string[]>(),
+      warning: new Map<string, string[]>(),
+    };
     for (const problem of problems) {
       const message = problem.message ?? this.t("Problem here.");
       const charIndex =
@@ -1870,16 +1985,26 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
             )
           : undefined;
       const nodeId = span?.nodeId ?? fallbackId;
-      const list = messages.get(nodeId) ?? [];
+      const bucket =
+        problem.severity === "warning" ? messages.warning : messages.error;
+      const list = bucket.get(nodeId) ?? [];
       list.push(message);
-      messages.set(nodeId, list);
+      bucket.set(nodeId, list);
     }
 
-    const errors: Record<string, string> = {};
-    for (const [nodeId, list] of messages) {
-      errors[nodeId] = list.join("\n");
-    }
-    return errors;
+    const joined = (
+      bucket: Map<string, string[]>,
+    ): Record<string, string> => {
+      const out: Record<string, string> = {};
+      for (const [nodeId, list] of bucket) {
+        out[nodeId] = list.join("\n");
+      }
+      return out;
+    };
+    return {
+      nodeErrors: joined(messages.error),
+      nodeWarnings: joined(messages.warning),
+    };
   }
 }
 

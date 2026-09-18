@@ -147,6 +147,20 @@ b       :imp_elim 1 2
     });
   });
 
+  test("allow-sorry is frozen on the exercise (see aufbau-proof.test.ts)", async () => {
+    const compiled = await compileCarnapMarkdown(
+      fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1" allow-sorry}
+theorem mp (a b: wff): $ (a → b) , a ⊢ b $
+----
+:::`),
+    );
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) {
+      return;
+    }
+    expect(fitchPublicData(compiled.artifact, "f1").allowSorry).toBe(true);
+  });
+
   test("the assumption axiom and the sequent's spelling come from the theory's roles", async () => {
     const compiled = await compileCarnapMarkdown(
       fitchSource(`:::aufbau-proof-fitch{system="prop" id="f1"}

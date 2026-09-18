@@ -415,6 +415,27 @@ export function parsePlaygroundAttribute(
 }
 
 /**
+ * The `allow-sorry` attribute: whether a line may be admitted with the
+ * engine's `sorry!` and shown as a warning rather than an error. It never
+ * makes such a proof correct — the verifier refuses a certificate that admits
+ * a line, and the widget sends none — it only changes what the student is
+ * told, and whether the widget will let the proof leave (it will on an exam,
+ * for nothing; otherwise it holds it back and says so). A bare `{allow-sorry}`
+ * means true.
+ */
+export function parseAllowSorryAttribute(
+  block: DirectiveBlock,
+  diagnostics: CompilerDiagnostic[],
+): boolean {
+  return parseBooleanAttribute(
+    block.attrs["allow-sorry"],
+    block.line,
+    "allow-sorry",
+    diagnostics,
+  );
+}
+
+/**
  * The header a playground's starter is read against: the fixed goal name, and
  * no declaration — nothing is appended to the theory until the proof has a
  * last line. Shaped like {@link TheoremHeader} so the starter readers take it.

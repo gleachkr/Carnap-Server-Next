@@ -20,6 +20,7 @@ import {
   extractStarterBody,
   goalBinderWarnings,
   PLAYGROUND_HEADER,
+  parseAllowSorryAttribute,
   parsePlaygroundAttribute,
   parsePlaygroundBody,
   parseProofOptions,
@@ -87,6 +88,7 @@ function starterStructuralDiagnostic(
 /** What `::::aufbau-proof-prawitz{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
+  "allow-sorry",
   "options",
   "playground",
   "system",
@@ -139,6 +141,7 @@ export async function compileAufbauProofPrawitz(
   const notations = requireProofNotations(block, theory, diagnostics);
   const title = block.attrs.title?.trim();
   const playground = parsePlaygroundAttribute(block, diagnostics);
+  const allowSorry = parseAllowSorryAttribute(block, diagnostics);
   const header = playground ? null : parseTheoremHeader(block, diagnostics);
   const playgroundBody = playground
     ? parsePlaygroundBody(block, diagnostics)
@@ -285,6 +288,7 @@ export async function compileAufbauProofPrawitz(
     ...(header === null
       ? { playground: true }
       : { goalDecl: header.theoremDecl }),
+    ...(allowSorry ? { allowSorry: true } : {}),
     goalFormula: header?.goalFormula ?? "",
     goalName: scope.goalName,
     options,

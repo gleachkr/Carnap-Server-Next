@@ -93,6 +93,9 @@
     --exercise-incorrect-bg,
     color-mix(in srgb, var(--_incorrect) 12%, transparent)
   );
+  /* A warning: a proof line admitted with `sorry!` where the exercise allows
+     it — not wrong, not right, and drawn in neither colour. */
+  --_warning: var(--exercise-warning, light-dark(#9a6400, #c9a043));
   /* The colour a truth table draws its main column and a claimed
      counterexample row in — always at a low alpha, at the use site. */
   --_highlight: var(--exercise-highlight, light-dark(#9a6400, #c9a043));

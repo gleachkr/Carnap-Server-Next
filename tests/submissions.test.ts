@@ -1472,7 +1472,7 @@ Choose yes again.
     });
   });
 
-  test("the resolved feedback reaches the widget's hydration payload", async () => {
+  test("the resolved feedback and exam reach the widget's hydration payload", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "hydrate-teacher@example.test");
       const student = await login(env, "hydrate-student@example.test");
@@ -1506,9 +1506,9 @@ And again.
 
       await enrollStudent(env, instructor, student, courseId);
 
-      const feedbackOn = async (
+      const optionsOn = async (
         assignmentId: string,
-      ): Promise<(string | undefined)[]> => {
+      ): Promise<{ exam?: boolean; feedback?: string }[]> => {
         const documentHtml = await (
           await appRequest(
             createTestApp(),
@@ -1526,9 +1526,12 @@ And again.
           (match) =>
             (
               JSON.parse(match[1] as string) as {
-                readonly options: { readonly feedback?: string };
+                readonly options: {
+                  readonly exam?: boolean;
+                  readonly feedback?: string;
+                };
               }
-            ).options.feedback,
+            ).options,
         );
       };
 
@@ -1544,8 +1547,13 @@ And again.
 
       // With grades withheld the assignment is an exam, so silence is the
       // default and all three widgets get it — the one that asked for it, the
-      // one that said only `exam`, and the one that said nothing at all.
-      expect(await feedbackOn(withheld.id)).toEqual(["none", "none", "none"]);
+      // one that said only `exam`, and the one that said nothing at all. And
+      // all three are told it is an exam, for the same reason.
+      expect(await optionsOn(withheld.id)).toEqual([
+        { exam: true, feedback: "none" },
+        { exam: true, feedback: "none" },
+        { exam: true, feedback: "none" },
+      ]);
 
       const released = await createPublishedAssignment(
         env,
@@ -1559,11 +1567,13 @@ And again.
       // Released, it is homework. What the author wrote still stands; what they
       // left unsaid resolves to `full`, which the payload omits because that is
       // what a widget assumes anyway. `exam` no longer has a say in this
-      // question — it decides what is kept, not what is said.
-      expect(await feedbackOn(released.id)).toEqual([
-        "none",
-        undefined,
-        undefined,
+      // question — it decides what is kept, not what is said — and only the
+      // exercise that wrote it is still one; the payload omits the default
+      // there too.
+      expect(await optionsOn(released.id)).toEqual([
+        { feedback: "none" },
+        { exam: true },
+        {},
       ]);
     });
   });

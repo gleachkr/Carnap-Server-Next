@@ -45,6 +45,7 @@ import type {
 } from "../domain/content";
 import type { CourseStaffTier } from "../domain/courses";
 import {
+  resolveExerciseExam,
   resolveExerciseFeedback,
   viewerEvaluation,
 } from "../domain/feedback";
@@ -1393,14 +1394,29 @@ async function loadStudentAssignmentView(
           context,
           courseId,
           // Resolved here rather than in the view: how much a widget may tell
-          // this student is a policy question about *this* assignment, and the
-          // content nodes the view walks carry no `exam` or `feedback` — those
-          // live in the manifest beside them.
-          feedbackByExercise: new Map(
-            detail.artifact.manifest.map((item) => [
-              item.id,
-              resolveExerciseFeedback(item, detail.assignment, now),
-            ]),
+          // this student, and whether it is an exam, are policy questions
+          // about *this* assignment, and the content nodes the view walks
+          // carry no `exam` or `feedback` — those live in the manifest beside
+          // them. The defaults are left out: `full` is what a widget assumes
+          // anyway, and there is no reason to put it in every payload on the
+          // page.
+          optionsByExercise: new Map(
+            detail.artifact.manifest.map((item) => {
+              const feedback = resolveExerciseFeedback(
+                item,
+                detail.assignment,
+                now,
+              );
+              return [
+                item.id,
+                {
+                  ...(resolveExerciseExam(item, detail.assignment, now)
+                    ? { exam: true }
+                    : {}),
+                  ...(feedback === "full" ? {} : { feedback }),
+                },
+              ];
+            }),
           ),
           runtimeState,
         };

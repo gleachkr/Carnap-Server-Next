@@ -109,6 +109,19 @@ theorem thm_top: $ top $
     });
   });
 
+  test("allow-sorry is frozen on the exercise (see aufbau-proof.test.ts)", async () => {
+    const compiled = await compileCarnapMarkdown(
+      treeSource(`:::aufbau-proof-tree{system="prop" id="t1" allow-sorry}
+theorem thm_top: $ top $
+:::`),
+    );
+    expect(compiled.ok).toBe(true);
+    if (!compiled.ok) {
+      return;
+    }
+    expect(treePublicData(compiled.artifact, "t1").allowSorry).toBe(true);
+  });
+
   test("a tree proof referencing an undeclared theory is rejected", async () => {
     expect(
       await diagnosticsFor(`:::aufbau-proof-tree{system="missing" id="t1"}

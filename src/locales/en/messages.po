@@ -257,6 +257,10 @@ msgstr "A Prawitz proof has no “#n” hypothesis leaves — write each premise
 msgid "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal."
 msgstr "A proof exercise needs a 'theorem <name>: $ … $' line declaring the goal."
 
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "A proof with lines admitted with sorry! cannot be submitted."
+msgstr "A proof with lines admitted with sorry! cannot be submitted."
+
 #: src/worker/application/gradebook.ts
 msgid "A reading records no scores, so it has no gradebook."
 msgstr "A reading records no scores, so it has no gradebook."
@@ -1656,6 +1660,14 @@ msgstr "Every course you are enrolled in has been archived."
 #: src/worker/exercises/model/strings.ts
 msgid "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
 msgstr "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
+
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Every other line checks; a proof with lines admitted with sorry! cannot be submitted."
+msgstr "Every other line checks; a proof with lines admitted with sorry! cannot be submitted."
+
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Every other line checks; lines admitted with sorry! do not score."
+msgstr "Every other line checks; lines admitted with sorry! do not score."
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "Every proof line needs a justification: '<formula> :<rule> <refs>'."

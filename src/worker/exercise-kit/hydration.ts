@@ -17,6 +17,13 @@ export const EXERCISE_HYDRATION_VERSION = 1;
 export type ExerciseHydrationMode = "answer" | "review";
 
 export interface ExerciseHydrationOptions {
+  /**
+   * Whether a wrong answer is kept (`resolveExerciseExam`), resolved for this
+   * reader on this assignment; absent means no. A widget that would hold an
+   * answer back for the student's own good — a proof with admitted lines —
+   * lets it go on an exam, where a held answer is a lost one.
+   */
+  readonly exam?: boolean;
   /** Resolved for this reader on this assignment; absent means `full`. */
   readonly feedback?: ExerciseFeedback;
 }

@@ -224,6 +224,9 @@ export abstract class CarnapExerciseElement<
   /** The answer as of the submit in flight, if there is one. */
   private submittedAnswer: string | null = null;
 
+  /** The check a submission is waiting on (see {@link holdSubmit}). */
+  private held: Promise<void> | null = null;
+
   /** This exercise's draft key, or null when drafts are off (see resolveDraftKey). */
   private draftKey: string | null = null;
 
@@ -504,6 +507,21 @@ export abstract class CarnapExerciseElement<
   }
 
   /**
+   * Whether a wrong answer is kept — the assignment's exam-ness, resolved by
+   * the server for this reader (`resolveExerciseExam`); false when the payload
+   * says nothing, which is every payload written before the field existed and
+   * every render outside an assignment.
+   *
+   * What a widget does with it is let go: an answer it would otherwise hold
+   * back for the student's own good, on an exam, is one they must be able to
+   * hand in as it stands. It does not decide what is shown — that is
+   * {@link feedback}, which an exam usually seals but need not.
+   */
+  protected get exam(): boolean {
+    return this.hydration?.options?.exam === true;
+  }
+
+  /**
    * Whether this widget may show *why*, as opposed to merely whether.
    *
    * The difference between `terse` and `full`: the truth table's per-cell marks,
@@ -757,6 +775,39 @@ export abstract class CarnapExerciseElement<
    */
   protected gateSubmit(gate: (event: Event) => void): void {
     this.form?.addEventListener("submit", gate, { capture: true });
+  }
+
+  /**
+   * From inside a gate: keep this submission until `settling` resolves, then
+   * submit again. For a check still pending or running at the moment of
+   * submit — a translation's equivalence search, a proof's compile — whose
+   * result the answer, or the gate itself, is waiting on. The gate runs again
+   * on the resubmit, so a hold followed by a refusal is one gate with two
+   * outcomes.
+   *
+   * Idempotent over the same promise: a second click while held changes
+   * nothing. An edit that makes the held check stale should {@link dropHold},
+   * or the resubmit would send the answer the student had already moved on
+   * from.
+   */
+  protected holdSubmit(event: Event, settling: Promise<void>): void {
+    event.preventDefault();
+    if (this.held === settling) {
+      return;
+    }
+    this.held = settling;
+    void settling.then(() => {
+      if (this.held !== settling) {
+        return;
+      }
+      this.held = null;
+      this.form?.requestSubmit();
+    });
+  }
+
+  /** Forget a held submission: the answer changed under it. */
+  protected dropHold(): void {
+    this.held = null;
   }
 
   /**

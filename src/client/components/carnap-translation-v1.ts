@@ -77,13 +77,6 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
   /** The equivalence search now running for the current text, if any. */
   private inFlight: Promise<void> | null = null;
 
-  /**
-   * The search a submit is waiting on. A second click during the wait is the
-   * same request; an edit abandons it, since what the reader asked to submit is
-   * no longer what the field holds.
-   */
-  private held: Promise<void> | null = null;
-
   protected enhance(): void {
     const root = this.shadowRoot;
     const data = this.publicData;
@@ -148,21 +141,9 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
       // The hold: a check still pending or running would leave this submission
       // without its certificate. Settle it first, then send.
       const settling = this.settleCheck();
-      if (settling === null) {
-        return;
+      if (settling !== null) {
+        this.holdSubmit(event, settling);
       }
-      event.preventDefault();
-      if (this.held === settling) {
-        return;
-      }
-      this.held = settling;
-      void settling.then(() => {
-        if (this.held !== settling) {
-          return;
-        }
-        this.held = null;
-        this.form?.requestSubmit();
-      });
     });
 
     this.updatePreview();
@@ -200,7 +181,7 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     this.mmb = "";
     this.solutionIndex = null;
     this.inFlight = null;
-    this.held = null;
+    this.dropHold();
     this.updatePreview();
     this.setCheckStatus("");
     this.syncAnswer();

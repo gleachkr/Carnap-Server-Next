@@ -32,7 +32,9 @@ originality: copied valid proofs remain a plagiarism concern.
 The server stores `{ proofText }` and the evaluation, not the certificate.
 The text can be compiled again for investigation, but old evaluations are
 not automatically recalculated. The engine's `sorry!` justification cannot
-produce an accepted exercise certificate.
+produce an accepted exercise certificate; `allow-sorry` only changes what the
+widget tells the student about one (a warning, and whether the proof may be
+submitted), never what it scores.
 
 ## Authoring
 
