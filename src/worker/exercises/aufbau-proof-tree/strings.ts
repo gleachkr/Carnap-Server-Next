@@ -1,6 +1,6 @@
 import { buildExerciseHelpStrings } from "../../exercise-kit/help-strings";
 import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
-import type { Translator } from "../../i18n/translator";
+import { placeholders, type Translator } from "../../i18n/translator";
 import { buildFormulaParserStrings } from "../../logic/specs/strings";
 
 /**
@@ -49,6 +49,9 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
     ),
     /** Tooltip naming the Delete button's key, like `Undo (Ctrl-Z)`. */
     "Delete (Del)": i18n.t("Delete (Del)"),
+    /** Accessible name of a hypothesis leaf's select, where the goal offers a
+     *  choice of hypotheses to cite. */
+    "Cited hypothesis": i18n.t("Cited hypothesis"),
     /** Help: what Delete does. */
     "Delete the line and everything above it": i18n.t(
       "Delete the line and everything above it",
@@ -84,10 +87,20 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
       i18n.t(
         "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward.",
       ),
+    /** On a hypothesis leaf citing past the goal's last hypothesis: a starter
+     *  or restored tree whose goal changed under it. */
+    "The goal has no hypothesis #{n}": i18n.t(
+      "The goal has no hypothesis #{n}",
+      placeholders("n"),
+      {
+        comment:
+          "Error on a proof-tree leaf citing hypothesis number {n} of a goal that has fewer.",
+      },
+    ),
     /** Help: the second orientation paragraph. */
-    "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it.":
+    "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses.":
       i18n.t(
-        "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it.",
+        "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses.",
       ),
     Undo: i18n.t("Undo"),
     "Undo (Ctrl-Z)": i18n.t("Undo (Ctrl-Z)"),

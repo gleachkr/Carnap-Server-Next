@@ -18,7 +18,14 @@ lN: $ formula $ by rule [references]
 ```
 
 A `hyp` leaf references the goal theorem's corresponding hypothesis as `#n`
-and emits no separate line. The flattener also maps generated character
+and emits no separate line. In the editor such a leaf is a citation, not a
+line: it shows the cited hypothesis's text as the goal declares it (read with
+`goalHypothesisTexts` in `exercise-kit/proof/formulas.ts`, in the engine's
+numbering — `(h: $ … $)` binders first, then the `>`-chain), fixed rather
+than editable, and its inference slot chooses *which* hypothesis — a select
+when the goal declares more than one, a bare `#1` when it declares one. The
+stored `formula` on a `hyp` node is that text, kept so review can redraw the
+leaf without the goal. The flattener also maps generated character
 ranges to tree nodes so compiler diagnostics can identify the relevant node.
 Rule aliases are resolved through the theory's rule reader.
 
@@ -67,8 +74,10 @@ statement in engine text), and the worker rebuilds the same
 against the system's `@vars` pools, and verifies the certificate against the
 theory plus that declaration. See `exercise-kit/proof/playground.ts`, and the
 [authoring reference][authoring] for the shared rules.
-In a playground the root is editable and starts empty, and "Add hypothesis"
-is disabled, since the goal has no hypotheses to cite. Over a theory whose
+"Add hypothesis" is disabled whenever the goal declares no hypotheses — a
+sequent-style goal keeps its assumptions left of the turnstile and declares
+none, and a playground has no goal at all. In a playground the root is
+editable and starts empty. Over a theory whose
 nodes stay engine text (`gentzen-lk`), the root is read once in engine mode
 to find its variables.
 

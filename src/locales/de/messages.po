@@ -951,6 +951,10 @@ msgstr "Aufgabe auswählen…"
 msgid "Choose the row you're claiming as a counterexample."
 msgstr "Markieren Sie die Zeile, die Sie als Gegenbeispiel angeben."
 
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Cited hypothesis"
+msgstr "Zitierte Hypothese"
+
 #: src/worker/application/lti-admin.ts
 #: src/worker/web/admin-lti.tsx
 msgid "Client ID"
@@ -3724,6 +3728,11 @@ msgstr ""
 msgid "The goal binds “{name}” as {sort}, and this theory spells a notation the same way. That spelling will not parse inside this exercise."
 msgstr ""
 
+#. Error on a proof-tree leaf citing hypothesis number {n} of a goal that has fewer.
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "The goal has no hypothesis #{n}"
+msgstr "Das Ziel hat keine Hypothese #{n}"
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The goal header must be followed by a '----' underline, then the proof body."
 msgstr "Auf die Zielzeile muss eine Unterstreichung '----' folgen und dann der Beweiskörper."
@@ -4288,8 +4297,8 @@ msgid "Type"
 msgstr "Art"
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it."
-msgstr "Tragen Sie die Regel, die den jeweiligen Schluss rechtfertigt, in das Feld unter der Zeile ein. „Hypothese hinzufügen“ erzeugt ein Blatt, das von einer Regel darunter entlastet wird."
+msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses."
+msgstr "Tragen Sie die Regel, die den jeweiligen Schluss rechtfertigt, in das Feld unter der Zeile ein. „Hypothese hinzufügen“ erzeugt ein Blatt, das eine der Hypothesen des Ziels zitiert."
 
 #: src/worker/web/courses.tsx
 msgid "Unarchive"

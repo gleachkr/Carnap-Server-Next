@@ -8,7 +8,11 @@
  * root and mounts a small Preact island that renders the tree with editing
  * affordances: each node's conclusion and inference rule are editable, a node
  * can be selected, and a toolbar adds a premise, adds a hypothesis reference, or
- * deletes the selected subtree. The tree is drawn by the vendored ProofML custom
+ * deletes the selected subtree. A hypothesis leaf is a *citation* of one of the
+ * goal's hypotheses, not a line: its text is the cited hypothesis, read from the
+ * goal declaration and never typed, and its inference slot is the choice of
+ * which one (a select when the goal offers more than one). The tree is drawn by
+ * the vendored ProofML custom
  * elements (imported here for their side effect of registering `<proof-tree>`
  * etc.); Preact renders those custom-element tags declaratively.
  *
@@ -43,6 +47,7 @@ import type {
 import {
   ENGINE_RULE,
   ENGINE_TEXT,
+  goalHypothesisTexts,
   hasTheoryText,
   proofFormulaReader,
   proofRuleReader,
@@ -103,7 +108,10 @@ const HISTORY_LIMIT = 100;
  * functions outside the element, so they receive the lookup as a prop instead of
  * reaching into the hydration payload themselves.
  */
-type Translate = (id: AufbauProofTreeStringId) => string;
+type Translate = (
+  id: AufbauProofTreeStringId,
+  values?: Readonly<Record<string, number | string>>,
+) => string;
 
 // ---------------------------------------------------------------------------
 // Byte/base64 helpers (unchanged from the imperative version).
@@ -291,9 +299,44 @@ function replaceNode(
   return changed ? { ...root, premises } : root;
 }
 
-function seedChild(hyp: number | null, parentFormula: string): TreeNode {
+/**
+ * What a hypothesis leaf citing `#hyp` shows: the goal's hypothesis of that
+ * number, or `""` where the goal has none (a starter or restored tree can cite
+ * past the end, and the leaf's error marker says so).
+ */
+function hypothesisText(hyp: number, hypotheses: readonly string[]): string {
+  return hypotheses[hyp - 1] ?? "";
+}
+
+/**
+ * Every hypothesis leaf's text made to agree with the goal. A restored or
+ * starter tree carries the text its leaves had when it was written, which is
+ * whatever that editor showed; the goal is what they cite, so the goal is what
+ * they show.
+ */
+function withHypothesisTexts(
+  node: TreeNode,
+  hypotheses: readonly string[],
+): TreeNode {
+  if (node.hyp !== null) {
+    const formula = hypothesisText(node.hyp, hypotheses);
+    return formula === node.formula ? node : { ...node, formula };
+  }
+  let changed = false;
+  const premises = node.premises.map((child) => {
+    const next = withHypothesisTexts(child, hypotheses);
+    changed = changed || next !== child;
+    return next;
+  });
+  return changed ? { ...node, premises } : node;
+}
+
+function seedChild(
+  hyp: number | null,
+  hypotheses: readonly string[],
+): TreeNode {
   return {
-    formula: hyp === null ? "" : parentFormula,
+    formula: hyp === null ? "" : hypothesisText(hyp, hypotheses),
     hyp,
     id: uid(),
     premises: [],
@@ -304,20 +347,24 @@ function seedChild(hyp: number | null, parentFormula: string): TreeNode {
 /**
  * The undo key for an action, or null if the edit must stand alone in history.
  * Consecutive text edits to the *same* field share a key so a run of keystrokes
- * collapses into one undo step; structural edits (add/delete) never coalesce.
+ * collapses into one undo step; structural edits (add/delete) and a hypothesis
+ * choice, which is one pick rather than a run of keystrokes, never coalesce.
  */
 function coalesceKeyFor(action: Action): string | null {
   switch (action.type) {
     case "setFormula":
     case "setRule":
-    case "setHyp":
       return `${action.type}:${action.id}`;
     default:
       return null;
   }
 }
 
-function docReducer(doc: Doc, action: Action): Doc {
+function docReducer(
+  doc: Doc,
+  action: Action,
+  hypotheses: readonly string[],
+): Doc {
   switch (action.type) {
     case "select":
       return action.id === doc.selectedId
@@ -341,8 +388,15 @@ function docReducer(doc: Doc, action: Action): Doc {
     }
 
     case "setHyp": {
+      // The text follows the citation: a leaf shows what it cites.
       const model = replaceNode(doc.model, action.id, (node) =>
-        node.hyp === action.hyp ? node : { ...node, hyp: action.hyp },
+        node.hyp === action.hyp
+          ? node
+          : {
+              ...node,
+              formula: hypothesisText(action.hyp, hypotheses),
+              hyp: action.hyp,
+            },
       );
       return model === doc.model ? doc : { ...doc, model };
     }
@@ -352,7 +406,12 @@ function docReducer(doc: Doc, action: Action): Doc {
       if (selected === null || selected.node.hyp !== null) {
         return doc;
       }
-      const child = seedChild(action.hyp, selected.node.formula);
+      // Nothing to cite is nothing to add; the toolbar and the `h` key are
+      // both disabled on this condition, and the reducer holds it too.
+      if (action.hyp !== null && hypotheses.length === 0) {
+        return doc;
+      }
+      const child = seedChild(action.hyp, hypotheses);
       const model = replaceNode(doc.model, doc.selectedId, (node) => ({
         ...node,
         premises: [...node.premises, child],
@@ -427,7 +486,7 @@ const SHORTCUTS: readonly {
 
 const INTRO_IDS: readonly AufbauProofTreeStringId[] = [
   "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward.",
-  "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it.",
+  "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses.",
   "The mark beside the Submit button shows whether the proof checks; hover it to read the problem.",
 ];
 
@@ -494,11 +553,67 @@ function EditableField(props: {
   );
 }
 
+/**
+ * A hypothesis leaf's inference slot: which of the goal's hypotheses it cites.
+ * A select when there is a choice to make, each option numbered the way the
+ * citation is and worded the way the hypothesis is; plain `#1` when there is
+ * not, since a control with one setting is a label that costs a click.
+ *
+ * The select is drawn as the label `#n` and nothing more, with the native
+ * control laid invisibly over it: the leaf already shows the hypothesis's
+ * text, and a closed select showing "#2 p → q" beside it would say everything
+ * twice and run into the next premise's bar. The options carry the text, so
+ * the list that opens reads as a choice between hypotheses, and a reader of
+ * the control hears the same. Carries `tree-rule` so the `r` key reaches it
+ * as it reaches a rule field; Esc steps out of it the same way (see
+ * `onKeyDown`).
+ */
+function HypothesisChoice(props: {
+  readonly hyp: number;
+  readonly hypotheses: readonly string[];
+  readonly onChoose: (hyp: number) => void;
+  readonly onSelect: () => void;
+  readonly t: Translate;
+}): preact.JSX.Element {
+  const { hyp, hypotheses, onChoose, onSelect, t } = props;
+
+  if (hypotheses.length <= 1) {
+    return <span class="tree-rule tree-hypothesis-ref">#{hyp}</span>;
+  }
+
+  return (
+    <span class="tree-hypothesis-pick">
+      <span aria-hidden="true" class="tree-hypothesis-ref">
+        #{hyp}
+      </span>
+      <select
+        aria-label={t("Cited hypothesis")}
+        class="tree-rule tree-hypothesis-choice"
+        onChange={(event) => onChoose(Number(event.currentTarget.value))}
+        onFocus={onSelect}
+        tabIndex={-1}
+        value={String(hyp)}
+      >
+        {hypotheses.map((text, index) => (
+          <option key={`${index}:${text}`} value={String(index + 1)}>
+            #{index + 1} {text}
+          </option>
+        ))}
+        {hypotheses[hyp - 1] === undefined ? (
+          <option value={String(hyp)}>#{hyp}</option>
+        ) : null}
+      </select>
+    </span>
+  );
+}
+
 function NodeView(props: {
   readonly dispatch: (action: Action) => void;
   /** The root's formula is the fixed goal — except in a playground, where the
    *  root is the student's to write and the goal follows it. */
   readonly fixedRoot: boolean;
+  /** The goal's hypotheses, in the order `#n` counts them. */
+  readonly hypotheses: readonly string[];
   readonly isRoot: boolean;
   readonly node: TreeNode;
   readonly nodeErrors: Readonly<Record<string, string>>;
@@ -506,11 +621,21 @@ function NodeView(props: {
   readonly onSelect: (id: string) => void;
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
   readonly selectedId: string;
+  readonly t: Translate;
 }): preact.JSX.Element {
-  const { dispatch, fixedRoot, isRoot, node, nodeErrors } = props;
-  const { onNodeKeyDown, onSelect, registerNode, selectedId } = props;
-  const fixed = isRoot && fixedRoot;
+  const { dispatch, fixedRoot, hypotheses, isRoot, node, nodeErrors } = props;
+  const { onNodeKeyDown, onSelect, registerNode, selectedId, t } = props;
   const isHyp = node.hyp !== null;
+  // A hypothesis leaf's text is the cited hypothesis, the goal's to state and
+  // not the student's to edit — the same fixed treatment as the goal root.
+  const fixed = (isRoot && fixedRoot) || isHyp;
+  // A citation past the goal's last hypothesis: a starter or restored tree
+  // whose goal changed under it. The compiler's complaint lands on the parent
+  // (the leaf owns no line), so the leaf says so itself.
+  const hypError =
+    node.hyp !== null && hypotheses[node.hyp - 1] === undefined
+      ? t("The goal has no hypothesis #{n}", { n: node.hyp })
+      : undefined;
   // Every non-hypothesis proposition is justified by an inference, so it always
   // gets a proof-forest above it — empty when there are no premises yet. This
   // keeps a fitch bar (and the rule slot beneath it) present for zero-premise
@@ -532,6 +657,7 @@ function NodeView(props: {
               key={child.id}
               dispatch={dispatch}
               fixedRoot={fixedRoot}
+              hypotheses={hypotheses}
               isRoot={false}
               node={child}
               nodeErrors={nodeErrors}
@@ -539,6 +665,7 @@ function NodeView(props: {
               onSelect={onSelect}
               registerNode={registerNode}
               selectedId={selectedId}
+              t={t}
             />
           ))}
         </proof-forest>
@@ -560,11 +687,15 @@ function NodeView(props: {
           tabIndex={node.id === selectedId ? 0 : -1}
         >
           <EditableField
-            className={["tree-edit", fixed ? "tree-fixed" : ""]
+            className={[
+              "tree-edit",
+              fixed ? "tree-fixed" : "",
+              isHyp ? "tree-hypothesis" : "",
+            ]
               .filter((cls) => cls.length > 0)
               .join(" ")}
             editable={!fixed}
-            error={nodeErrors[node.id]}
+            error={nodeErrors[node.id] ?? hypError}
             onInput={(text) =>
               dispatch({ id: node.id, text, type: "setFormula" })
             }
@@ -575,24 +706,13 @@ function NodeView(props: {
         </span>
       </proof-proposition>
       <proof-inference>
-        {isHyp ? (
-          <EditableField
-            className="tree-edit tree-rule"
-            editable={true}
-            error={undefined}
-            onInput={(text) => {
-              const match = /(\d+)/.exec(text);
-              if (match !== null) {
-                dispatch({
-                  hyp: Number(match[1]),
-                  id: node.id,
-                  type: "setHyp",
-                });
-              }
-            }}
+        {node.hyp !== null ? (
+          <HypothesisChoice
+            hyp={node.hyp}
+            hypotheses={hypotheses}
+            onChoose={(hyp) => dispatch({ hyp, id: node.id, type: "setHyp" })}
             onSelect={select}
-            selected={false}
-            value={`#${String(node.hyp)}`}
+            t={t}
           />
         ) : (
           <EditableField
@@ -617,6 +737,9 @@ function Editor(props: {
   readonly canUndo: boolean;
   readonly dispatch: (action: Action) => void;
   readonly doc: Doc;
+  /** The goal's hypotheses, in the order `#n` counts them; empty where the
+   *  goal declares none, which is what disables Add hypothesis. */
+  readonly hypotheses: readonly string[];
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onRedo: () => void;
   readonly onSelect: (id: string) => void;
@@ -630,14 +753,15 @@ function Editor(props: {
   readonly status: Status;
   readonly t: Translate;
 }): preact.JSX.Element {
-  const { canRedo, canUndo, dispatch, doc, proves, t } = props;
+  const { canRedo, canUndo, dispatch, doc, hypotheses, proves, t } = props;
   const { onNodeKeyDown, onRedo, onSelect, onUndo } = props;
   const { onToolbarEdit, registerNode, status } = props;
   const selected = locate(doc.model, doc.selectedId);
   const canBranch = selected !== null && selected.node.hyp === null;
-  // A hypothesis leaf cites the goal theorem's n-th hypothesis, and a
-  // playground's goal has none.
-  const canHypothesis = canBranch && proves === null;
+  // A hypothesis leaf cites one of the goal theorem's hypotheses, so there
+  // has to be one: a sequent-style goal keeps its assumptions left of the
+  // turnstile and declares none, and a playground has no goal at all.
+  const canHypothesis = canBranch && hypotheses.length > 0;
   const canDelete = selected !== null && selected.parentId !== null;
 
   return (
@@ -704,6 +828,7 @@ function Editor(props: {
         <NodeView
           dispatch={dispatch}
           fixedRoot={proves === null}
+          hypotheses={hypotheses}
           isRoot={true}
           node={doc.model}
           nodeErrors={status.nodeErrors}
@@ -711,6 +836,7 @@ function Editor(props: {
           onSelect={onSelect}
           registerNode={registerNode}
           selectedId={doc.selectedId}
+          t={t}
         />
       </div>
     </>
@@ -742,6 +868,8 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
   /** Cited rule name to the engine's, from the theory's `@syntax alias` lines. */
   private readRule: ProofRuleReader = ENGINE_RULE;
   private goalName = "";
+  /** The goal's hypotheses, what a `#n` leaf cites; read once at connect. */
+  private hypotheses: readonly string[] = [];
   private doc: Doc = {
     model: { formula: "", hyp: null, id: uid(), premises: [], rule: "" },
     selectedId: "",
@@ -753,7 +881,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
    * Not `translate` — `HTMLElement` already owns that name, as the boolean
    * behind the `translate` attribute.
    */
-  private readonly localize: Translate = (id) => this.t(id);
+  private readonly localize: Translate = (id, values) => this.t(id, values);
   // Undo/redo over the immutable document. `past`/`future` hold whole `Doc`
   // snapshots; `coalesceKey` collapses a run of same-field keystrokes into one
   // undo step. Selection-only changes never enter history.
@@ -793,6 +921,12 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     );
     this.readRule = proofRuleReader(theory.source);
     this.goalName = data.goalName;
+    // A playground appends its goal per compile and it has no hypotheses. An
+    // artifact frozen before `source` existed has only the stripped text,
+    // which declares the same goal and reads the same way.
+    this.hypotheses = this.playground
+      ? []
+      : goalHypothesisTexts(theory.source ?? theory.mm0, data.goalName);
 
     const container = root.querySelector<HTMLElement>(".proof-tree");
     if (container === null) {
@@ -810,9 +944,9 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     const starter = (data as { starterTree?: unknown }).starterTree;
     let model: TreeNode;
     if (prior !== null && isProofTreeNode(prior.tree)) {
-      model = deserialize(prior.tree);
+      model = withHypothesisTexts(deserialize(prior.tree), this.hypotheses);
     } else if (isProofTreeNode(starter)) {
-      model = deserialize(starter);
+      model = withHypothesisTexts(deserialize(starter), this.hypotheses);
     } else {
       model = {
         formula: data.goalFormula,
@@ -899,7 +1033,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       // conclusion field sits inside the treeitem; the rule field is a sibling
       // (outside it), so fall back to the owning proof-tree's treeitem.
       const target = event.target as HTMLElement | null;
-      if (target?.classList.contains("tree-edit") === true) {
+      if (target?.matches(".tree-edit, .tree-hypothesis-choice") === true) {
         event.preventDefault();
         const node =
           target.closest<HTMLElement>(".tree-node") ??
@@ -941,7 +1075,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
 
   private readonly dispatch = (action: Action): void => {
     const previous = this.doc;
-    const next = docReducer(previous, action);
+    const next = docReducer(previous, action, this.hypotheses);
     if (next === previous) {
       return;
     }
@@ -1145,7 +1279,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
         break;
       case "h":
       case "H":
-        if (node.hyp === null) {
+        if (node.hyp === null && this.hypotheses.length > 0) {
           event.preventDefault();
           this.dispatch({ hyp: 1, type: "addPremise" });
           this.focusNode(this.doc.selectedId);
@@ -1200,6 +1334,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
         canUndo={this.past.length > 0}
         dispatch={this.dispatch}
         doc={this.doc}
+        hypotheses={this.hypotheses}
         onNodeKeyDown={(event, id) => this.onTreeKeyDown(event, id)}
         onRedo={this.redo}
         onSelect={this.selectNode}

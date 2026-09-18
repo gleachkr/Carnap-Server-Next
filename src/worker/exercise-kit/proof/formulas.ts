@@ -875,6 +875,53 @@ export function goalStatementText(
     .join(" > ");
 }
 
+/**
+ * The goal's hypotheses in citation order — what `#1`, `#2`, … name in a
+ * proof over it — as the author wrote them; empty where the text declares no
+ * such goal, or the goal has none.
+ *
+ * The engine numbers hypotheses "in the order they appear in the header":
+ * the `(h: $ … $)` binders first, then the `>`-chain, with the conclusion
+ * never among them. A binder that names a sort (`{x: var}`, `(a: wff)`)
+ * is not a hypothesis and is skipped without taking a number. Read from the
+ * parsed declaration for the same reason {@link goalStatementText} is:
+ * cutting the text at its dollar signs would take the binders for the
+ * statement, or the statement for a binder.
+ *
+ * The tree editor draws a hypothesis leaf from this list rather than from
+ * anything the student typed — the leaf is a citation, and its text is
+ * whatever the citation names.
+ */
+export function goalHypothesisTexts(
+  source: string | null | undefined,
+  goalName: string,
+): readonly string[] {
+  const read =
+    source === null || source === undefined ? null : proofLanguage(source);
+  const goal =
+    read === null ? null : findGoal(read.language.spec.statements, goalName);
+
+  if (goal === null) {
+    return [];
+  }
+
+  const texts: string[] = [];
+
+  for (const binder of goal.binders) {
+    if ("text" in binder.type) {
+      texts.push(binder.type.text.trim());
+    }
+  }
+
+  for (const hypothesis of goal.hypotheses) {
+    if ("text" in hypothesis) {
+      texts.push(hypothesis.text.trim());
+    }
+  }
+
+  return texts;
+}
+
 /** One `$ … $` of a goal declaration that the theory's language refused. */
 export interface GoalFormulaProblem {
   readonly error: SpecFormulaError;

@@ -951,6 +951,10 @@ msgstr ""
 msgid "Choose the row you're claiming as a counterexample."
 msgstr ""
 
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Cited hypothesis"
+msgstr ""
+
 #: src/worker/application/lti-admin.ts
 #: src/worker/web/admin-lti.tsx
 msgid "Client ID"
@@ -3724,6 +3728,11 @@ msgstr ""
 msgid "The goal binds “{name}” as {sort}, and this theory spells a notation the same way. That spelling will not parse inside this exercise."
 msgstr ""
 
+#. Error on a proof-tree leaf citing hypothesis number {n} of a goal that has fewer.
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "The goal has no hypothesis #{n}"
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The goal header must be followed by a '----' underline, then the proof body."
 msgstr ""
@@ -4288,7 +4297,7 @@ msgid "Type"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that discharges against a rule below it."
+msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses."
 msgstr ""
 
 #: src/worker/web/courses.tsx

@@ -40,6 +40,39 @@
 .tree-fixed {
   cursor: pointer;
 }
+/* A hypothesis leaf's citation, in the inference slot's own muted face. The
+   bare `#n` is a label; where the goal offers a choice it is the visible face
+   of a select laid over it at zero opacity — the native picker opens from
+   it, with the hypotheses' text in the options, while the tree shows only
+   the number. The dashed underline is what says it can be changed, and it
+   goes solid while the control has focus. */
+.tree-hypothesis-ref {
+  padding: 0 0.1rem;
+}
+.tree-hypothesis-pick {
+  display: inline-block;
+  position: relative;
+}
+.tree-hypothesis-pick .tree-hypothesis-ref {
+  border-bottom: 1px dashed currentColor;
+}
+.tree-hypothesis-pick:focus-within .tree-hypothesis-ref {
+  border-bottom: 1px solid var(--_accent);
+  color: var(--_accent);
+}
+.tree-hypothesis-choice {
+  appearance: none;
+  cursor: pointer;
+  height: 100%;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+}
+.tree-hypothesis-choice option {
+  font-family: var(--_mono-font);
+}
 /* Roving-focus wrapper: carries keyboard focus for tree navigation. */
 .tree-node {
   border-radius: 0.25rem;

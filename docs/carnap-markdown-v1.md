@@ -1084,7 +1084,8 @@ or sequent in the system's own vocabulary, never a schema over metavariables.
 
 A playground is scored like any other exercise: the proof is correct when its
 certificate verifies, and worth `points`. A tree playground has no goal
-hypotheses to cite, so its "Add hypothesis" control is disabled.
+hypotheses to cite, so its "Add hypothesis" control is disabled, as it is for
+any goal that declares none.
 
 ## Aufbau-proof-tree directive
 
@@ -1115,8 +1116,11 @@ A proof that reuses a line is a graph rather than a tree and is rejected with
 `proof_is_not_a_tree`; duplicate the shared derivation in each branch.
 Malformed lines, dangling references, and multiple roots are author errors.
 
-Students can add premises or hypothesis references and delete subtrees.
-Feedback is shown on the relevant node. Submission data includes the tree,
+Students can add premises or hypothesis references and delete subtrees. A
+hypothesis reference is a leaf showing the cited hypothesis as the goal
+declares it, with a choice of which one where the goal declares several; the
+control is disabled for a goal that declares none, which is every goal stated
+as a sequent. Feedback is shown on the relevant node. Submission data includes the tree,
 generated proof text, and certificate; the server stores the answer and
 verdict, not the certificate. Review redraws the submitted tree.
 

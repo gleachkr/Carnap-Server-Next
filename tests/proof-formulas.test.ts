@@ -5,6 +5,7 @@ import {
   ENGINE_TEXT,
   goalBinderScope,
   goalBinderShadows,
+  goalHypothesisTexts,
   goalStatementText,
   hasTheoryText,
   proofFormulaReader,
@@ -299,6 +300,33 @@ describe("goalStatementText", () => {
 
   test("a goal the source does not declare is null, not empty", () => {
     expect(statementOf(SCHEMATIC, "not_the_goal")).toBeNull();
+  });
+});
+
+/**
+ * What a tree proof's `#n` leaf cites, in the engine's numbering: binders
+ * first, then the `>`-chain, the conclusion never among them.
+ */
+describe("goalHypothesisTexts", () => {
+  const hypothesesOf = (theoremDecl: string, goalName: string) =>
+    goalHypothesisTexts(`${FORALLX_THEORY_SOURCE}\n${theoremDecl}`, goalName);
+
+  test("a binder hypothesis, then the chain, as the author wrote them", () => {
+    expect(
+      hypothesesOf(
+        "theorem g {a: name} (h: $ F(a) $) (b: wff): $ _ ⊢ b $ > $ _ ⊢ G(a) $;",
+        "g",
+      ),
+    ).toEqual(["F(a)", "_ ⊢ b"]);
+  });
+
+  test("a sequent-style goal declares none", () => {
+    expect(hypothesesOf(CONCRETE, "t")).toEqual([]);
+  });
+
+  test("an undeclared goal, or no source, has none to cite", () => {
+    expect(hypothesesOf(SCHEMATIC, "not_the_goal")).toEqual([]);
+    expect(goalHypothesisTexts(null, "t")).toEqual([]);
   });
 });
 
