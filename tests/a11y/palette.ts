@@ -9,9 +9,8 @@ import { CONTENT_STYLES } from "../../src/worker/web/styles";
  * regexes went on matching — the wrong block, or both blocks at once — so the
  * suite kept passing while measuring the dark palette as "light" and finding
  * no second palette at all. The lesson is that a stylesheet has a structure
- * and the tests should read *that*: a `:root` block at the top level is the
- * light palette, and a `:root` block inside an `@media` is one more palette,
- * inheriting whatever it does not redeclare.
+ * and the tests should read *that*: the `:root` block is the palette, and
+ * each `light-dark()` pair in it is the two palettes at once.
  */
 
 interface CssBlock {
@@ -97,41 +96,81 @@ export function blocksOf(css: string): CssBlock[] {
 }
 
 /**
- * Every `:root` block `CONTENT_STYLES` declares, as raw declarations. `light`
- * is the top-level one; each `@media (…)` that redeclares `:root` contributes
- * one more under its query. A media palette lists only what it overrides —
- * resolving what it inherits is the caller's job, once it has decided what
- * a declaration is (the contrast test wants hex colours, the token test
- * wants every value).
+ * The top-level comma of a `light-dark(a, b)` value — the one that is not
+ * inside a nested `color-mix(...)` or `var(...)`.
+ */
+function splitPair(inner: string): [string, string] | undefined {
+  let depth = 0;
+
+  for (let index = 0; index < inner.length; index += 1) {
+    const char = inner[index];
+
+    if (char === "(") {
+      depth += 1;
+    } else if (char === ")") {
+      depth -= 1;
+    } else if (char === "," && depth === 0) {
+      return [inner.slice(0, index).trim(), inner.slice(index + 1).trim()];
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * The two palettes `CONTENT_STYLES` declares, each as raw `--token: value;`
+ * declarations: `light` and `dark`. There is one `:root` block, and every
+ * colour in it is a `light-dark(a, b)` pair, so the two palettes are the two
+ * halves of that block — a token written without the pair (a font, a measure,
+ * a derived value) is the same in both. Splitting the pairs here is what lets
+ * the contrast test measure dark as a palette of its own and the token test
+ * compare a fallback against the light half alone.
+ *
+ * A `:root` inside an `@media` is refused rather than read: the palette is
+ * keyed on `color-scheme`, which an author's stylesheet can pin, and not on
+ * the media query, which nothing an author writes can switch off. A second
+ * block under a query would quietly bring that back.
  */
 export function rootBlocks(): Map<string, string> {
-  const found = new Map<string, string>();
-  const roots = (blocks: CssBlock[]): string[] =>
-    blocks
-      .filter((block) => block.prelude === ":root")
-      .map((block) => block.body);
   const top = blocksOf(stripComments(CONTENT_STYLES, false));
-  const light = roots(top);
+  const roots = top.filter((block) => block.prelude === ":root");
 
-  if (light.length === 0) {
+  if (roots.length === 0) {
     throw new Error("no top-level :root block in CONTENT_STYLES");
   }
 
-  found.set("light", light.join("\n"));
-
   for (const block of top) {
-    const query = /^@media\s+\((.*)\)$/s.exec(block.prelude);
-
-    if (query?.[1] === undefined) {
-      continue;
-    }
-
-    const inner = roots(blocksOf(block.body));
-
-    if (inner.length > 0) {
-      found.set(query[1].trim(), inner.join("\n"));
+    if (
+      /^@media\b/.test(block.prelude) &&
+      blocksOf(block.body).some((inner) => inner.prelude === ":root")
+    ) {
+      throw new Error(
+        `a :root block under ${block.prelude}: the palette is keyed on color-scheme, not on a media query`,
+      );
     }
   }
 
-  return found;
+  const light: string[] = [];
+  const dark: string[] = [];
+
+  for (const block of roots) {
+    for (const match of block.body.matchAll(/(--[a-z0-9-]+):\s*([^;]+);/gs)) {
+      const name = match[1] as string;
+      const value = (match[2] as string).trim();
+      const pair = /^light-dark\((.*)\)$/s.exec(value);
+      const halves = pair?.[1] === undefined ? undefined : splitPair(pair[1]);
+
+      if (pair !== null && halves === undefined) {
+        throw new Error(`${name}: light-dark() with no top-level comma`);
+      }
+
+      light.push(`${name}: ${halves === undefined ? value : halves[0]};`);
+      dark.push(`${name}: ${halves === undefined ? value : halves[1]};`);
+    }
+  }
+
+  return new Map([
+    ["light", light.join("\n")],
+    ["dark", dark.join("\n")],
+  ]);
 }

@@ -15,9 +15,9 @@ import { rootBlocks } from "./palette";
  * It matters more now there are two palettes. None of the ratios survive the
  * translation to dark: they have to be re-derived, and re-derived again by
  * whoever next nudges a value. So the pairings the application actually draws
- * are asserted here, for every palette the stylesheet defines, in `bun test`
- * with no browser — which puts dark mode in `bun run validate` rather than
- * only in the on-demand Tier 2 run.
+ * are asserted here, for both halves of every `light-dark()` pair the
+ * stylesheet declares, in `bun test` with no browser — which puts dark mode
+ * in `bun run validate` rather than only in the on-demand Tier 2 run.
  *
  * This does not replace Tier 2. It checks the pairs we know the app draws;
  * axe in a real browser checks what the page *actually* renders, including
@@ -52,9 +52,9 @@ function contrast(foreground: string, background: string): number {
 type Palette = ReadonlyMap<string, string>;
 
 /**
- * The opaque colours of one `:root` block. Everything else in the block — the
- * fonts, the measures, and the derived `color-mix(...)` values — is skipped:
- * a ratio is only meaningful between two colours that actually cover.
+ * The opaque colours of one palette. Everything else in it — the fonts, the
+ * measures, and the derived `color-mix(...)` values — is skipped: a ratio is
+ * only meaningful between two colours that actually cover.
  */
 function colorsIn(block: string): Map<string, string> {
   const colors = new Map<string, string>();
@@ -77,26 +77,11 @@ function colorsIn(block: string): Map<string, string> {
   return colors;
 }
 
-/**
- * Every palette the stylesheet defines: the base `:root`, plus one per
- * `@media` block that redeclares it. A media palette inherits every token it
- * does not override, which is what makes the dark block short — and is also
- * why it has to be resolved here before anything is measured.
- */
+/** Every palette the stylesheet defines: the two halves of its pairs. */
 function palettes(): Map<string, Palette> {
-  const found = new Map<string, Palette>();
-  const blocks = rootBlocks();
-  const light = colorsIn(blocks.get("light") as string);
-
-  found.set("light", light);
-
-  for (const [name, block] of blocks) {
-    if (name !== "light") {
-      found.set(name, new Map([...light, ...colorsIn(block)]));
-    }
-  }
-
-  return found;
+  return new Map(
+    [...rootBlocks()].map(([name, block]) => [name, colorsIn(block)]),
+  );
 }
 
 const PALETTES = palettes();
@@ -144,17 +129,14 @@ function check(
 }
 
 test("the stylesheet defines the light palette and the dark one", () => {
-  // The dark block is the reason this file exists; a parser that stops
+  // The dark half is the reason this file exists; a parser that stops
   // finding it must fail here rather than quietly measure light twice.
-  expect([...PALETTES.keys()]).toEqual([
-    "light",
-    "prefers-color-scheme: dark",
-  ]);
+  expect([...PALETTES.keys()]).toEqual(["light", "dark"]);
 });
 
 test("dark is a palette of its own, not light under another name", () => {
   const light = PALETTES.get("light") as Palette;
-  const dark = PALETTES.get("prefers-color-scheme: dark") as Palette;
+  const dark = PALETTES.get("dark") as Palette;
 
   expect(dark.get("--surface")).not.toBe(light.get("--surface"));
   expect(luminance(dark.get("--surface") as string)).toBeLessThan(

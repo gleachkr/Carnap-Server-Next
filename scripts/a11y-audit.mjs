@@ -222,11 +222,13 @@ async function main() {
     });
   }
   if (DARK) {
-    // The dark palette is a media query and nothing else -- no cookie, no
-    // attribute -- so emulating the query is the only way in, and it is also
-    // the whole of what a reader with a dark desktop does. It applies to every
-    // frame of the target, which matters: the content document is a separate
-    // document that answers the query for itself.
+    // The dark palette is reached from the OS preference and nothing else --
+    // no cookie, no attribute: the stylesheet declares `color-scheme: light
+    // dark` and writes each colour as a light-dark() pair, so emulating the
+    // query is the only way in, and it is also the whole of what a reader with
+    // a dark desktop does. It applies to every frame of the target, which
+    // matters: the content document is a separate document that answers the
+    // query for itself.
     await cdp.send("Emulation.setEmulatedMedia", {
       features: [{ name: "prefers-color-scheme", value: "dark" }],
     });

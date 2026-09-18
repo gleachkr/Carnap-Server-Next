@@ -17,70 +17,100 @@
  * Every color in the application is one of these, and nothing outside this
  * block picks a color of its own: a rule elsewhere that wants a tint reaches
  * for color-mix over a token rather than respelling the token's channels at
- * an alpha. That is what lets a second palette be a second copy of this block
- * and nothing else — see the dark override below.
+ * an alpha.
+ *
+ * Each colour is written once, as a light-dark() pair, and `color-scheme:
+ * light dark` at the bottom is what selects between the halves: the browser
+ * takes the reader's OS preference, and a rule that declares `color-scheme`
+ * further down the tree pins everything under it — the second half of every
+ * pair, the widgets' shadow roots (color-scheme inherits across that
+ * boundary) and the form controls the browser draws itself. That is the one
+ * line an author who has moved the page's ground has to write:
+ * `:root { color-scheme: light; }`. It used to be a second copy of this block
+ * under `@media (prefers-color-scheme: dark)`, which nothing an author wrote
+ * could switch off, so a white `body` under a dark desktop got cream ink.
+ *
+ * Warm charcoal at night rather than a neutral or an inversion: the light
+ * palette's subject is paper, and paper in a dark room is warm and dim, not
+ * grey. The dark ratios are tuned to sit near the light ones rather than as far
+ * from the ground as they will go — --ink-muted lands at 4.76:1 on the
+ * lightest ground it may be drawn on, against 4.58:1 in light, because muted
+ * text that clears AA comfortably stops reading as muted.
+ * tests/a11y/contrast.test.ts holds every one of these pairings, in both
+ * halves.
  *
  * Shadow-DOM styles may write var(--token, <fallback>), because a content
  * document rendered with cssReset has no stylesheet of ours at all and the
  * fallback is then the widget's only color. Every such fallback must repeat
- * the light value here exactly; tests/a11y/tokens.test.ts enforces it, which
+ * the light half here exactly; tests/a11y/tokens.test.ts enforces it, which
  * is what stops a stale fallback from pinning a light color under dark.
  */
 :root {
-  /* Surfaces, from the ground the page sits on up to a control's own fill. */
-  --paper: #f1eadf;
-  --paper-top: #f5efe6;
-  --surface: #fbf7ef;
-  --surface-soft: #f8f2e8;
+  /* Surfaces, from the ground the page sits on up to a control's own fill.
+     Stacked the same way in both halves: --surface-soft is the recessed fill,
+     a step *below* the sheet, and --control-surface the raised one — which in
+     light coincides with --surface and in dark is what keeps a button from
+     dissolving into the sheet it sits on. */
+  --paper: light-dark(#f1eadf, #17140f);
+  --paper-top: light-dark(#f5efe6, #1d1913);
+  --surface: light-dark(#fbf7ef, #221d16);
+  --surface-soft: light-dark(#f8f2e8, #1e1a13);
   /* The header and footer's fill, laid over content scrolling beneath. */
   --surface-translucent: color-mix(in srgb, var(--surface) 96%, transparent);
-  /* A control's fill. The same value as --surface here, and its own token
+  /* A control's fill. The same value as --surface in light, and its own token
      anyway: these seven uses mean "the thing you press", and in dark a
      control has to sit visibly off the sheet instead of dissolving into it.
      A token whose only sin is coinciding in one palette still earns its
      keep in the other. */
-  --control-surface: #fbf7ef;
-  --rule: #d8d0c3;
-  --rule-soft: #e5ded3;
-  --ink: #16324a;
+  --control-surface: light-dark(#fbf7ef, #2a241b);
+  --rule: light-dark(#d8d0c3, #3d352a);
+  --rule-soft: light-dark(#e5ded3, #2e281f);
+  --ink: light-dark(#16324a, #e9e1d3);
   /* Clears WCAG AA 4.5:1 on --surface (4.58:1) and --paper-top, which is
      where nearly all secondary text sits. It does *not* clear it on the
      warmer fills — --surface-soft, --paper, --rule-soft — so muted text
      drawn on one of those reaches for --ink-muted-strong. */
-  --ink-muted: #5f7388;
+  --ink-muted: light-dark(#5f7388, #988e7e);
   /* --ink-muted for the warmer fills: same hue, dark enough for AA down to
      --rule-soft (4.9:1). Only for text that actually sits on one of them;
      used app-wide it reads as ordinary ink rather than as secondary. */
-  --ink-muted-strong: #4d5f72;
+  --ink-muted-strong: light-dark(#4d5f72, #aca291);
   /* Decoration only — separators, a disclosure triangle. At ~2.8:1 on the
      lightest surface it is below AA, so nothing a reader has to read (or
      click) may be drawn in it; that is what --ink-muted is for. */
-  --ink-faint: #8797a7;
-  --blue: #0b66d8;
+  --ink-faint: light-dark(#8797a7, #6e6557);
+  --blue: light-dark(#0b66d8, #5b9bef);
   /* The emphatic blue: a hover, a pressed state, an active nav item. Named
      for the emphasis and not for the lightness, because under a dark palette
      more emphasis means lighter rather than darker. */
-  --blue-strong: #074f9f;
-  --blue-soft: #eaf3ff;
-  --green: #1b7048;
-  --green-soft: #edf9f2;
-  --red: #b42318;
-  --red-soft: #fff0ed;
-  --gold: #9a6400;
-  --gold-soft: #fff7df;
-  /* Text drawn on a filled accent — a pressed chip, a selected option. */
-  --on-accent: #ffffff;
+  --blue-strong: light-dark(#074f9f, #8fbcff);
+  --blue-soft: light-dark(#eaf3ff, #16273d);
+  --green: light-dark(#1b7048, #46b87c);
+  --green-soft: light-dark(#edf9f2, #12281d);
+  --red: light-dark(#b42318, #f58a7c);
+  --red-soft: light-dark(#fff0ed, #2e1815);
+  --gold: light-dark(#9a6400, #c9a043);
+  --gold-soft: light-dark(#fff7df, #2b2110);
+  /* Text drawn on a filled accent — a pressed chip, a selected option. One of
+     two tokens that invert outright, which is the whole reason it has a name
+     rather than a value: an accent light enough to read on charcoal cannot
+     also carry white text. */
+  --on-accent: light-dark(#ffffff, #17140f);
   /* What a dialog casts, at whatever alpha the rule wants. Its own token
-     rather than --ink at an alpha: a shadow has to deepen under a dark
-     palette, where the ink is nearly white and would lift it instead. */
-  --shadow-color: #102235;
+     rather than --ink at an alpha, and the other one that inverts: a shadow
+     derived from the ink would be a highlight at night. */
+  --shadow-color: light-dark(#102235, #000000);
   /* The faint wash of colour up in the page's top right. Whole-colour rather
      than an alpha applied at the use site, because how much of it reads is a
-     property of the ground it lies on and so belongs to the palette. */
-  --body-glow: color-mix(in srgb, var(--blue) 5.5%, transparent);
+     property of the ground it lies on and so belongs to the palette. It
+     carries further on a dark ground than the same wash does on cream, but
+     starts from so much less light that it needs the extra to read at all. */
+  --body-glow: light-dark(
+    color-mix(in srgb, var(--blue) 5.5%, transparent),
+    color-mix(in srgb, var(--blue) 9%, transparent)
+  );
   /* The scope lines a Fitch proof draws down its subproofs. Relative to the
-     text it accompanies, so it follows the palette on its own; an instructor
-     theme can still override it outright. */
+     text it accompanies, so it follows the palette on its own. */
   --fitch-scope: color-mix(in srgb, currentColor 72%, transparent);
   --logo-font: "EB Garamond", Garamond, "Iowan Old Style", Georgia, serif;
   /* Fira Code sits in the body stack, after every sans face and before the
@@ -136,64 +166,7 @@
      reaches for this — the breadcrumb above the split columns, and the
      standalone content document, which has no shell to sit inside. */
   --page-measure: calc(85rem - 2 * var(--shell-gutter));
-  color-scheme: light;
-}
-
-/*
- * The same sheet at night. Only the colours are redeclared — every rule in
- * both layers already reads through the tokens, so this block is the whole
- * of dark mode, and it reaches the app shell, the standalone content
- * document (which links this stylesheet and evaluates the query itself), and
- * the exercise widgets' shadow roots (custom properties cross that boundary)
- * without any of them knowing a second palette exists.
- *
- * Warm charcoal rather than a neutral or an inversion: the light palette's
- * subject is paper, and paper in a dark room is warm and dim, not grey. The
- * ratios are tuned to sit near the light palette's rather than as far from
- * the ground as they will go — --ink-muted lands at 4.76:1 on the lightest
- * ground it may be drawn on, against 4.58:1 in light, because muted text
- * that clears AA comfortably stops reading as muted. tests/a11y/contrast.test.ts
- * holds every one of these pairings.
- *
- * Two tokens invert outright, which is the whole reason each has a name
- * rather than a value: --on-accent goes dark, because an accent light enough
- * to read on charcoal cannot also carry white text; and --shadow-color goes
- * to black, because a shadow derived from the ink would be a highlight here.
- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Stacked as in light: --surface-soft is the recessed fill, so it stays
-       a step *below* the sheet, and --control-surface the raised one — which
-       in light coincides with --surface and here is what keeps a button from
-       dissolving into the sheet it sits on. */
-    --paper: #17140f;
-    --paper-top: #1d1913;
-    --surface-soft: #1e1a13;
-    --surface: #221d16;
-    --control-surface: #2a241b;
-    --rule: #3d352a;
-    --rule-soft: #2e281f;
-    --ink: #e9e1d3;
-    --ink-muted: #988e7e;
-    --ink-muted-strong: #aca291;
-    --ink-faint: #6e6557;
-    --blue: #5b9bef;
-    --blue-strong: #8fbcff;
-    --blue-soft: #16273d;
-    --green: #46b87c;
-    --green-soft: #12281d;
-    --red: #f58a7c;
-    --red-soft: #2e1815;
-    --gold: #c9a043;
-    --gold-soft: #2b2110;
-    --on-accent: #17140f;
-    --shadow-color: #000000;
-    /* Carries further on a dark ground than the same wash does on cream,
-       but starts from so much less light that it needs the extra to read
-       at all. */
-    --body-glow: color-mix(in srgb, var(--blue) 9%, transparent);
-    color-scheme: dark;
-  }
+  color-scheme: light dark;
 }
 
 * {
