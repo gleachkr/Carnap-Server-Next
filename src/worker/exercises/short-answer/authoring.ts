@@ -1,21 +1,21 @@
-import type {
-  CompiledExercise,
-  CompilerDiagnostic,
-  DirectiveBlock,
-} from "../../application/content/authoring-toolkit";
+import { renderMarkdownChildren } from "../../application/content/authoring-toolkit";
+import {
+  type CompilerDiagnostic,
+  diagnostic,
+} from "../../application/content/diagnostics";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,
-  diagnostic,
+  type CompiledExercise,
+  type DirectiveBlock,
   parseBooleanAttribute,
   parseExamAttribute,
   parseFeedbackAttribute,
   parsePoints,
-  renderMarkdownChildren,
   requireAttribute,
   validateAttributes,
   validateExerciseId,
-} from "../../application/content/authoring-toolkit";
+} from "../../exercise-kit/authoring";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type { ShortAnswerPrivateData, ShortAnswerPublicData } from "./types";
 import {

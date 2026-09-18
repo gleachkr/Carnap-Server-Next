@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { CompilerDiagnostic } from "../src/worker/application/content/authoring-toolkit";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import { buildDiagnosticStrings } from "../src/worker/application/content/diagnostic-strings";
+import type { CompilerDiagnostic } from "../src/worker/application/content/diagnostics";
 import { badRequest } from "../src/worker/application/errors";
 import { DEFAULT_LOCALE, i18nFor } from "../src/worker/i18n";
 import {

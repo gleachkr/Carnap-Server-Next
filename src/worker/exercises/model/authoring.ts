@@ -1,22 +1,22 @@
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import type {
-  CompiledExercise,
-  CompilerDiagnostic,
-  DirectiveBlock,
-} from "../../application/content/authoring-toolkit";
+import { renderMarkdownSource } from "../../application/content/authoring-toolkit";
+import {
+  type CompilerDiagnostic,
+  diagnostic,
+} from "../../application/content/diagnostics";
+import type { ExerciseFeedback } from "../../domain/exercises";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,
-  diagnostic,
+  type CompiledExercise,
+  type DirectiveBlock,
   parseExamAttribute,
   parsePoints,
   reconcileFeedback,
-  renderMarkdownSource,
   requireAttribute,
   validateAttributes,
   validateExerciseId,
-} from "../../application/content/authoring-toolkit";
-import type { ExerciseFeedback } from "../../domain/exercises";
+} from "../../exercise-kit/authoring";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type { ModelField, ModelTarget } from "./logic";

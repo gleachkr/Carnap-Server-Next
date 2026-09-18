@@ -1,19 +1,19 @@
-import type {
-  CompiledExercise,
-  DirectiveBlock,
+import {
+  renderInlineMarkdown,
+  renderMarkdownChildren,
 } from "../../application/content/authoring-toolkit";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,
+  type CompiledExercise,
+  type DirectiveBlock,
   parseExamAttribute,
   parseFeedbackAttribute,
   parsePoints,
-  renderInlineMarkdown,
-  renderMarkdownChildren,
   requireAttribute,
   validateAttributes,
   validateExerciseId,
-} from "../../application/content/authoring-toolkit";
+} from "../../exercise-kit/authoring";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type {
   FreeResponsePrivateData,

@@ -27,13 +27,13 @@ import { placeholders, type Translator } from "../../i18n/translator";
  *   apostrophe anywhere else (`':|-:'`, `'auto'`, `'.'`) is left alone by ICU
  *   and stays as the author typed it in the source it describes.
  *
- * Dependency-free apart from the {@link Translator} type: `authoring-toolkit.ts`
+ * Dependency-free apart from the {@link Translator} type: `diagnostics.ts`
  * imports the id type from here, and it is compiled into the browser preview
  * bundle.
  */
 export function buildDiagnosticStrings(i18n: Translator) {
   return {
-    // Shared directive machinery (`authoring-toolkit.ts`).
+    // Shared directive machinery (`exercise-kit/authoring.ts`).
     "Exercise IDs must be 1 to 64 characters long and contain no spaces.":
       i18n.t(
         "Exercise IDs must be 1 to 64 characters long and contain no spaces.",

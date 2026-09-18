@@ -1,21 +1,21 @@
-import type {
-  CompiledExercise,
-  CompilerDiagnostic,
-  DirectiveBlock,
-} from "../../application/content/authoring-toolkit";
+import { renderMarkdownSource } from "../../application/content/authoring-toolkit";
+import {
+  type CompilerDiagnostic,
+  diagnostic,
+  diagnosticFrom,
+} from "../../application/content/diagnostics";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,
-  diagnostic,
-  diagnosticFrom,
+  type CompiledExercise,
+  type DirectiveBlock,
   parseExamAttribute,
   parseFeedbackAttribute,
   parsePoints,
-  renderMarkdownSource,
   requireAttribute,
   validateAttributes,
   validateExerciseId,
-} from "../../application/content/authoring-toolkit";
+} from "../../exercise-kit/authoring";
 import {
   extractStarterBody,
   goalBinderWarnings,

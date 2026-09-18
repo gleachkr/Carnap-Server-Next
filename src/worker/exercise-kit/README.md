@@ -29,9 +29,19 @@ lookups over it, and nothing else enumerates them.
   contract itself (`type.ts`), the action bar (`actions.ts`), the hydration
   payload (`hydration.ts`), the named group every exercise renders as
   (`group.ts`, `group.css`), the correctness mark, the answer events, the
-  help strings, the assessment helpers (`assessment.ts`) the ten per-type
-  `assessment.ts` objects share, and the page stylesheet for that chrome
-  (`exercise.css`, served by `web/styles.ts`).
+  help strings, the authoring helpers (`authoring.ts`: the directive block,
+  the common attribute parsers, the manifest assembly) the ten per-type
+  `authoring.ts` files are built from, the assessment helpers
+  (`assessment.ts`) the ten per-type `assessment.ts` objects share, and the
+  page stylesheet for that chrome (`exercise.css`, served by
+  `web/styles.ts`).
+
+The kit sits on the consuming side of a few `application/content/` leaves —
+the Markdown pipeline (`authoring-toolkit.ts`, which a type's `authoring.ts`
+renders its prompt through), the diagnostic envelope (`diagnostics.ts`) and
+its string catalog, the declaration hash, the theory-block compiler, and the
+render helpers. None of them knows what an exercise is; the directive
+machinery that does is here.
 
 Everything here is imported by the client bundles as well as the worker, so
 modules stay DOM-free and catalog-free unless their header says otherwise.

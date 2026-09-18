@@ -15,16 +15,10 @@ import {
   SurfaceLanguage,
   stripSyntaxAnnotations,
 } from "@aufbau/syntax";
-import type {
-  CompilerDiagnostic,
-  DirectiveBlock,
-} from "../../application/content/authoring-toolkit";
 import {
+  type CompilerDiagnostic,
   diagnostic,
-  parseBooleanAttribute,
-  requireAttribute,
-  validateAttributes,
-} from "../../application/content/authoring-toolkit";
+} from "../../application/content/diagnostics";
 import { libraryDiagnostic, lineAt } from "../../application/content/mm0";
 import { readLanguage } from "../../logic/specs";
 import { roleIndex } from "../../logic/specs/roles";
@@ -34,6 +28,12 @@ import {
   theoryByPath,
   theorySourceByFileName,
 } from "../../logic/theories";
+import {
+  type DirectiveBlock,
+  parseBooleanAttribute,
+  requireAttribute,
+  validateAttributes,
+} from "../authoring";
 
 /**
  * A theory name and the MM0 text an `:::aufbau-mm0` block declares.

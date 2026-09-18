@@ -3,8 +3,8 @@ import {
   ContentArtifactError,
   parseContentArtifact,
 } from "../src/worker/application/content/artifact";
-import type { CompilerDiagnostic } from "../src/worker/application/content/authoring-toolkit";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import type { CompilerDiagnostic } from "../src/worker/application/content/diagnostics";
 import type { CompiledContentArtifact } from "../src/worker/domain/content";
 import type { JsonValue } from "../src/worker/domain/json";
 import {

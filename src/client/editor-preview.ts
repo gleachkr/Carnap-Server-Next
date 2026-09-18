@@ -13,9 +13,9 @@
 import type { CompileResult } from "@aufbau/compiler";
 import type { EditorView } from "@codemirror/view";
 import { raw } from "hono/html";
-import type { CompilerDiagnostic } from "../worker/application/content/authoring-toolkit";
 import type { CompileMarkdownResult } from "../worker/application/content/compiler";
 import { compileCarnapMarkdown } from "../worker/application/content/compiler";
+import type { CompilerDiagnostic } from "../worker/application/content/diagnostics";
 import { compileTheorySource } from "../worker/application/content/mm0";
 import {
   componentAssetsForArtifact,

@@ -39,12 +39,12 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import type {
-  CompilerDiagnostic,
-  DirectiveBlock,
-} from "../../application/content/authoring-toolkit";
-import { diagnostic } from "../../application/content/authoring-toolkit";
+import {
+  type CompilerDiagnostic,
+  diagnostic,
+} from "../../application/content/diagnostics";
 import { languageFromSource } from "../../logic/specs";
+import type { DirectiveBlock } from "../authoring";
 import type { SystemResolver } from "./theory";
 
 /**

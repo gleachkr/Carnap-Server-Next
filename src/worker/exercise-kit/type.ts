@@ -1,9 +1,5 @@
-import type {
-  CompiledExercise,
-  CompilerDiagnostic,
-  DirectiveBlock,
-  MarkdownRenderOptions,
-} from "../application/content/authoring-toolkit";
+import type { MarkdownRenderOptions } from "../application/content/authoring-toolkit";
+import type { CompilerDiagnostic } from "../application/content/diagnostics";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -19,6 +15,7 @@ import type {
   NormalizedAnswer,
 } from "../domain/content";
 import type { Translator } from "../i18n/translator";
+import type { CompiledExercise, DirectiveBlock } from "./authoring";
 import type { SystemResolver } from "./systems/theory";
 
 /**

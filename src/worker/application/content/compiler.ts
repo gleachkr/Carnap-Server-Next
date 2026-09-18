@@ -6,6 +6,7 @@ import type {
   ContentSourceProfile,
   ExerciseManifestItem,
 } from "../../domain/content";
+import type { DirectiveBlock } from "../../exercise-kit/authoring";
 import { withSystemSources } from "../../exercise-kit/systems/join";
 import type {
   AufbauTheory,
@@ -19,27 +20,23 @@ import type { ExerciseType } from "../../exercise-kit/type";
 import { modelDataBodyLines } from "../../exercises/model/authoring";
 import type { TheoryResolver } from "../../logic/theories";
 import { BUILT_IN_SYSTEM_IDS } from "../../logic/theories";
-import type {
-  CompilerDiagnostic,
-  DirectiveBlock,
-  MarkdownNode,
-} from "./authoring-toolkit";
 import {
   createFootnoteNumbering,
-  diagnostic,
   directiveBlockFromNode,
   footnoteReferencesIn,
   isItemLinkTarget,
   isValidItemLinkTarget,
+  type MarkdownNode,
   markdownParser,
   renderMarkdownChildren,
 } from "./authoring-toolkit";
+import { type CompilerDiagnostic, diagnostic } from "./diagnostics";
 import { createMathCompiler, type MathFailure } from "./math";
 import type { ExerciseRegistry } from "./registry";
 import { createDefaultExerciseRegistry } from "./registry";
 
-export type { CompilerDiagnostic } from "./authoring-toolkit";
 export { CONTENT_SANITIZE_SCHEMA } from "./authoring-toolkit";
+export type { CompilerDiagnostic } from "./diagnostics";
 
 export type CompileMarkdownResult =
   | {

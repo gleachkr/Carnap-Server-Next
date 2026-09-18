@@ -1,22 +1,24 @@
-import type {
-  CompiledExercise,
-  CompilerDiagnostic,
-  DirectiveBlock,
-  MarkdownRenderOptions,
+import {
+  type MarkdownRenderOptions,
+  renderInlineMarkdown,
+  renderMarkdownSource,
 } from "../../application/content/authoring-toolkit";
+import {
+  type CompilerDiagnostic,
+  diagnostic,
+} from "../../application/content/diagnostics";
 import {
   buildCompiledExercise,
   COMMON_EXERCISE_ATTRIBUTES,
-  diagnostic,
+  type CompiledExercise,
+  type DirectiveBlock,
   parseExamAttribute,
   parseFeedbackAttribute,
   parsePoints,
-  renderInlineMarkdown,
-  renderMarkdownSource,
   requireAttribute,
   validateAttributes,
   validateExerciseId,
-} from "../../application/content/authoring-toolkit";
+} from "../../exercise-kit/authoring";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import type {
   MultipleChoiceMode,

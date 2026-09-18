@@ -9,15 +9,12 @@
  * repeat.
  */
 
-import type {
-  CompilerDiagnostic,
-  DirectiveBlock,
-} from "../../application/content/authoring-toolkit";
 import {
+  type CompilerDiagnostic,
   diagnostic,
-  parseBooleanAttribute,
-} from "../../application/content/authoring-toolkit";
+} from "../../application/content/diagnostics";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
+import { type DirectiveBlock, parseBooleanAttribute } from "../authoring";
 import type { AufbauTheory } from "../systems/theory";
 import type {
   ProofFormulaReader,

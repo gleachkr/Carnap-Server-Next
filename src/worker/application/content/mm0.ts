@@ -31,8 +31,7 @@
 import type { Diagnostic } from "@aufbau/syntax";
 import { parseSpec, type Spec, SurfaceLanguage } from "@aufbau/syntax";
 import { sentenceSort } from "../../logic/specs/roles";
-import type { CompilerDiagnostic } from "./authoring-toolkit";
-import { diagnostic } from "./authoring-toolkit";
+import { type CompilerDiagnostic, diagnostic } from "./diagnostics";
 
 /**
  * What a saved MM0 revision knows about itself.
