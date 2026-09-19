@@ -4,6 +4,7 @@ import {
   courseStaffTierFor,
   requireAuthenticated,
 } from "../application/authorization";
+import { badRequest } from "../application/errors";
 import {
   type AssignmentGradebook,
   assignmentGradebookCsv,
@@ -37,7 +38,10 @@ function requiredParam(context: Context<AppBindings>, name: string): string {
   const value = context.req.param(name);
 
   if (value === undefined) {
-    throw new Error(`Missing route parameter ${name}.`);
+    throw badRequest(
+      "missing_route_parameter",
+      "A route parameter is missing.",
+    );
   }
 
   return value;
@@ -154,7 +158,7 @@ function courseGradebookJson(gradebook: CourseGradebook) {
 async function courseGradebook(context: Context<AppBindings>) {
   const loginRedirect = webActorOrLogin(context);
 
-  if (loginRedirect !== null) {
+  if (wantsHtml(context) && loginRedirect !== null) {
     return loginRedirect;
   }
 
@@ -180,7 +184,7 @@ async function courseGradebook(context: Context<AppBindings>) {
 async function assignmentGradebook(context: Context<AppBindings>) {
   const loginRedirect = webActorOrLogin(context);
 
-  if (loginRedirect !== null) {
+  if (wantsHtml(context) && loginRedirect !== null) {
     return loginRedirect;
   }
 
@@ -249,7 +253,7 @@ async function courseCsv(context: Context<AppBindings>) {
 async function studentScore(context: Context<AppBindings>) {
   const loginRedirect = webActorOrLogin(context);
 
-  if (loginRedirect !== null) {
+  if (wantsHtml(context) && loginRedirect !== null) {
     return loginRedirect;
   }
 

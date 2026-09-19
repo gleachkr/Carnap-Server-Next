@@ -1702,6 +1702,46 @@ Choose yes.
     });
   });
 
+  test("a signed-out JSON caller is told 401, not sent to the login page", async () => {
+    // The login redirect is for a browser. The three gradebook routes that
+    // also answer JSON used to send every signed-out caller there, where
+    // every sibling route answers a JSON caller with the 401 envelope.
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "json-teacher@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+
+      for (const path of [
+        `/courses/${courseId}/instructor/gradebook`,
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/gradebook`,
+        `/courses/${courseId}/assignments/${assignmentId}/score`,
+      ]) {
+        const asJson = await appRequest(
+          createTestApp(),
+          path,
+          { headers: { Accept: "application/json" } },
+          env,
+        );
+        const asHtml = await appRequest(
+          createTestApp(),
+          path,
+          { headers: { Accept: "text/html" } },
+          env,
+        );
+
+        expect(asJson.status).toBe(401);
+        expect(asHtml.status).toBe(302);
+        expect(asHtml.headers.get("Location")).toContain("/login");
+      }
+    });
+  });
+
   test("the course gradebook hands its columns what they sort by", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "sort-teacher@example.test");
