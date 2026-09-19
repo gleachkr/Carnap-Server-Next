@@ -694,6 +694,41 @@ describe("LTI 1.3 core launches", () => {
     });
   });
 
+  // Beside the other link tests rather than in `trusted-proxy.test.ts`,
+  // which has no LTI plumbing: the URL the page shows locally is the one the
+  // email carries everywhere else.
+  test("the link confirmation URL takes the browser's origin behind a trusted proxy", async () => {
+    await withLtiApp(async (app, env, stores) => {
+      await stores.users.create({
+        id: "user-existing",
+        email: "instructor@example.test",
+        name: "Ida Instructor",
+        createdAt: NOW,
+      });
+
+      const launch = await instructorLaunch(
+        app,
+        { ...env, CARNAP_TRUST_PROXY: "1" },
+        {
+          headers: {
+            "X-Forwarded-Host": "logic.example.edu",
+            "X-Forwarded-Proto": "https",
+          },
+        },
+      );
+      const body = await launch.response.text();
+      const confirmMatch = body.match(
+        /href="([^"]*\/lti\/link\/confirm\?token=[^"]+)"/,
+      );
+
+      // A self-hosted instance behind a TLS-terminating proxy sees every
+      // request over plain http; the link it mails out used to say so.
+      expect(confirmMatch?.[1]).toStartWith(
+        "https://logic.example.edu/lti/link/confirm?token=",
+      );
+    });
+  });
+
   // The commonest way to end up nameless with an LMS that knows your name:
   // reach Carnap by email first, and link the launch to that account after.
   test("approving a link names the account it attaches to", async () => {

@@ -459,7 +459,7 @@ async function respondLinkPending(
     });
   }
 
-  const confirmUrl = new URL("/lti/link/confirm", context.req.url);
+  const confirmUrl = new URL("/lti/link/confirm", publicRequestUrl(context));
 
   confirmUrl.searchParams.set("token", outcome.linkToken);
 
