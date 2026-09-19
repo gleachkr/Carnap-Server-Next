@@ -1051,6 +1051,71 @@ describe("courses and enrollment", () => {
     });
   });
 
+  test("adding an already-enrolled student as staff by id promotes in place too", async () => {
+    // The JSON body names the account by id rather than email, and used to
+    // insert a second membership row — which the unique index refused, as a
+    // 500 — where the form's path promoted the one that was there.
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "instructor@example.test");
+      const student = await login(env, "student@example.test");
+      const created = await createCourse(env, instructor);
+      const link = await createEnrollmentLink(
+        env,
+        instructor,
+        created.course.id,
+      );
+      await appRequest(
+        createTestApp(),
+        link.enrollmentLink.enrollmentPath,
+        {
+          headers: {
+            Cookie: student.cookieHeader,
+            "X-CSRF-Token": student.csrfToken,
+          },
+          method: "POST",
+        },
+        env,
+      );
+      const response = await appRequest(
+        createTestApp(),
+        `/courses/${created.course.id}/staff`,
+        {
+          ...jsonRequest(
+            { role: "teacher_assistant", userId: student.body.actor.id },
+            instructor.csrfToken,
+          ),
+          headers: {
+            Cookie: instructor.cookieHeader,
+            "Content-Type": "application/json",
+            "X-CSRF-Token": instructor.csrfToken,
+          },
+        },
+        env,
+      );
+      const body = (await response.json()) as StaffResponse;
+      const detail = await appRequest(
+        createTestApp(),
+        `/courses/${created.course.id}`,
+        {
+          headers: {
+            Accept: "application/json",
+            Cookie: instructor.cookieHeader,
+          },
+        },
+        env,
+      );
+      const detailBody = (await detail.json()) as CourseResponse;
+      const forStudent = detailBody.memberships?.filter(
+        (membership) => membership.userId === student.body.actor.id,
+      );
+
+      expect(response.status).toBe(201);
+      expect(body.membership.role).toBe("teacher_assistant");
+      expect(forStudent?.length).toBe(1);
+      expect(forStudent?.[0]?.role).toBe("teacher_assistant");
+    });
+  });
+
   test("adding staff by an unknown email is rejected", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "instructor@example.test");

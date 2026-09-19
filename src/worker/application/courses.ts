@@ -613,25 +613,13 @@ export class CourseService {
       );
     }
 
-    const nowDate = this.options.now?.() ?? new Date();
-    const now = timestampNow(nowDate);
-
-    return this.options.stores.courses.addMembership({
-      courseId,
-      createdAt: now,
-      id: createAppId(nowDate.getTime()),
-      role: command.role,
-      status: "active",
-      userId: command.userId,
-    });
+    return this.enrollAsStaff(actor, courseId, user.id, command.role);
   }
 
   /**
-   * Add a staff member (instructor or TA) by their account
-   * email. When the person is already a member — e.g. a student who joined via
-   * an enrollment link — this promotes them in place rather than creating a
-   * duplicate membership, routing through the guarded role update so the last
-   * active instructor cannot be demoted away.
+   * Add a staff member (instructor or TA) by their account email — the same
+   * addition as {@link addStaff}, with the account looked up the way a
+   * form can name one.
    */
   async addStaffByEmail(
     actor: AuthenticatedActor,
@@ -660,15 +648,30 @@ export class CourseService {
       );
     }
 
+    return this.enrollAsStaff(actor, courseId, user.id, command.role);
+  }
+
+  /**
+   * The membership that makes a user staff. When the person is already a
+   * member — e.g. a student who joined via an enrollment link — this
+   * promotes them in place rather than creating a duplicate membership
+   * (which the store's unique index would refuse), routing through the
+   * guarded role update so the last active instructor cannot be demoted
+   * away. The caller has already checked the actor and the role.
+   */
+  private async enrollAsStaff(
+    actor: AuthenticatedActor,
+    courseId: AppId,
+    userId: AppId,
+    role: CourseMembership["role"],
+  ): Promise<CourseMembership> {
     const existing = await this.options.stores.courses.getMembership(
       courseId,
-      user.id,
+      userId,
     );
 
     if (existing !== null) {
-      await this.updateMembershipRole(actor, courseId, existing.id, {
-        role: command.role,
-      });
+      await this.updateMembershipRole(actor, courseId, existing.id, { role });
 
       return this.updateMembershipStatus(actor, courseId, existing.id, {
         status: "active",
@@ -682,9 +685,9 @@ export class CourseService {
       courseId,
       createdAt: now,
       id: createAppId(nowDate.getTime()),
-      role: command.role,
+      role,
       status: "active",
-      userId: user.id,
+      userId,
     });
   }
 
