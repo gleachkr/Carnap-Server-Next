@@ -33,6 +33,7 @@ import { sampleSource as starterTemplate } from "../src/worker/web/content";
 import { CONTENT_STYLE_SHEET } from "../src/worker/web/style-assets";
 import { grantTestContentAuthor } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
+import { FORALLX_THEORY_BLOCK } from "./helpers/forallx-theory";
 import { createTestStorage, type TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
@@ -1984,6 +1985,39 @@ ${sampleSource("styled_doc")}`,
       method: "POST",
     } satisfies RequestInit;
   }
+
+  test("the editor marks a warning as one before the browser's compile runs", async () => {
+    // The list's own colour is red. A warning used to arrive unclassed from
+    // the server and stay red until the preview bundle recompiled the source
+    // and repainted it — a flash of the wrong colour, and the wrong colour
+    // for good with scripts off.
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "warned-author@example.test");
+      const item = await createContent(env, author);
+      // A goal binder that shadows the language: told, not stopped.
+      const sourceText = `${FORALLX_THEORY_BLOCK}\n\n:::aufbau-proof-fitch{system="forallx" id="g1" points="1"}\nProve it.\n\ntheorem mp (a b: wff): $ a ⊢ a $;\n----\na → a    :ax\n:::\n`;
+      const saved = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        jsonRequest({ sourceText }, author),
+        env,
+      );
+
+      expect(saved.status).toBe(201);
+
+      const response = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions/new`,
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+      const html = await response.text();
+
+      expect(response.status).toBe(200);
+      expect(html).toContain('<li class="warning">');
+      expect(html).toContain("goal_binder_shadows_variable");
+    });
+  });
 
   test("the editor pairs the source field with a compiled preview", async () => {
     await withStorage(async (_storage, env) => {

@@ -30,8 +30,15 @@ import {
   isAufbauProofPublicData,
 } from "../worker/exercises/aufbau-proof/types";
 import {
+  AUFBAU_PROOF_FITCH_KIND,
+  isAufbauProofFitchPublicData,
+} from "../worker/exercises/aufbau-proof-fitch/types";
+import {
+  AUFBAU_PROOF_PRAWITZ_KIND,
+  isAufbauProofPrawitzPublicData,
+} from "../worker/exercises/aufbau-proof-prawitz/types";
+import {
   AUFBAU_PROOF_TREE_KIND,
-  type AufbauProofTreePublicData,
   isAufbauProofTreePublicData,
 } from "../worker/exercises/aufbau-proof-tree/types";
 import {
@@ -62,6 +69,12 @@ const DEBOUNCE_MS = 250;
 // The engine's diagnostic for a well-formed theory + goal with no proof body —
 // benign at authoring time (the student supplies the proof), so a tree exercise
 // whose only complaint is this counts as "declares cleanly".
+/**
+ * The engine's complaint about a proof with no lines — the first line of it.
+ * Since 0.0.10 the message goes on to name the theorem and the phase, so it
+ * is matched by its head rather than whole; matched whole, every goal check
+ * reported the benign case as a failure.
+ */
 const EMPTY_PROOF_MESSAGE = "proof block is empty";
 
 /**
@@ -109,10 +122,16 @@ interface ProofCheck {
 }
 
 /**
- * Run the Aufbau engine over each proof exercise's frozen theory + starter,
- * exactly as a student's browser would — so an author sees a malformed theory or
- * a starter that does not yet verify while writing. A stub starter legitimately
- * fails to verify; the note is informational, not a content error.
+ * Run the Aufbau engine over each linear proof exercise's frozen theory +
+ * starter, exactly as a student's browser would — so an author sees a
+ * malformed theory or a starter that does not yet verify while writing. A stub
+ * starter legitimately fails to verify; the note is informational, not a
+ * content error.
+ *
+ * A playground has no goal to verify against: its theory carries no
+ * `theorem playground`, and the goal is derived from whatever the student
+ * proves. Checked here, the engine would answer "extra proof block with no
+ * matching theorem" against every one of them.
  */
 async function proofChecksFor(
   artifact: CompiledContentArtifact,
@@ -121,7 +140,8 @@ async function proofChecksFor(
   const proofs = artifact.manifest.filter(
     (item): item is typeof item & { publicData: AufbauProofPublicData } =>
       item.kind === AUFBAU_PROOF_KIND &&
-      isAufbauProofPublicData(item.publicData),
+      isAufbauProofPublicData(item.publicData) &&
+      item.publicData.playground !== true,
   );
 
   if (proofs.length === 0) {
@@ -157,48 +177,63 @@ async function proofChecksFor(
   });
 }
 
+/** What the goal check reads off any of the three structured proof kinds. */
+interface GoalCheckData {
+  readonly goalName: string;
+  readonly mm0?: string;
+  readonly playground?: boolean;
+  readonly source?: string;
+}
+
 /**
- * Author-check each tree proof exercise. A tree has no starter proof to verify,
- * so we confirm the frozen theory + goal *declare cleanly*: compile an empty
- * body and treat the benign "proof block is empty" as success (the theory and
- * goal parsed; the student supplies the proof). Any other diagnostic is a real
- * theory or goal problem the author should see.
+ * Author-check each tree, Fitch and Prawitz proof exercise. None of the three
+ * has an engine-text starter to verify (a Fitch starter is surface text in
+ * the widget's own shape), so we confirm the frozen theory + goal *declare
+ * cleanly*: compile an empty body and treat the benign "proof block is empty"
+ * as success (the theory and goal parsed; the student supplies the proof).
+ * Any other diagnostic is a real theory or goal problem the author should
+ * see. A playground declares no goal and is left out, as above.
  */
-async function treeChecksFor(
+async function goalChecksFor(
   artifact: CompiledContentArtifact,
   strings: ProofCheckStrings,
 ): Promise<ProofCheck[]> {
-  const trees = artifact.manifest.filter(
-    (item): item is typeof item & { publicData: AufbauProofTreePublicData } =>
-      item.kind === AUFBAU_PROOF_TREE_KIND &&
-      isAufbauProofTreePublicData(item.publicData),
+  const goals = artifact.manifest.filter(
+    (item): item is typeof item & { publicData: GoalCheckData } =>
+      ((item.kind === AUFBAU_PROOF_TREE_KIND &&
+        isAufbauProofTreePublicData(item.publicData)) ||
+        (item.kind === AUFBAU_PROOF_FITCH_KIND &&
+          isAufbauProofFitchPublicData(item.publicData)) ||
+        (item.kind === AUFBAU_PROOF_PRAWITZ_KIND &&
+          isAufbauProofPrawitzPublicData(item.publicData))) &&
+      item.publicData.playground !== true,
   );
 
-  if (trees.length === 0) {
+  if (goals.length === 0) {
     return [];
   }
 
   const compiler = await loadProofCompiler();
 
-  return trees.map((tree) => {
-    const { goalName } = tree.publicData;
-    const { mm0 } = proofTheoryText(tree.publicData);
+  return goals.map((goal) => {
+    const { goalName } = goal.publicData;
+    const { mm0 } = proofTheoryText(goal.publicData);
     try {
       const result = compiler.compile(mm0, `${goalName}\n----\n`);
       const message = firstProblem(result);
       const declaresCleanly =
         result.ok === true ||
         message === null ||
-        message === EMPTY_PROOF_MESSAGE;
+        message.split("\n")[0] === EMPTY_PROOF_MESSAGE;
       return {
-        id: tree.id,
+        id: goal.id,
         message: declaresCleanly ? null : message,
         ok: declaresCleanly,
         okLabel: strings.declaresCleanly,
       };
     } catch {
       return {
-        id: tree.id,
+        id: goal.id,
         message: strings.unreadableTheory,
         ok: false,
         okLabel: strings.declaresCleanly,
@@ -481,11 +516,11 @@ function drawPreview(
     });
 
     // Engine-check any proof exercises (async: loads the compiler wasm) —
-    // linear starters verify, tree goals declare cleanly.
+    // linear starters verify; tree, Fitch and Prawitz goals declare cleanly.
     const checkStrings = proofCheckStrings();
     const checks = [
       ...(await proofChecksFor(artifact, checkStrings)),
-      ...(await treeChecksFor(artifact, checkStrings)),
+      ...(await goalChecksFor(artifact, checkStrings)),
     ];
 
     if (!stale()) {

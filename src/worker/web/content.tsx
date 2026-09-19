@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
 import type { DiagnosticMessageId } from "../application/content/diagnostic-strings";
+import type { DiagnosticSeverity } from "../application/content/diagnostics";
 import type { CompiledTheoryArtifact } from "../application/content/mm0";
 import type {
   ContentItem,
@@ -354,15 +355,16 @@ const ContentItemForm: FC<{
 };
 
 /**
- * One compiler complaint, as the editor page receives it: a code, a line, and
- * the message still unworded (see {@link TranslatableMessage}). Wording it is
- * this view's job, because the compiler that produced it — which also runs in
- * the author's browser — has no translator.
+ * One compiler complaint, as the editor page receives it: a code, a line, a
+ * severity, and the message still unworded (see {@link TranslatableMessage}).
+ * Wording it is this view's job, because the compiler that produced it —
+ * which also runs in the author's browser — has no translator.
  */
 export interface Diagnostic extends TranslatableMessage {
   readonly code: string;
   readonly line: number;
   readonly message: DiagnosticMessageId;
+  readonly severity: DiagnosticSeverity;
 }
 
 const DiagnosticsList: FC<{
@@ -387,8 +389,11 @@ const DiagnosticsList: FC<{
           }),
         );
 
+        // Errors are unclassed: red is the list's own colour, so only the
+        // exception needs saying — and it has to be said here too, or a
+        // warning is red until the browser's own compile repaints it.
         return (
-          <li>
+          <li class={item.severity === "warning" ? "warning" : undefined}>
             {before}
             <code>{item.code}</code>
             {after}

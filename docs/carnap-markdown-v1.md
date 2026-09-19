@@ -1112,7 +1112,7 @@ seeded with the fixed goal:
 :::aufbau-proof-tree{system="gentzen-lk" id="tree-identity"}
 Build a derivation of identity.
 
-theorem identity (a: wff): $ a ⊢ a $
+theorem identity (a: wff): $ a ==> a $
 :::
 ```
 
