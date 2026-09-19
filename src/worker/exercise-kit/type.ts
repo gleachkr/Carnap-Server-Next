@@ -52,6 +52,24 @@ export interface ExerciseType extends ExerciseAssessment {
     context: ExerciseCompileContext,
   ): Promise<CompiledExercise | null>;
   /**
+   * The body is source text the type reads itself, not markdown: none of the
+   * compiler's markdown lints — the raw-HTML and legacy-syntax line scans, the
+   * nested-directive scan — read it. The Fitch and Prawitz starters, whose
+   * `:<rule>` justifications and `-- label:n` comments parse as inline
+   * directives and whose formulas may contain `<`. Absent: the body is
+   * markdown, and every lint reads it.
+   */
+  readonly rawBody?: true;
+  /**
+   * For a body that is partly prose and partly data, the lines that are data —
+   * the ones on which a stray `:token` is not a nested directive the author
+   * meant. Only the nested-directive scan asks; the raw-HTML scan still reads
+   * the whole body, because HTML in the prose half is still a mistake. A
+   * model's givens and formulas, but not its prompt. Absent (and not
+   * `rawBody`): no line is.
+   */
+  dataBodyLines?(block: DirectiveBlock): ReadonlySet<number>;
+  /**
    * What a kind of exercise is called when its author gave it no title. Never
    * shown to sighted readers (see `exerciseGroupLabel`), so it names the kind
    * rather than the task: "Truth table", not "Fill in the truth table". Spelled

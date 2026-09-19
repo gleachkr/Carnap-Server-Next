@@ -24,6 +24,8 @@ export const AUFBAU_PROOF_FITCH_EXERCISE = {
   directiveName: "aufbau-proof-fitch",
   kind: AUFBAU_PROOF_FITCH_KIND,
   name: aufbauProofFitchName,
+  // The starter body is proof text, not markdown; see `ExerciseType.rawBody`.
+  rawBody: true,
   render: renderAufbauProofFitch,
   schemaVersion: AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
   strings: buildAufbauProofFitchStrings,

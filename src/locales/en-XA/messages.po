@@ -548,7 +548,6 @@ msgstr ""
 #: src/worker/exercises/free-response/read-only-view.ts
 #: src/worker/exercises/short-answer/read-only-view.ts
 #: src/worker/exercises/translation/assessment.ts
-#: src/worker/web/assignment-detail.tsx
 msgid "Answer"
 msgstr ""
 

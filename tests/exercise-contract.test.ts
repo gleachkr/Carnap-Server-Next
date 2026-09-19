@@ -173,6 +173,39 @@ describe("exercise contract", () => {
     ).resolves.toMatchObject({ awardedScore: 0, status: "incorrect" });
   });
 
+  /**
+   * Which directives take a raw body is the type's to say, not the compiler's:
+   * the compiler kept its own list of the two proof kinds, so a third raw-body
+   * type would have compiled with raw-HTML diagnostics for every `<` in its
+   * body and an "unsupported directive" for every `:token`, and nothing would
+   * have said why. The same fake type, with and without the flag.
+   */
+  test("a type that declares a raw body is spared the markdown lints", async () => {
+    const source = [
+      ":::fake",
+      "a < b :not-a-directive",
+      "<b>raw</b>",
+      ":::",
+    ].join("\n");
+    const diagnosticsWith = async (rawBody: boolean) => {
+      const registry = new ExerciseRegistry();
+
+      registry.register(
+        rawBody ? { ...fakeExerciseType, rawBody: true } : fakeExerciseType,
+      );
+
+      return (await compileCarnapMarkdown(source, { registry })).diagnostics
+        .map((item) => item.code)
+        .sort();
+    };
+
+    expect(await diagnosticsWith(false)).toEqual([
+      "unsafe_raw_html",
+      "unsupported_directive",
+    ]);
+    expect(await diagnosticsWith(true)).toEqual([]);
+  });
+
   test("structural answer errors are distinct from incorrect answers", async () => {
     const registry = new ExerciseRegistry();
 
@@ -634,6 +667,55 @@ describe("the interactive submission path", () => {
         .map((type) => type.kind)
         .sort(),
     );
+  });
+
+  /**
+   * The two text kinds have no element to write `answerData`; the runtime reads
+   * their native field by `name="text"` instead. That field is theirs to
+   * render: handed the bar, the renderer makes it live, and without one (a
+   * preview, a saved revision) it is disabled, since there is no attempt to
+   * record an answer against. The attempt page used to build the live form
+   * itself, from the two types' shapes — the one form that was not
+   * `type.render`, and a second renderer to keep in step with the first.
+   */
+  test("the text kinds render a live answer field when given the bar", async () => {
+    const compiled = await compileCarnapMarkdown(SHOWCASE_DEMO_SOURCE);
+
+    if (!compiled.ok) {
+      throw new Error("the showcase lesson did not compile");
+    }
+
+    const registry = createDefaultExerciseRegistry();
+    const i18n = i18nFor("en");
+    const probe = '<div class="exercise-actions" data-probe></div>';
+    const textKinds = registry
+      .types()
+      .filter((type) => !type.component.clientModule);
+
+    expect(textKinds.map((type) => type.directiveName)).toEqual([
+      "free-response",
+      "short-answer",
+    ]);
+
+    for (const type of textKinds) {
+      const node = compiled.artifact.document.nodes.find(
+        (candidate) =>
+          candidate.kind === "exercise" && candidate.exerciseKind === type.kind,
+      );
+
+      if (node === undefined || node.kind !== "exercise") {
+        throw new Error(`the showcase lesson has no ${type.directiveName}`);
+      }
+
+      const live = type.render(node, { actions: probe, i18n });
+      const inert = type.render(node, { i18n });
+      const field = /<(?:textarea|input)\b[^>]*>/;
+
+      expect(live.match(field)?.[0]).toContain('name="text"');
+      expect(live.match(field)?.[0]).not.toContain("disabled");
+      expect(inert.match(field)?.[0]).toContain("disabled");
+      expect(inert.match(field)?.[0]).not.toContain('name="text"');
+    }
   });
 
   /**

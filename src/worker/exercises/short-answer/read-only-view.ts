@@ -40,17 +40,26 @@ export function renderShortAnswer(
   const legend = exerciseLegendHtml(
     exerciseGroupLabel(shortAnswerName(i18n), context.title),
   );
+  // Unique per document, and safe as an id: `EXERCISE_ID_PATTERN` admits
+  // anything HTML admits as an id, which is what `for` matches against —
+  // exactly, with no escaping — and refuses the whitespace that would keep the
+  // two from ever pairing. Associated by `for`/`id` rather than by nesting, so
+  // the label and the control are siblings the layout can place independently
+  // — and so the field's accessible name never depends on what else the label
+  // wraps.
   const fieldId = `${node.exerciseId}-answer`;
-
-  // The same closing row a student's copy has, unslotted — a text exercise has no
-  // shadow card to project into — and with the submit disabled: there is no
-  // attempt behind a preview to record an answer against.
+  // With an action bar this is a student's form, and the field is the answer
+  // the runtime reads (`name="text"`, the one native field it knows). Without
+  // one it is a preview or a saved revision, and the field is inert: there is
+  // no attempt behind it to record an answer against. Either way the closing
+  // row sits unslotted — a text exercise has no shadow card to project into.
+  const field = context.actions === undefined ? " disabled" : ' name="text"';
   return `<section${rootAttributes}>
         <fieldset class="exercise-group">
           ${legend}
           <div class="exercise-prompt">${node.publicData.promptHtml}</div>
           <label for="${escapeHtml(fieldId)}">${escapeHtml(i18n.t("Answer"))}</label>
-          <input disabled id="${escapeHtml(fieldId)}">
+          <input${field} id="${escapeHtml(fieldId)}">
         </fieldset>
         ${context.actions ?? previewExerciseActionsHtml(i18n, false)}
       </section>`;

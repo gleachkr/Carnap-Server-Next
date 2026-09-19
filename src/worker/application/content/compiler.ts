@@ -17,7 +17,6 @@ import {
   compileAufbauMm0,
 } from "../../exercise-kit/systems/theory";
 import type { ExerciseType } from "../../exercise-kit/type";
-import { modelDataBodyLines } from "../../exercises/model/authoring";
 import type { TheoryResolver } from "../../logic/theories";
 import { BUILT_IN_SYSTEM_IDS } from "../../logic/theories";
 import { type CompilerDiagnostic, diagnostic } from "./diagnostics";
@@ -117,24 +116,22 @@ function isAufbauMm0Directive(
   );
 }
 
-// The Fitch and Prawitz starter bodies are raw proof text, not markdown: the
-// Fitch `:<rule>` justifications and the Prawitz `-- label:n` comments parse
-// as inline directives, and formulas may contain `<`, so — like
-// `:::aufbau-mm0` — their bodies are kept out of the raw-HTML/nested-directive
-// scans and handed to the type verbatim.
-const RAW_BODY_PROOF_DIRECTIVE_NAMES: ReadonlySet<string> = new Set([
-  "aufbau-proof-fitch",
-  "aufbau-proof-prawitz",
-]);
-
-const MODEL_DIRECTIVE_NAME = "model";
-
-function isRawBodyProofDirective(
-  node: MarkdownNode,
-): node is ContainerDirective {
-  return (
-    isContainerDirective(node) &&
-    RAW_BODY_PROOF_DIRECTIVE_NAMES.has(node.name)
+/**
+ * The directives whose bodies are source text, not markdown — the types that
+ * declare `rawBody` (the Fitch and Prawitz starters), which like
+ * `:::aufbau-mm0` are kept out of the raw-HTML/nested-directive scans and
+ * handed to the type verbatim. Asked of the registry rather than listed here
+ * so that a new raw-body type says so once, on its own object, instead of
+ * silently collecting raw-HTML diagnostics for its `<`.
+ */
+function rawBodyDirectiveNames(
+  registry: ExerciseRegistry,
+): ReadonlySet<string> {
+  return new Set(
+    registry
+      .types()
+      .filter((type) => type.rawBody === true)
+      .map((type) => type.directiveName),
   );
 }
 
@@ -158,19 +155,24 @@ function isValidStylesheetHref(value: string): boolean {
 /**
  * Line numbers occupied by the bodies of top-level directives whose bodies are
  * raw source, not markdown: `:::style` (CSS like `content: "<b>"`) and
- * `:::aufbau-mm0` (MM0 notation like `$<->$`). The raw-HTML and legacy-syntax
- * line scans must not read them.
+ * `:::aufbau-mm0` (MM0 notation like `$<->$`), and every exercise directive
+ * whose type declares `rawBody`. The raw-HTML and legacy-syntax line scans
+ * must not read them.
  */
-function rawDirectiveBodyLines(tree: Root): ReadonlySet<number> {
+function rawDirectiveBodyLines(
+  tree: Root,
+  rawBodyDirectives: ReadonlySet<string>,
+): ReadonlySet<number> {
   const excluded = new Set<number>();
 
   for (const child of tree.children as MarkdownNode[]) {
-    if (
-      (!isStyleDirective(child) &&
-        !isAufbauMm0Directive(child) &&
-        !isRawBodyProofDirective(child)) ||
-      child.position === undefined
-    ) {
+    const raw =
+      isContainerDirective(child) &&
+      (child.name === STYLE_DIRECTIVE_NAME ||
+        child.name === AUFBAU_MM0_DIRECTIVE_NAME ||
+        rawBodyDirectives.has(child.name));
+
+    if (!raw || child.position === undefined) {
       continue;
     }
 
@@ -196,7 +198,9 @@ function isDirectiveNode(node: { readonly type?: string }): boolean {
 
 /**
  * The body lines a directive reads as data rather than markdown, and so the
- * lines on which a stray `:token` is not a nested directive the author meant.
+ * lines on which a stray `:token` is not a nested directive the author meant:
+ * every line of a `rawBody` type's, and whichever a type's `dataBodyLines`
+ * names.
  *
  * Deliberately not the same set as {@link rawDirectiveBodyLines}, which serves
  * the raw-HTML and legacy-syntax *line* scans: a model is here and not there,
@@ -204,18 +208,17 @@ function isDirectiveNode(node: { readonly type?: string }): boolean {
  * Which is also why this is per line rather than per directive — a model's body
  * is only partly data, and a nested directive in its prompt is worth reporting.
  */
-function dataBodyLines(block: DirectiveBlock): ReadonlySet<number> {
-  if (RAW_BODY_PROOF_DIRECTIVE_NAMES.has(block.name)) {
+function dataBodyLines(
+  block: DirectiveBlock,
+  type: ExerciseType,
+): ReadonlySet<number> {
+  if (type.rawBody === true) {
     return new Set(
       block.bodyLines.map((_line, index) => block.bodyStartLine + index),
     );
   }
 
-  if (block.name === MODEL_DIRECTIVE_NAME) {
-    return modelDataBodyLines(block);
-  }
-
-  return NO_EXCLUDED_LINES;
+  return type.dataBodyLines?.(block) ?? NO_EXCLUDED_LINES;
 }
 
 function collectNestedDirectiveDiagnostics(
@@ -479,7 +482,10 @@ export async function compileCarnapMarkdown(
   const normalizedSource = sourceText.replaceAll("\r\n", "\n");
   const lines = normalizedSource.split("\n");
   const tree = markdownParser.parse(normalizedSource) as Root;
-  const excludedLines = rawDirectiveBodyLines(tree);
+  const excludedLines = rawDirectiveBodyLines(
+    tree,
+    rawBodyDirectiveNames(registry),
+  );
   const diagnostics: CompilerDiagnostic[] = [
     ...unsupportedRawHtmlDiagnostics(lines, 1, excludedLines),
     ...legacyDirectiveSyntaxDiagnostics(lines, 1, excludedLines),
@@ -676,12 +682,6 @@ export async function compileCarnapMarkdown(
 
     const block = directiveBlockFromNode(child, lines);
 
-    const dataLines = dataBodyLines(block);
-
-    for (const nested of block.children) {
-      collectNestedDirectiveDiagnostics(nested, diagnostics, dataLines);
-    }
-
     let type: ExerciseType;
 
     try {
@@ -696,6 +696,12 @@ export async function compileCarnapMarkdown(
         ),
       );
       continue;
+    }
+
+    const dataLines = dataBodyLines(block, type);
+
+    for (const nested of block.children) {
+      collectNestedDirectiveDiagnostics(nested, diagnostics, dataLines);
     }
 
     const compiled = await type.compile(block, {

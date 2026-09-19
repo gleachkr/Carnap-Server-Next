@@ -164,6 +164,32 @@ describe("the exercise import boundary", () => {
   });
 
   /**
+   * The same rule for the rest of the worker: the compiler, the services, the
+   * routes and the page renderers reach a type through the registry, which
+   * reaches it through `exercises/index.ts`. Before this the compiler kept its
+   * own list of which directives take a raw body and imported the model type's
+   * body splitter by name, and the attempt page imported the two text types'
+   * shapes to build their forms itself — so a new raw-body type silently got
+   * raw-HTML diagnostics for its `<`, and a type whose form differed from its
+   * preview had a second renderer nobody would think to look for. Whatever the
+   * outer layers need to know about a type belongs on its `ExerciseType`.
+   */
+  test("the rest of the worker sees a type only through the registry", async () => {
+    const edges = (await edgesUnder("src/worker")).filter(
+      (edge) =>
+        !edge.from.startsWith(`${EXERCISES}/`) &&
+        !edge.from.startsWith(`${KIT}/`),
+    );
+    const reaching = edges.filter((edge) => typeFolder(edge.target) !== null);
+
+    expect(edges.length).toBeGreaterThan(100);
+    expect(
+      describeEdges(reaching),
+      "a module outside src/worker/exercises/ is reading a type's folder — whatever it needs belongs on that type's ExerciseType object, asked of the registry",
+    ).toEqual([]);
+  });
+
+  /**
    * The verifier binds a wasm module the worker instantiates and no browser
    * bundle should carry; `package.json` maps `#proof-verifier` to it under
    * `workerd` and to a stub under `browser`. A relative import would step

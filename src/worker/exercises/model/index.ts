@@ -1,6 +1,6 @@
 import type { ExerciseType } from "../../exercise-kit/type";
 import { MODEL_ASSESSMENT } from "./assessment";
-import { compileModel } from "./authoring";
+import { compileModel, modelDataBodyLines } from "./authoring";
 import { renderModel } from "./read-only-view";
 import { buildModelStrings } from "./strings";
 import {
@@ -21,6 +21,7 @@ export const MODEL_EXERCISE = {
     ...MODEL_COMPONENT_METADATA,
     capabilities: MODEL_CAPABILITIES,
   },
+  dataBodyLines: modelDataBodyLines,
   directiveName: "model",
   kind: MODEL_KIND,
   name: modelName,

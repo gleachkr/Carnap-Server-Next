@@ -1,15 +1,29 @@
-import type { MultipleChoicePublicData } from "../../domain/content";
 import type { ExerciseCapabilities } from "../../domain/exercises";
 import type { JsonValue } from "../../domain/json";
+import { isObject } from "../../exercise-kit/assessment";
 import type { Translator } from "../../i18n/translator";
 
-export type {
-  MultipleChoiceAnswerData,
-  MultipleChoiceMode,
-  MultipleChoiceOptionPublicData,
-  MultipleChoicePrivateData,
-  MultipleChoicePublicData,
-} from "../../domain/content";
+export type MultipleChoiceMode = "single" | "multiple";
+
+export interface MultipleChoiceOptionPublicData {
+  readonly html: string;
+  readonly id: string;
+}
+
+export interface MultipleChoicePublicData {
+  readonly mode: MultipleChoiceMode;
+  readonly options: readonly MultipleChoiceOptionPublicData[];
+  readonly promptHtml: string;
+}
+
+export interface MultipleChoicePrivateData {
+  readonly correctOptionIds: readonly string[];
+  readonly mode: MultipleChoiceMode;
+}
+
+export interface MultipleChoiceAnswerData {
+  readonly selectedOptionIds: readonly string[];
+}
 
 export const MULTIPLE_CHOICE_KIND = "multiple-choice@1";
 export const MULTIPLE_CHOICE_SCHEMA_VERSION = 1;
@@ -30,10 +44,6 @@ export const MULTIPLE_CHOICE_CAPABILITIES: ExerciseCapabilities = {
 /** The generic group name for an untitled exercise of this type. */
 export function multipleChoiceName(i18n: Translator): string {
   return i18n.t("Multiple-choice question");
-}
-
-function isObject(value: JsonValue): value is Record<string, JsonValue> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function isMultipleChoicePublicData(

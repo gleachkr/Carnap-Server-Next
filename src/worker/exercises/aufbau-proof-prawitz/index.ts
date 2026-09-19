@@ -24,6 +24,8 @@ export const AUFBAU_PROOF_PRAWITZ_EXERCISE = {
   directiveName: "aufbau-proof-prawitz",
   kind: AUFBAU_PROOF_PRAWITZ_KIND,
   name: aufbauProofPrawitzName,
+  // The starter body is proof text, not markdown; see `ExerciseType.rawBody`.
+  rawBody: true,
   render: renderAufbauProofPrawitz,
   schemaVersion: AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
   strings: buildAufbauProofPrawitzStrings,

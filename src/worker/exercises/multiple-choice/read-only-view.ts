@@ -4,10 +4,7 @@ import {
   exerciseRootAttributes,
   VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
-import type {
-  ContentNode,
-  MultipleChoicePublicData,
-} from "../../domain/content";
+import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
 import {
   EXERCISE_GROUP_SHADOW_STYLES,
@@ -22,6 +19,7 @@ import shadowStyles from "./shadow.css" with { type: "text" };
 import {
   isMultipleChoicePublicData,
   MULTIPLE_CHOICE_KIND,
+  type MultipleChoicePublicData,
   multipleChoiceName,
 } from "./types";
 

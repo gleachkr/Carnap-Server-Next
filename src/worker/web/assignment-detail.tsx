@@ -45,7 +45,6 @@ import type { JsonValue } from "../domain/json";
 import type { Timestamp } from "../domain/time";
 import type { User } from "../domain/users";
 import { exerciseActionsHtml } from "../exercise-kit/actions";
-import { exerciseGroupLabel } from "../exercise-kit/group";
 import {
   EXERCISE_HYDRATION_VERSION,
   type ExerciseHydration,
@@ -53,14 +52,6 @@ import {
   exerciseHydrationScript,
 } from "../exercise-kit/hydration";
 import type { ExerciseType } from "../exercise-kit/type";
-import {
-  FREE_RESPONSE_KIND,
-  isFreeResponsePublicData,
-} from "../exercises/free-response/types";
-import {
-  isShortAnswerPublicData,
-  SHORT_ANSWER_KIND,
-} from "../exercises/short-answer/types";
 import type { AppBindings } from "../http";
 import { splitAtValue, type Translator, VALUE } from "../i18n/translator";
 import {
@@ -660,8 +651,7 @@ function exerciseHydration(
 }
 
 /**
- * The action bar for one exercise, resolved for the viewer. Every per-kind form
- * needs exactly this, so it is spelled once.
+ * The action bar for one exercise, resolved for the viewer.
  *
  * `slotted` is what projects the bar into an element's shadow card. The two text
  * kinds have no card to project into, so theirs sits in the light DOM beside the
@@ -670,7 +660,7 @@ function exerciseHydration(
 function exerciseActions(
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  slotted = true,
+  slotted: boolean,
 ): string {
   const i18n = submission.context.get("i18n");
 
@@ -727,19 +717,27 @@ const ExerciseFormShell: FC<{
 };
 
 /**
- * The form for a type with a client element.
+ * One exercise's form: the type renders the same markup a preview shows, with
+ * the viewer's action bar in place of the preview's inert one.
  *
- * The element renders its chrome into a Declarative Shadow Root (inert until it
- * upgrades); the prompt is slotted from light DOM so author CSS and the
- * document's math font still reach it. The element's own controls — Check, a
- * counterexample, Help — share the light-DOM action bar the element fills on
- * upgrade, and every such widget looks for `.exercise-actions` in **its own
- * light DOM**. That is why the bar is handed to the type's renderer here
- * rather than laid beside the element: beside it, the element cannot reach it,
- * and its buttons silently never appear. `tests/exercise-contract.test.ts`
- * checks that every type puts the bar it is given inside what it renders.
+ * A type with a client element renders its chrome into a Declarative Shadow
+ * Root (inert until it upgrades); the prompt is slotted from light DOM so
+ * author CSS and the document's math font still reach it. The element's own
+ * controls — Check, a counterexample, Help — share the light-DOM action bar the
+ * element fills on upgrade, and every such widget looks for `.exercise-actions`
+ * in **its own light DOM**. That is why the bar is handed to the type's
+ * renderer here rather than laid beside the element: beside it, the element
+ * cannot reach it, and its buttons silently never appear.
+ * `tests/exercise-contract.test.ts` checks that every type puts the bar it is
+ * given inside what it renders.
+ *
+ * The two text types have no element: they render a native field the runtime
+ * reads directly, and their bar sits beside it in the light DOM, unslotted —
+ * there is no shadow card to project into. Which is `slotted` below: the one
+ * thing the form knows about a type's shape, and the same thing the type's own
+ * preview bar knows.
  */
-function elementSubmissionForm(
+function exerciseSubmissionForm(
   type: ExerciseType,
   submission: InlineSubmissionContext,
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
@@ -751,7 +749,11 @@ function elementSubmissionForm(
       <input name="schemaVersion" type="hidden" value={type.schemaVersion} />
       {raw(
         type.render(node, {
-          actions: exerciseActions(submission, node),
+          actions: exerciseActions(
+            submission,
+            node,
+            type.component.clientModule,
+          ),
           contentRevisionId: submission.contentRevisionId,
           i18n: submission.context.get("i18n"),
           title,
@@ -762,81 +764,9 @@ function elementSubmissionForm(
 }
 
 /**
- * The form for the two text kinds, which have no element: a native field the
- * server renders, usable with JavaScript off. Each kind vouches for its own
- * payload before the form is built.
- */
-function textSubmissionForm(
-  type: ExerciseType,
-  submission: InlineSubmissionContext,
-  node: Extract<ContentNode, { readonly kind: "exercise" }>,
-  title: string | null,
-): Child | null {
-  const kind = node.exerciseKind;
-  const publicData =
-    (kind === FREE_RESPONSE_KIND &&
-      isFreeResponsePublicData(node.publicData)) ||
-    (kind === SHORT_ANSWER_KIND && isShortAnswerPublicData(node.publicData))
-      ? node.publicData
-      : null;
-
-  if (publicData === null) {
-    return null;
-  }
-
-  const i18n = submission.context.get("i18n");
-  const label = exerciseGroupLabel(type.name(i18n), title);
-  // Unique per document, and safe as an id: `EXERCISE_ID_PATTERN` admits
-  // anything HTML admits as an id, which is what `for` matches against —
-  // exactly, with no escaping — and refuses the whitespace that would keep the
-  // two from ever pairing.
-  const fieldId = `${node.exerciseId}-answer`;
-
-  return (
-    <ExerciseFormShell node={node} submission={submission}>
-      <input name="answerKind" type="hidden" value={type.answerKind} />
-      <input name="schemaVersion" type="hidden" value={type.schemaVersion} />
-      {/* The box the eight widget kinds get from their custom element. A text
-          exercise has no element, so its section is the exercise here — the same
-          `<section class="exercise">` the no-submission renderer builds, holding
-          the same fieldset and the same closing row. */}
-      <section class="exercise">
-        <fieldset class="exercise-group">
-          <legend
-            class={
-              label.hidden
-                ? "exercise-legend visually-hidden"
-                : "exercise-legend"
-            }
-          >
-            {label.text}
-          </legend>
-          <div class="exercise-prompt">{raw(publicData.promptHtml)}</div>
-          {/* Associated by `for`/`id` rather than by nesting, so the label and
-              the control are siblings the layout can place independently — and
-              so the field's accessible name never depends on what else the
-              label wraps. */}
-          <label for={fieldId}>{i18n.t("Answer")}</label>
-          {kind === FREE_RESPONSE_KIND ? (
-            <textarea id={fieldId} name="text" rows={8} />
-          ) : (
-            <input id={fieldId} name="text" />
-          )}
-        </fieldset>
-        {/* Unslotted: there is no shadow card to project into, but it is the
-            same row, with the same submit, status line and correctness mark in
-            the same place. */}
-        {raw(exerciseActions(submission, node, false))}
-      </section>
-    </ExerciseFormShell>
-  );
-}
-
-/**
- * The submission form for one exercise, by what its type renders with: a
- * client element gets {@link elementSubmissionForm}, a native field gets
- * {@link textSubmissionForm}. Null for a node no type claims, which the caller
- * renders read-only instead.
+ * The submission form for one exercise: the shell, and inside it whatever the
+ * type renders when handed the viewer's action bar. Null for a node no type
+ * claims, which the caller renders read-only instead.
  */
 function submissionFormNode(
   submission: InlineSubmissionContext,
@@ -845,13 +775,9 @@ function submissionFormNode(
 ): Child | null {
   const type = exercises.typeForAssetId(node.render.assetId);
 
-  if (type === null) {
-    return null;
-  }
-
-  return type.component.clientModule
-    ? elementSubmissionForm(type, submission, node, title)
-    : textSubmissionForm(type, submission, node, title);
+  return type === null
+    ? null
+    : exerciseSubmissionForm(type, submission, node, title);
 }
 
 function renderAssignmentContent(

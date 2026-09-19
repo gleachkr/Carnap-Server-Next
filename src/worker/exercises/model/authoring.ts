@@ -531,8 +531,8 @@ function parseConstraintBody(
  * The body lines a model reads as data rather than prose: its formula, sequent,
  * and constraint lines, and its givens.
  *
- * The compiler asks so that a colon in one of them is not reported as a
- * directive. `| Domain:0,1,2` — a given written the way most authors write a
+ * The type's `dataBodyLines` hook: the compiler asks so that a colon in one of
+ * them is not reported as a directive. `| Domain:0,1,2` — a given written the way most authors write a
  * key and a value — parses as a text directive named “0”, and the author would
  * be told their given was an unsupported directive rather than that it was a
  * given. Nothing is lost by not reading these lines as markdown: the body

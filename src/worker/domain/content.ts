@@ -71,7 +71,6 @@ export function isContentSharing(value: unknown): value is ContentSharing {
   );
 }
 export type ContentSourceProfile = "carnap-markdown-v1";
-export type MultipleChoiceMode = "single" | "multiple";
 
 export interface ContentItem {
   readonly id: AppId;
@@ -232,49 +231,4 @@ export interface CompiledContentArtifact {
    * `exercise-kit/systems/join.ts` for the join that hands an exercise its copy.
    */
   readonly systems?: CompiledSystems;
-}
-
-export interface MultipleChoiceOptionPublicData {
-  readonly html: string;
-  readonly id: string;
-}
-
-export interface MultipleChoicePublicData {
-  readonly mode: MultipleChoiceMode;
-  readonly options: readonly MultipleChoiceOptionPublicData[];
-  readonly promptHtml: string;
-}
-
-export interface MultipleChoicePrivateData {
-  readonly correctOptionIds: readonly string[];
-  readonly mode: MultipleChoiceMode;
-}
-
-export interface MultipleChoiceAnswerData {
-  readonly selectedOptionIds: readonly string[];
-}
-
-export interface FreeResponsePublicData {
-  readonly promptHtml: string;
-}
-
-export interface FreeResponsePrivateData {
-  readonly rubricHtml?: string;
-}
-
-export interface FreeResponseAnswerData {
-  readonly text: string;
-}
-
-export interface ShortAnswerPublicData {
-  readonly promptHtml: string;
-}
-
-export interface ShortAnswerPrivateData {
-  readonly acceptedAnswers: readonly string[];
-  readonly caseSensitive: boolean;
-}
-
-export interface ShortAnswerAnswerData {
-  readonly text: string;
 }
