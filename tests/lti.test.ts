@@ -21,6 +21,7 @@ import type { Env } from "../src/worker/env";
 import type { WorkerApp } from "../src/worker/http";
 import { remoteLtiKeyResolver } from "../src/worker/infrastructure/lti/platform-keys";
 import { OUTBOUND_USER_AGENT } from "../src/worker/user-agent";
+import { setCookieHeaders } from "./helpers/http";
 import {
   beginTestLogin,
   CLAIM_CUSTOM,
@@ -57,27 +58,19 @@ async function withLtiApp(
 ): Promise<void> {
   const storage: TestStorage = await createTestStorage();
 
-  try {
-    const app = await createLtiTestApp();
-    const env: Env = { CARNAP_ENV: "local", DB: storage.db };
-    const fixture = await registerTestPlatform(storage.stores);
+  const app = await createLtiTestApp();
+  const env: Env = { CARNAP_ENV: "local", DB: storage.db };
+  const fixture = await registerTestPlatform(storage.stores);
 
-    await run(app, env, storage.stores, fixture);
-  } finally {
-    await storage.dispose();
-  }
+  await run(app, env, storage.stores, fixture);
 }
 
 /** The `Set-Cookie` header carrying the session, attributes and all. */
 function sessionCookieAttributes(response: Response): string {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
   return (
-    headers
-      .getSetCookie?.()
-      .find((header) => header.startsWith("carnap_session=")) ?? ""
+    setCookieHeaders(response).find((header) =>
+      header.startsWith("carnap_session="),
+    ) ?? ""
   );
 }
 

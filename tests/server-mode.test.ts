@@ -5,6 +5,7 @@ import { createApp } from "../src/worker/app";
 import type { AppStores } from "../src/worker/application/stores";
 import type { Env } from "../src/worker/env";
 import type { AppBindings } from "../src/worker/http";
+import { cookieHeader } from "./helpers/http";
 import { createLibSqlTestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
@@ -28,13 +29,6 @@ function serverApp(stores: AppStores): Hono<AppBindings> {
   app.route("/", createApp());
 
   return app;
-}
-
-function cookieHeader(response: Response): string {
-  return response.headers
-    .getSetCookie()
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
 }
 
 describe("serving without a D1 binding", () => {

@@ -34,32 +34,28 @@ async function withOpenAttempt(
 ): Promise<void> {
   const storage = await createTestStorage();
 
-  try {
-    const stores = storage.stores;
+  const stores = storage.stores;
 
-    await seedUser(stores, "student");
+  await seedUser(stores, "student");
 
-    const assignmentId = await seedCourseWithAssignment(
-      stores,
-      "reset",
-      "student",
-    );
-    const attempt = await stores.assessment.beginAttempt({
-      assignmentId,
-      createdFrom: "student",
-      expiresAt: null,
-      id: "attempt-original",
-      maxAttempts: null,
-      openedAt: SEED_NOW,
-      userId: "student",
-    });
+  const assignmentId = await seedCourseWithAssignment(
+    stores,
+    "reset",
+    "student",
+  );
+  const attempt = await stores.assessment.beginAttempt({
+    assignmentId,
+    createdFrom: "student",
+    expiresAt: null,
+    id: "attempt-original",
+    maxAttempts: null,
+    openedAt: SEED_NOW,
+    userId: "student",
+  });
 
-    expect(attempt).not.toBeNull();
+  expect(attempt).not.toBeNull();
 
-    await run({ assignmentId, db: storage.db, stores });
-  } finally {
-    await storage.dispose();
-  }
+  await run({ assignmentId, db: storage.db, stores });
 }
 
 function reset(

@@ -11,6 +11,7 @@ import type { LtiDeployment, LtiPlatform } from "../../src/worker/domain/lti";
 import type { Env } from "../../src/worker/env";
 import type { WorkerApp } from "../../src/worker/http";
 import { createTestApp } from "./app";
+import { setCookieHeaders } from "./http";
 
 // The test suite declares the claim URIs independently of the application so
 // a typo in either side fails a test instead of matching itself.
@@ -263,13 +264,7 @@ function launchCookies(response: Response): {
   readonly cookieHeader: string | null;
   readonly csrfToken: string | null;
 } {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-  const setCookies =
-    headers.getSetCookie?.() ??
-    (headers.get("set-cookie") ?? "").split(/,(?=\s*[^;=]+=)/);
-  const pairs = setCookies
+  const pairs = setCookieHeaders(response)
     .map((cookie) => cookie.split(";")[0]?.trim() ?? "")
     .filter((pair) => pair.includes("="));
 

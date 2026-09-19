@@ -4,7 +4,12 @@ import { hashAuthToken } from "../src/worker/application/tokens";
 import type { Env } from "../src/worker/env";
 import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import {
+  jsonRequest,
+  type LoginResult,
+  login,
+  withStorage,
+} from "./helpers/http";
 
 const EXPIRED = "2020-01-02T03:04:05.000Z";
 
@@ -14,28 +19,6 @@ interface ErrorEnvelope {
   readonly error: {
     readonly code: string;
   };
-}
-
-interface StartLoginResponse {
-  readonly login: {
-    readonly email: string;
-    readonly loginToken: string;
-  };
-}
-
-interface LoginResponse {
-  readonly actor: {
-    readonly id: string;
-    readonly email: string;
-    readonly name: string | null;
-  };
-  readonly csrfToken: string;
-}
-
-interface LoginResult {
-  readonly body: LoginResponse;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
 }
 
 interface CourseResponse {
@@ -80,95 +63,21 @@ interface EnrollmentLinkResponse {
   };
 }
 
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function jsonRequest(body: unknown, csrfToken?: string): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(csrfToken === undefined ? {} : { "X-CSRF-Token": csrfToken }),
-    },
-    method: "POST",
-  };
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
-
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const app = createTestApp();
-  const startResponse = await appRequest(
-    app,
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    app,
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const body = (await confirmResponse.json()) as LoginResponse;
-
-  expect(startResponse.status).toBe(202);
-  expect(confirmResponse.status).toBe(200);
-
-  return {
-    body,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: body.csrfToken,
-  };
-}
-
+/**
+ * This suite is the one for the course routes, so unlike the shared seed it
+ * keeps the whole response — the title and timezone are what it asserts on.
+ */
 async function createCourse(
   env: Env,
   loginResult: LoginResult,
   title = "Intro Logic",
 ): Promise<CourseResponse> {
-  await grantTestCourseCreator(env, loginResult.body.actor.id);
+  await grantTestCourseCreator(env, loginResult.actorId);
 
   const response = await appRequest(
     createTestApp(),
     "/courses",
-    {
-      ...jsonRequest({ title, timezone: "America/New_York" }),
-      headers: {
-        Cookie: loginResult.cookieHeader,
-        "Content-Type": "application/json",
-        "X-CSRF-Token": loginResult.csrfToken,
-      },
-    },
+    jsonRequest({ title, timezone: "America/New_York" }, loginResult),
     env,
   );
   const body = (await response.json()) as CourseResponse;
@@ -186,14 +95,7 @@ async function createEnrollmentLink(
   const response = await appRequest(
     createTestApp(),
     `/courses/${courseId}/enrollment-links`,
-    {
-      ...jsonRequest({}, loginResult.csrfToken),
-      headers: {
-        Cookie: loginResult.cookieHeader,
-        "Content-Type": "application/json",
-        "X-CSRF-Token": loginResult.csrfToken,
-      },
-    },
+    jsonRequest({}, loginResult),
     env,
   );
   const body = (await response.json()) as EnrollmentLinkResponse;
@@ -211,14 +113,7 @@ describe("courses and enrollment", () => {
       const response = await appRequest(
         createTestApp(),
         "/courses",
-        {
-          ...jsonRequest({ title: "Intro Logic", timezone: "UTC" }),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({ title: "Intro Logic", timezone: "UTC" }, instructor),
         env,
       );
       const body = (await response.json()) as ErrorEnvelope;
@@ -237,7 +132,7 @@ describe("courses and enrollment", () => {
       expect(created.course.timezone).toBe("America/New_York");
       expect(created.membership.role).toBe("instructor");
       expect(created.membership.status).toBe("active");
-      expect(created.membership.userId).toBe(instructor.body.actor.id);
+      expect(created.membership.userId).toBe(instructor.actorId);
     });
   });
 
@@ -268,7 +163,7 @@ describe("courses and enrollment", () => {
       expect(accepted.status).toBe(200);
       expect(body.membership.role).toBe("student");
       expect(body.membership.status).toBe("active");
-      expect(body.membership.userId).toBe(student.body.actor.id);
+      expect(body.membership.userId).toBe(student.actorId);
     });
   });
 
@@ -536,60 +431,32 @@ describe("courses and enrollment", () => {
       const coStaffResponse = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/staff`,
-        {
-          ...jsonRequest(
-            { role: "instructor", userId: coInstructor.body.actor.id },
-            owner.csrfToken,
-          ),
-          headers: {
-            Cookie: owner.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": owner.csrfToken,
-          },
-        },
+        jsonRequest(
+          { role: "instructor", userId: coInstructor.actorId },
+          owner,
+        ),
         env,
       );
       const taStaffResponse = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/staff`,
-        {
-          ...jsonRequest(
-            { role: "teacher_assistant", userId: assistant.body.actor.id },
-            owner.csrfToken,
-          ),
-          headers: {
-            Cookie: owner.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": owner.csrfToken,
-          },
-        },
+        jsonRequest(
+          { role: "teacher_assistant", userId: assistant.actorId },
+          owner,
+        ),
         env,
       );
       const coStaff = (await coStaffResponse.json()) as StaffResponse;
       const coEnrollmentLink = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/enrollment-links`,
-        {
-          ...jsonRequest({}, coInstructor.csrfToken),
-          headers: {
-            Cookie: coInstructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": coInstructor.csrfToken,
-          },
-        },
+        jsonRequest({}, coInstructor),
         env,
       );
       const taEnrollmentLink = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/enrollment-links`,
-        {
-          ...jsonRequest({}, assistant.csrfToken),
-          headers: {
-            Cookie: assistant.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": assistant.csrfToken,
-          },
-        },
+        jsonRequest({}, assistant),
         env,
       );
       const taBody = (await taEnrollmentLink.json()) as ErrorEnvelope;
@@ -613,7 +480,7 @@ describe("courses and enrollment", () => {
         id: "expired-enrollment-link-1",
         courseId: created.course.id,
         tokenHash: await hashAuthToken(expiredToken),
-        createdById: instructor.body.actor.id,
+        createdById: instructor.actorId,
         createdAt: EXPIRED,
         expiresAt: EXPIRED,
       });
@@ -646,17 +513,10 @@ describe("courses and enrollment", () => {
       const response = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}`,
-        {
-          ...jsonRequest(
-            { timezone: "Europe/Paris", title: "Advanced Logic" },
-            instructor.csrfToken,
-          ),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest(
+          { timezone: "Europe/Paris", title: "Advanced Logic" },
+          instructor,
+        ),
         env,
       );
       const body = (await response.json()) as CourseResponse;
@@ -674,17 +534,10 @@ describe("courses and enrollment", () => {
       const response = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}`,
-        {
-          ...jsonRequest(
-            { timezone: "Mars/Phobos", title: "Advanced Logic" },
-            instructor.csrfToken,
-          ),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest(
+          { timezone: "Mars/Phobos", title: "Advanced Logic" },
+          instructor,
+        ),
         env,
       );
       const body = (await response.json()) as ErrorEnvelope;
@@ -719,14 +572,7 @@ describe("courses and enrollment", () => {
       const response = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}`,
-        {
-          ...jsonRequest({ title: "Hijacked" }, student.csrfToken),
-          headers: {
-            Cookie: student.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": student.csrfToken,
-          },
-        },
+        jsonRequest({ title: "Hijacked" }, student),
         env,
       );
       const body = (await response.json()) as ErrorEnvelope;
@@ -744,14 +590,7 @@ describe("courses and enrollment", () => {
       const archived = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/archive`,
-        {
-          ...jsonRequest({}, instructor.csrfToken),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({}, instructor),
         env,
       );
       const archivedBody = (await archived.json()) as CourseResponse;
@@ -776,14 +615,7 @@ describe("courses and enrollment", () => {
       const unarchived = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/unarchive`,
-        {
-          ...jsonRequest({}, instructor.csrfToken),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({}, instructor),
         env,
       );
       const unarchivedBody = (await unarchived.json()) as CourseResponse;
@@ -804,14 +636,7 @@ describe("courses and enrollment", () => {
       const untitled = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/clone`,
-        {
-          ...jsonRequest({}, instructor.csrfToken),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({}, instructor),
         env,
       );
       const untitledBody = (await untitled.json()) as ErrorEnvelope;
@@ -822,14 +647,7 @@ describe("courses and enrollment", () => {
       const blank = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/clone`,
-        {
-          ...jsonRequest({ title: "   " }, instructor.csrfToken),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({ title: "   " }, instructor),
         env,
       );
       const blankBody = (await blank.json()) as ErrorEnvelope;
@@ -840,17 +658,7 @@ describe("courses and enrollment", () => {
       const named = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/clone`,
-        {
-          ...jsonRequest(
-            { title: "Intro Logic, Fall" },
-            instructor.csrfToken,
-          ),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({ title: "Intro Logic, Fall" }, instructor),
         env,
       );
       const namedBody = (await named.json()) as CourseResponse;
@@ -885,14 +693,7 @@ describe("courses and enrollment", () => {
       await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/archive`,
-        {
-          ...jsonRequest({}, instructor.csrfToken),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest({}, instructor),
         env,
       );
 
@@ -977,7 +778,7 @@ describe("courses and enrollment", () => {
       );
       const detailBody = (await detail.json()) as CourseResponse;
       const added = detailBody.memberships?.find(
-        (membership) => membership.userId === ta.body.actor.id,
+        (membership) => membership.userId === ta.actorId,
       );
 
       expect(response.status).toBe(303);
@@ -1041,7 +842,7 @@ describe("courses and enrollment", () => {
       );
       const detailBody = (await detail.json()) as CourseResponse;
       const forStudent = detailBody.memberships?.filter(
-        (membership) => membership.userId === student.body.actor.id,
+        (membership) => membership.userId === student.actorId,
       );
 
       expect(response.status).toBe(303);
@@ -1079,17 +880,10 @@ describe("courses and enrollment", () => {
       const response = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/staff`,
-        {
-          ...jsonRequest(
-            { role: "teacher_assistant", userId: student.body.actor.id },
-            instructor.csrfToken,
-          ),
-          headers: {
-            Cookie: instructor.cookieHeader,
-            "Content-Type": "application/json",
-            "X-CSRF-Token": instructor.csrfToken,
-          },
-        },
+        jsonRequest(
+          { role: "teacher_assistant", userId: student.actorId },
+          instructor,
+        ),
         env,
       );
       const body = (await response.json()) as StaffResponse;
@@ -1106,7 +900,7 @@ describe("courses and enrollment", () => {
       );
       const detailBody = (await detail.json()) as CourseResponse;
       const forStudent = detailBody.memberships?.filter(
-        (membership) => membership.userId === student.body.actor.id,
+        (membership) => membership.userId === student.actorId,
       );
 
       expect(response.status).toBe(201);

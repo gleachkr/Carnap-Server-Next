@@ -6,6 +6,12 @@ import type { AppStores } from "../../src/worker/application/stores";
 import type { Env } from "../../src/worker/env";
 import { appRequest, createTestApp } from "../helpers/app";
 import {
+  authHeaders,
+  jsonRequest,
+  type LoginResult,
+  login,
+} from "../helpers/http";
+import {
   createLtiTestApp,
   INSTRUCTOR_ROLE,
   performLaunch,
@@ -37,12 +43,6 @@ export interface Fixture {
   readonly name: string;
   /** The rendered HTML document (a page shell, or a content document). */
   readonly html: string;
-}
-
-interface LoginResult {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
 }
 
 /**
@@ -198,63 +198,6 @@ No formulas at all.
 :::aufbau-mm0{name="prop"}
 provable sort wff;
 :::`;
-
-function cookieHeader(response: Response): string {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-  const cookies =
-    headers.getSetCookie?.() ??
-    (headers.get("set-cookie") ?? "")
-      .split(/,(?=\s*[^;=]+=)/)
-      .map((cookie) => cookie.trim())
-      .filter((cookie) => cookie.length > 0);
-  return cookies.map((cookie) => cookie.split(";")[0] ?? "").join("; ");
-}
-
-function jsonRequest(body: unknown, login?: LoginResult): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(login === undefined
-        ? {}
-        : { Cookie: login.cookieHeader, "X-CSRF-Token": login.csrfToken }),
-    },
-    method: "POST",
-  };
-}
-
-function authHeaders(login: LoginResult): HeadersInit {
-  return { Cookie: login.cookieHeader, "X-CSRF-Token": login.csrfToken };
-}
-
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const start = await appRequest(
-    createTestApp(),
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await start.json()) as {
-    login: { loginToken: string };
-  };
-  const confirm = await appRequest(
-    createTestApp(),
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const confirmBody = (await confirm.json()) as {
-    actor: { id: string };
-    csrfToken: string;
-  };
-  return {
-    actorId: confirmBody.actor.id,
-    cookieHeader: cookieHeader(confirm),
-    csrfToken: confirmBody.csrfToken,
-  };
-}
 
 async function grantCapability(
   env: Env,

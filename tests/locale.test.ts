@@ -2,13 +2,13 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { Hono } from "hono";
 import { exportJWK, generateKeyPair } from "jose";
 
-import type { AppStores } from "../src/worker/application/stores";
 import { LOCALE_COOKIE_NAME } from "../src/worker/cookies";
 import type { Env } from "../src/worker/env";
 import type { AppBindings, WorkerApp } from "../src/worker/http";
 import { matchSupportedLocale } from "../src/worker/i18n/locales";
 import { localeDetectorMiddleware } from "../src/worker/middleware/locale";
 import { appRequest, createTestApp } from "./helpers/app";
+import { login, setCookieHeaders, withStorage } from "./helpers/http";
 import {
   beginTestLogin,
   createLtiTestApp,
@@ -27,44 +27,15 @@ const CLAIM_LAUNCH_PRESENTATION =
 /** A German string from the page chrome; if this renders, the locale took. */
 const GERMAN_CHROME = "Carnap-Startseite";
 
-interface StartLoginResponse {
-  readonly login: { readonly loginToken: string };
-}
-
-interface ConfirmLoginResponse {
-  readonly actor: { readonly id: string };
-  readonly csrfToken: string;
-}
-
 interface Session {
   readonly actorId: string;
   readonly cookieHeader: string;
   readonly csrfToken: string;
 }
 
-async function withStorage(
-  run: (stores: AppStores, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage.stores, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function setCookies(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  return headers.getSetCookie?.() ?? [];
-}
-
 /** The value a response sets `name` to, or null when it sets no such cookie. */
 function cookieValue(response: Response, name: string): string | null {
-  for (const header of setCookies(response)) {
+  for (const header of setCookieHeaders(response)) {
     const [pair = ""] = header.split(";");
     const separator = pair.indexOf("=");
 
@@ -78,7 +49,9 @@ function cookieValue(response: Response, name: string): string | null {
 
 function cookieAttributes(response: Response, name: string): string {
   return (
-    setCookies(response).find((header) => header.startsWith(`${name}=`)) ?? ""
+    setCookieHeaders(response).find((header) =>
+      header.startsWith(`${name}=`),
+    ) ?? ""
   );
 }
 
@@ -89,7 +62,7 @@ function cookieAttributes(response: Response, name: string): string {
  * makes the launch tests below mean anything.
  */
 function crossSiteCookieHeader(response: Response): string {
-  return setCookies(response)
+  return setCookieHeaders(response)
     .filter((header) => /;\s*SameSite=None\b/i.test(header))
     .map((header) => header.split(";")[0] ?? "")
     .join("; ");
@@ -108,45 +81,16 @@ const SECURE_ORIGIN = "https://localhost";
  * profile form afterwards. The tests below need a stored name to start from —
  * their subject is what a *rejected* save leaves behind.
  */
+async function signInWithoutName(env: Env): Promise<Session> {
+  return login(env, "ada@example.test");
+}
+
 async function signIn(env: Env): Promise<Session> {
   const session = await signInWithoutName(env);
 
   await saveProfile(env, session, { locale: "" });
 
   return session;
-}
-
-async function signInWithoutName(env: Env): Promise<Session> {
-  const started = await appRequest(
-    createTestApp(),
-    "/auth/login/start",
-    {
-      body: JSON.stringify({ email: "ada@example.test" }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    },
-    env,
-  );
-  const startBody = (await started.json()) as StartLoginResponse;
-  const confirmed = await appRequest(
-    createTestApp(),
-    "/auth/login/confirm",
-    {
-      body: JSON.stringify({ loginToken: startBody.login.loginToken }),
-      headers: { "Content-Type": "application/json" },
-      method: "POST",
-    },
-    env,
-  );
-  const body = (await confirmed.json()) as ConfirmLoginResponse;
-
-  return {
-    actorId: body.actor.id,
-    cookieHeader: setCookies(confirmed)
-      .map((header) => header.split(";")[0] ?? "")
-      .join("; "),
-    csrfToken: body.csrfToken,
-  };
 }
 
 /**
@@ -305,7 +249,7 @@ describe("choosing a language", () => {
   // browser sends. Asking it again in the footer of the login page put a
   // prominent control in front of someone with no reason yet to care.
   test("a signed-out reader is not asked, and gets what their browser asks for", async () => {
-    await withStorage(async (_stores, env) => {
+    await withStorage(async (_storage, env) => {
       const html = await (
         await get(env, "/login", { "Accept-Language": "de" })
       ).text();
@@ -318,7 +262,7 @@ describe("choosing a language", () => {
   // The language is a preference like any other, so it is a field on the profile
   // form rather than a second form beside it: one set of inputs, one Save.
   test("the profile form carries it, beside the name and under one Save", async () => {
-    await withStorage(async (_stores, env) => {
+    await withStorage(async (_storage, env) => {
       const session = await signIn(env);
       const form = profileForm(
         await (
@@ -336,7 +280,7 @@ describe("choosing a language", () => {
   });
 
   test("choosing one stores it, cookies it, and answers in it", async () => {
-    await withStorage(async (stores, env) => {
+    await withStorage(async ({ stores }, env) => {
       const session = await signIn(env);
       const response = await chooseLanguage(env, session, "de");
 
@@ -369,7 +313,7 @@ describe("choosing a language", () => {
   // The way back out, which the old switcher had no way to express: an account
   // that has never chosen follows the request, and so does one that unchooses.
   test("match my browser clears both the row and the cookie", async () => {
-    await withStorage(async (stores, env) => {
+    await withStorage(async ({ stores }, env) => {
       const session = await signIn(env);
 
       await chooseLanguage(env, session, "de");
@@ -402,7 +346,7 @@ describe("choosing a language", () => {
   // Both fields are validated before either is written, so the reader gets their
   // whole submission back to correct rather than half of it applied.
   test("a rejected save keeps the language the reader chose", async () => {
-    await withStorage(async (stores, env) => {
+    await withStorage(async ({ stores }, env) => {
       const session = await signIn(env);
       const response = await saveProfile(env, session, {
         locale: "de",
@@ -431,7 +375,7 @@ describe("choosing a language", () => {
   // chosen and overwrite them with the platform's language. The cookie names a
   // language and authenticates nothing, so `None` gives up no defence.
   test("the cookie is cross-site, so an LTI launch can see it", async () => {
-    await withStorage(async (_stores, env) => {
+    await withStorage(async (_storage, env) => {
       const attributes = cookieAttributes(
         // Signed in over plain http, because that is where the API hands a
         // login token back; the save — the request under test — runs over
@@ -447,7 +391,7 @@ describe("choosing a language", () => {
 
   // Browsers reject `None` without `Secure`, and local dev is plain http.
   test("plain-http local dev falls back to Lax", async () => {
-    await withStorage(async (_stores, env) => {
+    await withStorage(async (_storage, env) => {
       const attributes = cookieAttributes(
         await chooseLanguage(env, await signIn(env), "de"),
         LOCALE_COOKIE_NAME,
@@ -462,7 +406,7 @@ describe("choosing a language", () => {
   // that are on offer — so it is refused rather than folded to a default, and it
   // takes the name down with it: the save is one write or none.
   test("a locale that is not on offer is refused", async () => {
-    await withStorage(async (stores, env) => {
+    await withStorage(async ({ stores }, env) => {
       const session = await signIn(env);
 
       for (const locale of ["fr", "en-XA", "de-DE"]) {
@@ -485,7 +429,7 @@ describe("choosing a language", () => {
   });
 
   test("the stored preference outranks a cookie from another browser", async () => {
-    await withStorage(async (_stores, env) => {
+    await withStorage(async (_storage, env) => {
       const session = await signIn(env);
 
       await chooseLanguage(env, session, "de");
@@ -510,7 +454,7 @@ describe("choosing a language", () => {
    * exception is only defensible while it stays this narrow.
    */
   test("the pseudolocale outranks even a stored preference", async () => {
-    await withStorage(async (_stores, env) => {
+    await withStorage(async (_storage, env) => {
       const session = await signIn(env);
 
       await chooseLanguage(env, session, "de");
@@ -608,18 +552,14 @@ describe("the LTI launch_presentation.locale claim", () => {
   ): Promise<void> {
     const storage: TestStorage = await createTestStorage();
 
-    try {
-      const env: Env = {
-        CARNAP_ENV: "local",
-        DB: storage.db,
-        ...overrides,
-      };
+    const env: Env = {
+      CARNAP_ENV: "local",
+      DB: storage.db,
+      ...overrides,
+    };
 
-      await registerTestPlatform(storage.stores);
-      await run(await createLtiTestApp(), env);
-    } finally {
-      await storage.dispose();
-    }
+    await registerTestPlatform(storage.stores);
+    await run(await createLtiTestApp(), env);
   }
 
   test("seeds the locale cookie from the platform's language", async () => {

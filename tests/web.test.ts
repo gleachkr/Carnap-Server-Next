@@ -13,15 +13,14 @@ import {
   grantTestCourseCreator,
 } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import {
+  cookieHeader,
+  jsonRequest,
+  type LoginResult,
+  withStorage,
+} from "./helpers/http";
 
 setDefaultTimeout(30_000);
-
-interface LoginCookies {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
 
 interface MeResponse {
   readonly actor: { readonly id: string };
@@ -43,18 +42,6 @@ interface AssignmentResponse {
   readonly assignment: { readonly id: string };
 }
 
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
 function htmlHeaders(cookieHeader?: string): HeadersInit {
   return {
     Accept: "text/html",
@@ -74,39 +61,6 @@ function formRequest(
     },
     method: "POST",
   };
-}
-
-function jsonRequest(body: unknown, login: LoginCookies): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: login.cookieHeader,
-      "X-CSRF-Token": login.csrfToken,
-    },
-    method: "POST",
-  };
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
 }
 
 function csrfTokenFromCookies(cookies: string): string {
@@ -145,7 +99,7 @@ function extractLoginPath(html: string): string {
   return `${url.pathname}${url.search}`;
 }
 
-async function webLogin(env: Env, email: string): Promise<LoginCookies> {
+async function webLogin(env: Env, email: string): Promise<LoginResult> {
   const start = await appRequest(
     createTestApp(),
     "/login",
@@ -1535,7 +1489,7 @@ describe("course staff and student views", () => {
     expect(promoted.status).toBe(303);
 
     const page = async (
-      login: LoginCookies,
+      login: LoginResult,
       path: string,
     ): Promise<{ html: string; status: number }> => {
       const response = await appRequest(

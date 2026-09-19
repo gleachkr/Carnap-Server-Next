@@ -11,7 +11,12 @@ import type { Env } from "../src/worker/env";
 import { requireAuthenticated } from "../src/worker/http";
 import { storesForContext } from "../src/worker/stores";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import {
+  cookieHeader,
+  jsonRequest,
+  setCookieHeaders,
+  withStorage,
+} from "./helpers/http";
 
 const NOW = "2026-01-02T03:04:05.000Z";
 
@@ -48,49 +53,6 @@ interface LoginResult {
   readonly csrfToken: string;
   readonly sessionCookie: string;
   readonly csrfCookie: string;
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function jsonRequest(body: unknown): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  };
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookiePair(setCookie: string): string {
-  return setCookie.split(";")[0] ?? "";
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response).map(cookiePair).join("; ");
 }
 
 function findSetCookie(response: Response, name: string): string {

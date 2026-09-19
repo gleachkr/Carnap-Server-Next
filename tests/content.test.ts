@@ -34,28 +34,14 @@ import { CONTENT_STYLE_SHEET } from "../src/worker/web/style-assets";
 import { grantTestContentAuthor } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
 import { FORALLX_THEORY_BLOCK } from "./helpers/forallx-theory";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import {
+  jsonRequest,
+  type LoginResult,
+  login as signIn,
+  withStorage,
+} from "./helpers/http";
 
 setDefaultTimeout(30_000);
-
-interface StartLoginResponse {
-  readonly login: {
-    readonly loginToken: string;
-  };
-}
-
-interface LoginResponse {
-  readonly actor: {
-    readonly id: string;
-  };
-  readonly csrfToken: string;
-}
-
-interface LoginResult {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
 
 interface ContentItemResponse {
   readonly item: {
@@ -90,92 +76,6 @@ interface ErrorEnvelope {
   readonly error: {
     readonly code: string;
   };
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
-
-function jsonRequest(body: unknown, login?: LoginResult): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(login === undefined
-        ? {}
-        : {
-            Cookie: login.cookieHeader,
-            "X-CSRF-Token": login.csrfToken,
-          }),
-    },
-    method: "POST",
-  };
-}
-
-/** Signs in with no authoring permission at all — a student, in effect. */
-async function signIn(env: Env, email: string): Promise<LoginResult> {
-  const app = createTestApp();
-  const startResponse = await appRequest(
-    app,
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    app,
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const body = (await confirmResponse.json()) as LoginResponse;
-
-  return {
-    actorId: body.actor.id,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: body.csrfToken,
-  };
-}
-
-/**
- * Signs in as somebody who may write content. Nobody may by default, so every
- * test below that saves an item or a revision goes through here.
- */
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const result = await signIn(env, email);
-
-  await grantTestContentAuthor(env, result.actorId);
-
-  return result;
 }
 
 async function createContent(
@@ -220,6 +120,15 @@ function findExercise(
   }
 
   return item;
+}
+
+/** Signed in and allowed to write content, which nobody is by default. */
+async function login(env: Env, email: string): Promise<LoginResult> {
+  const result = await signIn(env, email);
+
+  await grantTestContentAuthor(env, result.actorId);
+
+  return result;
 }
 
 describe("content compiler", () => {

@@ -2,71 +2,15 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
 import type { Env } from "../src/worker/env";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import {
+  type LoginResult,
+  login as signIn,
+  withStorage,
+} from "./helpers/http";
 
 setDefaultTimeout(30_000);
 
 const NOW = "2026-01-02T03:04:05.000Z";
-
-interface StartLoginResponse {
-  readonly login: { readonly loginToken: string };
-}
-
-interface ConfirmLoginResponse {
-  readonly actor: {
-    readonly id: string;
-    readonly email: string;
-    readonly name: string | null;
-  };
-  readonly csrfToken: string;
-}
-
-interface LoginResult {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function jsonRequest(body: unknown): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  };
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
 
 /**
  * Sign in, and save a name unless the caller wants the account left as a new
@@ -79,28 +23,7 @@ async function login(
   email = "Ada@Example.test",
   name: string | null = "Ada Lovelace",
 ): Promise<LoginResult> {
-  const startResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const body = (await confirmResponse.json()) as ConfirmLoginResponse;
-
-  expect(confirmResponse.status).toBe(200);
-
-  const session = {
-    actorId: body.actor.id,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: body.csrfToken,
-  };
+  const session = await signIn(env, email);
 
   if (name !== null) {
     expect(

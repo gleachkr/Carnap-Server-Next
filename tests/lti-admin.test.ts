@@ -3,6 +3,13 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import type { Env } from "../src/worker/env";
 import { appRequest, createTestApp } from "./helpers/app";
 import {
+  ACCEPT_JSON,
+  jsonRequest,
+  type LoginResult,
+  login,
+  withStorage,
+} from "./helpers/http";
+import {
   createLtiTestApp,
   INSTRUCTOR_ROLE,
   performLaunch,
@@ -10,24 +17,8 @@ import {
   TEST_DEPLOYMENT_ID,
   TEST_ISSUER,
 } from "./helpers/lti";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
-
-interface StartLoginResponse {
-  readonly login: { readonly loginToken: string };
-}
-
-interface LoginResponse {
-  readonly actor: { readonly id: string; readonly email: string };
-  readonly csrfToken: string;
-}
-
-interface LoginResult {
-  readonly body: LoginResponse;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
 
 interface PlatformResponse {
   readonly platform: {
@@ -66,78 +57,6 @@ const PLATFORM_FIELDS = {
   tokenEndpoint: `${TEST_ISSUER}/token`,
 };
 
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function jsonRequest(body: unknown, csrfToken?: string): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(csrfToken === undefined ? {} : { "X-CSRF-Token": csrfToken }),
-    },
-    method: "POST",
-  };
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
-
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const app = createTestApp();
-  const startResponse = await appRequest(
-    app,
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    app,
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const body = (await confirmResponse.json()) as LoginResponse;
-
-  expect(startResponse.status).toBe(202);
-  expect(confirmResponse.status).toBe(200);
-
-  return {
-    body,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: body.csrfToken,
-  };
-}
-
 async function adminRequest(
   env: Env,
   admin: LoginResult,
@@ -147,15 +66,7 @@ async function adminRequest(
   return appRequest(
     createTestApp(),
     path,
-    {
-      ...jsonRequest(body, admin.csrfToken),
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Cookie: admin.cookieHeader,
-        "X-CSRF-Token": admin.csrfToken,
-      },
-    },
+    jsonRequest(body, admin, ACCEPT_JSON),
     env,
   );
 }

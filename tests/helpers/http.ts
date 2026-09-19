@@ -57,13 +57,26 @@ export function authHeaders(login: LoginResult): Record<string, string> {
   return { Cookie: login.cookieHeader, "X-CSRF-Token": login.csrfToken };
 }
 
-/** A JSON `POST`, signed in when `login` is given. */
-export function jsonRequest(body: unknown, login?: LoginResult): RequestInit {
+/** The header a client that wants JSON back sends, where a route negotiates. */
+export const ACCEPT_JSON: Record<string, string> = {
+  Accept: "application/json",
+};
+
+/**
+ * A JSON `POST`, signed in when `login` is given. `headers` adds to the
+ * defaults — an `Accept` for a route that would otherwise redirect.
+ */
+export function jsonRequest(
+  body: unknown,
+  login?: LoginResult,
+  headers: Record<string, string> = {},
+): RequestInit {
   return {
     body: JSON.stringify(body),
     headers: {
       "Content-Type": "application/json",
       ...(login === undefined ? {} : authHeaders(login)),
+      ...headers,
     },
     method: "POST",
   };
