@@ -15,7 +15,6 @@ import {
 } from "../application/content/renderer";
 import { CourseService } from "../application/courses";
 import { AppHttpError, badRequest } from "../application/errors";
-import { GradebookService } from "../application/gradebook";
 import { ManualGradingService } from "../application/manual-grading";
 import {
   attemptActivity,
@@ -36,7 +35,6 @@ import type {
   Assignment,
   AssignmentContentVersion,
   AssignmentExerciseExcuse,
-  AssignmentOverride,
 } from "../domain/assignments";
 import type {
   AnswerEnvelope,
@@ -786,13 +784,7 @@ async function updatePublishedSettingsFromForm(
       assignmentFormCommand(form),
     );
 
-    // Due dates feed late penalties and the release date anchors deferred
-    // deliveries, so published-settings changes resync like other edits.
-    await refreshScoresAfterInstructorChange(context, assignmentId);
-    await storesForContext(context).lti.rescheduleGradeJobsForAssignment(
-      assignmentId,
-      timestampNow(new Date()),
-    );
+    kickGradePassback(context);
 
     return redirect(
       `/courses/${courseId}/instructor/assignments/${detail.assignment.id}?updated=1`,
@@ -834,11 +826,7 @@ async function updatePublishedSettingsFromJson(
     ),
   );
 
-  await refreshScoresAfterInstructorChange(context, assignmentId);
-  await storesForContext(context).lti.rescheduleGradeJobsForAssignment(
-    assignmentId,
-    timestampNow(new Date()),
-  );
+  kickGradePassback(context);
 
   return context.json(assignmentDetailJson(detail, context.get("i18n")));
 }
@@ -1133,7 +1121,7 @@ async function upsertLatePolicy(
     command,
   );
 
-  await refreshScoresAfterInstructorChange(context, assignmentId);
+  kickGradePassback(context);
 
   if (formSubmission) {
     return redirect(
@@ -1146,47 +1134,10 @@ async function upsertLatePolicy(
 }
 
 /**
- * Instructor actions that change what a score *evaluates to* (excuses,
- * overrides, repoints, attempt resets, late policies) recompute the
- * grade-passback ledger right away, so the change reaches any linked LMS
- * gradebook now. What Carnap itself shows needs no such step — every page
- * computes from the live rows — so this is scoped to graded assignments, the
- * only ones with passback. `userId` narrows the recompute where the action
- * touched one student.
- *
- * Without one, the students refreshed are those with a ledger row: everyone
- * who has ever submitted, since a submission writes its row. A student who
- * has not is at "not started" or "missing" whatever the instructor changes,
- * and neither is a score `planGradeJob` would send as a fresh value.
+ * The services recompute the grade-passback ledger for every instructor
+ * change that alters what a score evaluates to; the route's part is only to
+ * start a delivery run for whatever that queued.
  */
-async function refreshScoresAfterInstructorChange(
-  context: Context<AppBindings>,
-  assignmentId: string,
-  userId?: string,
-): Promise<void> {
-  const stores = storesForContext(context);
-  const assignment = await stores.assignments.getById(assignmentId);
-
-  if (assignment === null || assignment.assessmentMode !== "graded") {
-    return;
-  }
-
-  const gradebook = new GradebookService({ stores });
-
-  if (userId === undefined) {
-    const scores = await stores.scores.listAssignmentScores(assignment.id);
-
-    await gradebook.refreshAssignmentScoresForUsers(
-      assignment,
-      scores.map((score) => score.userId),
-    );
-  } else {
-    await gradebook.refreshStudentAssignmentScore(assignment, userId);
-  }
-
-  kickGradePassback(context);
-}
-
 async function upsertAssignmentOverride(
   context: Context<AppBindings>,
 ): Promise<Response> {
@@ -1206,11 +1157,7 @@ async function upsertAssignmentOverride(
     command,
   );
 
-  await refreshScoresAfterInstructorChange(
-    context,
-    assignmentId,
-    override.userId,
-  );
+  kickGradePassback(context);
 
   if (formSubmission) {
     return redirect(
@@ -1241,13 +1188,6 @@ async function setGradeVisibility(
     release,
   );
 
-  // Deliveries deferred while grades were withheld are parked on the old
-  // release date; re-anchor them to now so the delivery re-reads the new
-  // one (an unreleased assignment just re-defers).
-  await storesForContext(context).lti.rescheduleGradeJobsForAssignment(
-    assignmentId,
-    timestampNow(new Date()),
-  );
   kickGradePassback(context);
 
   if (formSubmission) {
@@ -1279,7 +1219,7 @@ async function repointPublishedAssignment(
     command,
   );
 
-  await refreshScoresAfterInstructorChange(context, assignmentId);
+  kickGradePassback(context);
 
   if (formSubmission) {
     return redirect(
@@ -1309,7 +1249,7 @@ async function excuseAssignmentExercise(
     command,
   );
 
-  await refreshScoresAfterInstructorChange(context, assignmentId);
+  kickGradePassback(context);
 
   if (formSubmission) {
     return redirect(
@@ -1777,45 +1717,26 @@ async function instructorDetailPage(
     students.map((membership) => membership.userId),
   );
 
-  // Load each student's existing override so the roster can flag it and the
-  // modal can open pre-filled with the current values.
-  const assignments = storesForContext(context).assignments;
-  const overrideList = await Promise.all(
-    students.map((membership) =>
-      assignments.getOverrideForAssignmentUser(
-        detail.assignment.id,
-        membership.userId,
-      ),
-    ),
-  );
+  // Each student's existing override, so the roster can flag it and the
+  // modal can open pre-filled with the current values; the late policy, so
+  // its form opens showing the one in force (the form replaces the whole
+  // policy on save, so without this an instructor changing the grace period
+  // would post the form's own defaults over the penalty they set earlier, and
+  // the sheet would claim there was no late penalty when there was one).
+  const corrections = await assignmentService(
+    context,
+  ).correctionsForInstructor(actor, courseId, detail.assignment.id);
   const overrides = new Map(
-    overrideList
-      .filter((override): override is AssignmentOverride => override !== null)
-      .map((override) => [override.userId, override] as const),
+    corrections.overrides.map((override) => [override.userId, override]),
   );
-  // The late policy form replaces the whole policy on save, so it has to open
-  // showing the one in force: without this an instructor changing the grace
-  // period would post the form's own defaults over the penalty they set
-  // earlier, and the sheet would claim there was no late penalty when there
-  // was one.
-  const latePolicy = await assignments.getLatePolicy(detail.assignment.id);
-  // Whether any evaluation already stands on a student's work — what the
-  // correction form's advisory is about, read from the evaluations
-  // themselves rather than from the passback ledger, which records only
-  // what an LMS was last told. A draft has none.
-  const gradedWorkExists =
-    detail.assignment.state === "published" &&
-    (await storesForContext(context).assessment.hasEvaluatedWork(
-      detail.assignment.id,
-    ));
 
   return renderInstructorAssignmentPage(context, {
     courseId,
     courseTitle: await courseTitleFor(context, courseId),
     detail,
     directory,
-    gradedWorkExists,
-    latePolicy,
+    gradedWorkExists: corrections.gradedWorkExists,
+    latePolicy: corrections.latePolicy,
     notices: instructorNotices(context.get("i18n"))
       .filter((entry) => url.searchParams.has(entry.param))
       .map((entry) => entry.message),
@@ -1978,11 +1899,7 @@ async function resetAttempt(
     requiredParam(context, "attemptId"),
   );
 
-  await refreshScoresAfterInstructorChange(
-    context,
-    assignmentId,
-    result.newAttempt.userId,
-  );
+  kickGradePassback(context);
 
   if (isFormSubmission(context)) {
     return redirect(

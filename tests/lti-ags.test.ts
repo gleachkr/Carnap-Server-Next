@@ -1,6 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { generateKeyPair, jwtVerify } from "jose";
 
+import { AttemptService } from "../src/worker/application/attempts";
 import type { AuthenticatedActor } from "../src/worker/application/auth";
 import { GradePassbackService } from "../src/worker/application/grade-passback";
 import type { AppStores } from "../src/worker/application/stores";
@@ -1448,6 +1449,76 @@ describe("LTI grade passback", () => {
       await expect(
         stores.lti.listGradeJobsForCourse(courseId, "pending"),
       ).resolves.toEqual([]);
+    });
+  });
+
+  test("a correction made through the service alone still resyncs the LMS", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const instructor = await login(env, "ags-teacher@example.test");
+      const student = await login(env, "ags-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const { link, platform } = await ltiFixture(stores, courseId, {
+        assignmentId,
+      });
+
+      await linkStudentToLms(stores, platform, student.actorId, "sub-1");
+
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignmentId,
+      );
+
+      await submitCorrectAnswer(
+        env,
+        student,
+        courseId,
+        assignmentId,
+        attemptId,
+      );
+
+      const lms = fakeLms();
+      const service = await passbackService(stores, lms);
+
+      await expect(service.processDueJobs()).resolves.toMatchObject({
+        sent: 1,
+      });
+
+      // The ledger and its jobs are the service's to keep, not the route's:
+      // a caller with no request — a script, a backfill — makes the same
+      // change and owes the LMS the same correction.
+      const instructorUser = await stores.users.getById(instructor.actorId);
+
+      if (instructorUser === null) {
+        throw new Error("Expected the instructor to exist.");
+      }
+
+      await new AttemptService({ stores }).reset(
+        actorFor(instructorUser),
+        courseId,
+        assignmentId,
+        attemptId,
+      );
+
+      const requeued = await stores.lti.getGradeJob(link.id, student.actorId);
+
+      expect(requeued?.status).toBe("pending");
+      expect(requeued?.score).toBe(0);
+      expect(requeued?.maxScore).toBe(2);
+      await expect(
+        stores.scores.getAssignmentScore(assignmentId, student.actorId),
+      ).resolves.toMatchObject({ maxScore: 2, score: 0 });
     });
   });
 

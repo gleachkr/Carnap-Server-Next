@@ -7,6 +7,7 @@ import { deferred } from "../i18n/deferred";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
 import { AppHttpError, forbidden } from "./errors";
+import { GradebookService } from "./gradebook";
 import {
   attemptActivity,
   effectiveAssignmentPolicy,
@@ -273,6 +274,13 @@ export class AttemptService {
     if (reset === null) {
       throw attemptNotFound();
     }
+
+    // The voided attempt's work no longer counts, so the student's ledger
+    // row is recomputed now and any LMS told.
+    await new GradebookService({
+      now: this.options.now,
+      stores: this.options.stores,
+    }).refreshAfterInstructorChange(assignment, oldAttempt.userId);
 
     return reset;
   }

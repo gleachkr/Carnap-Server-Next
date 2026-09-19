@@ -2596,20 +2596,12 @@ class SqliteScoreStore implements ScoreStore {
     return rows.map(mapAssignmentScore);
   }
 
-  async upsertAssignmentScore(
-    input: UpsertAssignmentScoreInput,
-  ): Promise<AssignmentScore> {
-    const rows = await this.scoreUpsertQuery([input]);
-
-    return this.upsertedScore(rows, input);
-  }
-
   async upsertAssignmentScoreWithGradeJobs(
     input: UpsertAssignmentScoreInput,
     jobs: readonly EnqueueLtiGradeJobInput[],
   ): Promise<AssignmentScore> {
     if (jobs.length === 0) {
-      return this.upsertAssignmentScore(input);
+      return this.upsertedScore(await this.scoreUpsertQuery([input]), input);
     }
 
     const [scoreRows] = await this.db.batch([

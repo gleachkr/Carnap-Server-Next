@@ -15,6 +15,7 @@ import {
   requirePlatformCapability,
 } from "./authorization";
 import { AppHttpError, badRequest, forbidden } from "./errors";
+import { GradebookService } from "./gradebook";
 import type { AppStores } from "./stores";
 import { createAuthToken, hashAuthToken } from "./tokens";
 
@@ -701,33 +702,46 @@ export class CourseService {
     const nowDate = this.options.now?.() ?? new Date();
     const now = timestampNow(nowDate);
 
-    return this.options.stores.courses.upsertAccommodation({
-      availableUntilExtensionMinutes: nonNegativeInteger(
-        command.availableUntilExtensionMinutes,
-        0,
-        "invalid_available_until_extension",
-      ),
-      courseId,
-      createdById: actor.user.id,
-      dueAtExtensionMinutes: nonNegativeInteger(
-        command.dueAtExtensionMinutes,
-        0,
-        "invalid_due_at_extension",
-      ),
-      extraAttempts: nonNegativeInteger(
-        command.extraAttempts,
-        0,
-        "invalid_extra_attempts",
-      ),
-      id: createAppId(nowDate.getTime()),
-      now,
-      timeLimitMultiplier: positiveNumber(
-        command.timeLimitMultiplier,
-        1,
-        "invalid_time_limit_multiplier",
-      ),
-      userId: command.userId,
-    });
+    const accommodation =
+      await this.options.stores.courses.upsertAccommodation({
+        availableUntilExtensionMinutes: nonNegativeInteger(
+          command.availableUntilExtensionMinutes,
+          0,
+          "invalid_available_until_extension",
+        ),
+        courseId,
+        createdById: actor.user.id,
+        dueAtExtensionMinutes: nonNegativeInteger(
+          command.dueAtExtensionMinutes,
+          0,
+          "invalid_due_at_extension",
+        ),
+        extraAttempts: nonNegativeInteger(
+          command.extraAttempts,
+          0,
+          "invalid_extra_attempts",
+        ),
+        id: createAppId(nowDate.getTime()),
+        now,
+        timeLimitMultiplier: positiveNumber(
+          command.timeLimitMultiplier,
+          1,
+          "invalid_time_limit_multiplier",
+        ),
+        userId: command.userId,
+      });
+
+    // An accommodation moves the student's due dates on every graded
+    // assignment in the course, and with them any late penalty — so the
+    // grade-passback ledger is recomputed for them across the course, the
+    // way an instructor's change to one assignment recomputes it there.
+    // The pages need nothing: they compute from the live rows.
+    await new GradebookService({
+      now: this.options.now,
+      stores: this.options.stores,
+    }).refreshCourseScoresForUser(courseId, accommodation.userId);
+
+    return accommodation;
   }
 
   async cloneCourse(

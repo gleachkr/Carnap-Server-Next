@@ -1445,14 +1445,17 @@ describe("LTI 1.3 core launches", () => {
         "lms-student-1",
       );
 
-      await stores.scores.upsertAssignmentScore({
-        assignmentId,
-        userId: studentId,
-        score: 2,
-        maxScore: 2,
-        status: "complete",
-        calculatedAt: NOW,
-      });
+      await stores.scores.upsertAssignmentScoreWithGradeJobs(
+        {
+          assignmentId,
+          userId: studentId,
+          score: 2,
+          maxScore: 2,
+          status: "complete",
+          calculatedAt: NOW,
+        },
+        [],
+      );
 
       // Associating while the link has no line item can queue nothing.
       const associate = await app.request(
@@ -1552,14 +1555,17 @@ describe("LTI 1.3 core launches", () => {
         "lms-student-1",
       );
 
-      await stores.scores.upsertAssignmentScore({
-        assignmentId,
-        userId: studentId,
-        score: 2,
-        maxScore: 2,
-        status: "complete",
-        calculatedAt: NOW,
-      });
+      await stores.scores.upsertAssignmentScoreWithGradeJobs(
+        {
+          assignmentId,
+          userId: studentId,
+          score: 2,
+          maxScore: 2,
+          status: "complete",
+          calculatedAt: NOW,
+        },
+        [],
+      );
 
       // Their next launch through the LMS activity notices the outbox has
       // no row for them and queues the stable score.

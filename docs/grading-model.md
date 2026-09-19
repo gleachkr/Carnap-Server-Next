@@ -136,8 +136,11 @@ deliveries by data recency. Page views do not write this table.
 
 Score-changing operations refresh the ledger: submissions, manual grades,
 excuses, overrides, content corrections, attempt resets, late policies, and
-accommodations. A missing refresh can delay an LMS update even when the
-application displays the correct score.
+accommodations. The service method that makes the change performs the refresh
+before it returns, so a caller with no HTTP request — a script, a backfill —
+keeps the ledger as a route would; the route's only part is to start a
+delivery run afterwards. A missing refresh can delay an LMS update even when
+the application displays the correct score.
 
 A student who has never submitted remains not started or missing. Passback
 does not send an unsolicited score for that student merely because policy

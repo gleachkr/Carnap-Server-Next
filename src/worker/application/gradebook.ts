@@ -731,11 +731,13 @@ function calculateAssignmentScore(
  * It records what a score last evaluated to so that a change can be told
  * from a repeat (an unchanged score must not re-send to an LMS) and so that
  * deliveries can be ordered by data recency (`calculatedAt`). It is written
- * by the `refresh*` methods here, which every path that changes what a score
- * evaluates to calls — a submission, a hand-written grade, an instructor's
- * excuse, override, repoint, reset, late policy or accommodation — and by
- * nothing a reader does. A write path that misses it delays an LMS sync
- * until the next one; it cannot show anyone a wrong number.
+ * by the `refresh*` methods here, which every service method that changes
+ * what a score evaluates to calls before it returns — a submission, a
+ * hand-written grade, an instructor's excuse, override, repoint, reset, late
+ * policy or accommodation — and by nothing a reader does. The call sits in
+ * the service, not the route, so a caller that is not a request (a script,
+ * a backfill) gets the same ledger. A write path that misses it delays an
+ * LMS sync until the next one; it cannot show anyone a wrong number.
  */
 export class GradebookService {
   private readonly contextPlatformMemo = new Map<AppId, AppId | null>();
@@ -786,6 +788,60 @@ export class GradebookService {
 
     await this.options.stores.scores.upsertAssignmentScoresWithGradeJobs(
       await this.ledgerWrites([assignment], userIds, inputs),
+    );
+  }
+
+  /**
+   * What an instructor's change to an assignment calls for: excuses,
+   * overrides, repoints, attempt resets, late policies and settings edits
+   * all change what a score *evaluates to*, so the grade-passback ledger is
+   * recomputed right away and the change reaches any linked LMS gradebook
+   * now. What Carnap itself shows needs no such step — every page computes
+   * from the live rows — so this is scoped to graded assignments, the only
+   * ones with passback. `userId` narrows the recompute where the change
+   * touched one student.
+   *
+   * Without one, the students refreshed are those with a ledger row:
+   * everyone who has ever submitted, since a submission writes its row. A
+   * student who has not is at "not started" or "missing" whatever the
+   * instructor changes, and neither is a score `planGradeJob` would send as
+   * a fresh value.
+   */
+  async refreshAfterInstructorChange(
+    assignment: Assignment,
+    userId?: AppId,
+  ): Promise<void> {
+    if (assignment.assessmentMode !== "graded") {
+      return;
+    }
+
+    if (userId !== undefined) {
+      await this.refreshStudentAssignmentScore(assignment, userId);
+
+      return;
+    }
+
+    const scores = await this.options.stores.scores.listAssignmentScores(
+      assignment.id,
+    );
+
+    await this.refreshAssignmentScoresForUsers(
+      assignment,
+      scores.map((score) => score.userId),
+    );
+  }
+
+  /**
+   * Make every pending delivery for an assignment due now. Deliveries
+   * deferred while grades were withheld are parked on the old release date,
+   * so a change to the release (or to the due date that anchors late
+   * penalties) re-anchors them to now and the delivery re-reads the new one;
+   * an assignment whose grades are still withheld just re-defers.
+   */
+  async rescheduleDeliveries(assignmentId: AppId): Promise<void> {
+    await this.options.stores.lti.rescheduleGradeJobsForAssignment(
+      assignmentId,
+      timestampNow(this.options.now?.() ?? new Date()),
     );
   }
 

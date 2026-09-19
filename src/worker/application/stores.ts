@@ -776,12 +776,11 @@ export interface ScoreStore {
   listAssignmentScoresInScope(
     scope: ScoringScope,
   ): Promise<AssignmentScore[]>;
-  upsertAssignmentScore(
-    input: UpsertAssignmentScoreInput,
-  ): Promise<AssignmentScore>;
   /**
    * Write the score and its outbound grade-passback jobs in one transaction,
    * so a grade can never change without the LMS send being queued (PLAN §11.4).
+   * There is no job-less write: a change that owes nothing passes `[]`, and
+   * the planner is the one that decides that.
    */
   upsertAssignmentScoreWithGradeJobs(
     input: UpsertAssignmentScoreInput,

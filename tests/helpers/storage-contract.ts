@@ -1810,14 +1810,17 @@ export function describeStorageContract(
         // A score projection computed from older data than the stored row
         // must not regress it.
         await expect(
-          stores.scores.upsertAssignmentScore({
-            assignmentId: assignment.id,
-            userId: student.id,
-            score: 1,
-            maxScore: 5,
-            status: "partial",
-            calculatedAt: "2026-01-01T00:00:00.000Z",
-          }),
+          stores.scores.upsertAssignmentScoreWithGradeJobs(
+            {
+              assignmentId: assignment.id,
+              userId: student.id,
+              score: 1,
+              maxScore: 5,
+              status: "partial",
+              calculatedAt: "2026-01-01T00:00:00.000Z",
+            },
+            [],
+          ),
         ).resolves.toMatchObject({ score: 3, calculatedAt: NOW });
       });
     });

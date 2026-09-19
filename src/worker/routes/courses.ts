@@ -849,25 +849,6 @@ courseRoutes.post("/:courseId/staff", async (context) => {
   return context.json({ membership: publicMembership(membership) }, 201);
 });
 
-/**
- * An accommodation moves a student's due dates on every graded assignment in
- * the course, and with them any late penalty — so the grade-passback ledger
- * is recomputed for that student across the course, the way an instructor's
- * change to one assignment recomputes it there (`routes/assignments.ts`).
- * The pages need nothing: they compute from the live rows.
- */
-async function refreshScoresAfterAccommodationChange(
-  context: Context<AppBindings>,
-  courseId: string,
-  userId: string,
-): Promise<void> {
-  await gradebookService(context).refreshCourseScoresForUser(
-    courseId,
-    userId,
-  );
-  kickGradePassback(context);
-}
-
 async function upsertAccommodationFromForm(
   context: Context<AppBindings>,
 ): Promise<Response> {
@@ -878,17 +859,12 @@ async function upsertAccommodationFromForm(
     const command = accommodationCommandFromForm(
       await context.req.raw.formData(),
     );
-    const accommodation = await courseService(context).upsertAccommodation(
+    await courseService(context).upsertAccommodation(
       actor,
       courseId,
       command,
     );
-
-    await refreshScoresAfterAccommodationChange(
-      context,
-      courseId,
-      accommodation.userId,
-    );
+    kickGradePassback(context);
 
     return redirect(`/courses/${courseId}?accommodationSaved=1`);
   } catch (error) {
@@ -922,11 +898,7 @@ courseRoutes.post("/:courseId/accommodations", async (context) => {
     command,
   );
 
-  await refreshScoresAfterAccommodationChange(
-    context,
-    courseId,
-    accommodation.userId,
-  );
+  kickGradePassback(context);
 
   return context.json({ accommodation: publicAccommodation(accommodation) });
 });

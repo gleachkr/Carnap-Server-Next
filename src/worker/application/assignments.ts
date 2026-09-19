@@ -29,6 +29,7 @@ import {
   contentArtifactFromRevision,
 } from "./content/artifact";
 import { AppHttpError, badRequest } from "./errors";
+import { GradebookService } from "./gradebook";
 import {
   assignmentAsAppliedTo,
   attemptActivity,
@@ -116,6 +117,23 @@ export interface AssignmentOverrideCommand {
   readonly maxAttempts?: number | null;
   readonly timeLimitMinutes?: number | null;
   readonly userId: AppId;
+}
+
+/**
+ * What the instructor's page shows beside the assignment itself: the
+ * corrections in force and whether any grade already stands on the work.
+ */
+export interface AssignmentCorrections {
+  /**
+   * Whether any evaluation already stands on a student's work — what the
+   * correction form's advisory is about, read from the evaluations themselves
+   * rather than from the passback ledger, which records only what an LMS was
+   * last told. A draft has none.
+   */
+  readonly gradedWorkExists: boolean;
+  readonly latePolicy: AssignmentLatePolicy | null;
+  /** Every student's override on this assignment, at most one each. */
+  readonly overrides: readonly AssignmentOverride[];
 }
 
 export interface AssignmentDetail {
@@ -861,6 +879,9 @@ export class AssignmentService {
       throw assignmentNotFound();
     }
 
+    // The new revision may score the same work differently.
+    await this.gradebook().refreshAfterInstructorChange(updated);
+
     return this.detailForAssignment(updated);
   }
 
@@ -934,6 +955,14 @@ export class AssignmentService {
       );
     }
 
+    // Due dates feed late penalties and the release date anchors deferred
+    // deliveries, so a settings change resyncs the ledger like any other
+    // edit and re-anchors what is parked.
+    const gradebook = this.gradebook();
+
+    await gradebook.refreshAfterInstructorChange(updated);
+    await gradebook.rescheduleDeliveries(updated.id);
+
     return this.detailForAssignment(updated);
   }
 
@@ -971,6 +1000,10 @@ export class AssignmentService {
     if (updated === null) {
       throw assignmentNotFound();
     }
+
+    // Nothing a score evaluates to changed, only whether it may be sent:
+    // deliveries deferred while grades were withheld re-read the release.
+    await this.gradebook().rescheduleDeliveries(updated.id);
 
     return this.detailForAssignment(updated);
   }
@@ -1014,8 +1047,7 @@ export class AssignmentService {
     }
 
     const nowDate = this.options.now?.() ?? new Date();
-
-    return this.options.stores.assignments.excuseExercise({
+    const excuse = await this.options.stores.assignments.excuseExercise({
       actorId: actor.user.id,
       assignmentId: assignment.id,
       createdAt: timestampNow(nowDate),
@@ -1023,6 +1055,10 @@ export class AssignmentService {
       id: createAppId(nowDate.getTime()),
       reason: normalizeCorrectionNote(command.reason),
     });
+
+    await this.gradebook().refreshAfterInstructorChange(assignment);
+
+    return excuse;
   }
 
   async listForInstructor(
@@ -1073,6 +1109,34 @@ export class AssignmentService {
       await this.getAssignmentInCourse(courseId, assignmentId),
       onUnreadableArtifact,
     );
+  }
+
+  /**
+   * Three reads, each over the whole assignment: the page used to ask for
+   * each student's override one query at a time.
+   */
+  async correctionsForInstructor(
+    actor: AuthenticatedActor,
+    courseId: AppId,
+    assignmentId: AppId,
+  ): Promise<AssignmentCorrections> {
+    await requireInstructor(this.options.stores, actor, courseId);
+
+    const assignment = await this.getAssignmentInCourse(
+      courseId,
+      assignmentId,
+    );
+    const [overrides, latePolicy, gradedWorkExists] = await Promise.all([
+      this.options.stores.assignments.listOverridesForScoring({
+        assignmentIds: [assignment.id],
+      }),
+      this.options.stores.assignments.getLatePolicy(assignment.id),
+      assignment.state === "published"
+        ? this.options.stores.assessment.hasEvaluatedWork(assignment.id)
+        : Promise.resolve(false),
+    ]);
+
+    return { gradedWorkExists, latePolicy, overrides };
   }
 
   async listForStudent(
@@ -1239,7 +1303,7 @@ export class AssignmentService {
         ? 100
         : normalizePercent(command.maxPercentPenalty);
 
-    return this.options.stores.assignments.upsertLatePolicy({
+    const policy = await this.options.stores.assignments.upsertLatePolicy({
       assignmentId: assignment.id,
       createdById: actor.user.id,
       graceMinutes:
@@ -1252,6 +1316,10 @@ export class AssignmentService {
       now,
       percentPenalty,
     });
+
+    await this.gradebook().refreshAfterInstructorChange(assignment);
+
+    return policy;
   }
 
   async upsertOverride(
@@ -1274,7 +1342,7 @@ export class AssignmentService {
     const nowDate = this.options.now?.() ?? new Date();
     const now = timestampNow(nowDate);
 
-    return this.options.stores.assignments.upsertOverride({
+    const override = await this.options.stores.assignments.upsertOverride({
       assignmentId: assignment.id,
       availableFrom: normalizeTimestamp(
         command.availableFrom,
@@ -1298,6 +1366,13 @@ export class AssignmentService {
       ),
       userId: command.userId,
     });
+
+    await this.gradebook().refreshAfterInstructorChange(
+      assignment,
+      override.userId,
+    );
+
+    return override;
   }
 
   /**
@@ -1344,6 +1419,18 @@ export class AssignmentService {
     }
 
     return { artifact: contentArtifactFromRevision(revision), item };
+  }
+
+  /**
+   * The ledger writer the instructor's changes share. Built per call rather
+   * than held, like the submission and manual-grading services do, so this
+   * service stays a bag of stores and a clock.
+   */
+  private gradebook(): GradebookService {
+    return new GradebookService({
+      now: this.options.now,
+      stores: this.options.stores,
+    });
   }
 
   private async getAssignmentInCourse(
