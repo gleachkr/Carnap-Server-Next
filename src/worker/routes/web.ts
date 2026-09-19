@@ -7,14 +7,18 @@ import {
   LOGIN_TTL_SECONDS,
   SESSION_COOKIE_NAME,
 } from "../application/auth";
-import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
 import {
   clearLocaleCookie,
   setLocaleCookie,
   setProfilePromptDismissedCookie,
 } from "../cookies";
-import { type AppBindings, clientIpAddress, publicRequestUrl } from "../http";
+import {
+  type AppBindings,
+  clientIpAddress,
+  publicRequestUrl,
+  requireAuthenticated,
+} from "../http";
 // The catalogs come in with `i18nFor`, so the locale predicates come from the
 // same module rather than half from here and half from the leaf.
 import { i18nFor, isSelectableLocale, isSupportedLocale } from "../i18n";
@@ -30,7 +34,7 @@ import {
 import { renderDonatePage } from "../web/donate";
 import { FAVICON_CACHE_CONTROL, FAVICON_SVG } from "../web/favicon";
 import { fieldValue, redirect, safeNext } from "../web/html";
-import { type ProfileIdentity, renderProfile } from "../web/profile";
+import { renderProfile } from "../web/profile";
 import { clearSessionCookies, setSessionCookies } from "./session-cookies";
 
 interface LoginDeliveryResult {
@@ -40,47 +44,6 @@ interface LoginDeliveryResult {
 
 function authService(context: Context<AppBindings>): AuthService {
   return new AuthService({ stores: storesForContext(context) });
-}
-
-/**
- * Resolve the actor's identities for display: an LTI identity's subject is
- * `{platformRowId}:{sub}`, so the prefix looks up the platform's registered
- * name. A platform deleted since linking falls back to the generic label.
- */
-async function profileIdentities(
-  context: Context<AppBindings>,
-  actor: Parameters<AuthService["listOwnIdentities"]>[0],
-): Promise<ProfileIdentity[]> {
-  const stores = storesForContext(context);
-  const identities = await authService(context).listOwnIdentities(actor);
-
-  return Promise.all(
-    identities.map(async (identity) => {
-      if (identity.provider !== "lti") {
-        return { ...pickIdentity(identity), platformName: null };
-      }
-
-      const platformId = identity.providerSubject.split(":")[0] ?? "";
-      const platform = await stores.lti.getPlatformById(platformId);
-
-      return {
-        ...pickIdentity(identity),
-        platformName: platform?.name ?? null,
-      };
-    }),
-  );
-}
-
-function pickIdentity(identity: {
-  readonly id: string;
-  readonly provider: ProfileIdentity["provider"];
-  readonly createdAt: string;
-}) {
-  return {
-    id: identity.id,
-    provider: identity.provider,
-    createdAt: identity.createdAt,
-  };
 }
 
 function loginConfirmUrl(
@@ -290,7 +253,7 @@ webRoutes.get("/profile", async (context) => {
   }
 
   const actor = requireAuthenticated(context);
-  const identities = await profileIdentities(context, actor);
+  const identities = await authService(context).listOwnIdentities(actor);
   const url = new URL(context.req.url);
   const i18n = context.get("i18n");
   const notice = url.searchParams.has("saved")
@@ -341,7 +304,7 @@ webRoutes.post("/profile", async (context) => {
     return context.redirect("/profile?saved=1", 303);
   } catch (error) {
     if (error instanceof AppHttpError) {
-      const identities = await profileIdentities(context, actor);
+      const identities = await authService(context).listOwnIdentities(actor);
 
       return renderProfile(context, actor, identities, {
         error: error.localize(context.get("i18n")),
@@ -385,7 +348,7 @@ webRoutes.post("/profile/identities/remove", async (context) => {
     return redirect("/profile?unlinked=1", 303);
   } catch (error) {
     if (error instanceof AppHttpError) {
-      const identities = await profileIdentities(context, actor);
+      const identities = await authService(context).listOwnIdentities(actor);
 
       return renderProfile(context, actor, identities, {
         error: error.localize(context.get("i18n")),

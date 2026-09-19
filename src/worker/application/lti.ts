@@ -1,5 +1,4 @@
 import {
-  createRemoteJWKSet,
   type JWTPayload,
   type JWTVerifyGetKey,
   errors as joseErrors,
@@ -9,7 +8,11 @@ import {
 import type { Assignment } from "../domain/assignments";
 import type { CourseRole } from "../domain/courses";
 import { createAppId } from "../domain/ids";
-import type { LtiPlatform, LtiResourceLink } from "../domain/lti";
+import {
+  type LtiPlatform,
+  type LtiResourceLink,
+  ltiProviderSubject,
+} from "../domain/lti";
 import { addSeconds, type Timestamp, timestampNow } from "../domain/time";
 import {
   normalizeAssertedName,
@@ -26,7 +29,6 @@ import {
   type Translator,
   translateMessage,
 } from "../i18n/translator";
-import { OUTBOUND_USER_AGENT } from "../user-agent";
 import type { AuthenticatedActor, AuthService, MintedSession } from "./auth";
 import { requireInstructor } from "./authorization";
 import { contentArtifactFromRevision } from "./content/artifact";
@@ -125,37 +127,13 @@ export class LtiLaunchError extends Error {
 
 /**
  * Resolves the key material used to verify a platform's id_tokens. The
- * default fetches the platform's JWKS over the network (with jose's built-in
- * caching); tests inject a local key set so launches stay hermetic.
+ * production resolver (`infrastructure/lti/platform-keys.ts`) fetches the
+ * platform's JWKS over the network; tests inject a local key set so launches
+ * stay hermetic.
  */
 export type LtiPlatformKeyResolver = (
   platform: LtiPlatform,
 ) => JWTVerifyGetKey;
-
-const remoteKeySets = new Map<string, JWTVerifyGetKey>();
-
-/**
- * The `User-Agent` is ours rather than the `jose/x.y.z` the library would
- * otherwise send: a platform admin reading their logs should see the tool that
- * is calling, not the JWT library it happens to be built on. Canvas rejects an
- * agentless request outright, so this header is load-bearing either way — jose
- * setting one of its own is the only reason launches were not already failing.
- */
-export const defaultLtiKeyResolver: LtiPlatformKeyResolver = (platform) => {
-  const cached = remoteKeySets.get(platform.jwksUri);
-
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  const keySet = createRemoteJWKSet(new URL(platform.jwksUri), {
-    headers: { "User-Agent": OUTBOUND_USER_AGENT },
-  });
-
-  remoteKeySets.set(platform.jwksUri, keySet);
-
-  return keySet;
-};
 
 export interface BeginLtiLoginInput {
   readonly issuer: string;
@@ -235,7 +213,8 @@ export interface ConfirmedLtiLink {
 export interface LtiServiceOptions {
   readonly stores: AppStores;
   readonly auth: AuthService;
-  readonly keyResolver?: LtiPlatformKeyResolver;
+  /** Injected, never defaulted: the network lives in `infrastructure/`. */
+  readonly keyResolver: LtiPlatformKeyResolver;
   readonly now?: () => Date;
   readonly requestId?: string;
 }
@@ -417,11 +396,7 @@ export function mapLtiRolesToCourseRole(
 }
 
 export class LtiService {
-  private readonly keyResolver: LtiPlatformKeyResolver;
-
-  constructor(private readonly options: LtiServiceOptions) {
-    this.keyResolver = options.keyResolver ?? defaultLtiKeyResolver;
-  }
+  constructor(private readonly options: LtiServiceOptions) {}
 
   /**
    * Handle an OIDC third-party login initiation: validate the platform,
@@ -758,7 +733,7 @@ export class LtiService {
 
     await this.createIdentity(
       challenge.userId,
-      providerSubject(challenge.platformId, challenge.subject),
+      ltiProviderSubject(challenge.platformId, challenge.subject),
       nowDate,
     );
 
@@ -1154,7 +1129,7 @@ export class LtiService {
     try {
       const { payload } = await jwtVerify(
         idToken,
-        this.keyResolver(platform),
+        this.options.keyResolver(platform),
         {
           algorithms: ["RS256"],
           audience: platform.clientId,
@@ -1307,7 +1282,7 @@ export class LtiService {
     | { readonly kind: "user"; readonly user: User }
     | Extract<LtiLaunchOutcome, { kind: "link-pending" }>
   > {
-    const subject = providerSubject(platform.id, launch.subject);
+    const subject = ltiProviderSubject(platform.id, launch.subject);
     const identity = await this.options.stores.users.getExternalIdentity(
       "lti",
       subject,
@@ -1911,12 +1886,6 @@ export class LtiService {
       await this.options.stores.lti.enqueueGradeJob(job);
     }
   }
-}
-
-function providerSubject(platformId: string, subject: string): string {
-  // `sub` is only unique per issuer, so the stored identity subject is
-  // namespaced by our platform record.
-  return `${platformId}:${subject}`;
 }
 
 export function invalidLinkError(): LtiLaunchError {

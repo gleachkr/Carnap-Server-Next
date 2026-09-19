@@ -4,6 +4,7 @@ import type {
   AuthenticatedActor,
   TurnstileVerifier,
 } from "./application/auth";
+import { forbidden, unauthorized } from "./application/errors";
 import type { LtiPlatformKeyResolver } from "./application/lti";
 import type { AppStores } from "./application/stores";
 import type { Env } from "./env";
@@ -78,6 +79,28 @@ export interface AppBindings {
 }
 
 export type WorkerApp = Hono<AppBindings>;
+
+/**
+ * The actor the auth middleware resolved, or the error a signed-out request
+ * gets: 403 for a disabled account that presented a live session, 401 for no
+ * session at all. Here rather than in `application/`, because it reads the
+ * request — the services take the actor as a parameter and never see one.
+ */
+export function requireAuthenticated(
+  context: Context<AppBindings>,
+): AuthenticatedActor {
+  if (context.get("authFailure") === "disabled_user") {
+    throw forbidden("disabled_user");
+  }
+
+  const actor = context.get("actor");
+
+  if (actor === null) {
+    throw unauthorized();
+  }
+
+  return actor;
+}
 
 /**
  * Who a request came from, for the audit trail — null when nothing credible

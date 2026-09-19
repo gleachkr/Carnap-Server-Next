@@ -1,6 +1,7 @@
 import type { PlatformCapabilityGrant } from "../domain/admin";
 import type { AuthSession } from "../domain/auth";
 import { createAppId } from "../domain/ids";
+import { parseLtiProviderSubject } from "../domain/lti";
 import { addSeconds, type Timestamp, timestampNow } from "../domain/time";
 import {
   type ExternalIdentity,
@@ -135,6 +136,13 @@ export interface MintedSession {
 }
 
 export type ConfirmedNativeLogin = MintedSession;
+
+/** One of the actor's own identities, an LTI one named by its platform. */
+export interface OwnIdentity extends ExternalIdentity {
+  /** The LMS platform's registered name; null for native identities, and
+   *  for an LTI identity whose platform has since been deleted. */
+  readonly platformName: string | null;
+}
 
 export interface UpdateOwnProfileInput {
   /**
@@ -368,14 +376,31 @@ export class AuthService {
 
   /**
    * The sign-in methods linked to the actor's own account (a native email
-   * login, plus any LMS/LTI links). No capability check: an actor may always
-   * read their own identities.
+   * login, plus any LMS/LTI links), each LTI one named by its platform. No
+   * capability check: an actor may always read their own identities.
    */
-  async listOwnIdentities(
-    actor: AuthenticatedActor,
-  ): Promise<ExternalIdentity[]> {
-    return this.options.stores.users.listExternalIdentitiesForUser(
-      actor.user.id,
+  async listOwnIdentities(actor: AuthenticatedActor): Promise<OwnIdentity[]> {
+    const identities =
+      await this.options.stores.users.listExternalIdentitiesForUser(
+        actor.user.id,
+      );
+
+    // One platform read per LTI identity: an account holds one or two. A
+    // platform deleted since linking names nothing; the identity is still
+    // listed, and still removable.
+    return Promise.all(
+      identities.map(async (identity) => {
+        const platformId =
+          identity.provider === "lti"
+            ? parseLtiProviderSubject(identity.providerSubject)?.platformId
+            : undefined;
+        const platform =
+          platformId === undefined
+            ? null
+            : await this.options.stores.lti.getPlatformById(platformId);
+
+        return { ...identity, platformName: platform?.name ?? null };
+      }),
     );
   }
 

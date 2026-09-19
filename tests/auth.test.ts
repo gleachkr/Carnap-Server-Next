@@ -1,9 +1,6 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
-import {
-  requireAuthenticated,
-  requireInstructor,
-} from "../src/worker/application/authorization";
+import { requireInstructor } from "../src/worker/application/authorization";
 import {
   createStoredLoginRateLimiter,
   LOGIN_RATE_LIMIT_PER_EMAIL,
@@ -11,6 +8,7 @@ import {
 } from "../src/worker/application/login-rate-limit";
 import type { AppStores } from "../src/worker/application/stores";
 import type { Env } from "../src/worker/env";
+import { requireAuthenticated } from "../src/worker/http";
 import { storesForContext } from "../src/worker/stores";
 import { appRequest, createTestApp } from "./helpers/app";
 import { createTestStorage, type TestStorage } from "./helpers/storage";

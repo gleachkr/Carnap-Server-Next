@@ -118,16 +118,17 @@ import type {
 import type { AssignmentScore } from "../../domain/grades";
 import type { AppId } from "../../domain/ids";
 import { assertJsonValue } from "../../domain/json";
-import type {
-  LtiContext,
-  LtiDeepLinkRequest,
-  LtiDeployment,
-  LtiGradeJob,
-  LtiGradeJobStatus,
-  LtiLinkChallenge,
-  LtiLoginState,
-  LtiPlatform,
-  LtiResourceLink,
+import {
+  type LtiContext,
+  type LtiDeepLinkRequest,
+  type LtiDeployment,
+  type LtiGradeJob,
+  type LtiGradeJobStatus,
+  type LtiLinkChallenge,
+  type LtiLoginState,
+  type LtiPlatform,
+  type LtiResourceLink,
+  ltiProviderSubject,
 } from "../../domain/lti";
 import type { ExternalIdentity, User } from "../../domain/users";
 import type { AppDatabase } from "./database";
@@ -758,8 +759,7 @@ class SqliteUserStore implements UserStore {
     userId: AppId,
     platformId: AppId,
   ): Promise<string | null> {
-    // Platform row ids are UUIDs, so the prefix carries no LIKE wildcards.
-    const prefix = `${platformId}:`;
+    const prefix = ltiProviderSubject(platformId, "");
     const row = nullableSingle(
       await this.db
         .select({ providerSubject: externalIdentities.providerSubject })
@@ -781,7 +781,7 @@ class SqliteUserStore implements UserStore {
     userIds: readonly AppId[],
     platformId: AppId,
   ): Promise<Map<AppId, string>> {
-    const prefix = `${platformId}:`;
+    const prefix = ltiProviderSubject(platformId, "");
     const rows = await overSlices([...new Set(userIds)], (slice) =>
       this.db
         .select({

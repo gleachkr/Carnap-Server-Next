@@ -4,7 +4,6 @@ import { raw } from "hono/html";
 import type { AuthenticatedActor } from "../application/auth";
 import {
   canAuthorContent,
-  requireAuthenticated,
   requireContentAuthor,
 } from "../application/authorization";
 import { ContentService, canReadSource } from "../application/content";
@@ -26,7 +25,7 @@ import type {
   ContentRevisionSummary,
   ContentSourceFormat,
 } from "../domain/content";
-import type { AppBindings } from "../http";
+import { type AppBindings, requireAuthenticated } from "../http";
 import { deferred } from "../i18n/deferred";
 import type { Translator } from "../i18n/translator";
 import { HOSTED_THEORY_SUFFIX, hostedTheoryPath } from "../logic/theories";

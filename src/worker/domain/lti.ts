@@ -33,7 +33,32 @@ export interface LtiDeployment {
   readonly createdAt: Timestamp;
 }
 
-/** A mapping from an LMS course (LTI context) to an Carnap course. */
+/**
+ * The `providerSubject` an LTI identity is stored under. A platform's `sub`
+ * claim is unique only per issuer, so it is namespaced by our platform row:
+ * `{platformRowId}:{sub}`. Row ids are UUIDs, which hold no `:` — so the first
+ * `:` is always the boundary — and no LIKE wildcards, so `ltiProviderSubject(
+ * platformId, "")` is a safe prefix for "every identity on this platform".
+ */
+export function ltiProviderSubject(platformId: AppId, sub: string): string {
+  return `${platformId}:${sub}`;
+}
+
+/** The inverse of {@link ltiProviderSubject}; null for a non-LTI subject. */
+export function parseLtiProviderSubject(
+  providerSubject: string,
+): { readonly platformId: AppId; readonly sub: string } | null {
+  const boundary = providerSubject.indexOf(":");
+
+  return boundary === -1
+    ? null
+    : {
+        platformId: providerSubject.slice(0, boundary),
+        sub: providerSubject.slice(boundary + 1),
+      };
+}
+
+/** A mapping from an LMS course (LTI context) to a Carnap course. */
 export interface LtiContext {
   readonly id: AppId;
   readonly deploymentId: AppId;
@@ -46,7 +71,7 @@ export interface LtiContext {
  * A resource link the platform has launched, mapped to an assignment once an
  * instructor associates it. A null `assignmentId` means "seen but unmapped";
  * such launches land on the course page. The AGS line-item URL is captured
- * when present so milestone 11 grade passback can use it.
+ * when present so grade passback can use it.
  */
 export interface LtiResourceLink {
   readonly id: AppId;

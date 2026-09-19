@@ -5,7 +5,6 @@ import {
   type PlatformCapabilityCommand,
   type SupportMembershipCommand,
 } from "../application/admin";
-import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
 import type {
   AdminAuditEvent,
@@ -14,7 +13,7 @@ import type {
 } from "../domain/admin";
 import type { CourseMembership } from "../domain/courses";
 import type { User } from "../domain/users";
-import type { AppBindings } from "../http";
+import { type AppBindings, requireAuthenticated } from "../http";
 import { storesForContext } from "../stores";
 import {
   renderAdminAudit,

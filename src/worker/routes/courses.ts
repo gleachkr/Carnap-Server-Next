@@ -1,7 +1,6 @@
 import { type Context, Hono } from "hono";
 
 import { AssignmentService } from "../application/assignments";
-import { requireAuthenticated } from "../application/authorization";
 import { CourseService } from "../application/courses";
 import { AppHttpError, badRequest } from "../application/errors";
 import { GradePassbackService } from "../application/grade-passback";
@@ -14,7 +13,11 @@ import {
   courseStaffTier,
 } from "../domain/courses";
 import { timestampNow } from "../domain/time";
-import { type AppBindings, publicRequestUrl } from "../http";
+import {
+  type AppBindings,
+  publicRequestUrl,
+  requireAuthenticated,
+} from "../http";
 import type { Translator } from "../i18n/translator";
 import { kickGradePassback } from "../passback";
 import { storesForContext } from "../stores";

@@ -7,7 +7,7 @@ import type {
 import { ScoreDeliveryError } from "../../application/grade-passback";
 import type { LtiGradeFailureReason, LtiPlatform } from "../../domain/lti";
 import { withUserAgent } from "../../user-agent";
-import type { LtiToolKey } from "./tool-key";
+import { type LtiToolKey, protectedHeaderFor } from "./tool-key";
 
 type Fetcher = (
   input: RequestInfo | URL,
@@ -117,16 +117,8 @@ export class AgsClient implements LtiScoreSender {
     }
 
     const nowSeconds = Math.floor(nowMs / 1000);
-    const header: { alg: string; kid?: string } = {
-      alg: this.options.toolKey.alg,
-    };
-
-    if (this.options.toolKey.kid !== undefined) {
-      header.kid = this.options.toolKey.kid;
-    }
-
     const assertion = await new SignJWT({})
-      .setProtectedHeader(header)
+      .setProtectedHeader(protectedHeaderFor(this.options.toolKey))
       .setIssuer(platform.clientId)
       .setSubject(platform.clientId)
       .setAudience(platform.tokenEndpoint)

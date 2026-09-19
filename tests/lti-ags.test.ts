@@ -1,5 +1,5 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
-import { generateKeyPair, jwtVerify } from "jose";
+import { exportJWK, generateKeyPair, jwtVerify } from "jose";
 
 import { AttemptService } from "../src/worker/application/attempts";
 import type { AuthenticatedActor } from "../src/worker/application/auth";
@@ -402,7 +402,12 @@ function testToolKey(): Promise<TestToolKey> {
 
     return {
       publicKey: pair.publicKey,
-      toolKey: { alg: "RS256", key: pair.privateKey, kid: "tool-key-1" },
+      toolKey: {
+        alg: "RS256",
+        key: pair.privateKey,
+        kid: "tool-key-1",
+        publicJwk: await exportJWK(pair.publicKey),
+      },
     };
   })();
 

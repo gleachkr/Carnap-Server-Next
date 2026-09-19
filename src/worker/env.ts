@@ -21,8 +21,9 @@ export interface Env {
   readonly DB?: D1Database;
   /**
    * The tool's private signing key as a JSON JWK (with `kid` and `alg`),
-   * set via `wrangler secret put` in deployed environments. Only its public
-   * half is served (at /lti/jwks); signing starts with milestone 11.
+   * set via `wrangler secret put` in deployed environments. It signs Deep
+   * Linking responses and AGS client assertions; only its public half is
+   * served (at /lti/jwks). Read through `loadLtiToolKey`.
    */
   readonly LTI_TOOL_PRIVATE_KEY?: string;
   readonly RESEND_API_KEY?: string;

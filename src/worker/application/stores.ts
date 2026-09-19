@@ -158,8 +158,8 @@ export interface UserStore {
   ): Promise<ExternalIdentity | null>;
   /**
    * The user's LTI subject (`sub` claim) on one platform, or null when the
-   * account holds no identity there. LTI provider subjects are stored as
-   * `{platformRowId}:{sub}`.
+   * account holds no identity there. The stored `providerSubject` is
+   * `ltiProviderSubject(platformId, sub)`; this returns the `sub` half.
    */
   getLtiSubject(userId: AppId, platformId: AppId): Promise<string | null>;
   /**

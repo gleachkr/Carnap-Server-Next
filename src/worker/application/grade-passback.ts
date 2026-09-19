@@ -167,7 +167,7 @@ export class ScoreDeliveryError extends Error {
 }
 
 export interface LtiScoreMessage {
-  /** The user's LTI subject on the platform — the `sub` claim, not an Carnap id. */
+  /** The user's LTI subject on the platform — the `sub` claim, not a Carnap id. */
   readonly subject: string;
   readonly scoreGiven: number;
   readonly scoreMaximum: number;

@@ -1,10 +1,13 @@
 import { type Context, Hono } from "hono";
 
-import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
 import { LtiAdminService } from "../application/lti-admin";
 import type { LtiDeployment, LtiPlatform } from "../domain/lti";
-import { type AppBindings, publicRequestUrl } from "../http";
+import {
+  type AppBindings,
+  publicRequestUrl,
+  requireAuthenticated,
+} from "../http";
 import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
 import { renderAdminLtiPlatforms } from "../web/admin-lti";

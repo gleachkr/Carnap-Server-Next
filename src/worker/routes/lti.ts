@@ -1,23 +1,29 @@
 import { type Context, Hono } from "hono";
-import { SignJWT } from "jose";
 
 import { AuthService } from "../application/auth";
-import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError } from "../application/errors";
 import { GradePassbackService } from "../application/grade-passback";
 import {
-  defaultLtiKeyResolver,
   invalidLinkError,
   LTI_LINK_TTL_SECONDS,
   LtiLaunchError,
   LtiService,
 } from "../application/lti";
 import { hasLocaleCookie, setLocaleCookie } from "../cookies";
-import { type AppBindings, publicRequestUrl } from "../http";
+import {
+  type AppBindings,
+  publicRequestUrl,
+  requireAuthenticated,
+} from "../http";
 import { i18nFor, isSupportedLocale } from "../i18n";
 import { deferred } from "../i18n/deferred";
 import { ltiLinkEmailSenderFromEnv } from "../infrastructure/email/resend";
-import { loadLtiToolKey } from "../infrastructure/lti/tool-key";
+import { signDeepLinkResponse } from "../infrastructure/lti/deep-link";
+import { remoteLtiKeyResolver } from "../infrastructure/lti/platform-keys";
+import {
+  loadLtiToolKey,
+  ltiToolKeyConfigured,
+} from "../infrastructure/lti/tool-key";
 import { applyLocale } from "../middleware/locale";
 import { allowFrameAncestor } from "../middleware/security-headers";
 import { kickGradePassback } from "../passback";
@@ -41,7 +47,7 @@ export function ltiServiceForContext(
 
   return new LtiService({
     auth: new AuthService({ stores }),
-    keyResolver: context.get("ltiKeyResolver") ?? defaultLtiKeyResolver,
+    keyResolver: context.get("ltiKeyResolver") ?? remoteLtiKeyResolver,
     requestId: context.get("requestId"),
     stores,
   });
@@ -394,20 +400,9 @@ ltiRoutes.post("/deep-link/respond", async (context) => {
       assignmentId.length === 0 ? null : assignmentId,
       new URL("/lti/launch", publicRequestUrl(context)).href,
     );
-    const header: { alg: string; kid?: string } = { alg: toolKey.alg };
-
-    if (toolKey.kid !== undefined) {
-      header.kid = toolKey.kid;
-    }
-
-    const jwt = await new SignJWT(prepared.claims)
-      .setProtectedHeader(header)
-      .setIssuedAt()
-      .setExpirationTime("5m")
-      .sign(toolKey.key);
 
     return renderLtiDeepLinkReturn(context, {
-      jwt,
+      jwt: await signDeepLinkResponse(toolKey, prepared.claims),
       returnUrl: prepared.returnUrl,
     });
   } catch (error) {
@@ -615,77 +610,26 @@ ltiRoutes.post("/grade-jobs/:jobId/retry", async (context) => {
 });
 
 /**
- * The tool's public key set. LMS registration forms ask for this URL; the
- * key itself is only used from milestone 11 onward (Deep Linking and AGS
- * message signing), so an empty set is honest while no key is configured.
+ * The tool's public key set. LMS registration forms ask for this URL, and
+ * platforms fetch it to verify what we sign (Deep Linking responses, AGS
+ * client assertions). The key is the one `loadLtiToolKey` signs with, so a
+ * secret that cannot sign — a whole JWKS pasted in, a symmetric key, an
+ * unparseable one — publishes nothing rather than something the platform
+ * could never match; and an empty set is honest while no key is configured.
  */
-ltiRoutes.get("/jwks", (context) => {
+ltiRoutes.get("/jwks", async (context) => {
   const configured = context.env.LTI_TOOL_PRIVATE_KEY;
+  const toolKey = await loadLtiToolKey(configured);
 
-  if (configured === undefined || configured.trim().length === 0) {
-    return context.json({ keys: [] });
-  }
-
-  let parsed: Record<string, unknown>;
-
-  try {
-    parsed = JSON.parse(configured) as Record<string, unknown>;
-  } catch (_error) {
-    console.error("lti_tool_key_invalid", {
-      requestId: context.get("requestId"),
-    });
-
-    return context.json({ keys: [] });
-  }
-
-  const publicJwk = publicJwkFields(parsed);
-
-  if (publicJwk === null) {
-    console.error("lti_tool_key_invalid", {
-      requestId: context.get("requestId"),
-    });
-
-    return context.json({ keys: [] });
-  }
-
-  return context.json({ keys: [publicJwk] });
-});
-
-/**
- * The secret must be a single asymmetric private JWK. Copying an allowlist of
- * public members (instead of stripping known private ones) fails closed: a
- * misconfigured secret — a whole JWKS, a symmetric key, a key type whose
- * private fields we did not anticipate — publishes nothing rather than
- * everything.
- */
-const PUBLIC_JWK_MEMBERS = [
-  "kty",
-  "use",
-  "alg",
-  "kid",
-  "n",
-  "e",
-  "crv",
-  "x",
-  "y",
-] as const;
-
-function publicJwkFields(
-  jwk: Record<string, unknown>,
-): Record<string, unknown> | null {
-  const kty = jwk.kty;
-
-  if (typeof kty !== "string" || kty === "oct") {
-    return null;
-  }
-
-  const publicJwk: Record<string, unknown> = {};
-
-  for (const member of PUBLIC_JWK_MEMBERS) {
-    if (jwk[member] !== undefined) {
-      publicJwk[member] = jwk[member];
+  if (toolKey === null) {
+    if (ltiToolKeyConfigured(configured)) {
+      console.error("lti_tool_key_invalid", {
+        requestId: context.get("requestId"),
+      });
     }
+
+    return context.json({ keys: [] });
   }
 
-  return publicJwk;
-}
+  return context.json({ keys: [toolKey.publicJwk] });
+});

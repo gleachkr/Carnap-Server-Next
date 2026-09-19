@@ -1,4 +1,3 @@
-import type { Context } from "hono";
 import type { PlatformCapability } from "../domain/admin";
 import {
   type CourseMembership,
@@ -7,33 +6,15 @@ import {
   courseStaffTier,
 } from "../domain/courses";
 import type { AppId } from "../domain/ids";
-import type { AppBindings } from "../http";
-import { forbidden, unauthorized } from "./errors";
+import type { AuthenticatedActor } from "./auth";
+import { forbidden } from "./errors";
 import type { AppStores } from "./stores";
 
 export type RequiredCourseRole = CourseRole | "member";
 
-export function requireAuthenticated(
-  context: Context<AppBindings>,
-): NonNullable<AppBindings["Variables"]["actor"]> {
-  const failure = context.get("authFailure");
-
-  if (failure === "disabled_user") {
-    throw forbidden("disabled_user");
-  }
-
-  const actor = context.get("actor");
-
-  if (actor === null) {
-    throw unauthorized();
-  }
-
-  return actor;
-}
-
 export async function requireCourseRole(
   stores: AppStores,
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   courseId: AppId,
   allowedRoles: readonly RequiredCourseRole[],
 ): Promise<CourseMembership> {
@@ -59,7 +40,7 @@ export async function requireCourseRole(
 
 export async function requireInstructor(
   stores: AppStores,
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   courseId: AppId,
 ): Promise<CourseMembership> {
   return requireCourseRole(stores, actor, courseId, ["instructor"]);
@@ -67,7 +48,7 @@ export async function requireInstructor(
 
 export async function requireCourseStaff(
   stores: AppStores,
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   courseId: AppId,
 ): Promise<CourseMembership> {
   return requireCourseRole(stores, actor, courseId, [
@@ -85,7 +66,7 @@ export async function requireCourseStaff(
  */
 export async function courseStaffTierFor(
   stores: AppStores,
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   courseId: AppId,
 ): Promise<CourseStaffTier | null> {
   const membership = await stores.courses.getMembership(
@@ -99,7 +80,7 @@ export async function courseStaffTierFor(
 }
 
 export function hasPlatformCapability(
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   capability: PlatformCapability,
 ): boolean {
   return actor.capabilities.some(
@@ -108,7 +89,7 @@ export function hasPlatformCapability(
 }
 
 export function hasAnyPlatformCapability(
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   capabilities: readonly PlatformCapability[],
 ): boolean {
   return capabilities.some((capability) =>
@@ -117,7 +98,7 @@ export function hasAnyPlatformCapability(
 }
 
 export function requirePlatformCapability(
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
+  actor: AuthenticatedActor,
   capabilities: readonly PlatformCapability[],
 ): void {
   if (!hasAnyPlatformCapability(actor, capabilities)) {
@@ -141,18 +122,14 @@ export function requirePlatformCapability(
  * particular uploading a file, is not something the least trusted accounts on
  * the platform should fall into by default.
  */
-export function canAuthorContent(
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
-): boolean {
+export function canAuthorContent(actor: AuthenticatedActor): boolean {
   return (
     actor.isCourseStaff ||
     hasAnyPlatformCapability(actor, ["content_author", "site_admin"])
   );
 }
 
-export function requireContentAuthor(
-  actor: NonNullable<AppBindings["Variables"]["actor"]>,
-): void {
+export function requireContentAuthor(actor: AuthenticatedActor): void {
   if (!canAuthorContent(actor)) {
     throw forbidden("content_author_required");
   }

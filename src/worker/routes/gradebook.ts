@@ -1,9 +1,6 @@
 import { type Context, Hono } from "hono";
 
-import {
-  courseStaffTierFor,
-  requireAuthenticated,
-} from "../application/authorization";
+import { courseStaffTierFor } from "../application/authorization";
 import { badRequest } from "../application/errors";
 import {
   type AssignmentGradebook,
@@ -16,7 +13,7 @@ import { SubmissionService } from "../application/submissions";
 import type { Assignment } from "../domain/assignments";
 import type { CourseStaffTier } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
-import type { AppBindings } from "../http";
+import { type AppBindings, requireAuthenticated } from "../http";
 import { storesForContext } from "../stores";
 import { csvDownloadHeaders } from "../web/download";
 import {

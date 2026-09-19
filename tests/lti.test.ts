@@ -7,17 +7,19 @@ import {
 } from "jose";
 
 import { AuthService } from "../src/worker/application/auth";
-import {
-  defaultLtiKeyResolver,
-  LtiService,
-} from "../src/worker/application/lti";
+import { LtiService } from "../src/worker/application/lti";
 import type { AppStores } from "../src/worker/application/stores";
 import { hashAuthToken } from "../src/worker/application/tokens";
 import { createAppId } from "../src/worker/domain/ids";
-import type { LtiPlatform } from "../src/worker/domain/lti";
+import {
+  type LtiPlatform,
+  ltiProviderSubject,
+  parseLtiProviderSubject,
+} from "../src/worker/domain/lti";
 import { timestampNow } from "../src/worker/domain/time";
 import type { Env } from "../src/worker/env";
 import type { WorkerApp } from "../src/worker/http";
+import { remoteLtiKeyResolver } from "../src/worker/infrastructure/lti/platform-keys";
 import { OUTBOUND_USER_AGENT } from "../src/worker/user-agent";
 import {
   beginTestLogin,
@@ -1613,7 +1615,38 @@ describe("LTI 1.3 core launches", () => {
         keys: [],
       });
 
+      const { privateJwkJson, publicKey } = await testToolKeyPair();
       const withKey = await app.request(
+        "/lti/jwks",
+        {},
+        { ...env, LTI_TOOL_PRIVATE_KEY: privateJwkJson },
+      );
+      const body = (await withKey.json()) as {
+        readonly keys: readonly Record<string, unknown>[];
+      };
+      const privateJwk = JSON.parse(privateJwkJson) as Record<
+        string,
+        unknown
+      >;
+
+      expect(body.keys).toHaveLength(1);
+      expect(body.keys[0]?.kid).toBe("carnap-tool-test-key");
+      expect(body.keys[0]?.n).toBe(privateJwk.n);
+      expect(body.keys[0]?.d).toBeUndefined();
+      expect(body.keys[0]?.p).toBeUndefined();
+      expect(body.keys[0]?.q).toBeUndefined();
+      // What is published is the public half of the key that signs.
+      expect(body.keys[0]).toEqual({
+        ...(await exportJWK(publicKey)),
+        alg: "RS256",
+        kid: "carnap-tool-test-key",
+      });
+
+      // Misconfigured secrets publish nothing rather than everything: a
+      // whole JWKS pasted in, a symmetric key with no public half, or a
+      // private key that cannot sign — one that parses as a JWK but does not
+      // import.
+      const unusable = await app.request(
         "/lti/jwks",
         {},
         {
@@ -1621,31 +1654,18 @@ describe("LTI 1.3 core launches", () => {
           LTI_TOOL_PRIVATE_KEY: JSON.stringify({
             alg: "RS256",
             d: "secret-private-exponent",
-            dp: "x",
-            dq: "x",
             e: "AQAB",
             kid: "tool-key-1",
             kty: "RSA",
             n: "public-modulus",
-            p: "x",
-            q: "x",
-            qi: "x",
           }),
         },
       );
-      const body = (await withKey.json()) as {
-        readonly keys: readonly Record<string, unknown>[];
-      };
 
-      expect(body.keys).toHaveLength(1);
-      expect(body.keys[0]?.kid).toBe("tool-key-1");
-      expect(body.keys[0]?.n).toBe("public-modulus");
-      expect(body.keys[0]?.d).toBeUndefined();
-      expect(body.keys[0]?.p).toBeUndefined();
-      expect(body.keys[0]?.q).toBeUndefined();
+      expect((await unusable.json()) as Record<string, unknown>).toEqual({
+        keys: [],
+      });
 
-      // Misconfigured secrets publish nothing rather than everything: a
-      // whole JWKS pasted in, or a symmetric key with no public half.
       const jwksShaped = await app.request(
         "/lti/jwks",
         {},
@@ -1715,7 +1735,7 @@ describe("LTI 1.3 core launches", () => {
       };
 
       try {
-        const keySet = defaultLtiKeyResolver(platform);
+        const keySet = remoteLtiKeyResolver(platform);
 
         // No key can match an empty set; the request is what is under test.
         await expect(
@@ -1923,6 +1943,21 @@ async function selectedContentItems(
     })
   ).payload[CLAIM_DL_CONTENT_ITEMS] as readonly Record<string, unknown>[];
 }
+
+describe("the stored LTI subject", () => {
+  test("round-trips through the platform namespace, whatever the sub holds", () => {
+    const platformId = createAppId();
+    // A `sub` is the platform's to shape: Moodle's are numbers, Canvas's
+    // UUIDs, and nothing stops one carrying the separator itself.
+    for (const sub of ["42", "a:b:c", "", "https://lms.example.test/u/9"]) {
+      expect(
+        parseLtiProviderSubject(ltiProviderSubject(platformId, sub)),
+      ).toEqual({ platformId, sub });
+    }
+
+    expect(parseLtiProviderSubject("someone@example.test")).toBeNull();
+  });
+});
 
 describe("LTI Deep Linking", () => {
   test("an instructor launch reaches the assignment picker and a selection signs a response", async () => {

@@ -171,6 +171,10 @@ msgstr "{used} von {allowed}"
 msgid "A “-- label:” comment must sit at the end of the proof line it marks, not on its own line."
 msgstr "Ein „-- label:“-Kommentar muss am Ende der Beweiszeile stehen, die er markiert, nicht in einer eigenen Zeile."
 
+#: src/worker/web/lti.tsx
+msgid "A Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
+msgstr "Für {email} gibt es bereits ein Carnap-Konto. Wir haben einen Bestätigungslink an diese Adresse gesendet — öffnen Sie ihn, um Ihre LMS-Identität mit dem Konto zu verbinden, und starten Sie danach erneut aus Ihrem LMS."
+
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "A cited subproof must begin and end at the same indentation level."
 msgstr "Ein zitierter Teilbeweis muss auf derselben Einrückungsebene beginnen und enden."
@@ -524,10 +528,6 @@ msgstr "Eine Annahme trägt genau eine Entladungsmarke; „{payload}“ liest si
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves."
 msgstr ""
-
-#: src/worker/web/lti.tsx
-msgid "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
-msgstr "Für {email} gibt es bereits ein Carnap-Konto. Wir haben einen Bestätigungslink an diese Adresse gesendet — öffnen Sie ihn, um Ihre LMS-Identität mit dem Konto zu verbinden, und starten Sie danach erneut aus Ihrem LMS."
 
 #: src/worker/application/courses.ts
 msgid "An email address is required."

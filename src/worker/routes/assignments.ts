@@ -5,7 +5,6 @@ import { AttemptService } from "../application/attempts";
 import type { AuthenticatedActor } from "../application/auth";
 import {
   courseStaffTierFor,
-  requireAuthenticated,
   requireInstructor,
 } from "../application/authorization";
 import { ContentService } from "../application/content";
@@ -50,7 +49,7 @@ import {
 } from "../domain/feedback";
 import { assertJsonValue } from "../domain/json";
 import { timestampNow } from "../domain/time";
-import type { AppBindings } from "../http";
+import { type AppBindings, requireAuthenticated } from "../http";
 import { deferred } from "../i18n/deferred";
 import type { Translator } from "../i18n/translator";
 import { kickGradePassback } from "../passback";

@@ -171,6 +171,10 @@ msgstr "{used} of {allowed}"
 msgid "A “-- label:” comment must sit at the end of the proof line it marks, not on its own line."
 msgstr "A “-- label:” comment must sit at the end of the proof line it marks, not on its own line."
 
+#: src/worker/web/lti.tsx
+msgid "A Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
+msgstr "A Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
+
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "A cited subproof must begin and end at the same indentation level."
 msgstr "A cited subproof must begin and end at the same indentation level."
@@ -524,10 +528,6 @@ msgstr "An assumption carries a single discharge label; “{payload}” reads as
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves."
 msgstr "An aufbau-mm0 block needs MM0 source in its body, or a src naming a theory this site serves."
-
-#: src/worker/web/lti.tsx
-msgid "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
-msgstr "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
 
 #: src/worker/application/courses.ts
 msgid "An email address is required."

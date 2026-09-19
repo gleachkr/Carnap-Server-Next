@@ -6,9 +6,12 @@ import {
   AuthService,
   SESSION_COOKIE_NAME,
 } from "../application/auth";
-import { requireAuthenticated } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
-import { type AppBindings, clientIpAddress } from "../http";
+import {
+  type AppBindings,
+  clientIpAddress,
+  requireAuthenticated,
+} from "../http";
 import { deferred } from "../i18n/deferred";
 import { turnstileForContext } from "../infrastructure/turnstile";
 import { storesForContext } from "../stores";

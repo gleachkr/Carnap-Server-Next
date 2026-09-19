@@ -61,7 +61,7 @@ export function renderLtiLinkPending(
     <Sheet title={title}>
       <Notice>
         {i18n.t(
-          "An Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS.",
+          "A Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS.",
           { email: model.email },
         )}
       </Notice>
