@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   mountPrawitz,
   PRAWITZ_THEORY,
@@ -8,6 +8,7 @@ import {
   prawitzPublicData,
   prawitzTypeInto,
 } from "./prawitz-widget";
+import { mockProofCompiler } from "./proof-compiler-mock";
 import { until } from "./tree-widget";
 
 /**
@@ -26,22 +27,7 @@ import { until } from "./tree-widget";
 const ENGINE_FAILURE =
   "The proof engine couldn't read this proof — check for unexpected characters.";
 
-const compile = mock((_mm0: string, _proof: string) => ({
-  mmbBytes: new Uint8Array([1, 2, 3]),
-  ok: true,
-}));
-
-const PROOF_COMPILER = "../../src/client/proof-compiler";
-const realProofCompiler = { ...(await import(PROOF_COMPILER)) };
-
-mock.module(PROOF_COMPILER, () => ({
-  ...realProofCompiler,
-  loadProofCompiler: async () => ({ compile }),
-}));
-
-afterAll(() => {
-  mock.module(PROOF_COMPILER, () => ({ ...realProofCompiler }));
-});
+const compile = await mockProofCompiler();
 
 await import("../../src/client/components/carnap-aufbau-proof-prawitz-v1");
 

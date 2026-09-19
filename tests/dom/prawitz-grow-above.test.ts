@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   prawitzButton as button,
   prawitzItems as items,
@@ -9,6 +9,7 @@ import {
   prawitzRuleFieldOf as ruleFieldOf,
   prawitzTypeInto as typeInto,
 } from "./prawitz-widget";
+import { mockProofCompiler } from "./proof-compiler-mock";
 import { until } from "./tree-widget";
 
 /**
@@ -23,22 +24,7 @@ import { until } from "./tree-widget";
  * The compiler is mocked at the module seam, as in the tree widget's tests.
  */
 
-const compile = mock((_mm0: string, _proof: string) => ({
-  mmbBytes: new Uint8Array([1, 2, 3]),
-  ok: true,
-}));
-
-const PROOF_COMPILER = "../../src/client/proof-compiler";
-const realProofCompiler = { ...(await import(PROOF_COMPILER)) };
-
-mock.module(PROOF_COMPILER, () => ({
-  ...realProofCompiler,
-  loadProofCompiler: async () => ({ compile }),
-}));
-
-afterAll(() => {
-  mock.module(PROOF_COMPILER, () => ({ ...realProofCompiler }));
-});
+await mockProofCompiler();
 
 await import("../../src/client/components/carnap-aufbau-proof-prawitz-v1");
 

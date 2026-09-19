@@ -1,5 +1,6 @@
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { dom } from "../helpers/dom";
+import { mockProofCompiler } from "./proof-compiler-mock";
 import {
   type MountedTree,
   mountTree,
@@ -22,22 +23,7 @@ import {
  * that `#n` flattens and verifies is `tests/tree-proof-flatten.test.ts`'s.
  */
 
-const compile = mock((_mm0: string, _proof: string) => ({
-  mmbBytes: new Uint8Array([1, 2, 3]),
-  ok: true,
-}));
-
-const PROOF_COMPILER = "../../src/client/proof-compiler";
-const realProofCompiler = { ...(await import(PROOF_COMPILER)) };
-
-mock.module(PROOF_COMPILER, () => ({
-  ...realProofCompiler,
-  loadProofCompiler: async () => ({ compile }),
-}));
-
-afterAll(() => {
-  mock.module(PROOF_COMPILER, () => ({ ...realProofCompiler }));
-});
+const compile = await mockProofCompiler();
 
 await import("../../src/client/components/carnap-aufbau-proof-tree-v1");
 

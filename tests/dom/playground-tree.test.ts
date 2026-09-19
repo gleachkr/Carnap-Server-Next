@@ -1,4 +1,5 @@
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
+import { mockProofCompiler } from "./proof-compiler-mock";
 import {
   mountTree,
   toolbarButton,
@@ -17,25 +18,7 @@ import {
  * real is `tests/playground.test.ts`'s business.
  */
 
-const compile = mock((_mm0: string, _proof: string) => ({
-  mmbBytes: new Uint8Array([1, 2, 3]),
-  ok: true,
-}));
-
-// Only the loader is stood in for; the module's readers stay real, and the
-// loader is put back afterwards — `mock.module` is process-wide, and the
-// files that test the real loader and readers share this process.
-const PROOF_COMPILER = "../../src/client/proof-compiler";
-const realProofCompiler = { ...(await import(PROOF_COMPILER)) };
-
-mock.module(PROOF_COMPILER, () => ({
-  ...realProofCompiler,
-  loadProofCompiler: async () => ({ compile }),
-}));
-
-afterAll(() => {
-  mock.module(PROOF_COMPILER, () => ({ ...realProofCompiler }));
-});
+const compile = await mockProofCompiler();
 
 await import("../../src/client/components/carnap-aufbau-proof-tree-v1");
 

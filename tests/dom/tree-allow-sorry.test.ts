@@ -1,5 +1,6 @@
-import { afterAll, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { dom } from "../helpers/dom";
+import { mockProofCompiler } from "./proof-compiler-mock";
 import {
   type MountedTree,
   mountTree,
@@ -25,7 +26,7 @@ import {
  * token, as the real engine does (`tests/sorry-certificate.test.ts`).
  */
 
-const compile = mock((_mm0: string, proof: string) => {
+await mockProofCompiler((_mm0: string, proof: string) => {
   const at = proof.indexOf("sorry!");
   if (at === -1) {
     return { diagnostics: [], mmbBytes: new Uint8Array([1, 2, 3]), ok: true };
@@ -45,18 +46,6 @@ const compile = mock((_mm0: string, proof: string) => {
     mmbBytes: new Uint8Array([1, 2, 3]),
     ok: true,
   };
-});
-
-const PROOF_COMPILER = "../../src/client/proof-compiler";
-const realProofCompiler = { ...(await import(PROOF_COMPILER)) };
-
-mock.module(PROOF_COMPILER, () => ({
-  ...realProofCompiler,
-  loadProofCompiler: async () => ({ compile }),
-}));
-
-afterAll(() => {
-  mock.module(PROOF_COMPILER, () => ({ ...realProofCompiler }));
 });
 
 await import("../../src/client/components/carnap-aufbau-proof-tree-v1");
