@@ -490,7 +490,7 @@ const SHORTCUTS: readonly {
 const INTRO_IDS: readonly AufbauProofTreeStringId[] = [
   "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward.",
   "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses.",
-  "The mark beside the Submit button shows whether the proof checks; hover it to read the problem.",
+  "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined; hover it to read what is wrong.",
 ];
 
 /**
@@ -1536,7 +1536,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
   /**
    * The language's refusals as the same node-id → message map a compiler
    * diagnostic produces, so the view draws one kind of squiggle. Withheld
-   * under `terse`/`none` on the same terms as {@link collectNodeErrors}: a
+   * under `terse`/`none` on the same terms as {@link collectNodeProblems}: a
    * refusal is a reason, and the two must not disagree about that.
    */
   private formulaNodeErrors(
@@ -1604,7 +1604,7 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       this.setStatus({
         mark: "idle",
         markTitle: "",
-        nodeErrors: {},
+        nodeErrors: this.compileFailureErrors(),
         nodeWarnings: {},
       });
       this.syncAnswer();
@@ -1631,6 +1631,24 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     // what it is not saying deserves a sentence.
     this.setCheckStatus(this.admittedStatus());
     this.syncAnswer();
+  }
+
+  /**
+   * The compiler threw before it could report diagnostics. One generic
+   * message on the root node, where a diagnostic with no span would land,
+   * rather than a blank tree and a spinner that stopped for no stated reason
+   * — withheld on the same terms as any other reason.
+   */
+  private compileFailureErrors(): Record<string, string> {
+    if (!this.showsDetail) {
+      return {};
+    }
+
+    return {
+      [this.doc.model.id]: this.t(
+        "The proof engine couldn't read this proof — check for unexpected characters.",
+      ),
+    };
   }
 
   /**

@@ -78,9 +78,9 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
     Redo: i18n.t("Redo"),
     "Redo (Ctrl-Y)": i18n.t("Redo (Ctrl-Y)"),
     /** Help: the third orientation paragraph. */
-    "The mark beside the Submit button shows whether the proof checks; hover it to read the problem.":
+    "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined; hover it to read what is wrong.":
       i18n.t(
-        "The mark beside the Submit button shows whether the proof checks; hover it to read the problem.",
+        "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined; hover it to read what is wrong.",
       ),
     /** Help: the first orientation paragraph. */
     "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward.":

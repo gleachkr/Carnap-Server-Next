@@ -3873,7 +3873,7 @@ msgid "The LTI platform was not found."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "The mark beside the Submit button shows whether the proof checks; hover it to read the problem."
+msgid "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined; hover it to read what is wrong."
 msgstr ""
 
 #: src/worker/web/admin.tsx

@@ -1826,7 +1826,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       this.setStatus({
         mark: "idle",
         markTitle: "",
-        nodeErrors: this.structuralErrors(),
+        nodeErrors: this.compileFailureErrors(this.structuralErrors()),
       });
       this.syncAnswer();
       return;
@@ -1856,12 +1856,43 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   }
 
   /**
+   * The compiler threw before it could report diagnostics. One generic
+   * message on the first tree's root, where a diagnostic with no span would
+   * land, rather than a blank forest and a spinner that stopped for no
+   * stated reason — added beneath whatever the translator already said
+   * about that line, and withheld on the same terms as any other reason.
+   */
+  private compileFailureErrors(
+    errors: Record<string, string>,
+  ): Record<string, string> {
+    const rootId = this.doc.trees[0]?.id;
+    if (!this.showsDetail || rootId === undefined) {
+      return errors;
+    }
+
+    const message = this.t(
+      "The proof engine couldn't read this proof — check for unexpected characters.",
+    );
+    const above = errors[rootId];
+    return {
+      ...errors,
+      [rootId]: above === undefined ? message : `${above}\n${message}`,
+    };
+  }
+
+  /**
    * Everything wrong with the tree before the compiler has seen it, as one
    * node-id → message map: the translator's structural diagnostics, worded
    * from this widget's own switch, and the language's refusals, which arrive
-   * already worded by the parser.
+   * already worded by the parser. Withheld under `terse`/`none` on the same
+   * terms as {@link collectNodeErrors}: a refusal is a reason, and the two
+   * must not disagree about that.
    */
   private structuralErrors(): Record<string, string> {
+    if (!this.showsDetail) {
+      return {};
+    }
+
     const errors: Record<string, string> = {};
     const add = (nodeId: string, message: string): void => {
       errors[nodeId] =
@@ -1890,8 +1921,8 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     proof: string,
   ): Record<string, string> {
     // Every node error is a reason, and `terse` and `none` withhold reasons.
-    // Caught here rather than at the three call sites so a fourth cannot miss
-    // it; the compile itself still runs, because the certificate depends on it.
+    // Caught here rather than at the call site so another cannot miss it;
+    // the compile itself still runs, because the certificate depends on it.
     if (!this.showsDetail) {
       return {};
     }
