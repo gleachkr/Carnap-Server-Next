@@ -661,10 +661,7 @@ export class AssignmentService {
       throw contentRevisionNotFound();
     }
 
-    const { artifact, item } = await this.requireAssignableLesson(
-      actor,
-      revision,
-    );
+    await this.requireAssignableLesson(actor, revision);
 
     const updated = await this.options.stores.assignments.updateDraft({
       assessmentMode,
@@ -690,14 +687,10 @@ export class AssignmentService {
       );
     }
 
-    return {
-      artifact,
-      assignment: updated,
-      contentItem: item,
-      contentRevision: revision,
-      contentVersions: [],
-      exerciseExcuses: [],
-    };
+    // The same detail a read gives, not a literal with empty lists: a draft
+    // can be an unpublished assignment, whose versions and excuses survive
+    // the unpublish, and PUT and GET on it must agree.
+    return this.detailForAssignment(updated);
   }
 
   async publish(

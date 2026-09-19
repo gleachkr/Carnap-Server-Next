@@ -2171,6 +2171,57 @@ describe("assignment unpublish", () => {
     });
   });
 
+  test("editing an unpublished assignment answers with the versions it kept", async () => {
+    // Unpublishing flips the state and nothing else, so the draft still has
+    // the content version its publish recorded. The edit reply used to be a
+    // literal with empty lists where a read of the same draft listed it.
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const course = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      const draft = await createDraft(
+        env,
+        instructor,
+        course.course.id,
+        revision.revision.id,
+      );
+      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await unpublish(env, instructor, course.course.id, draft.assignment.id);
+
+      const path = `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`;
+      const edited = await appRequest(
+        createTestApp(),
+        path,
+        jsonRequest(
+          {
+            contentRevisionId: revision.revision.id,
+            description: "Read the lesson and answer the question.",
+            title: "Homework 1, revised",
+          },
+          instructor,
+        ),
+        env,
+      );
+      const editedBody = (await edited.json()) as AssignmentResponse;
+      const read = await appRequest(
+        createTestApp(),
+        path,
+        { headers: { Cookie: instructor.cookieHeader } },
+        env,
+      );
+      const readBody = (await read.json()) as AssignmentResponse;
+
+      expect(edited.status).toBe(200);
+      expect(editedBody.assignment.title).toBe("Homework 1, revised");
+      expect(editedBody.contentVersions.length).toBeGreaterThan(0);
+      expect(editedBody.contentVersions).toEqual(readBody.contentVersions);
+    });
+  });
+
   test("unpublish is blocked once a student has an attempt", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
