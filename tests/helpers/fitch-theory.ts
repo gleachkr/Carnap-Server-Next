@@ -3,7 +3,8 @@
  * turnstile judgement (`⊢`) with an ACUI comma-context, plus `ax`, implication,
  * and conjunction rules. It is the theory the Stage 0 spike validated against the
  * real `@aufbau` compiler + verifier, so proofs the translator emits for it
- * genuinely compile and verify. Shared by the authoring and verify suites.
+ * genuinely compile and verify. Shared by the Fitch authoring and verify
+ * suites, the Prawitz verify suite, and the Fitch widget test.
  *
  * House convention: multi-premise rules are **multiplicative** — one context
  * variable per premise, joined in the conclusion — and every conclusion also
