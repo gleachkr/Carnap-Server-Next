@@ -41,50 +41,46 @@ describe("serving without a D1 binding", () => {
   test("signs someone in and keeps them signed in", async () => {
     const storage = await createLibSqlTestStorage();
 
-    try {
-      const app = serverApp(storage.stores);
-      const json = (body: unknown): RequestInit => ({
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
+    const app = serverApp(storage.stores);
+    const json = (body: unknown): RequestInit => ({
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
 
-      const start = await app.request(
-        "/auth/login/start",
-        json({ email: "ada@example.test" }),
-        SERVER_ENV,
-      );
+    const start = await app.request(
+      "/auth/login/start",
+      json({ email: "ada@example.test" }),
+      SERVER_ENV,
+    );
 
-      expect(start.status).toBe(202);
+    expect(start.status).toBe(202);
 
-      const startBody = (await start.json()) as {
-        login: { loginToken: string };
-      };
-      const confirm = await app.request(
-        "/auth/login/confirm",
-        json({ loginToken: startBody.login.loginToken }),
-        SERVER_ENV,
-      );
+    const startBody = (await start.json()) as {
+      login: { loginToken: string };
+    };
+    const confirm = await app.request(
+      "/auth/login/confirm",
+      json({ loginToken: startBody.login.loginToken }),
+      SERVER_ENV,
+    );
 
-      expect(confirm.status).toBe(200);
+    expect(confirm.status).toBe(200);
 
-      // The actual regression: resolving the actor used to be gated on the
-      // `DB` binding rather than on storage being available, so every request
-      // after a successful sign-in came back anonymous — a login that appeared
-      // to work and then silently did nothing.
-      const me = await app.request(
-        "/auth/me",
-        { headers: { Cookie: cookieHeader(confirm) } },
-        SERVER_ENV,
-      );
+    // The actual regression: resolving the actor used to be gated on the
+    // `DB` binding rather than on storage being available, so every request
+    // after a successful sign-in came back anonymous — a login that appeared
+    // to work and then silently did nothing.
+    const me = await app.request(
+      "/auth/me",
+      { headers: { Cookie: cookieHeader(confirm) } },
+      SERVER_ENV,
+    );
 
-      expect(me.status).toBe(200);
-      await expect(me.json()).resolves.toMatchObject({
-        actor: { email: "ada@example.test", name: null },
-      });
-    } finally {
-      await storage.dispose();
-    }
+    expect(me.status).toBe(200);
+    await expect(me.json()).resolves.toMatchObject({
+      actor: { email: "ada@example.test", name: null },
+    });
   });
 
   test("answers as a signed-out visitor when there is no storage either", async () => {

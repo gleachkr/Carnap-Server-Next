@@ -25,13 +25,7 @@ export function describeStorageContract(
   async function withStorage(
     run: (storage: StoresUnderTest) => Promise<void>,
   ): Promise<void> {
-    const storage = await createStorage();
-
-    try {
-      await run(storage);
-    } finally {
-      await storage.dispose();
-    }
+    await run(await createStorage());
   }
 
   async function createUser(stores: AppStores, id = "user-1") {

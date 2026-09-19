@@ -1,7 +1,7 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
 import type { AppStores } from "../src/worker/application/stores";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import { withStorage } from "./helpers/http";
 
 setDefaultTimeout(30_000);
 
@@ -21,18 +21,6 @@ const NOW = "2026-08-01T00:00:00.000Z";
  */
 async function runBackfill(db: D1Database): Promise<void> {
   await db.prepare(await Bun.file(MIGRATION_PATH).text()).run();
-}
-
-async function withStorage(
-  run: (storage: TestStorage) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage);
-  } finally {
-    await storage.dispose();
-  }
 }
 
 async function createUser(

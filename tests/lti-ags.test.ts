@@ -12,151 +12,23 @@ import type { Env } from "../src/worker/env";
 import { AgsClient } from "../src/worker/infrastructure/lti/ags-client";
 import type { LtiToolKey } from "../src/worker/infrastructure/lti/tool-key";
 import { OUTBOUND_USER_AGENT } from "../src/worker/user-agent";
-import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
+import {
+  authHeaders,
+  createCourse,
+  enrollStudent,
+  jsonRequest,
+  type LoginResult,
+  login,
+  withStorage,
+} from "./helpers/http";
 import { registerTestPlatform, TEST_ISSUER } from "./helpers/lti";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
 
 const NOW = "2026-01-02T03:04:05.000Z";
 const LINE_ITEM_URL = `${TEST_ISSUER}/line-items/42?type_id=7`;
 const AGS_SCORE_SCOPE = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
-
-interface LoginResult {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
-
-interface StartLoginResponse {
-  readonly login: { readonly loginToken: string };
-}
-
-interface ConfirmLoginResponse {
-  readonly actor: { readonly id: string };
-  readonly csrfToken: string;
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
-
-function jsonRequest(body: unknown, login?: LoginResult): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(login === undefined
-        ? {}
-        : {
-            Cookie: login.cookieHeader,
-            "X-CSRF-Token": login.csrfToken,
-          }),
-    },
-    method: "POST",
-  };
-}
-
-function authHeaders(login: LoginResult) {
-  return {
-    Cookie: login.cookieHeader,
-    "X-CSRF-Token": login.csrfToken,
-  };
-}
-
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const startResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const confirmBody = (await confirmResponse.json()) as ConfirmLoginResponse;
-
-  return {
-    actorId: confirmBody.actor.id,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: confirmBody.csrfToken,
-  };
-}
-
-async function createCourse(env: Env, instructor: LoginResult) {
-  await grantTestCourseCreator(env, instructor.actorId);
-
-  const response = await appRequest(
-    createTestApp(),
-    "/courses",
-    jsonRequest({ title: "Intro Logic", timezone: "UTC" }, instructor),
-    env,
-  );
-  const body = (await response.json()) as { course: { id: string } };
-
-  expect(response.status).toBe(201);
-
-  return body.course.id;
-}
-
-async function enrollStudent(
-  env: Env,
-  instructor: LoginResult,
-  student: LoginResult,
-  courseId: string,
-): Promise<void> {
-  const linkResponse = await appRequest(
-    createTestApp(),
-    `/courses/${courseId}/enrollment-links`,
-    jsonRequest({}, instructor),
-    env,
-  );
-  const link = (await linkResponse.json()) as {
-    enrollmentLink: { enrollmentPath: string };
-  };
-  const enrollResponse = await appRequest(
-    createTestApp(),
-    link.enrollmentLink.enrollmentPath,
-    { headers: authHeaders(student), method: "POST" },
-    env,
-  );
-
-  expect(enrollResponse.status).toBe(200);
-}
 
 async function createRevision(env: Env, author: LoginResult) {
   const itemResponse = await appRequest(

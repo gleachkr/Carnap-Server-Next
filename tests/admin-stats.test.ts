@@ -1,24 +1,12 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { withStorage } from "./helpers/http";
 import {
   seedCourseWithAssignment,
   seedSubmission,
   seedUser,
 } from "./helpers/seed";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
-
-async function withStorage(
-  run: (storage: TestStorage) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage);
-  } finally {
-    await storage.dispose();
-  }
-}
 
 describe("admin global stats", () => {
   test("counts users, live courses, assignments, submissions, and manual grading", async () => {

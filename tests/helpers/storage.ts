@@ -23,17 +23,16 @@ import {
 /** Storage over a real D1 binding, which raw-SQL assertions can reach for. */
 export interface TestStorage {
   readonly db: D1Database;
-  readonly dispose: () => Promise<void>;
   readonly stores: AppStores;
 }
 
 /**
- * The narrower thing a driver-neutral suite may assume: stores, and a way to
- * let go of them. Anything reachable from here is reachable on both hosts,
- * which is exactly the property the contract suite is asserting.
+ * The narrower thing a driver-neutral suite may assume: the stores. Anything
+ * reachable from here is reachable on both hosts, which is exactly the
+ * property the contract suite is asserting. Both fixtures are process-wide
+ * instances reset on each call, so there is nothing to release after a test.
  */
 export interface StoresUnderTest {
-  readonly dispose: () => Promise<void>;
   readonly stores: AppStores;
 }
 
@@ -185,11 +184,7 @@ export async function createTestStorage(): Promise<TestStorage> {
 
   await resetDatabase(db);
 
-  return {
-    db,
-    async dispose() {},
-    stores: createD1Stores(db),
-  };
+  return { db, stores: createD1Stores(db) };
 }
 
 export async function createLibSqlTestStorage(): Promise<StoresUnderTest> {
@@ -197,8 +192,5 @@ export async function createLibSqlTestStorage(): Promise<StoresUnderTest> {
 
   await resetAppDatabase(storage.db);
 
-  return {
-    async dispose() {},
-    stores: storage.stores,
-  };
+  return { stores: storage.stores };
 }

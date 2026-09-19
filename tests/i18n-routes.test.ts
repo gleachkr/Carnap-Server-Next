@@ -6,6 +6,7 @@ import type { Env } from "../src/worker/env";
 import type { WorkerApp } from "../src/worker/http";
 import { grantTestCourseCreator } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
+import { jsonRequest, login, withStorage } from "./helpers/http";
 import {
   beginTestLogin,
   createLtiTestApp,
@@ -13,7 +14,7 @@ import {
   mintIdToken,
   registerTestPlatform,
 } from "./helpers/lti";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import type { TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
 
@@ -34,21 +35,6 @@ interface SentEmail {
   readonly to: readonly string[];
 }
 
-interface LoginResult {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
-
-interface StartLoginResponse {
-  readonly login: { readonly loginToken: string };
-}
-
-interface ConfirmLoginResponse {
-  readonly actor: { readonly id: string };
-  readonly csrfToken: string;
-}
-
 interface CourseResponse {
   readonly course: { readonly id: string };
 }
@@ -63,23 +49,6 @@ interface ContentRevisionResponse {
 
 interface AssignmentResponse {
   readonly assignment: { readonly id: string };
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-  overrides: Partial<Omit<Env, "DB">> = {},
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, {
-      CARNAP_ENV: "local",
-      DB: storage.db,
-      ...overrides,
-    });
-  } finally {
-    await storage.dispose();
-  }
 }
 
 /**
@@ -117,30 +86,6 @@ async function capturingEmail<T>(
   }
 }
 
-function jsonRequest(body: unknown, login?: LoginResult): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(login === undefined
-        ? {}
-        : {
-            Cookie: login.cookieHeader,
-            "X-CSRF-Token": login.csrfToken,
-          }),
-    },
-    method: "POST",
-  };
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  return headers.getSetCookie?.() ?? [];
-}
-
 /** Everything a requester can see on a response bar the correlation id. */
 function comparableHeaders(
   response: Response,
@@ -148,35 +93,6 @@ function comparableHeaders(
   return [...response.headers].filter(
     ([name]) => name.toLowerCase() !== "x-request-id",
   );
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
-
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const startResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const confirmBody = (await confirmResponse.json()) as ConfirmLoginResponse;
-
-  return {
-    actorId: confirmBody.actor.id,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: confirmBody.csrfToken,
-  };
 }
 
 async function storeLocale(

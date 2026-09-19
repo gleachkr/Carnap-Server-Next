@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { Env } from "../src/worker/env";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import { withStorage } from "./helpers/http";
 
 /**
  * A self-hosted instance behind a TLS-terminating proxy receives every request
@@ -15,18 +15,6 @@ const PROXIED = {
   "X-Forwarded-Host": "logic.example.edu",
   "X-Forwarded-Proto": "https",
 };
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
 
 function trusted(env: Env): Env {
   return { ...env, CARNAP_TRUST_PROXY: "1" };

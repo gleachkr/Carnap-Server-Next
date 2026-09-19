@@ -4,39 +4,19 @@ import type { CompiledContentArtifact } from "../src/worker/domain/content";
 import type { Env } from "../src/worker/env";
 import { CONTENT_SCRIPT_ASSET } from "../src/worker/web/script-assets";
 import { CONTENT_STYLE_SHEET } from "../src/worker/web/style-assets";
-import {
-  grantTestContentAuthor,
-  grantTestCourseCreator,
-} from "./helpers/admin";
+import { grantTestContentAuthor } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import {
+  createCourse,
+  enrollStudent,
+  jsonRequest,
+  type LoginResult,
+  login,
+  withStorage,
+} from "./helpers/http";
+import type { TestStorage } from "./helpers/storage";
 
 setDefaultTimeout(30_000);
-
-interface LoginResult {
-  readonly actorId: string;
-  readonly cookieHeader: string;
-  readonly csrfToken: string;
-}
-
-interface StartLoginResponse {
-  readonly login: { readonly loginToken: string };
-}
-
-interface ConfirmLoginResponse {
-  readonly actor: { readonly id: string };
-  readonly csrfToken: string;
-}
-
-interface CourseResponse {
-  readonly course: { readonly id: string };
-}
-
-interface EnrollmentLinkResponse {
-  readonly enrollmentLink: {
-    readonly enrollmentPath: string;
-  };
-}
 
 interface ContentItemResponse {
   readonly item: { readonly id: string };
@@ -87,125 +67,6 @@ interface ItemListResponse {
 
 interface CourseGradebookResponse {
   readonly assignments: readonly { readonly id: string }[];
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
-}
-
-function setCookieHeaders(response: Response): string[] {
-  const headers = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
-  };
-
-  if (headers.getSetCookie !== undefined) {
-    return headers.getSetCookie();
-  }
-
-  return (headers.get("set-cookie") ?? "")
-    .split(/,(?=\s*[^;=]+=)/)
-    .map((cookie) => cookie.trim())
-    .filter((cookie) => cookie.length > 0);
-}
-
-function cookieHeader(response: Response): string {
-  return setCookieHeaders(response)
-    .map((cookie) => cookie.split(";")[0] ?? "")
-    .join("; ");
-}
-
-function jsonRequest(body: unknown, login?: LoginResult): RequestInit {
-  return {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      ...(login === undefined
-        ? {}
-        : {
-            Cookie: login.cookieHeader,
-            "X-CSRF-Token": login.csrfToken,
-          }),
-    },
-    method: "POST",
-  };
-}
-
-async function login(env: Env, email: string): Promise<LoginResult> {
-  const startResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/start",
-    jsonRequest({ email }),
-    env,
-  );
-  const startBody = (await startResponse.json()) as StartLoginResponse;
-  const confirmResponse = await appRequest(
-    createTestApp(),
-    "/auth/login/confirm",
-    jsonRequest({ loginToken: startBody.login.loginToken }),
-    env,
-  );
-  const confirmBody = (await confirmResponse.json()) as ConfirmLoginResponse;
-
-  return {
-    actorId: confirmBody.actor.id,
-    cookieHeader: cookieHeader(confirmResponse),
-    csrfToken: confirmBody.csrfToken,
-  };
-}
-
-async function createCourse(
-  env: Env,
-  instructor: LoginResult,
-): Promise<CourseResponse> {
-  await grantTestCourseCreator(env, instructor.actorId);
-
-  const response = await appRequest(
-    createTestApp(),
-    "/courses",
-    jsonRequest({ title: "Intro Logic", timezone: "UTC" }, instructor),
-    env,
-  );
-
-  expect(response.status).toBe(201);
-
-  return (await response.json()) as CourseResponse;
-}
-
-async function enrollStudent(
-  env: Env,
-  instructor: LoginResult,
-  student: LoginResult,
-  courseId: string,
-): Promise<void> {
-  const linkResponse = await appRequest(
-    createTestApp(),
-    `/courses/${courseId}/enrollment-links`,
-    jsonRequest({}, instructor),
-    env,
-  );
-  const link = (await linkResponse.json()) as EnrollmentLinkResponse;
-  const enrollResponse = await appRequest(
-    createTestApp(),
-    link.enrollmentLink.enrollmentPath,
-    {
-      headers: {
-        Cookie: student.cookieHeader,
-        "X-CSRF-Token": student.csrfToken,
-      },
-      method: "POST",
-    },
-    env,
-  );
-
-  expect(enrollResponse.status).toBe(200);
 }
 
 function source(exerciseId: string, prompt: string): string {
@@ -352,7 +213,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
       const student = await login(env, "student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -361,29 +222,29 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
       expect(draft.assignment.state).toBe("draft");
       expect(draft.assignment.contentRevisionId).toBe(revision.revision.id);
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const listResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments`,
+        `/courses/${courseId}/assignments`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const list = (await listResponse.json()) as AssignmentListResponse;
 
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const detailResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -408,7 +269,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "resource-teacher@example.test");
       const student = await login(env, "resource-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -417,7 +278,7 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         {
           assessmentMode: "none",
@@ -428,26 +289,26 @@ describe("assignment publication", () => {
         },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const listResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/items`,
+        `/courses/${courseId}/items`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const list = (await listResponse.json()) as ItemListResponse;
       const detailResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/items/${draft.assignment.id}`,
+        `/courses/${courseId}/items/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const detail = (await detailResponse.json()) as AssignmentResponse;
       const htmlResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/items/${draft.assignment.id}`,
+        `/courses/${courseId}/items/${draft.assignment.id}`,
         {
           headers: {
             Accept: "text/html",
@@ -459,7 +320,7 @@ describe("assignment publication", () => {
       const html = await htmlResponse.text();
       const beginResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}/attempts`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}/attempts`,
         {
           headers: {
             Cookie: student.cookieHeader,
@@ -471,7 +332,7 @@ describe("assignment publication", () => {
       );
       const gradebookResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/gradebook`,
+        `/courses/${courseId}/instructor/gradebook`,
         { headers: { Cookie: instructor.cookieHeader } },
         env,
       );
@@ -496,7 +357,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "stable-teacher@example.test");
       const student = await login(env, "stable-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const first = await createRevision(
         env,
         instructor,
@@ -510,17 +371,17 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         first.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const response = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -537,7 +398,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "repoint-teacher@example.test");
       const student = await login(env, "repoint-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const item = await createContentItem(env, instructor);
       const first = await createRevisionForItem(
         env,
@@ -554,16 +415,16 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         first.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const repointResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}/content-revision`,
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}/content-revision`,
         jsonRequest(
           {
             contentRevisionId: second.revision.id,
@@ -575,11 +436,11 @@ describe("assignment publication", () => {
       );
       const repointed = (await repointResponse.json()) as AssignmentResponse;
 
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const studentResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -601,7 +462,7 @@ describe("assignment publication", () => {
   test("the corrections ledger lists every version, noted or not", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "ledger-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const item = await createContentItem(env, instructor);
       const first = await createRevisionForItem(
         env,
@@ -624,13 +485,13 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         first.revision.id,
       );
 
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
-      const base = `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`;
+      const base = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
 
       // One correction described, one not. The note is optional on the form, so
       // an instructor in a hurry publishes the second kind, and it changes the
@@ -713,7 +574,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "excuse-teacher@example.test");
       const student = await login(env, "excuse-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -722,16 +583,16 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const excuseResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}/excuses`,
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}/excuses`,
         jsonRequest(
           {
             exerciseId: "too_hard",
@@ -742,18 +603,18 @@ describe("assignment publication", () => {
         env,
       );
 
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const detailResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const detail = (await detailResponse.json()) as AssignmentResponse;
       const htmlResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         {
           headers: {
             Accept: "text/html",
@@ -765,14 +626,14 @@ describe("assignment publication", () => {
       const html = await htmlResponse.text();
       const documentResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}/content`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}/content`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const documentHtml = await documentResponse.text();
       const instructorResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`,
         {
           headers: {
             Accept: "text/html",
@@ -820,7 +681,7 @@ describe("assignment publication", () => {
       const instructor = await login(env, "visibility-teacher@example.test");
       const student = await login(env, "visibility-student@example.test");
       const outsider = await login(env, "outsider@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -829,14 +690,14 @@ describe("assignment publication", () => {
       const hidden = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { listed: false, title: "Hidden homework" },
       );
       const future = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         {
           availableFrom: "2999-01-01T00:00:00.000Z",
@@ -844,32 +705,32 @@ describe("assignment publication", () => {
         },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, hidden.assignment.id);
-      await publish(env, instructor, course.course.id, future.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, hidden.assignment.id);
+      await publish(env, instructor, courseId, future.assignment.id);
 
       const listResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments`,
+        `/courses/${courseId}/assignments`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const list = (await listResponse.json()) as AssignmentListResponse;
       const hiddenDetail = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${hidden.assignment.id}`,
+        `/courses/${courseId}/assignments/${hidden.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const futureDetail = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${future.assignment.id}`,
+        `/courses/${courseId}/assignments/${future.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const outsiderDetail = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${hidden.assignment.id}`,
+        `/courses/${courseId}/assignments/${hidden.assignment.id}`,
         { headers: { Cookie: outsider.cookieHeader } },
         env,
       );
@@ -890,7 +751,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "avail-teacher@example.test");
       const student = await login(env, "avail-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -899,14 +760,14 @@ describe("assignment publication", () => {
       const open = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { title: "Open now" },
       );
       const closing = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         {
           availableUntil: "2999-01-01T00:00:00.000Z",
@@ -916,14 +777,14 @@ describe("assignment publication", () => {
       const upcoming = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { availableFrom: "2999-01-01T00:00:00.000Z", title: "Upcoming" },
       );
       const closed = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         {
           availableUntil: "2000-01-01T00:00:00.000Z",
@@ -931,27 +792,22 @@ describe("assignment publication", () => {
         },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, open.assignment.id);
-      await publish(env, instructor, course.course.id, closing.assignment.id);
-      await publish(
-        env,
-        instructor,
-        course.course.id,
-        upcoming.assignment.id,
-      );
-      await publish(env, instructor, course.course.id, closed.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, open.assignment.id);
+      await publish(env, instructor, courseId, closing.assignment.id);
+      await publish(env, instructor, courseId, upcoming.assignment.id);
+      await publish(env, instructor, courseId, closed.assignment.id);
 
       const page = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}`,
+        `/courses/${courseId}`,
         { headers: { Accept: "text/html", Cookie: student.cookieHeader } },
         env,
       );
       const html = await page.text();
-      const openHref = `/courses/${course.course.id}/assignments/${open.assignment.id}`;
-      const upcomingHref = `/courses/${course.course.id}/assignments/${upcoming.assignment.id}`;
-      const closedHref = `/courses/${course.course.id}/assignments/${closed.assignment.id}`;
+      const openHref = `/courses/${courseId}/assignments/${open.assignment.id}`;
+      const upcomingHref = `/courses/${courseId}/assignments/${upcoming.assignment.id}`;
+      const closedHref = `/courses/${courseId}/assignments/${closed.assignment.id}`;
 
       expect(page.status).toBe(200);
       expect(html).toContain(
@@ -975,7 +831,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "sorting-teacher@example.test");
       const student = await login(env, "sorting-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -991,19 +847,19 @@ describe("assignment publication", () => {
         const draft = await createDraft(
           env,
           instructor,
-          course.course.id,
+          courseId,
           revision.revision.id,
           fields,
         );
 
-        await publish(env, instructor, course.course.id, draft.assignment.id);
+        await publish(env, instructor, courseId, draft.assignment.id);
       }
 
-      await enrollStudent(env, instructor, student, course.course.id);
+      await enrollStudent(env, instructor, student, courseId);
 
       const page = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}`,
+        `/courses/${courseId}`,
         { headers: { Accept: "text/html", Cookie: student.cookieHeader } },
         env,
       );
@@ -1029,7 +885,7 @@ describe("assignment publication", () => {
   test("browser forms create, edit, and publish assignments", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "browser-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1037,7 +893,7 @@ describe("assignment publication", () => {
       );
       const coursePageResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}`,
+        `/courses/${courseId}`,
         {
           headers: {
             Accept: "text/html",
@@ -1048,7 +904,7 @@ describe("assignment publication", () => {
       );
       const quickCreateResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments`,
+        `/courses/${courseId}/assignments`,
         {
           body: new URLSearchParams({
             csrfToken: instructor.csrfToken,
@@ -1089,7 +945,7 @@ describe("assignment publication", () => {
 
       const createResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments`,
+        `/courses/${courseId}/assignments`,
         {
           body: new URLSearchParams({
             contentRevisionId: revision.revision.id,
@@ -1114,8 +970,7 @@ describe("assignment publication", () => {
       expect(assignmentId).toBeDefined();
 
       const detailPath =
-        `/courses/${course.course.id}` +
-        `/instructor/assignments/${assignmentId}`;
+        `/courses/${courseId}` + `/instructor/assignments/${assignmentId}`;
       const detailResponse = await appRequest(
         createTestApp(),
         detailPath,
@@ -1249,7 +1104,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "settings-teacher@example.test");
       const outsider = await login(env, "settings-outsider@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1258,15 +1113,15 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { dueAt: "2999-01-01T00:00:00.000Z" },
       );
       const assignmentId = draft.assignment.id;
 
-      await publish(env, instructor, course.course.id, assignmentId);
+      await publish(env, instructor, courseId, assignmentId);
 
-      const detailPath = `/courses/${course.course.id}/instructor/assignments/${assignmentId}`;
+      const detailPath = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
       const settingsPath = `${detailPath}/settings`;
 
       // The edit page for a published assignment serves the settings form,
@@ -1324,7 +1179,7 @@ describe("assignment publication", () => {
   test("the assignment form's Cancel goes back where the form was opened", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "cancel-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1333,18 +1188,18 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
       const headers = {
         Accept: "text/html",
         Cookie: instructor.cookieHeader,
       };
-      const detailPath = `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`;
+      const detailPath = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
 
       const createPage = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/new`,
+        `/courses/${courseId}/instructor/assignments/new`,
         { headers },
         env,
       );
@@ -1359,7 +1214,7 @@ describe("assignment publication", () => {
       // course; giving up on an edit returns to the assignment itself. A single
       // default for both would send one of them somewhere it never came from.
       expect(await createPage.text()).toContain(
-        `href="/courses/${course.course.id}">Cancel</a>`,
+        `href="/courses/${courseId}">Cancel</a>`,
       );
       expect(await editPage.text()).toContain(
         `href="${detailPath}">Cancel</a>`,
@@ -1371,7 +1226,7 @@ describe("assignment publication", () => {
     await withStorage(async ({ db }, env) => {
       const instructor = await login(env, "compiled-teacher@example.test");
       const student = await login(env, "compiled-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1380,7 +1235,7 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
@@ -1388,13 +1243,13 @@ describe("assignment publication", () => {
         .prepare("UPDATE content_revisions SET source_text = ? WHERE id = ?")
         .bind("::::unsupported\n::::", revision.revision.id)
         .run();
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const response = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -1410,7 +1265,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "gated-teacher@example.test");
       const student = await login(env, "gated-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1419,26 +1274,26 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const beforeResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const before = (await beforeResponse.json()) as AssignmentResponse;
 
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const afterResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -1458,7 +1313,7 @@ describe("assignment publication", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "time-teacher@example.test");
       const student = await login(env, "time-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1467,17 +1322,17 @@ describe("assignment publication", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { dueAt: "2026-07-20T23:59:00.000Z" },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const pageResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/assignments/${draft.assignment.id}`,
         { headers: { Accept: "text/html", Cookie: student.cookieHeader } },
         env,
       );
@@ -1503,19 +1358,19 @@ ${source("styled_q", "Styled prompt.")}`;
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "doc-teacher@example.test");
       const student = await login(env, "doc-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(env, instructor, styledSource);
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
-      const pageUrl = `/courses/${course.course.id}/assignments/${draft.assignment.id}`;
+      const pageUrl = `/courses/${courseId}/assignments/${draft.assignment.id}`;
       const documentUrl = `${pageUrl}/content`;
       const gateUrl = `${pageUrl}/start`;
       const before = await appRequest(
@@ -1550,7 +1405,7 @@ ${source("styled_q", "Styled prompt.")}`;
       expect(beforeGateHtml).not.toContain("maroon");
       expect(beforeGateHtml).not.toContain("styles.example.test");
 
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const after = await appRequest(
         createTestApp(),
@@ -1595,7 +1450,7 @@ ${source("styled_q", "Styled prompt.")}`;
   test("a style reset drops the default document styles", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "reset-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1609,16 +1464,16 @@ Plain reading prose.`,
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { assessmentMode: "none" },
       );
 
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const response = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}/content`,
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}/content`,
         { headers: { Cookie: instructor.cookieHeader } },
         env,
       );
@@ -1644,10 +1499,10 @@ Plain reading prose.`,
       const instructor = await login(env, "new-page-teacher@example.test");
       const student = await login(env, "new-page-student@example.test");
       const outsider = await login(env, "new-page-outsider@example.test");
-      const course = await createCourse(env, instructor);
-      await enrollStudent(env, instructor, student, course.course.id);
+      const courseId = await createCourse(env, instructor);
+      await enrollStudent(env, instructor, student, courseId);
 
-      const url = `/courses/${course.course.id}/instructor/assignments/new`;
+      const url = `/courses/${courseId}/instructor/assignments/new`;
       const statusFor = async (cookie: string): Promise<number> =>
         (
           await appRequest(
@@ -1669,7 +1524,7 @@ Plain reading prose.`,
       const instructor = await login(env, "access-teacher@example.test");
       const student = await login(env, "access-student@example.test");
       const outsider = await login(env, "access-outsider@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1678,15 +1533,15 @@ Plain reading prose.`,
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
-      const studentUrl = `/courses/${course.course.id}/assignments/${draft.assignment.id}/content`;
-      const instructorUrl = `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}/content`;
+      const studentUrl = `/courses/${courseId}/assignments/${draft.assignment.id}/content`;
+      const instructorUrl = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}/content`;
       const outsiderResponse = await appRequest(
         createTestApp(),
         studentUrl,
@@ -1719,7 +1574,7 @@ describe("the attempt gate", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "gate-teacher@example.test");
       const student = await login(env, "gate-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1728,15 +1583,15 @@ describe("the attempt gate", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { title: "Gated homework" },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
-      const base = `/courses/${course.course.id}/assignments/${draft.assignment.id}`;
+      const base = `/courses/${courseId}/assignments/${draft.assignment.id}`;
       const gate = await appRequest(
         createTestApp(),
         `${base}/start`,
@@ -1788,7 +1643,7 @@ describe("the attempt gate", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "gate2-teacher@example.test");
       const student = await login(env, "gate2-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1797,30 +1652,25 @@ describe("the attempt gate", () => {
       const reading = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { assessmentMode: "none", title: "Reading" },
       );
       const graded = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { title: "Graded" },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, reading.assignment.id);
-      await publish(env, instructor, course.course.id, graded.assignment.id);
-      await startAttempt(
-        env,
-        student,
-        course.course.id,
-        graded.assignment.id,
-      );
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, reading.assignment.id);
+      await publish(env, instructor, courseId, graded.assignment.id);
+      await startAttempt(env, student, courseId, graded.assignment.id);
 
-      const readingBase = `/courses/${course.course.id}/assignments/${reading.assignment.id}`;
-      const gradedBase = `/courses/${course.course.id}/assignments/${graded.assignment.id}`;
+      const readingBase = `/courses/${courseId}/assignments/${reading.assignment.id}`;
+      const gradedBase = `/courses/${courseId}/assignments/${graded.assignment.id}`;
       const onReading = await appRequest(
         createTestApp(),
         `${readingBase}/start`,
@@ -1853,7 +1703,7 @@ describe("a student the instructor has overridden", () => {
     await withStorage(async (storage, env) => {
       const instructor = await login(env, "over-teacher@example.test");
       const student = await login(env, "over-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -1862,20 +1712,20 @@ describe("a student the instructor has overridden", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { maxAttempts: 3, timeLimitMinutes: 1, title: "Overridden" },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
       await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}/overrides`,
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}/overrides`,
         jsonRequest({ maxAttempts: 1, userId: student.actorId }, instructor),
         env,
       );
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
       // Time the attempt out, as the clock would have. The next request the
       // student makes reaps it, leaving one used attempt and none open — which
       // is one more than this student is allowed.
@@ -1884,7 +1734,7 @@ describe("a student the instructor has overridden", () => {
         .bind("2020-01-01T00:00:00.000Z", draft.assignment.id)
         .run();
 
-      const base = `/courses/${course.course.id}/assignments/${draft.assignment.id}`;
+      const base = `/courses/${courseId}/assignments/${draft.assignment.id}`;
       const page = await appRequest(
         createTestApp(),
         base,
@@ -1924,7 +1774,7 @@ describe("item link resolution", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "link-teacher@example.test");
       const student = await login(env, "link-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const target = await createContentItem(env, instructor);
       const targetRevision = await createRevisionForItem(
         env,
@@ -1940,35 +1790,25 @@ describe("item link resolution", () => {
       const targetDraft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         targetRevision.revision.id,
         { assessmentMode: "none", title: "Chapter 2" },
       );
       const linkingDraft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         linkingRevision.revision.id,
         { assessmentMode: "none", title: "Chapter 1" },
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(
-        env,
-        instructor,
-        course.course.id,
-        targetDraft.assignment.id,
-      );
-      await publish(
-        env,
-        instructor,
-        course.course.id,
-        linkingDraft.assignment.id,
-      );
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, targetDraft.assignment.id);
+      await publish(env, instructor, courseId, linkingDraft.assignment.id);
 
       const documentResponse = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments/${linkingDraft.assignment.id}/content`,
+        `/courses/${courseId}/assignments/${linkingDraft.assignment.id}/content`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -1985,20 +1825,20 @@ describe("item link resolution", () => {
 
       const studentGo = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/${target.item.id}`,
+        `/courses/${courseId}/go/${target.item.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const instructorGo = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/go/${target.item.id}`,
+        `/courses/${courseId}/instructor/go/${target.item.id}`,
         { headers: { Cookie: instructor.cookieHeader } },
         env,
       );
-      const linkingDocumentUrl = `http://localhost/courses/${course.course.id}/assignments/${linkingDraft.assignment.id}/content`;
+      const linkingDocumentUrl = `http://localhost/courses/${courseId}/assignments/${linkingDraft.assignment.id}/content`;
       const fromStandalone = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/${target.item.id}`,
+        `/courses/${courseId}/go/${target.item.id}`,
         {
           headers: {
             Cookie: student.cookieHeader,
@@ -2009,7 +1849,7 @@ describe("item link resolution", () => {
       );
       const fromOurFrame = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/${target.item.id}`,
+        `/courses/${courseId}/go/${target.item.id}`,
         {
           headers: {
             Cookie: student.cookieHeader,
@@ -2020,29 +1860,29 @@ describe("item link resolution", () => {
       );
       const unauthenticated = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/${target.item.id}`,
+        `/courses/${courseId}/go/${target.item.id}`,
         {},
         env,
       );
 
       expect(studentGo.status).toBe(302);
       expect(studentGo.headers.get("Location")).toBe(
-        `/courses/${course.course.id}/assignments/${targetDraft.assignment.id}`,
+        `/courses/${courseId}/assignments/${targetDraft.assignment.id}`,
       );
       // Followed from a document standing on its own — a fullscreen tab, or a
       // lesson framed by an LMS — the next item is the next document: there is
       // no page around this one to go back to.
       expect(fromStandalone.headers.get("Location")).toBe(
-        `/courses/${course.course.id}/assignments/${targetDraft.assignment.id}/content`,
+        `/courses/${courseId}/assignments/${targetDraft.assignment.id}/content`,
       );
       // Followed from a document inside one of our frames, the link is on its
       // way out to `_top`, which is the page the reader is already looking at.
       expect(fromOurFrame.headers.get("Location")).toBe(
-        `/courses/${course.course.id}/assignments/${targetDraft.assignment.id}`,
+        `/courses/${courseId}/assignments/${targetDraft.assignment.id}`,
       );
       expect(instructorGo.status).toBe(302);
       expect(instructorGo.headers.get("Location")).toBe(
-        `/courses/${course.course.id}/instructor/assignments/${targetDraft.assignment.id}`,
+        `/courses/${courseId}/instructor/assignments/${targetDraft.assignment.id}`,
       );
       expect(unauthenticated.status).toBe(302);
       expect(unauthenticated.headers.get("Location")).toContain("/login");
@@ -2053,7 +1893,7 @@ describe("item link resolution", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "draft-link-teacher@example.test");
       const student = await login(env, "draft-link-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const target = await createContentItem(env, instructor);
       const targetRevision = await createRevisionForItem(
         env,
@@ -2064,28 +1904,28 @@ describe("item link resolution", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         targetRevision.revision.id,
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
+      await enrollStudent(env, instructor, student, courseId);
 
       const studentGo = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/${target.item.id}`,
+        `/courses/${courseId}/go/${target.item.id}`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
       const studentHtml = await studentGo.text();
       const instructorGo = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/${target.item.id}`,
+        `/courses/${courseId}/go/${target.item.id}`,
         { headers: { Cookie: instructor.cookieHeader } },
         env,
       );
       const missingGo = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/go/not-a-real-item`,
+        `/courses/${courseId}/go/not-a-real-item`,
         { headers: { Cookie: student.cookieHeader } },
         env,
       );
@@ -2095,7 +1935,7 @@ describe("item link resolution", () => {
       expect(studentHtml).toContain("not available in this course");
       expect(instructorGo.status).toBe(302);
       expect(instructorGo.headers.get("Location")).toBe(
-        `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`,
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`,
       );
       expect(missingGo.status).toBe(404);
     });
@@ -2144,7 +1984,7 @@ describe("assignment unpublish", () => {
   test("an instructor can unpublish a published assignment with no attempts", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2153,15 +1993,15 @@ describe("assignment unpublish", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const response = await unpublish(
         env,
         instructor,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
       const body = (await response.json()) as AssignmentResponse;
@@ -2177,7 +2017,7 @@ describe("assignment unpublish", () => {
     // literal with empty lists where a read of the same draft listed it.
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2186,13 +2026,13 @@ describe("assignment unpublish", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
-      await publish(env, instructor, course.course.id, draft.assignment.id);
-      await unpublish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      await unpublish(env, instructor, courseId, draft.assignment.id);
 
-      const path = `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`;
+      const path = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
       const edited = await appRequest(
         createTestApp(),
         path,
@@ -2226,7 +2066,7 @@ describe("assignment unpublish", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
       const student = await login(env, "student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2235,17 +2075,17 @@ describe("assignment unpublish", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
-      await startAttempt(env, student, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
 
       const response = await unpublish(
         env,
         instructor,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
       const body = (await response.json()) as {
@@ -2260,7 +2100,7 @@ describe("assignment unpublish", () => {
   test("unpublishing a draft assignment is rejected", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2269,14 +2109,14 @@ describe("assignment unpublish", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
       const response = await unpublish(
         env,
         instructor,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
       const body = (await response.json()) as {
@@ -2292,7 +2132,7 @@ describe("assignment unpublish", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
       const student = await login(env, "student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2301,16 +2141,16 @@ describe("assignment unpublish", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const response = await unpublish(
         env,
         student,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
 
@@ -2343,7 +2183,7 @@ describe("assignment delete", () => {
   test("an instructor can delete a draft assignment", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2352,14 +2192,14 @@ describe("assignment delete", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
       const response = await deleteDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
       const body = (await response.json()) as { readonly deleted: boolean };
@@ -2371,7 +2211,7 @@ describe("assignment delete", () => {
       const again = await deleteDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
       expect(again.status).toBe(404);
@@ -2381,7 +2221,7 @@ describe("assignment delete", () => {
   test("deleting a published assignment is rejected", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2390,15 +2230,15 @@ describe("assignment delete", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
 
       const response = await deleteDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
       const body = (await response.json()) as {
@@ -2414,7 +2254,7 @@ describe("assignment delete", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");
       const student = await login(env, "student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2423,15 +2263,15 @@ describe("assignment delete", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
-      await enrollStudent(env, instructor, student, course.course.id);
+      await enrollStudent(env, instructor, student, courseId);
 
       const response = await deleteDraft(
         env,
         student,
-        course.course.id,
+        courseId,
         draft.assignment.id,
       );
 
@@ -2461,7 +2301,7 @@ describe("an assignment whose content cannot be read", () => {
   test("the instructor keeps the page that can repair it", async () => {
     await withStorage(async (storage, env) => {
       const instructor = await login(env, "unreadable-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const item = await createContentItem(env, instructor);
       const revision = await createRevisionForItem(
         env,
@@ -2472,14 +2312,14 @@ describe("an assignment whose content cannot be read", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
-      await publish(env, instructor, course.course.id, draft.assignment.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
       await corruptArtifact(storage, revision.revision.id);
 
-      const base = `/courses/${course.course.id}/instructor/assignments/${draft.assignment.id}`;
+      const base = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
       const page = await appRequest(
         createTestApp(),
         base,
@@ -2507,7 +2347,7 @@ describe("an assignment whose content cannot be read", () => {
     await withStorage(async (storage, env) => {
       const instructor = await login(env, "unreadable-strict@example.test");
       const student = await login(env, "unreadable-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const item = await createContentItem(env, instructor);
       const revision = await createRevisionForItem(
         env,
@@ -2518,15 +2358,15 @@ describe("an assignment whose content cannot be read", () => {
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
       );
 
-      await publish(env, instructor, course.course.id, draft.assignment.id);
-      await enrollStudent(env, instructor, student, course.course.id);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
       await corruptArtifact(storage, revision.revision.id);
 
-      const base = `/courses/${course.course.id}`;
+      const base = `/courses/${courseId}`;
       const instructorJson = await appRequest(
         createTestApp(),
         `${base}/instructor/assignments/${draft.assignment.id}`,
@@ -2566,7 +2406,7 @@ describe("an assignment whose content cannot be read", () => {
   test("a revision that cannot be read is refused before an assignment is pointed at it", async () => {
     await withStorage(async (storage, env) => {
       const instructor = await login(env, "unreadable-picker@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const item = await createContentItem(env, instructor);
       const good = await createRevisionForItem(
         env,
@@ -2583,26 +2423,21 @@ describe("an assignment whose content cannot be read", () => {
       const published = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         good.revision.id,
       );
       const draft = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         good.revision.id,
         { title: "Homework 2" },
       );
 
-      await publish(
-        env,
-        instructor,
-        course.course.id,
-        published.assignment.id,
-      );
+      await publish(env, instructor, courseId, published.assignment.id);
       await corruptArtifact(storage, bad.revision.id);
 
-      const base = `/courses/${course.course.id}/instructor/assignments`;
+      const base = `/courses/${courseId}/instructor/assignments`;
       const form = new FormData();
 
       form.set("csrfToken", instructor.csrfToken);
@@ -2690,7 +2525,7 @@ describe("grade visibility", () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "visibility-teacher@example.test");
       const student = await login(env, "visibility-student@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2699,21 +2534,21 @@ describe("grade visibility", () => {
       const open = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { gradesVisibility: "immediate", title: "Homework, open" },
       );
       const held = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { gradesVisibility: "manual", title: "Exam, held" },
       );
       const timed = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         {
           gradesVisibleAt: "2030-01-01T00:00:00.000Z",
@@ -2728,16 +2563,16 @@ describe("grade visibility", () => {
         "2030-01-01T00:00:00.000Z",
       );
 
-      await enrollStudent(env, instructor, student, course.course.id);
-      await publish(env, instructor, course.course.id, open.assignment.id);
-      await publish(env, instructor, course.course.id, held.assignment.id);
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, open.assignment.id);
+      await publish(env, instructor, courseId, held.assignment.id);
 
       // The point of the whole control: the student can see how they did on the
       // open one without the instructor going back to release anything.
       const score = async (assignmentId: string) =>
         appRequest(
           createTestApp(),
-          `/courses/${course.course.id}/assignments/${assignmentId}/score`,
+          `/courses/${courseId}/assignments/${assignmentId}/score`,
           { headers: { Cookie: student.cookieHeader } },
           env,
         );
@@ -2750,7 +2585,7 @@ describe("grade visibility", () => {
   test("releasing on an open assignment says what that does", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "warn-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2759,14 +2594,14 @@ describe("grade visibility", () => {
       const open = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { gradesVisibility: "manual", title: "Exam, still open" },
       );
       const closed = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         {
           availableUntil: "2026-01-01T00:00:00.000Z",
@@ -2775,14 +2610,14 @@ describe("grade visibility", () => {
         },
       );
 
-      await publish(env, instructor, course.course.id, open.assignment.id);
-      await publish(env, instructor, course.course.id, closed.assignment.id);
+      await publish(env, instructor, courseId, open.assignment.id);
+      await publish(env, instructor, courseId, closed.assignment.id);
 
       const page = async (assignmentId: string): Promise<string> =>
         (
           await appRequest(
             createTestApp(),
-            `/courses/${course.course.id}/instructor/assignments/${assignmentId}`,
+            `/courses/${courseId}/instructor/assignments/${assignmentId}`,
             {
               headers: {
                 Accept: "text/html",
@@ -2808,7 +2643,7 @@ describe("grade visibility", () => {
   test("scheduling grades with no time to schedule is refused", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "unscheduled-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2816,7 +2651,7 @@ describe("grade visibility", () => {
       );
       const response = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments`,
+        `/courses/${courseId}/assignments`,
         jsonRequest(
           {
             contentRevisionId: revision.revision.id,
@@ -2838,7 +2673,7 @@ describe("grade visibility", () => {
   test("a bare timestamp still means what it always meant", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "legacy-teacher@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       const revision = await createRevision(
         env,
         instructor,
@@ -2850,14 +2685,14 @@ describe("grade visibility", () => {
       const scheduled = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { gradesVisibleAt: "2031-05-05T00:00:00.000Z" },
       );
       const silent = await createDraft(
         env,
         instructor,
-        course.course.id,
+        courseId,
         revision.revision.id,
         { title: "Homework 2" },
       );
@@ -2872,7 +2707,7 @@ describe("grade visibility", () => {
   test("the form asks the question, and preselects the open answer", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "form-visibility@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       await createRevision(
         env,
         instructor,
@@ -2881,7 +2716,7 @@ describe("grade visibility", () => {
 
       const page = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/new`,
+        `/courses/${courseId}/instructor/assignments/new`,
         { headers: { Accept: "text/html", Cookie: instructor.cookieHeader } },
         env,
       );
@@ -2906,7 +2741,7 @@ describe("grade visibility", () => {
   test("quick create takes the same default the form shows", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "quick-visibility@example.test");
-      const course = await createCourse(env, instructor);
+      const courseId = await createCourse(env, instructor);
       await createRevision(
         env,
         instructor,
@@ -2915,7 +2750,7 @@ describe("grade visibility", () => {
 
       const created = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/assignments`,
+        `/courses/${courseId}/assignments`,
         {
           body: new URLSearchParams({
             csrfToken: instructor.csrfToken,
@@ -2937,7 +2772,7 @@ describe("grade visibility", () => {
         )?.[1] ?? "";
       const detail = await appRequest(
         createTestApp(),
-        `/courses/${course.course.id}/instructor/assignments/${assignmentId}`,
+        `/courses/${courseId}/instructor/assignments/${assignmentId}`,
         { headers: { Cookie: instructor.cookieHeader } },
         env,
       );

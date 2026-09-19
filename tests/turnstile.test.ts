@@ -15,7 +15,7 @@ import {
   turnstileFromEnv,
 } from "../src/worker/infrastructure/turnstile";
 import { appRequest, createTestApp } from "./helpers/app";
-import { createTestStorage, type TestStorage } from "./helpers/storage";
+import { withStorage } from "./helpers/http";
 
 /**
  * The Turnstile gate on asking for a login email: the verifier that redeems
@@ -226,18 +226,6 @@ function fakeVerifier(outcome?: AppHttpError): {
       },
     },
   };
-}
-
-async function withStorage(
-  run: (storage: TestStorage, env: Env) => Promise<void>,
-): Promise<void> {
-  const storage = await createTestStorage();
-
-  try {
-    await run(storage, { CARNAP_ENV: "local", DB: storage.db });
-  } finally {
-    await storage.dispose();
-  }
 }
 
 describe("the login routes stand behind the gate", () => {
