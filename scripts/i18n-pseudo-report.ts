@@ -105,8 +105,9 @@ const ALLOWED = new Set(
  */
 const TIMEZONE_WORDS = new Set(
   (
-    (Intl as { supportedValuesOf?: (key: "timeZone") => string[] })
-      .supportedValuesOf?.("timeZone") ?? []
+    (
+      Intl as { supportedValuesOf?: (key: "timeZone") => string[] }
+    ).supportedValuesOf?.("timeZone") ?? []
   ).flatMap((zone) =>
     zone.split(/[^A-Za-z]+/).map((word) => word.toLowerCase()),
   ),
@@ -137,9 +138,7 @@ function asciiWords(candidates: readonly string[]): string[] {
   return [...words].sort((a, b) => a.localeCompare(b));
 }
 
-async function collectResidue(): Promise<
-  Record<string, readonly string[]>
-> {
+async function collectResidue(): Promise<Record<string, readonly string[]>> {
   const fixtures = await collectFixtures({
     headers: { "Accept-Language": PSEUDO_LOCALE },
   });
@@ -187,13 +186,9 @@ function printReport(
     const words = residue[name] ?? [];
     const before = previous?.[name] ?? null;
     const added =
-      before === null
-        ? []
-        : words.filter((word) => !before.includes(word));
+      before === null ? [] : words.filter((word) => !before.includes(word));
     const fixed =
-      before === null
-        ? []
-        : before.filter((word) => !words.includes(word));
+      before === null ? [] : before.filter((word) => !words.includes(word));
 
     console.log(`■ ${name}  (${words.length})`);
 

@@ -16,12 +16,13 @@
  * the theory before compiling, which is what the widget and the worker both
  * do (`exercise-kit/proof/playground`).
  *
- * Not part of `bun run check` / `bun test` because the compiler is untyped and
- * client-only. Run it after touching the lesson, the theory, or the translator:
+ * Not part of `bun test`: it loads the compiler's wasm and runs every proof
+ * through it, which is slow, and the lesson's *compiling* is already
+ * `tests/showcase-demo.test.ts`'s. Run it after touching the lesson, the
+ * theory, or the translator:
  *
  *   bun run scripts/showcase-verify.ts
  */
-// @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
@@ -33,19 +34,31 @@ import {
 import {
   isPlaygroundExercise,
   lastProofStatement,
+  type ProofStatement,
   playgroundGoal,
   playgroundTheoryText,
-  type ProofStatement,
 } from "../src/worker/exercise-kit/proof/playground";
-import { AUFBAU_PROOF_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof/types";
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
+import {
+  AUFBAU_PROOF_COMPONENT_METADATA,
+  type AufbauProofPublicData,
+} from "../src/worker/exercises/aufbau-proof/types";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
-import { AUFBAU_PROOF_FITCH_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-fitch/types";
+import {
+  AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
+  type AufbauProofFitchPublicData,
+} from "../src/worker/exercises/aufbau-proof-fitch/types";
 import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
-import { AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-prawitz/types";
+import {
+  AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
+  type AufbauProofPrawitzPublicData,
+} from "../src/worker/exercises/aufbau-proof-prawitz/types";
 import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
-import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-tree/types";
+import {
+  AUFBAU_PROOF_TREE_COMPONENT_METADATA,
+  type AufbauProofTreePublicData,
+} from "../src/worker/exercises/aufbau-proof-tree/types";
 import { SHOWCASE_DEMO_SOURCE } from "../tests/helpers/showcase-demo";
 
 /**
@@ -63,6 +76,13 @@ const PROOF_ASSET_IDS: ReadonlySet<string> = new Set([
   AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA.assetId,
   AUFBAU_PROOF_TREE_COMPONENT_METADATA.assetId,
 ]);
+
+/** The public data of any of the four; which one, the asset id says. */
+type ProofPublicData =
+  | AufbauProofPublicData
+  | AufbauProofFitchPublicData
+  | AufbauProofPrawitzPublicData
+  | AufbauProofTreePublicData;
 
 /**
  * The exercises the showcase deliberately leaves *unfinished*, and the proof
@@ -129,7 +149,10 @@ function lowered(translation: Lowering): Lowered | null {
     return null;
   }
 
-  return { proofText: translation.proofText, statement: translation.statement };
+  return {
+    proofText: translation.proofText,
+    statement: translation.statement,
+  };
 }
 
 /**
@@ -144,29 +167,31 @@ function lowered(translation: Lowering): Lowered | null {
  */
 function lower(
   assetId: string,
-  publicData: Record<string, string & Record<string, unknown>>,
+  publicData: ProofPublicData,
   source: string | null,
 ): Lowered | null {
   if (assetId === AUFBAU_PROOF_COMPONENT_METADATA.assetId) {
+    const data = publicData as AufbauProofPublicData;
     // Linear lines are engine text already; nothing has read them, so the
     // statement's variables are left for `playgroundGoal` to find.
-    const text = lastProofStatement(publicData.starterBody);
+    const text = lastProofStatement(data.starterBody);
 
     return {
-      proofText: `${publicData.goalName}\n----\n${publicData.starterBody}`,
+      proofText: `${data.goalName}\n----\n${data.starterBody}`,
       statement: text === null ? null : { text, variables: null },
     };
   }
 
   if (assetId === AUFBAU_PROOF_FITCH_COMPONENT_METADATA.assetId) {
+    const data = publicData as AufbauProofFitchPublicData;
     return lowered(
       fitchToAuf(
-        publicData.starterBody,
-        publicData.goalName,
-        publicData.assumptionRule,
-        publicData.sequentSymbol ?? "⊢",
-        publicData.contextSymbol ?? ",",
-        proofFormulaReader(source, "sentence", publicData.goalName),
+        data.starterBody,
+        data.goalName,
+        data.assumptionRule,
+        data.sequentSymbol ?? "⊢",
+        data.contextSymbol ?? ",",
+        proofFormulaReader(source, "sentence", data.goalName),
         ruleCitationShapes(source),
         proofRuleReader(source),
       ),
@@ -174,27 +199,37 @@ function lower(
   }
 
   if (assetId === AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA.assetId) {
+    const data = publicData as AufbauProofPrawitzPublicData;
+    if (data.starterTree === undefined) {
+      console.log("    no starter to lower");
+      return null;
+    }
     return lowered(
       prawitzToAuf(
-        publicData.starterTree as never,
-        publicData.goalName,
-        publicData.assumptionRule,
-        publicData.sequentSymbol ?? "⊢",
-        publicData.contextSymbol ?? ",",
+        data.starterTree,
+        data.goalName,
+        data.assumptionRule,
+        data.sequentSymbol ?? "⊢",
+        data.contextSymbol ?? ",",
         // A Prawitz node carries a bare formula; the translator builds the
         // sequent around it, as in Fitch.
-        proofFormulaReader(source, "sentence", publicData.goalName),
+        proofFormulaReader(source, "sentence", data.goalName),
         proofRuleReader(source),
       ),
     );
   }
 
   if (assetId === AUFBAU_PROOF_TREE_COMPONENT_METADATA.assetId) {
+    const data = publicData as AufbauProofTreePublicData;
+    if (data.starterTree === undefined) {
+      console.log("    no starter to lower");
+      return null;
+    }
     return lowered(
       flattenProofTree(
-        publicData.starterTree as never,
-        publicData.goalName,
-        proofFormulaReader(source, "sequent", publicData.goalName),
+        data.starterTree,
+        data.goalName,
+        proofFormulaReader(source, "sequent", data.goalName),
         proofRuleReader(source),
       ),
     );
@@ -243,10 +278,7 @@ for (const node of compiled.artifact.document.nodes) {
     continue;
   }
 
-  const publicData = node.publicData as Record<
-    string,
-    string & Record<string, unknown>
-  >;
+  const publicData = node.publicData as unknown as ProofPublicData;
 
   // The engine input, and the text the starter is read as surface formulas in.
   // Since #257 both are filled by the systems join, and the stripped `mm0` is
@@ -269,13 +301,15 @@ for (const node of compiled.artifact.document.nodes) {
       continue;
     }
 
+    // Both unfinished exercises are Fitch, as their intended solution is.
+    const fitch = publicData as AufbauProofFitchPublicData;
     const translated = fitchToAuf(
       INTENDED_SOLUTION,
-      publicData.goalName,
-      publicData.assumptionRule,
-      publicData.sequentSymbol ?? "⊢",
-      publicData.contextSymbol ?? ",",
-      proofFormulaReader(source, "sentence", publicData.goalName),
+      fitch.goalName,
+      fitch.assumptionRule,
+      fitch.sequentSymbol ?? "⊢",
+      fitch.contextSymbol ?? ",",
+      proofFormulaReader(source, "sentence", fitch.goalName),
       ruleCitationShapes(source),
       proofRuleReader(source),
     );
@@ -290,7 +324,9 @@ for (const node of compiled.artifact.document.nodes) {
       continue;
     }
 
-    console.log(`✓ ${label} — unfinished as intended, and solvable as prompted`);
+    console.log(
+      `✓ ${label} — unfinished as intended, and solvable as prompted`,
+    );
     continue;
   }
 
@@ -314,7 +350,12 @@ for (const node of compiled.artifact.document.nodes) {
       continue;
     }
 
-    if (!(await verify(playgroundTheoryText(theory, goal).mm0, starter.proofText))) {
+    if (
+      !(await verify(
+        playgroundTheoryText(theory, goal).mm0,
+        starter.proofText,
+      ))
+    ) {
       console.log(`✗ ${label}`);
       failed += 1;
       continue;

@@ -28,14 +28,19 @@
  */
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-
+import stixPackage from "../node_modules/@fontsource/stix-two-math/package.json";
 import garamondPackage from "../node_modules/@fontsource-variable/eb-garamond/package.json";
 import interPackage from "../node_modules/@fontsource-variable/inter/package.json";
-import stixPackage from "../node_modules/@fontsource/stix-two-math/package.json";
 import firaPackage from "../node_modules/firacode/package.json";
 import { NOSNIFF_HEADER } from "../src/worker/middleware/security-headers";
-import { FONT_CACHE_CONTROL, FONT_ROUTE_PREFIX } from "../src/worker/web/fonts";
-import { MATH_FONT_FILE, MATH_FONT_VERSION } from "../src/worker/web/math-font";
+import {
+  FONT_CACHE_CONTROL,
+  FONT_ROUTE_PREFIX,
+} from "../src/worker/web/fonts";
+import {
+  MATH_FONT_FILE,
+  MATH_FONT_VERSION,
+} from "../src/worker/web/math-font";
 import {
   type FontSubset,
   subsetRange,
@@ -82,13 +87,16 @@ async function installedRanges(font: UiFont): Promise<Map<string, string>> {
   ).text();
   const ranges = new Map<string, string>();
 
-  for (const face of css.matchAll(
+  for (const [, file, range] of css.matchAll(
     /src: url\(\.\/files\/([^)]+)\)[^;]+;\s*unicode-range: ([^;]+);/g,
   )) {
-    const subset = face[1]
+    if (file === undefined || range === undefined) {
+      continue;
+    }
+    const subset = file
       .replace(`${font.package}-`, "")
       .replace("-wght-normal.woff2", "");
-    ranges.set(subset, face[2].trim());
+    ranges.set(subset, range.trim());
   }
 
   return ranges;

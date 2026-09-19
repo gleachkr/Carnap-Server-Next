@@ -15,6 +15,7 @@
     "a11y:audit": "bun scripts/a11y-audit.mjs",
     "a11y:audit:dark": "bun scripts/a11y-audit.mjs --dark",
     "a11y:audit:report": "bun scripts/a11y-audit.mjs --report",
+    "a11y:audit:update": "bun scripts/a11y-audit.mjs --update",
     "a11y:baseline": "bun scripts/a11y-report.ts --update",
     "a11y:report": "bun scripts/a11y-report.ts",
     "build:client": "rm -rf public/assets && bun build src/client/editor-preview.ts src/client/source-view.ts --outdir public/assets --target browser --minify && bun build src/client/components/carnap-*.ts src/client/components/carnap-*.tsx --outdir public/assets/components --target browser --minify --splitting --format esm && cp node_modules/@aufbau/compiler/compiler.wasm public/assets/aufbau-compiler.wasm && mkdir -p public/assets/aufbau-lsp && cp node_modules/@aufbau/lsp/index.js node_modules/@aufbau/lsp/worker.js node_modules/@aufbau/lsp/lsp.wasm public/assets/aufbau-lsp/ && bun scripts/copy-fonts.ts",

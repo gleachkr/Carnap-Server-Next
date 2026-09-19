@@ -15,7 +15,7 @@
  *   bun run a11y:audit           gate: fail (exit 1) on findings not baselined
  *   bun run a11y:audit:dark      the same, as a reader whose OS is dark
  *   bun run a11y:audit:report    print the full inventory; never fails
- *   node scripts/a11y-audit.mjs --update   rewrite baseline.browser.json
+ *   bun run a11y:audit:update    rewrite baseline.browser.json
  *
  * Flags: --report, --update, --dark, --base=URL, --email=ADDR, plus extra
  * route paths as positional args (added to the audited set).
@@ -650,7 +650,7 @@ function report(findings, routes) {
       note:
         "Known Tier 2 (browser) accessibility violations, accepted-for-now. " +
         "`bun run a11y:audit` fails on any finding absent here. Regenerate " +
-        "with `node scripts/a11y-audit.mjs --update`; a shrinking list is " +
+        "with `bun run a11y:audit:update`; a shrinking list is " +
         "progress.",
     };
     writeFileSync(BASELINE_PATH, `${JSON.stringify(payload, null, 2)}\n`);

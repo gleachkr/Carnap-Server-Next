@@ -23,7 +23,9 @@ const FILE = opt("--file", "");
 const BASE = opt("--base", "http://localhost:8787").replace(/\/$/, "");
 const EMAIL = opt("--email", "claude-agent@example.test");
 if (!FILE) {
-  throw new Error("usage: seed-lesson.ts --file=path/to/lesson.md [--title=…]");
+  throw new Error(
+    "usage: seed-lesson.ts --file=path/to/lesson.md [--title=…]",
+  );
 }
 const SOURCE = await Bun.file(FILE).text();
 const TITLE = opt("--title", FILE.split("/").at(-1) ?? FILE);
@@ -94,7 +96,9 @@ async function postJson(
   absorb(response);
   const text = await response.text();
   if (response.status >= 300) {
-    throw new Error(`POST ${path} → ${response.status}: ${text.slice(0, 400)}`);
+    throw new Error(
+      `POST ${path} → ${response.status}: ${text.slice(0, 400)}`,
+    );
   }
   return text ? (JSON.parse(text) as Record<string, unknown>) : {};
 }

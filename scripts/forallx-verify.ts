@@ -8,13 +8,13 @@
  * This is the authoritative "does the translation actually verify against the
  * engine" check. It compiles + verifies from source every run and stores no MMB
  * fixture — keeping a compiler-specific byte blob stable is the engine's job, not
- * this repo's. It is not part of `bun run check`/`bun test` because the compiler
- * is untyped and client-only; run it deliberately after touching the theory,
- * the cases, or the translator:
+ * this repo's. It is typechecked with everything else but not part of `bun
+ * test`, because it runs every case through the compiler's wasm, which is slow
+ * and duplicates nothing a test asserts; run it deliberately after touching
+ * the theory, the cases, or the translator:
  *
  *   bun run scripts/forallx-verify.ts
  */
-// @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
@@ -45,7 +45,10 @@ for (const testCase of FORALLX_CASES) {
     readRule,
   );
 
-  if (translation.formulaProblems.length > 0 && testCase.shouldFail !== true) {
+  if (
+    translation.formulaProblems.length > 0 &&
+    testCase.shouldFail !== true
+  ) {
     console.log(`✗ ${testCase.goalName}`);
     console.log(
       `    unreadable: ${translation.formulaProblems

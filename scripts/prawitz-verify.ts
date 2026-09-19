@@ -9,19 +9,19 @@
  * This is the authoritative "does the translation actually verify against the
  * engine" check. It compiles + verifies from source every run and stores no
  * MMB fixture — keeping a compiler-specific byte blob stable is the engine's
- * job, not this repo's. It is not part of `bun run check`/`bun test` because
- * the compiler is untyped and client-only; run it deliberately after touching
- * the theory, the cases, or the translator:
+ * job, not this repo's. It is typechecked with everything else but not part
+ * of `bun test`, because it runs every case through the compiler's wasm, which
+ * is slow; run it deliberately after touching the theory, the cases, or the
+ * translator:
  *
  *   bun run scripts/prawitz-verify.ts
  */
-// @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
-import { PRAWITZ_CASES } from "../tests/helpers/prawitz-cases";
 import { forallxExercise } from "../tests/helpers/forallx-theory";
+import { PRAWITZ_CASES } from "../tests/helpers/prawitz-cases";
 
 const wasmBytes = await Bun.file(
   "node_modules/@aufbau/compiler/compiler.wasm",

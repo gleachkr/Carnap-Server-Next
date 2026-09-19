@@ -62,7 +62,9 @@ function printReport(findings: readonly Finding[]): void {
   const rules = [...byRule.keys()].sort();
   for (const rule of rules) {
     const bucket = byRule.get(rule) ?? [];
-    const wcag = [...new Set(bucket.flatMap((f) => f.wcag))].sort().join(", ");
+    const wcag = [...new Set(bucket.flatMap((f) => f.wcag))]
+      .sort()
+      .join(", ");
     console.log(`■ ${rule}  (${bucket.length})  [${wcag}]`);
     for (const finding of bucket) {
       console.log(`    ${finding.fixture}: ${finding.target}`);

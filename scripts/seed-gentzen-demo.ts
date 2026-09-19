@@ -62,11 +62,16 @@ async function login(): Promise<void> {
   });
   absorb(confirm);
   if (!jar.has("carnap_session")) {
-    throw new Error(`Login did not set a session cookie (status ${confirm.status}).`);
+    throw new Error(
+      `Login did not set a session cookie (status ${confirm.status}).`,
+    );
   }
 }
 
-async function postJson(path: string, body: unknown): Promise<Record<string, unknown>> {
+async function postJson(
+  path: string,
+  body: unknown,
+): Promise<Record<string, unknown>> {
   const csrf = jar.get("carnap_csrf") ?? "";
   const response = await fetch(`${BASE}${path}`, {
     body: JSON.stringify(body),
@@ -81,7 +86,9 @@ async function postJson(path: string, body: unknown): Promise<Record<string, unk
   absorb(response);
   const text = await response.text();
   if (response.status >= 300) {
-    throw new Error(`POST ${path} → ${response.status}: ${text.slice(0, 400)}`);
+    throw new Error(
+      `POST ${path} → ${response.status}: ${text.slice(0, 400)}`,
+    );
   }
   return text ? (JSON.parse(text) as Record<string, unknown>) : {};
 }
@@ -121,7 +128,8 @@ console.log(`Content ${itemId}, revision ${revisionId}`);
 const assignment = await postJson(`/courses/${courseId}/assignments`, {
   assessmentMode: "practice",
   contentRevisionId: revisionId,
-  description: "Tree-shaped proofs in Gentzen's classical sequent calculus (LK).",
+  description:
+    "Tree-shaped proofs in Gentzen's classical sequent calculus (LK).",
   title: "Sequent calculus practice",
 });
 const assignmentId = pick(assignment, "assignment", "id");
@@ -134,5 +142,7 @@ await postJson(
 console.log("Published.\n");
 
 console.log("Open (logged in as the local admin):");
-console.log(`  Assignment:     ${BASE}/courses/${courseId}/assignments/${assignmentId}`);
+console.log(
+  `  Assignment:     ${BASE}/courses/${courseId}/assignments/${assignmentId}`,
+);
 console.log(`  Live authoring: ${BASE}/content/${itemId}/revisions/new`);

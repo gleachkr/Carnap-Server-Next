@@ -11,9 +11,9 @@ import { SHOWCASE_DEMO_SOURCE } from "./helpers/showcase-demo";
  * each directive's source in a code fence next to the live exercise, so a syntax
  * change that breaks the exercise breaks this test too.
  *
- * Whether the four worked proofs actually verify against the engine is checked
- * by `bun run scripts/showcase-verify.ts` (the compiler is client-only and
- * untyped, so it stays out of `bun test`).
+ * Whether the worked proofs actually verify against the engine is checked by
+ * `bun run scripts/showcase-verify.ts`, kept out of `bun test` for its cost:
+ * every proof through the compiler's wasm, on every run.
  */
 
 const EXPECTED_KINDS = [

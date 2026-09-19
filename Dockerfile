@@ -27,9 +27,10 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 # Everything `build:client` reads: the client and worker sources it bundles, the
-# font-copying script, and the tsconfigs that decide how JSX compiles.
+# font-copying script (the only one of `scripts/` the build runs), and the
+# tsconfigs that decide how JSX compiles.
 COPY tsconfig.json tsconfig.client.json ./
-COPY scripts ./scripts
+COPY scripts/copy-fonts.ts ./scripts/
 COPY src ./src
 
 # Writes `public/`: the editor and viewer bundles, the exercise components, the

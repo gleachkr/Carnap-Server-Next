@@ -700,7 +700,8 @@ describe("the interactive submission path", () => {
     for (const type of textKinds) {
       const node = compiled.artifact.document.nodes.find(
         (candidate) =>
-          candidate.kind === "exercise" && candidate.exerciseKind === type.kind,
+          candidate.kind === "exercise" &&
+          candidate.exerciseKind === type.kind,
       );
 
       if (node === undefined || node.kind !== "exercise") {

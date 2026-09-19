@@ -184,11 +184,14 @@ async function login(): Promise<void> {
     );
   }
 
-  const confirm = await fetch(new URL(match[1].replace(/&amp;/g, "&"), BASE), {
-    headers: { Cookie: cookieHeader() },
-    method: "GET",
-    redirect: "manual",
-  });
+  const confirm = await fetch(
+    new URL(match[1].replace(/&amp;/g, "&"), BASE),
+    {
+      headers: { Cookie: cookieHeader() },
+      method: "GET",
+      redirect: "manual",
+    },
+  );
   absorb(confirm);
 
   if (!jar.has("carnap_session")) {
@@ -207,7 +210,9 @@ async function getJson(path: string): Promise<Record<string, unknown>> {
   const text = await response.text();
 
   if (response.status >= 300) {
-    throw new Error(`GET ${path} → ${response.status}: ${text.slice(0, 400)}`);
+    throw new Error(
+      `GET ${path} → ${response.status}: ${text.slice(0, 400)}`,
+    );
   }
 
   return JSON.parse(text) as Record<string, unknown>;
@@ -231,7 +236,9 @@ async function postJson(
   const text = await response.text();
 
   if (response.status >= 300) {
-    throw new Error(`POST ${path} → ${response.status}: ${text.slice(0, 400)}`);
+    throw new Error(
+      `POST ${path} → ${response.status}: ${text.slice(0, 400)}`,
+    );
   }
 
   return text ? (JSON.parse(text) as Record<string, unknown>) : {};
@@ -327,4 +334,6 @@ console.log("\nOpen (as the local admin):");
 console.log(
   `  Instructor: ${BASE}/courses/${COURSE}/instructor/assignments/${ASSIGNMENT}`,
 );
-console.log(`  Student:    ${BASE}/courses/${COURSE}/assignments/${ASSIGNMENT}`);
+console.log(
+  `  Student:    ${BASE}/courses/${COURSE}/assignments/${ASSIGNMENT}`,
+);

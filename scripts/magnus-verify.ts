@@ -7,14 +7,13 @@
  * and exits non-zero if any fails.
  *
  * The sibling of `scripts/forallx-verify.ts`, and the same authoritative check:
- * it compiles + verifies from source every run and stores no MMB fixture. Not
- * part of `bun run check`/`bun test` because the compiler is untyped and
- * client-only; run it deliberately after touching the theory, the cases, or
- * the translator:
+ * it compiles + verifies from source every run and stores no MMB fixture.
+ * Typechecked with everything else but not part of `bun test`, because it
+ * runs every case through the compiler's wasm, which is slow; run it
+ * deliberately after touching the theory, the cases, or the translator:
  *
  *   bun run scripts/magnus-verify.ts
  */
-// @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
 
 import {
@@ -60,7 +59,10 @@ for (const testCase of MAGNUS_CASES) {
     readRule,
   );
 
-  if (translation.formulaProblems.length > 0 && testCase.shouldFail !== true) {
+  if (
+    translation.formulaProblems.length > 0 &&
+    testCase.shouldFail !== true
+  ) {
     console.log(`✗ ${testCase.goalName}`);
     console.log(
       `    unreadable: ${translation.formulaProblems
@@ -137,7 +139,11 @@ for (const [name, fitch] of PLAYGROUND_CASES) {
     "AS",
     "⊢",
     ";",
-    proofFormulaReader(MAGNUS_THEORY_SOURCE, "sentence", PLAYGROUND_GOAL_NAME),
+    proofFormulaReader(
+      MAGNUS_THEORY_SOURCE,
+      "sentence",
+      PLAYGROUND_GOAL_NAME,
+    ),
     ruleCitationShapes(MAGNUS_THEORY_SOURCE),
     proofRuleReader(MAGNUS_THEORY_SOURCE),
   );
@@ -166,7 +172,9 @@ for (const [name, fitch] of PLAYGROUND_CASES) {
       : { errored: false, ok: false };
 
   if (!verdict.ok) {
-    console.log(`✗ playground: ${name}  ${JSON.stringify(result.diagnostics)}`);
+    console.log(
+      `✗ playground: ${name}  ${JSON.stringify(result.diagnostics)}`,
+    );
     continue;
   }
 

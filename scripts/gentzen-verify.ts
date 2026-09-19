@@ -8,17 +8,16 @@
  * This is the authoritative "does the tree actually verify against the engine"
  * check for the sequent-calculus cases. It compiles + verifies from source every
  * run and stores no MMB fixture — keeping a compiler-specific byte blob stable is
- * the engine's job, not this repo's. It is not part of `bun run check`/`bun test`
- * because the compiler is untyped and client-only; run it deliberately after
- * touching the theory or the cases:
+ * the engine's job, not this repo's. It is typechecked with everything else
+ * but not part of `bun test`, because it runs every case through the
+ * compiler's wasm, which is slow; run it deliberately after touching the
+ * theory or the cases:
  *
  *   bun run scripts/gentzen-verify.ts
  */
-// @ts-expect-error — the compiler package ships no types (client-only; see its d.ts).
 import { loadCompiler } from "@aufbau/compiler";
-
-import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
+import { flattenProofTree } from "../src/worker/exercises/aufbau-proof-tree/flatten";
 import { GENTZEN_CASES } from "../tests/helpers/gentzen-cases";
 import { GENTZEN_THEORY_MM0 } from "../tests/helpers/gentzen-theory";
 

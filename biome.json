@@ -9,6 +9,7 @@
       "tests/**/*.ts",
       "tests/**/*.tsx",
       "scripts/**/*.mjs",
+      "scripts/**/*.ts",
       "*.ts",
       "*.json",
       "*.jsonc",

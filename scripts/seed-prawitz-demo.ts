@@ -87,7 +87,9 @@ async function postJson(
   absorb(response);
   const text = await response.text();
   if (response.status >= 300) {
-    throw new Error(`POST ${path} → ${response.status}: ${text.slice(0, 400)}`);
+    throw new Error(
+      `POST ${path} → ${response.status}: ${text.slice(0, 400)}`,
+    );
   }
   return text ? (JSON.parse(text) as Record<string, unknown>) : {};
 }

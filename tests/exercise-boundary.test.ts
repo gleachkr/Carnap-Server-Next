@@ -18,7 +18,10 @@ import { dirname, posix } from "node:path";
  * empty.
  *
  * Only relative imports are read. A bare specifier is a package, and packages
- * are on the far side of a different boundary.
+ * are on the far side of a different boundary. And only `src/` is walked: the
+ * verify scripts under `scripts/` reach into the proof types by name on
+ * purpose — they are the types' own engine batteries, run by hand — and the
+ * tests are the tests.
  */
 
 const EXERCISES = "src/worker/exercises";
