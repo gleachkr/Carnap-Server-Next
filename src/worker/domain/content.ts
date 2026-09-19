@@ -22,10 +22,7 @@ export type {
   ExerciseRenderSpec,
   ExerciseReviewAudience,
   ExerciseReviewContext,
-  ManualGradingSpec,
   NormalizedAnswer,
-  RubricCriterionSpec,
-  RubricSpec,
 } from "./exercises";
 
 /**

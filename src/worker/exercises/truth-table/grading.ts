@@ -53,7 +53,6 @@ export interface ResolvedTable {
  * another.
  */
 export interface TruthTableSource {
-  readonly dialect?: string;
   readonly formulas: readonly string[];
   readonly source?: string;
 }
@@ -221,22 +220,6 @@ export function counterexampleHolds(
     values.slice(0, premiseCount).every((value) => value === true) &&
     hasProperty(values.slice(premiseCount), property)
   );
-}
-
-/**
- * Whether the sequent holds on a given row of a `validity` table: `true` unless
- * the row is a counterexample (see {@link counterexampleHolds}). This is the
- * correct value for the turnstile column's cell — mark `T` where it holds, `F`
- * on a counterexample. `property` is the counterexample-to property (default
- * `tautology`, i.e. conclusions all false — the ordinary invalidity case).
- */
-export function sequentHolds(
-  table: ResolvedTable,
-  premiseCount: number,
-  rowIndex: number,
-  property: TruthTableCounterexampleTarget = "tautology",
-): boolean {
-  return !counterexampleHolds(table, rowIndex, property, premiseCount);
 }
 
 /**

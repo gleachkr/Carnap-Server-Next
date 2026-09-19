@@ -26,7 +26,7 @@ export function renderLtiError(
 
   return renderShell(
     context,
-    { showTitle: false, status: options.status, title },
+    { status: options.status, title },
     <Sheet title={title}>
       <ErrorSummary>{options.message}</ErrorSummary>
       <p class="small">
@@ -57,7 +57,7 @@ export function renderLtiLinkPending(
 
   return renderShell(
     context,
-    { showTitle: false, title },
+    { title },
     <Sheet title={title}>
       <Notice>
         {i18n.t(
@@ -95,7 +95,7 @@ export function renderLtiLinkConfirm(
 
   return renderShell(
     context,
-    { showTitle: false, title },
+    { title },
     <Sheet title={title}>
       <p>
         {i18n.t(
@@ -132,7 +132,7 @@ export function renderLtiDeepLinkSelect(
 
   return renderShell(
     context,
-    { showTitle: false, title },
+    { title },
     <Sheet
       description={i18n.t(
         "The activity you are adding in your LMS will open the assignment you choose here.",
@@ -214,7 +214,7 @@ export function renderLtiDeepLinkReturn(
 
   return renderShell(
     context,
-    { showTitle: false, title },
+    { title },
     <Sheet title={title}>
       <p>{i18n.t("Sending your selection back to the LMS…")}</p>
       {/* Submitted for the reader by the shell script, which looks for this id.
@@ -237,7 +237,7 @@ export function renderLtiLinkConfirmed(
 
   return renderShell(
     context,
-    { showTitle: false, title },
+    { title },
     <Sheet title={title}>
       <Notice>
         {i18n.t(

@@ -64,9 +64,12 @@ import {
 import type { AufbauProofPrawitzStringId } from "../../worker/exercises/aufbau-proof-prawitz/strings";
 import type { PrawitzDiagnostic } from "../../worker/exercises/aufbau-proof-prawitz/translate";
 import { prawitzToAuf } from "../../worker/exercises/aufbau-proof-prawitz/translate";
-import type {
-  AufbauProofPrawitzPublicData,
-  PrawitzProofNode,
+import {
+  type AufbauProofPrawitzPublicData,
+  DEFAULT_ASSUMPTION_RULE,
+  DEFAULT_CONTEXT_SYMBOL,
+  DEFAULT_SEQUENT_SYMBOL,
+  type PrawitzProofNode,
 } from "../../worker/exercises/aufbau-proof-prawitz/types";
 import {
   type CompileDiagnostic,
@@ -1050,12 +1053,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   private readRule: ProofRuleReader = ENGINE_RULE;
   private goalName = "";
   private goalFormula = "";
-  private assumptionRule = "ax";
+  private assumptionRule = DEFAULT_ASSUMPTION_RULE;
   /** The theory's turnstile; artifacts compiled before `sequent=` existed have
    *  no `sequentSymbol`, so this default stands in for them. */
-  private sequentSymbol = "⊢";
+  private sequentSymbol = DEFAULT_SEQUENT_SYMBOL;
   /** The theory's context separator, on the same terms as `sequentSymbol`. */
-  private contextSymbol = ",";
+  private contextSymbol = DEFAULT_CONTEXT_SYMBOL;
   private doc: Doc = { selected: [], trees: [] };
   private status: Status = { mark: "idle", markTitle: "", nodeErrors: {} };
   private readonly localize: Translate = (id, values) => this.t(id, values);

@@ -25,9 +25,10 @@
  * premises live in the goal sequent's context, and every leaf is an assumption
  * line (see the emission notes in {@link ./translate prawitzToAuf}).
  *
- * `serializePrawitzStarter` is the exact inverse (modulo node ids and line
- * labels): it runs the translator and annotates its `.auf` output with the
- * label comments. Tests pin the round-trip.
+ * The notation is the translator's own output plus the label comments, so a
+ * complete tree's `.auf` annotated that way parses back to the same shape;
+ * `tests/prawitz-parse.test.ts` pins the round-trip with a serializer of its
+ * own.
  */
 
 import type { ProofRuleReader } from "../../exercise-kit/proof/formulas";
@@ -37,7 +38,6 @@ import type {
   ProofTreeParseIssue,
 } from "../../exercise-kit/proof/tree-parse";
 import { parseProofTree } from "../../exercise-kit/proof/tree-parse";
-import { prawitzToAuf } from "./translate";
 import type { PrawitzProofNode } from "./types";
 
 export type PrawitzStarterResult =
@@ -299,52 +299,4 @@ export function parsePrawitzStarter(
     return tree;
   }
   return { bodyLineByLabel, ok: true, tree };
-}
-
-/**
- * Render a Prawitz tree back into starter lines — the inverse of
- * {@link parsePrawitzStarter} up to node ids and generated line labels. The
- * proof lines are the translator's own `.auf` output (full sequents, inferred
- * contexts), each annotated with its node's label comment, so a serialized
- * complete tree is itself engine-compilable text.
- */
-export function serializePrawitzStarter(
-  root: PrawitzProofNode,
-  assumptionRule: string,
-  sequentSymbol: string,
-  contextSymbol = ",",
-  readRule: ProofRuleReader = ENGINE_RULE,
-): string {
-  const assumption = readRule(assumptionRule);
-  const byId = new Map<string, PrawitzProofNode>();
-  const index = (node: PrawitzProofNode): void => {
-    byId.set(node.id, node);
-    for (const premise of node.premises) {
-      index(premise);
-    }
-  };
-  index(root);
-
-  const translated = prawitzToAuf(
-    root,
-    "starter",
-    assumptionRule,
-    sequentSymbol,
-    contextSymbol,
-    undefined,
-    readRule,
-  );
-  return translated.lineSpans
-    .map((span) => {
-      const line = translated.proofText.slice(span.from, span.to);
-      const node = byId.get(span.nodeId);
-      const marks =
-        node === undefined
-          ? ""
-          : readRule(node.rule) === assumption
-            ? (node.label?.trim() ?? "")
-            : (node.discharge ?? []).join(", ");
-      return marks.length === 0 ? line : `${line} -- label:${marks}`;
-    })
-    .join("\n");
 }

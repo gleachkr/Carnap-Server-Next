@@ -9,7 +9,6 @@ import type {
   ExerciseManifestItem,
   ExerciseRenderSpec,
   ExerciseReviewContext,
-  ManualGradingSpec,
   NormalizedAnswer,
 } from "../../domain/content";
 import type {
@@ -128,12 +127,6 @@ export class ExerciseRegistry {
     }
 
     return type.evaluate(answer, declaration, context);
-  }
-
-  manualGradingSpec(declaration: ExerciseManifestItem): ManualGradingSpec {
-    return (
-      this.typeFor(declaration.kind).manualGradingSpec?.(declaration) ?? {}
-    );
   }
 
   reviewAnswer(

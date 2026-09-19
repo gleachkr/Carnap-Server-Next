@@ -40,7 +40,6 @@ export type {
 } from "./fields";
 export {
   formatFunctionTable,
-  formatTupleList,
   functionTableLayout,
   MAX_DOMAIN_SIZE,
   MAX_FUNCTION_ROWS,

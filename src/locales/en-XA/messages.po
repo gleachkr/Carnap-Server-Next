@@ -930,7 +930,6 @@ msgid "Change saved."
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts
-#: src/worker/exercises/translation/strings.ts
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Check"
 msgstr ""
@@ -941,10 +940,6 @@ msgstr ""
 
 #: src/worker/exercise-kit/actions.ts
 msgid "Checking"
-msgstr ""
-
-#: src/worker/exercises/model/strings.ts
-msgid "Choose a value for every argument."
 msgstr ""
 
 #: src/worker/web/lti.tsx
@@ -1739,33 +1734,8 @@ msgid "Exercise to excuse"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '->' (conditional)."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected ')'."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '/\\' (conjunction)."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '\\/' (disjunction)."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '<->' (biconditional)."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "Expected “{bracket}”."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Expected “{operator}” after this term."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -1776,11 +1746,6 @@ msgstr ""
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "Expected a formula."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Expected a term but found “{token}”."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
@@ -2164,10 +2129,6 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Line “{label}” is part of a citation cycle."
 msgstr ""
 
 #: src/worker/web/courses.tsx
@@ -3979,10 +3940,6 @@ msgstr ""
 msgid "There is no autograded score to approve on this submission."
 msgstr ""
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "There is no root line."
-msgstr ""
-
 #: src/worker/exercises/truth-table/strings.ts
 msgid "There's an error somewhere."
 msgstr ""
@@ -4344,11 +4301,6 @@ msgstr ""
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "Unexpected “{token}”."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Unexpected character “{character}”."
 msgstr ""
 
 #: src/worker/web/courses.tsx

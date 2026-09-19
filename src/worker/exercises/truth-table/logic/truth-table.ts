@@ -1,14 +1,14 @@
 /**
- * Truth-table semantics for the `prop` system: collect a formula's atoms,
- * enumerate every valuation, evaluate sub-formulas, and assemble the full key
- * table an author's formulas define. DOM-free — shared by the worker (compile +
- * authoritative grade) and the client element (local check).
+ * Truth-table semantics: collect a formula's atoms, enumerate every
+ * valuation, and evaluate a formula under one. The table itself — which
+ * cells a formula has, and what each is worth — is `grading.ts`'s
+ * `resolveTable` and `correctCells`, over the layout in `layout.ts`. DOM-free
+ * — shared by the worker (compile + authoritative grade) and the client
+ * element (local check).
  */
 
-import type { SurfaceLanguage } from "@aufbau/syntax";
 import { applyBinaryConnective } from "../../../logic/specs/connectives";
-import type { Formula, ParseError } from "./formula";
-import { parseFormula } from "./formula";
+import type { Formula } from "./formula";
 
 /**
  * The largest number of distinct atoms a table may contain. Guards against an
@@ -17,44 +17,6 @@ import { parseFormula } from "./formula";
  * more.
  */
 export const MAX_TABLE_ATOMS = 12;
-
-/** One column under a written-out formula: the sub-formula it evaluates. */
-export interface FormulaColumn {
-  readonly formula: Formula;
-  /** True for the column under the formula's main connective (its root). */
-  readonly isMain: boolean;
-}
-
-/** The compiled key for a single author formula. */
-export interface FormulaTable {
-  readonly source: string;
-  readonly formula: Formula;
-  /** Sub-formula columns in left-to-right display order. */
-  readonly columns: readonly FormulaColumn[];
-  /** Index into {@link columns} of the main connective's column. */
-  readonly mainColumnIndex: number;
-  /** `values[rowIndex][columnIndex]` — the correct value for each cell. */
-  readonly values: readonly (readonly boolean[])[];
-}
-
-/** The full key table for an ordered list of author formulas. */
-export interface TruthTable {
-  /** Distinct atoms across every formula, in canonical order. */
-  readonly atoms: readonly string[];
-  /** `valuations[rowIndex][atomIndex]` — the reference-column value. */
-  readonly valuations: readonly (readonly boolean[])[];
-  readonly formulas: readonly FormulaTable[];
-}
-
-export interface TruthTableBuildError {
-  readonly formulaIndex: number;
-  readonly source: string;
-  readonly error: ParseError;
-}
-
-export type TruthTableResult =
-  | { readonly ok: true; readonly table: TruthTable }
-  | { readonly ok: false; readonly errors: readonly TruthTableBuildError[] };
 
 function collectAtomsInto(formula: Formula, into: Set<string>): void {
   switch (formula.type) {
@@ -141,132 +103,4 @@ export function evaluate(
         evaluate(formula.right, valuation),
       );
   }
-}
-
-function collectColumnsInto(
-  formula: Formula,
-  root: Formula,
-  into: FormulaColumn[],
-): void {
-  switch (formula.type) {
-    case "atom":
-      // Atom occurrences are reference columns, not sub-formula columns.
-      return;
-    // A truth constant has no reference column to stand in for it, so its own
-    // column is where its value is written.
-    case "verum":
-    case "falsum":
-      into.push({ formula, isMain: formula === root });
-      return;
-    case "not":
-      // Prefix connective: its column precedes the operand's columns.
-      into.push({ formula, isMain: formula === root });
-      collectColumnsInto(formula.operand, root, into);
-      return;
-    default:
-      // Infix connective: left operand, this column, then right operand.
-      collectColumnsInto(formula.left, root, into);
-      into.push({ formula, isMain: formula === root });
-      collectColumnsInto(formula.right, root, into);
-  }
-}
-
-/**
- * The sub-formula columns for a formula, in left-to-right display order (an
- * in-order walk emitting a column for every connective). The main connective's
- * column is flagged rather than positioned, since it sits mid-formula.
- */
-export function subformulaColumns(formula: Formula): FormulaColumn[] {
-  const columns: FormulaColumn[] = [];
-  collectColumnsInto(formula, formula, columns);
-  return columns;
-}
-
-function valuationMap(
-  atoms: readonly string[],
-  row: readonly boolean[],
-): Map<string, boolean> {
-  const map = new Map<string, boolean>();
-
-  for (const [index, atom] of atoms.entries()) {
-    map.set(atom, row[index] ?? false);
-  }
-
-  return map;
-}
-
-function buildFormulaTable(
-  source: string,
-  formula: Formula,
-  atoms: readonly string[],
-  valuations: readonly (readonly boolean[])[],
-): FormulaTable {
-  const columns = subformulaColumns(formula);
-  const mainColumnIndex = columns.findIndex((column) => column.isMain);
-  const values = valuations.map((row) => {
-    const map = valuationMap(atoms, row);
-    return columns.map((column) => evaluate(column.formula, map));
-  });
-
-  return { columns, formula, mainColumnIndex, source, values };
-}
-
-/**
- * Parse each source formula and assemble the full key table. Returns every
- * per-formula parse error together, so an author sees all bad formulas at once.
- */
-export function buildTruthTable(
-  sources: readonly string[],
-  lang?: SurfaceLanguage,
-): TruthTableResult {
-  const parsed: Formula[] = [];
-  const errors: TruthTableBuildError[] = [];
-
-  for (const [index, source] of sources.entries()) {
-    const result = parseFormula(source, lang);
-
-    if (result.ok) {
-      parsed.push(result.formula);
-    } else {
-      for (const error of result.errors) {
-        errors.push({ error, formulaIndex: index, source });
-      }
-    }
-  }
-
-  if (errors.length > 0) {
-    return { errors, ok: false };
-  }
-
-  const atoms = collectAtoms(parsed);
-
-  if (atoms.length > MAX_TABLE_ATOMS) {
-    return {
-      errors: [
-        {
-          error: {
-            message:
-              "A truth table may use at most {max} atoms; found {found}.",
-            params: { found: atoms.length, max: MAX_TABLE_ATOMS },
-            position: 0,
-          },
-          formulaIndex: 0,
-          source: sources[0] ?? "",
-        },
-      ],
-      ok: false,
-    };
-  }
-
-  const valuations = enumerateValuations(atoms);
-  const formulas = parsed.map((formula, index) =>
-    buildFormulaTable(sources[index] ?? "", formula, atoms, valuations),
-  );
-
-  return { ok: true, table: { atoms, formulas, valuations } };
-}
-
-/** Whether a formula's main connective is true under every valuation. */
-export function isTautology(table: FormulaTable): boolean {
-  return table.values.every((row) => row[table.mainColumnIndex] === true);
 }

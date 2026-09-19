@@ -11,7 +11,6 @@ import type {
   ExerciseKind,
   ExerciseManifestItem,
   ExerciseReviewContext,
-  ManualGradingSpec,
   NormalizedAnswer,
 } from "../domain/content";
 import type { Translator } from "../i18n/translator";
@@ -81,7 +80,6 @@ export interface ExerciseAssessment {
     declaration: ExerciseManifestItem,
     context: EvaluationContext,
   ): Promise<AutomaticEvaluation>;
-  manualGradingSpec?(declaration: ExerciseManifestItem): ManualGradingSpec;
   normalizeAnswer(
     envelope: AnswerEnvelope,
     declaration: ExerciseManifestItem,

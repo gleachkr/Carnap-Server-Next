@@ -10,11 +10,7 @@
  * knows which type is asking.
  */
 
-import {
-  parseSpec,
-  SurfaceLanguage,
-  stripSyntaxAnnotations,
-} from "@aufbau/syntax";
+import { parseSpec, SurfaceLanguage } from "@aufbau/syntax";
 import {
   type CompilerDiagnostic,
   diagnostic,
@@ -38,16 +34,16 @@ import {
 /**
  * A theory name and the MM0 text an `:::aufbau-mm0` block declares.
  *
- * The two texts differ by the `@syntax` annotations, and which one a caller
- * wants is not a detail. `mm0` is engine input — what a goal declaration is
- * appended to and what a certificate is verified against — and the engine
- * rejects an annotation that is not its own. `source` is the artifact as
- * written and as the route serves it, which is what the `show` panel puts in
- * front of a reader: a file that is also a course's *language* says so in
- * those annotations, and hiding them would show a reader half of it.
+ * `source` is the artifact as written and as the route serves it, `@syntax`
+ * annotations and all: it is what the `show` panel puts in front of a
+ * reader (a file that is also a course's *language* says so in those
+ * annotations, and hiding them would show a reader half of it), and it is
+ * what the document's systems table freezes. The engine's text — the same
+ * with the annotations stripped, since the engine rejects an annotation
+ * that is not its own — is made where it is needed, at the read boundary
+ * (`join.ts`), not carried here.
  */
 export interface AufbauTheory {
-  readonly mm0: string;
   readonly name: string;
   /**
    * What the theory says about itself that a Fitch or Prawitz proof needs in
@@ -267,7 +263,6 @@ export async function compileAufbauMm0(
   reportUnreadableTheory(block, base, source, diagnostics);
 
   return {
-    mm0: stripSyntaxAnnotations(source),
     name,
     notations: declaredNotations(source),
     show,
@@ -359,7 +354,6 @@ export function builtInSystem(id: string): AufbauTheory | null {
   }
 
   return {
-    mm0: stripSyntaxAnnotations(source),
     name: id,
     notations: declaredNotations(source),
     show: false,

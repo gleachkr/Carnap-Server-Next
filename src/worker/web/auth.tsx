@@ -102,7 +102,7 @@ export function renderLoginPage(
 
   return renderShell(
     context,
-    { showTitle: false, title: i18n.t("Log in") },
+    { title: i18n.t("Log in") },
     <>
       {model.loggedOut ? (
         <Notice>{i18n.t("You have been logged out.")}</Notice>
@@ -135,7 +135,7 @@ export function renderLoginError(
 
   return renderShell(
     context,
-    { showTitle: false, status: model.status, title: i18n.t("Log in") },
+    { status: model.status, title: i18n.t("Log in") },
     <Sheet title={i18n.t("Account access")}>
       <ErrorSummary>{model.message}</ErrorSummary>
       <LoginForm
@@ -155,7 +155,7 @@ export function renderLoginSent(
 
   return renderShell(
     context,
-    { showTitle: false, title: i18n.t("Check your email") },
+    { title: i18n.t("Check your email") },
     <Sheet title={i18n.t("Check your email")}>
       <Notice>{i18n.t("A login link has been created.")}</Notice>
       {localLoginLink === null ? null : (

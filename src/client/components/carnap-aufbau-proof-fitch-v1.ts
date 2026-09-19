@@ -69,7 +69,12 @@ import {
   fitchToAuf,
   type RuleCitationShape,
 } from "../../worker/exercises/aufbau-proof-fitch/translate";
-import type { AufbauProofFitchPublicData } from "../../worker/exercises/aufbau-proof-fitch/types";
+import {
+  type AufbauProofFitchPublicData,
+  DEFAULT_ASSUMPTION_RULE,
+  DEFAULT_CONTEXT_SYMBOL,
+  DEFAULT_SEQUENT_SYMBOL,
+} from "../../worker/exercises/aufbau-proof-fitch/types";
 import {
   type CompileDiagnostic,
   loadProofCompiler,
@@ -382,12 +387,12 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
    *  own rule signatures. See `aufbau-proof-fitch/citations.ts`. */
   private citationShapes: ReadonlyMap<string, RuleCitationShape> = new Map();
   private goalName = "";
-  private assumptionRule = "ax";
+  private assumptionRule = DEFAULT_ASSUMPTION_RULE;
   /** The theory's turnstile; artifacts compiled before `sequent=` existed have
    *  no `sequentSymbol`, so this default stands in for them. */
-  private sequentSymbol = "⊢";
+  private sequentSymbol = DEFAULT_SEQUENT_SYMBOL;
   /** The theory's context separator, on the same terms as `sequentSymbol`. */
-  private contextSymbol = ",";
+  private contextSymbol = DEFAULT_CONTEXT_SYMBOL;
   private editor: EditorView | null = null;
   private proofText = "";
   private fitchText = "";
@@ -597,7 +602,8 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       return;
     }
     const fitchText = source.textContent ?? "";
-    const assumptionRule = this.getAttribute("data-assumption-rule") || "ax";
+    const assumptionRule =
+      this.getAttribute("data-assumption-rule") || DEFAULT_ASSUMPTION_RULE;
     // The theory is not on this page; what the boxes need from it is which
     // spellings mean the assumption rule, and the server lists those.
     const spellings = new Set(

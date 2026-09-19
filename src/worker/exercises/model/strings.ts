@@ -25,10 +25,6 @@ export function buildModelStrings(i18n: Translator) {
       placeholders("max"),
     ),
     Check: i18n.t("Check"),
-    /** The heading over a function symbol's generated value table. */
-    "Choose a value for every argument.": i18n.t(
-      "Choose a value for every argument.",
-    ),
     "Could not read the value of {field}.": i18n.t(
       "Could not read the value of {field}.",
       placeholders("field"),

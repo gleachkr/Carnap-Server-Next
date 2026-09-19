@@ -4,13 +4,11 @@ import type {
   ExerciseAnswerReview,
   ExerciseManifestItem,
   ExerciseReviewContext,
-  ManualGradingSpec,
   NormalizedAnswer,
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
 import {
   diagnostic,
-  htmlToText,
   isObject,
   isTextAnswerData,
   normalizeText,
@@ -39,28 +37,6 @@ function isFreeResponsePrivateData(
 }
 
 export const FREE_RESPONSE_ASSESSMENT = {
-  manualGradingSpec(declaration: ExerciseManifestItem): ManualGradingSpec {
-    if (!isFreeResponsePrivateData(declaration.privateData)) {
-      return {};
-    }
-
-    if (declaration.privateData.rubricHtml === undefined) {
-      return {};
-    }
-
-    return {
-      rubric: {
-        criteria: [
-          {
-            description: htmlToText(declaration.privateData.rubricHtml),
-            id: "response",
-            maxPoints: declaration.nominalPoints,
-          },
-        ],
-      },
-    };
-  },
-
   normalizeAnswer(envelope: AnswerEnvelope): AnswerNormalizationResult {
     if (envelope.kind !== FREE_RESPONSE_ANSWER_KIND) {
       return {

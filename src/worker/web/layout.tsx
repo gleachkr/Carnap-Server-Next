@@ -58,7 +58,6 @@ export interface ShellOptions {
    * it would otherwise sit in. Renders only where the breadcrumb does.
    */
   readonly headerAside?: Child;
-  readonly showTitle?: boolean;
   readonly status?: 200 | 400 | 401 | 403 | 404 | 429 | 500;
   readonly title: string;
 }
@@ -124,7 +123,6 @@ interface LayoutProps {
    * takes only what it renders.
    */
   readonly prompt: Child | null;
-  readonly showTitle: boolean;
   readonly title: string;
 }
 
@@ -135,7 +133,6 @@ const Layout: FC<LayoutProps> = ({
   chromeless,
   headerAside,
   prompt,
-  showTitle,
   title,
 }) => {
   // Both the words and the tag: `<html lang>` and the client scripts' `Intl`
@@ -155,9 +152,7 @@ const Layout: FC<LayoutProps> = ({
   // on its own, since the aside needs a row to sit in whatever the trail
   // does.
   const showHeaderRow =
-    showTitle &&
-    !chromeless &&
-    (breadcrumb.length > 0 || headerAside !== null);
+    !chromeless && (breadcrumb.length > 0 || headerAside !== null);
 
   return (
     <html lang={i18n.locale}>
@@ -325,7 +320,6 @@ export function renderShell(
         // else's application, where our own housekeeping is an interruption
         // in the middle of their assignment.
         prompt={chromeless ? null : <ProfilePrompt context={context} />}
-        showTitle={options.showTitle ?? true}
         title={options.title}
       >
         {children}

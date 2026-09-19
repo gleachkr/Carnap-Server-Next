@@ -119,7 +119,7 @@ Review redraws the submitted tree.
 - `types.ts`: `PrawitzProofNode`, public/answer shapes, and guards.
 - `translate.ts`: scope/dependency analysis, `.auf` emission, line mappings,
   and structural diagnostics.
-- `parse.ts`: `parsePrawitzStarter` and `serializePrawitzStarter`, using the
+- `parse.ts`: `parsePrawitzStarter`, using the
   kit's tree parser (`src/worker/exercise-kit/proof/tree-parse.ts`) for
   structural work.
 - `authoring.ts`: directive compilation, theory/goal handling, and starters.

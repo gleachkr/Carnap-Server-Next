@@ -790,48 +790,6 @@ export function fitchToAuf(
   return { diagnostics, formulaProblems, lineSpans, proofText, statement };
 }
 
-/**
- * The subproof depth (0 = top level) of every raw line, or `null` for a blank
- * line. The client editor uses this to draw the Fitch scope-lines; it walks the
- * same indentation stack as {@link fitchToAuf} (after the same common-indent
- * strip) so the bars line up exactly with the sequent contexts.
- */
-export function fitchLineDepths(fitchText: string): (number | null)[] {
-  const rawLines = fitchText.split("\n");
-  const minIndent = rawLines.reduce(
-    (least, raw) =>
-      raw.trim().length === 0 ? least : Math.min(least, leadingWidth(raw)),
-    Number.POSITIVE_INFINITY,
-  );
-  const baseIndent = Number.isFinite(minIndent) ? minIndent : 0;
-  const indentStack: number[] = [0];
-
-  return rawLines.map((raw) => {
-    if (raw.trim().length === 0) {
-      return null;
-    }
-
-    const width = leadingWidth(raw) - baseIndent;
-    const top = indentStack[indentStack.length - 1] ?? 0;
-
-    if (width > top) {
-      indentStack.push(width);
-    } else if (width < top) {
-      while (
-        indentStack.length > 1 &&
-        (indentStack[indentStack.length - 1] ?? 0) > width
-      ) {
-        indentStack.pop();
-      }
-      if ((indentStack[indentStack.length - 1] ?? 0) !== width) {
-        indentStack[indentStack.length - 1] = width;
-      }
-    }
-
-    return indentStack.length - 1;
-  });
-}
-
 /** One line's scope-bar geometry: the absolute indentation columns of its
  * enclosing subproofs (outermost first) and the index of the first freshly-opened
  * bar (see {@link ParsedLine.openFrom}). */

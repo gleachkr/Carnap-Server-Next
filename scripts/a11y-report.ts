@@ -2,7 +2,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { type Finding, runAxe } from "../tests/a11y/axe-runner";
-import { collectFixtures } from "../tests/a11y/fixtures";
+import { collectFixtures, type Fixture } from "../tests/a11y/fixtures";
 
 /**
  * Tier 1 accessibility inventory + baseline generator (see `docs/a11y.md`).
@@ -15,7 +15,7 @@ import { collectFixtures } from "../tests/a11y/fixtures";
  * The file is meant to be read in diffs — a shrinking baseline is progress.
  */
 
-export const BASELINE_PATH = join(
+const BASELINE_PATH = join(
   import.meta.dir,
   "..",
   "tests",
@@ -23,7 +23,7 @@ export const BASELINE_PATH = join(
   "baseline.json",
 );
 
-export interface Baseline {
+interface Baseline {
   readonly note: string;
   readonly findings: ReadonlyArray<{
     readonly fingerprint: string;
@@ -34,8 +34,14 @@ export interface Baseline {
   }>;
 }
 
-export async function collectFindings(): Promise<Finding[]> {
-  const fixtures = await collectFixtures();
+/**
+ * Every finding over the fixture set, sorted by fingerprint. The gate in
+ * `tests/a11y/a11y.test.ts` passes the fixtures it has already rendered, so
+ * they are seeded once per run rather than once per caller.
+ */
+export async function collectFindings(
+  fixtures: readonly Fixture[],
+): Promise<Finding[]> {
   const all: Finding[] = [];
   for (const fixture of fixtures) {
     all.push(...(await runAxe(fixture.html, fixture.name)));
@@ -83,7 +89,7 @@ function toBaseline(findings: readonly Finding[]): Baseline {
 
 if (import.meta.main) {
   const update = process.argv.includes("--update");
-  const findings = await collectFindings();
+  const findings = await collectFindings(await collectFixtures());
   printReport(findings);
   if (update) {
     writeFileSync(

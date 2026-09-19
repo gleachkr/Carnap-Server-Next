@@ -930,7 +930,6 @@ msgid "Change saved."
 msgstr "Change saved."
 
 #: src/worker/exercises/model/strings.ts
-#: src/worker/exercises/translation/strings.ts
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Check"
 msgstr "Check"
@@ -942,10 +941,6 @@ msgstr "Check your email"
 #: src/worker/exercise-kit/actions.ts
 msgid "Checking"
 msgstr "Checking"
-
-#: src/worker/exercises/model/strings.ts
-msgid "Choose a value for every argument."
-msgstr "Choose a value for every argument."
 
 #: src/worker/web/lti.tsx
 msgid "Choose an assignment"
@@ -1739,34 +1734,9 @@ msgid "Exercise to excuse"
 msgstr "Exercise to excuse"
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '->' (conditional)."
-msgstr "Expected '->' (conditional)."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected ')'."
-msgstr "Expected ')'."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '/\\' (conjunction)."
-msgstr "Expected '/\\' (conjunction)."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '\\/' (disjunction)."
-msgstr "Expected '\\/' (disjunction)."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '<->' (biconditional)."
-msgstr "Expected '<->' (biconditional)."
-
-#: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "Expected “{bracket}”."
 msgstr "Expected “{bracket}”."
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Expected “{operator}” after this term."
-msgstr "Expected “{operator}” after this term."
 
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
@@ -1777,11 +1747,6 @@ msgstr "Expected a formula but found “{token}”."
 #: src/worker/logic/specs/strings.ts
 msgid "Expected a formula."
 msgstr "Expected a formula."
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Expected a term but found “{token}”."
-msgstr "Expected a term but found “{token}”."
 
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
@@ -2165,10 +2130,6 @@ msgstr "Line “{label}” is cited more than once, so this proof is a graph, no
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
 msgstr "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Line “{label}” is part of a citation cycle."
-msgstr "Line “{label}” is part of a citation cycle."
 
 #: src/worker/web/courses.tsx
 msgid "Link"
@@ -3979,10 +3940,6 @@ msgstr "There is already a given for “{field}”."
 msgid "There is no autograded score to approve on this submission."
 msgstr "There is no autograded score to approve on this submission."
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "There is no root line."
-msgstr "There is no root line."
-
 #: src/worker/exercises/truth-table/strings.ts
 msgid "There's an error somewhere."
 msgstr "There's an error somewhere."
@@ -4345,11 +4302,6 @@ msgstr "Undo (Ctrl-Z)"
 #: src/worker/logic/specs/strings.ts
 msgid "Unexpected “{token}”."
 msgstr "Unexpected “{token}”."
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Unexpected character “{character}”."
-msgstr "Unexpected character “{character}”."
 
 #: src/worker/web/courses.tsx
 msgid "Unexpected delivery failure."

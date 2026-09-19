@@ -237,16 +237,6 @@ export class AuthService {
     await this.options.stores.auth.createNativeLoginChallenge({
       id: createAppId(nowDate.getTime()),
       email,
-      // Nothing supplies a name here any more: asking for one on the login form
-      // meant an anonymous request chose the name a new account was created
-      // under, and returning users met a field that was silently ignored. A
-      // name is now only ever written by its owner, signed in, on /profile.
-      //
-      // The column and the plumbing below stay because a link already in
-      // someone's inbox when this shipped still carries one, and it should go
-      // on working for the fifteen minutes it has left. Once #173 squashes the
-      // migrations to a baseline, the column can go with it.
-      name: null,
       tokenHash,
       createdAt,
       expiresAt,
@@ -290,11 +280,7 @@ export class AuthService {
       );
     }
 
-    const user = await this.resolveNativeUser(
-      challenge.email,
-      challenge.name,
-      nowDate,
-    );
+    const user = await this.resolveNativeUser(challenge.email, nowDate);
 
     return this.mintSession(user);
   }
@@ -494,9 +480,15 @@ export class AuthService {
     return this.options.stores.platformCapabilities.listActiveForUser(userId);
   }
 
+  /**
+   * A new account is created without a name: asking for one on the login
+   * form meant an anonymous request chose the name an account was created
+   * under, and returning users met a field that was silently ignored. A name
+   * is only ever written by its owner, signed in, on /profile. (The
+   * challenge table's `name` column is empty and waits for #173.)
+   */
   private async resolveNativeUser(
     email: string,
-    name: string | null,
     nowDate: Date,
   ): Promise<User> {
     const identity = await this.options.stores.users.getExternalIdentity(
@@ -522,7 +514,7 @@ export class AuthService {
         id: createAppId(nowDate.getTime()),
         email,
         emailVerifiedAt: now,
-        name,
+        name: null,
         createdAt: now,
       }));
 

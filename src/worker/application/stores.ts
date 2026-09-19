@@ -175,7 +175,6 @@ export interface UserStore {
 export interface CreateNativeLoginChallengeInput {
   readonly id: AppId;
   readonly email: string;
-  readonly name: string | null;
   readonly tokenHash: string;
   readonly createdAt: Timestamp;
   readonly expiresAt: Timestamp;

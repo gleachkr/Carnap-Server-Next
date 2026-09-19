@@ -438,7 +438,6 @@ export function describeStorageContract(
           stores.auth.createNativeLoginChallenge({
             id,
             email: "ada@example.test",
-            name: null,
             tokenHash: `${id}-hash`,
             createdAt,
             expiresAt,

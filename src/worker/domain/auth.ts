@@ -4,7 +4,6 @@ import type { Timestamp } from "./time";
 export interface NativeLoginChallenge {
   readonly id: AppId;
   readonly email: string;
-  readonly name: string | null;
   readonly tokenHash: string;
   readonly createdAt: Timestamp;
   readonly expiresAt: Timestamp;
@@ -18,7 +17,6 @@ export interface AuthSession {
   readonly createdAt: Timestamp;
   readonly expiresAt: Timestamp;
   readonly revokedAt: Timestamp | null;
-  readonly lastSeenAt: Timestamp | null;
   /**
    * The one foreign origin allowed to frame what this session sees, or null for
    * the ordinary case of nobody but us. Only an LTI launch sets it, to the LMS

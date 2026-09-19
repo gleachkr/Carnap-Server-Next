@@ -102,13 +102,3 @@ export function formulaLayout(
   emit(formula, formula, true, connectiveSpellings(lang), segments);
   return segments;
 }
-
-/** Just the fillable cells of a formula, in left-to-right display order. */
-export function formulaCells(
-  formula: Formula,
-  lang: SurfaceLanguage,
-): CellSegment[] {
-  return formulaLayout(formula, lang).filter(
-    (segment): segment is CellSegment => segment.kind === "cell",
-  );
-}

@@ -26,25 +26,7 @@ export function buildTranslationStrings(i18n: Translator) {
     // with the proof types, which read a typed formula the same way.
     ...buildFormulaParserStrings(i18n),
 
-    // Three sentences the hand parser this replaced could produce and the spec
-    // parser cannot. Kept until something is known to have stopped asking for
-    // them, since a stored catalog entry costs nothing and a missing one shows
-    // a student English.
-    "Expected a term but found “{token}”.": i18n.t(
-      "Expected a term but found “{token}”.",
-      placeholders("token"),
-    ),
-    "Expected “{operator}” after this term.": i18n.t(
-      "Expected “{operator}” after this term.",
-      placeholders("operator"),
-    ),
-    "Unexpected character “{character}”.": i18n.t(
-      "Unexpected character “{character}”.",
-      placeholders("character"),
-    ),
-
-    // ——— The widget's own chrome.
-    Check: i18n.t("Check"),
+    // ——— The widget's own chrome. No Check: the check is live.
     // The live rendering under the input: what the student's ASCII parses as,
     // in logical symbols. Naming the relation ("reads as") rather than just
     // printing the formula keeps two near-identical strings apart for a

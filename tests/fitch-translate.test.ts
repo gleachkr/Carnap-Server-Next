@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
 import {
-  fitchLineDepths,
   fitchScopeGeometry,
   fitchToAuf,
 } from "../src/worker/exercises/aufbau-proof-fitch/translate";
@@ -213,23 +212,6 @@ describe("fitchToAuf — details", () => {
       const slice = result.proofText.slice(span.from, span.to);
       expect(slice.startsWith("l")).toBe(true);
     }
-  });
-});
-
-describe("fitchLineDepths — scope-line depths", () => {
-  test("nested subproofs report their depth; blanks are null", () => {
-    const depths = fitchLineDepths(
-      [
-        "    a           :ax",
-        "        b       :ax",
-        "",
-        "        a       :ax",
-        "    b → a       :imp_intro 2-3",
-        "a → (b → a)     :imp_intro 1-4",
-      ].join("\n"),
-    );
-
-    expect(depths).toEqual([1, 2, null, 2, 1, 0]);
   });
 });
 

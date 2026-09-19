@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import {
   type AnySQLiteColumn,
   index,
@@ -555,8 +554,6 @@ export const assignmentScores = sqliteTable(
     ),
   ],
 );
-
-export const enableForeignKeys = sql`PRAGMA foreign_keys = ON`;
 
 export const platformCapabilityGrants = sqliteTable(
   "platform_capability_grants",

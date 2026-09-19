@@ -214,30 +214,19 @@ export function parseProofTree(body: string): ProofTreeParseResult {
     );
   }
 
-  const root = roots[0];
-  if (root === undefined) {
-    return issue("proof_has_no_root", "There is no root line.", null);
-  }
+  // Exactly one, by the two checks above.
+  const root = roots[0] as ParsedLine;
 
-  // Build the tree from the root, guarding against cycles and tracking which
-  // lines were reached so we can flag any that dangle off the tree.
+  // Build the tree from the root, tracking which lines were reached so we can
+  // flag any that dangle off the tree. No cycle guard: every label is cited
+  // at most once and the root not at all, so a walk from the root can never
+  // return to a line it has visited — a cycle among the other lines is
+  // simply never reached, and is reported as such below.
   const reached = new Set<string>();
   let hypCounter = 0;
 
-  function build(
-    line: ParsedLine,
-    ancestors: ReadonlySet<string>,
-  ): ProofTreeNode | ProofTreeParseResult {
-    if (ancestors.has(line.label)) {
-      return issue(
-        "proof_has_cycle",
-        "Line “{label}” is part of a citation cycle.",
-        line.bodyLine,
-        { label: line.label },
-      );
-    }
+  function build(line: ParsedLine): ProofTreeNode | ProofTreeParseResult {
     reached.add(line.label);
-    const path = new Set(ancestors).add(line.label);
 
     const premises: ProofTreeNode[] = [];
     for (const ref of line.refs) {
@@ -255,7 +244,7 @@ export function parseProofTree(body: string): ProofTreeParseResult {
       }
       // Non-hypothesis refs are validated above, so this lookup always hits.
       const child = byLabel.get(ref) as ParsedLine;
-      const built = build(child, path);
+      const built = build(child);
       if ("ok" in built) {
         return built;
       }
@@ -270,7 +259,7 @@ export function parseProofTree(body: string): ProofTreeParseResult {
     };
   }
 
-  const built = build(root, new Set());
+  const built = build(root);
   if ("ok" in built) {
     return built;
   }

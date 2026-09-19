@@ -475,14 +475,6 @@ table button:not(:where(.modal-dialog button)) {
   margin-top: 0;
 }
 
-.section-title {
-  align-items: baseline;
-  display: flex;
-  gap: 0.75rem;
-  justify-content: space-between;
-  margin-bottom: 0.8rem;
-}
-
 /* Summary strips */
 
 /* The cells self-arrange into however many columns the width affords, so a

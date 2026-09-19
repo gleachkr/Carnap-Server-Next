@@ -25,7 +25,3 @@ export function buildExerciseHelpStrings(i18n: Translator) {
     Keyboard: i18n.t("Keyboard"),
   };
 }
-
-export type ExerciseHelpStringId = keyof ReturnType<
-  typeof buildExerciseHelpStrings
->;

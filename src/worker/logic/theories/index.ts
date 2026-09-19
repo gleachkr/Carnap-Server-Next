@@ -12,9 +12,11 @@
  * `@syntax` annotations and are registered by `../specs` under the language id
  * of the same stem, so `system=` on a model or translation exercise and `src=`
  * on a proof exercise's theory block name the same bytes and cannot disagree
- * about what `A` means. Two things follow for anyone reading these files. The annotations
- * are *not* the engine's — `compileAufbauMm0` strips them where it freezes a
- * theory, and anything else handing this text to the compiler must too. And a
+ * about what `A` means. Two things follow for anyone reading these files. The
+ * annotations are *not* the engine's — the systems join
+ * (`exercise-kit/systems/join.ts`) strips them where an exercise's frozen
+ * text is read back, and anything else handing this text to the compiler
+ * must too. And a
  * file that plays both roles cannot spell its context separator `,`, because
  * the comma is the student's argument separator; it says so itself with
  * `@syntax role context-join`, which is what the proof types read.

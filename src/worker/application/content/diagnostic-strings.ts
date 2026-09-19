@@ -187,13 +187,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
       "Could not parse the goal's formula “{formula}”: {detail}",
       placeholders("detail", "formula"),
     ),
-    "Expected ')'.": i18n.t("Expected ')'."),
-    "Expected '->' (conditional).": i18n.t("Expected '->' (conditional)."),
-    "Expected '/\\' (conjunction).": i18n.t("Expected '/\\' (conjunction)."),
-    "Expected '<->' (biconditional).": i18n.t(
-      "Expected '<->' (biconditional).",
-    ),
-    "Expected '\\/' (disjunction).": i18n.t("Expected '\\/' (disjunction)."),
     "Expected a formula but found “{token}”.": i18n.t(
       "Expected a formula but found “{token}”.",
       placeholders("token"),
@@ -241,10 +234,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "This given assigns {pinned} to a cell whose computed value is {expected}.",
         placeholders("expected", "pinned"),
       ),
-    "Unexpected character “{character}”.": i18n.t(
-      "Unexpected character “{character}”.",
-      placeholders("character"),
-    ),
     "Unexpected “{token}”.": i18n.t(
       "Unexpected “{token}”.",
       placeholders("token"),
@@ -341,24 +330,16 @@ export function buildDiagnosticStrings(i18n: Translator) {
         placeholders("formula"),
       ),
 
-    // The shared first-order parser (`exercise-kit/formula/formula.ts`).
-    // It shares "Expected a formula.", "Expected a formula but found …",
-    // "Unexpected character …" and "Unexpected …" with the propositional parser
-    // above; these are the sentences only a first-order dialect can produce.
-    "Expected a term but found “{token}”.": i18n.t(
-      "Expected a term but found “{token}”.",
-      placeholders("token"),
-    ),
+    // The spec-driven formula reader (`logic/specs/diagnostics.ts`), which
+    // every formula type parses with. `logic/specs/strings.ts` is the same
+    // list for the widgets; this copy is what the compiler's diagnostics
+    // resolve through on the server.
     "Expected a variable after the quantifier.": i18n.t(
       "Expected a variable after the quantifier.",
     ),
     "Expected “{bracket}”.": i18n.t(
       "Expected “{bracket}”.",
       placeholders("bracket"),
-    ),
-    "Expected “{operator}” after this term.": i18n.t(
-      "Expected “{operator}” after this term.",
-      placeholders("operator"),
     ),
     "Parentheses may only enclose a sentence joined by a two-place connective.":
       i18n.t(
@@ -532,10 +513,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion.",
         placeholders("label"),
       ),
-    "Line “{label}” is part of a citation cycle.": i18n.t(
-      "Line “{label}” is part of a citation cycle.",
-      placeholders("label"),
-    ),
     "More than one line is uncited ({labels}); a proof tree must end at a single root.":
       i18n.t(
         "More than one line is uncited ({labels}); a proof tree must end at a single root.",
@@ -552,7 +529,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "The starter proof has no lines.": i18n.t(
       "The starter proof has no lines.",
     ),
-    "There is no root line.": i18n.t("There is no root line."),
 
     // The Prawitz starter parser and structural checks
     // (`aufbau-proof-prawitz/parse.ts`, `authoring.ts`).

@@ -194,14 +194,6 @@ describe("exercise contract", () => {
     ).resolves.toMatchObject({ status: "incorrect" });
   });
 
-  test("manual grading metadata is optional", () => {
-    const registry = new ExerciseRegistry();
-
-    registry.register(fakeExerciseType);
-
-    expect(registry.manualGradingSpec(fakeManifestItem)).toEqual({});
-  });
-
   test("exercise packages return earned credit evidence, not scores", async () => {
     const registry = new ExerciseRegistry();
 

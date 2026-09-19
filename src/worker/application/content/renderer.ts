@@ -16,8 +16,6 @@ export interface RenderCompiledContentOptions {
   readonly contentRevisionId?: string;
 }
 
-export type { ExerciseRenderContext } from "../../exercise-kit/type";
-
 export function renderCompiledContent(
   artifact: CompiledContentArtifact,
   i18n: Translator,

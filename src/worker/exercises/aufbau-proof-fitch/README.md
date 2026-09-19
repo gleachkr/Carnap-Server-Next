@@ -147,7 +147,7 @@ available for display. See `../../exercise-kit/proof/formulas.ts`.
 
 ## Scope rendering
 
-`fitchLineDepths` and `fitchScopeGeometry` share the translator's scope walk.
+`fitchScopeGeometry` walks the same indentation stack as the translator.
 Geometry records indentation columns for enclosing bars and an `openFrom`
 index identifying newly opened bars. A sibling box begins with a visible
 gap, so adjacent boxes do not look continuous.

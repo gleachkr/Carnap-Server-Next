@@ -1,5 +1,6 @@
 import { expect, setDefaultTimeout, test } from "bun:test";
 
+import { collectFindings } from "../../scripts/a11y-report";
 import { type Finding, runAxe } from "./axe-runner";
 import baseline from "./baseline.json";
 import { collectFixtures } from "./fixtures";
@@ -38,14 +39,8 @@ function fixtures(): ReturnType<typeof collectFixtures> {
   return cachedFixtures;
 }
 
-function collectFindings(): Promise<Finding[]> {
-  cachedFindings ??= (async () => {
-    const findings: Finding[] = [];
-    for (const fixture of await fixtures()) {
-      findings.push(...(await runAxe(fixture.html, fixture.name)));
-    }
-    return findings;
-  })();
+function auditFindings(): Promise<Finding[]> {
+  cachedFindings ??= fixtures().then(collectFindings);
 
   return cachedFindings;
 }
@@ -73,7 +68,7 @@ test("the audit reaches inside a declarative shadow root", async () => {
 });
 
 test("no new WCAG 2.2 AA structural violations beyond the baseline", async () => {
-  const findings = await collectFindings();
+  const findings = await auditFindings();
 
   const regressions = findings.filter(
     (finding) => !baselineFingerprints.has(finding.fingerprint),
@@ -116,7 +111,7 @@ test("the audited fixtures include the incomplete-profile prompt", async () => {
 });
 
 test("baseline has no stale entries (fixed issues still listed)", async () => {
-  const findings = await collectFindings();
+  const findings = await auditFindings();
   const current = new Set(findings.map((finding) => finding.fingerprint));
 
   const stale = [...baselineFingerprints].filter(

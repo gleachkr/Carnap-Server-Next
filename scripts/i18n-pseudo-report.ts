@@ -28,7 +28,7 @@ import { visibleText } from "../tests/i18n/visible-text";
 
 const PSEUDO_LOCALE = "en-XA";
 
-export const BASELINE_PATH = join(
+const BASELINE_PATH = join(
   import.meta.dir,
   "..",
   "tests",
@@ -112,7 +112,7 @@ const TIMEZONE_WORDS = new Set(
   ),
 );
 
-export interface PseudoBaseline {
+interface PseudoBaseline {
   readonly note: string;
   /** Fixture name → the ASCII words still visible, sorted. */
   readonly residue: Readonly<Record<string, readonly string[]>>;
@@ -137,7 +137,7 @@ function asciiWords(candidates: readonly string[]): string[] {
   return [...words].sort((a, b) => a.localeCompare(b));
 }
 
-export async function collectResidue(): Promise<
+async function collectResidue(): Promise<
   Record<string, readonly string[]>
 > {
   const fixtures = await collectFixtures({

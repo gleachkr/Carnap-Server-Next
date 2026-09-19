@@ -548,8 +548,9 @@ function gradeJobsForScoreChange(
   return jobs;
 }
 
+/** Two ids as one map key; a NUL between them, since neither can hold one. */
 function pairKey(first: AppId, second: AppId): string {
-  return `${first} ${second}`;
+  return `${first}\u0000${second}`;
 }
 
 /** Byte order — what the database sorts text by — not the locale's. */

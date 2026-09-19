@@ -930,7 +930,6 @@ msgid "Change saved."
 msgstr "Änderung gespeichert."
 
 #: src/worker/exercises/model/strings.ts
-#: src/worker/exercises/translation/strings.ts
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Check"
 msgstr "Prüfen"
@@ -942,10 +941,6 @@ msgstr "Prüfen Sie Ihre E-Mails"
 #: src/worker/exercise-kit/actions.ts
 msgid "Checking"
 msgstr "Wird geprüft"
-
-#: src/worker/exercises/model/strings.ts
-msgid "Choose a value for every argument."
-msgstr "Wählen Sie für jedes Argument einen Wert."
 
 #: src/worker/web/lti.tsx
 msgid "Choose an assignment"
@@ -1739,34 +1734,9 @@ msgid "Exercise to excuse"
 msgstr "Zu entschuldigende Übung"
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '->' (conditional)."
-msgstr "'->' (Subjunktion) erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected ')'."
-msgstr "')' erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '/\\' (conjunction)."
-msgstr "'/\\' (Konjunktion) erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '\\/' (disjunction)."
-msgstr "'\\/' (Disjunktion) erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Expected '<->' (biconditional)."
-msgstr "'<->' (Bisubjunktion) erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
 msgid "Expected “{bracket}”."
 msgstr "„{bracket}“ erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Expected “{operator}” after this term."
-msgstr "„{operator}“ nach diesem Term erwartet."
 
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
@@ -1777,11 +1747,6 @@ msgstr "Formel erwartet, aber „{token}“ gefunden."
 #: src/worker/logic/specs/strings.ts
 msgid "Expected a formula."
 msgstr "Formel erwartet."
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Expected a term but found “{token}”."
-msgstr "Term erwartet, aber „{token}“ gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
 #: src/worker/logic/specs/strings.ts
@@ -2165,10 +2130,6 @@ msgstr "Zeile „{label}“ wird mehr als einmal zitiert, dieser Beweis ist also
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
 msgstr "Zeile „{label}“ ist nicht mit der Wurzel des Beweises verbunden; jede Zeile muss in die Konklusion einfließen."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Line “{label}” is part of a citation cycle."
-msgstr "Zeile „{label}“ ist Teil eines Zitatzyklus."
 
 #: src/worker/web/courses.tsx
 msgid "Link"
@@ -3979,10 +3940,6 @@ msgstr "Für „{field}“ gibt es schon eine Vorgabe."
 msgid "There is no autograded score to approve on this submission."
 msgstr "Für diese Abgabe gibt es keine automatisch ermittelte Punktzahl, die bestätigt werden könnte."
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "There is no root line."
-msgstr "Es gibt keine Wurzelzeile."
-
 #: src/worker/exercises/truth-table/strings.ts
 msgid "There's an error somewhere."
 msgstr "Irgendwo steckt ein Fehler."
@@ -4345,11 +4302,6 @@ msgstr "Rückgängig (Strg-Z)"
 #: src/worker/logic/specs/strings.ts
 msgid "Unexpected “{token}”."
 msgstr "Unerwartetes „{token}“."
-
-#: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/translation/strings.ts
-msgid "Unexpected character “{character}”."
-msgstr "Unerwartetes Zeichen „{character}“."
 
 #: src/worker/web/courses.tsx
 msgid "Unexpected delivery failure."

@@ -294,13 +294,6 @@ export function formatFunctionTable(rows: readonly FunctionRow[]): string {
   return rows.map((row) => `[${row.args.join(",")};${row.value}]`).join(",");
 }
 
-/** Write a relation's extension back in the spelling {@link parseTupleList} reads. */
-export function formatTupleList(
-  tuples: readonly (readonly number[])[],
-): string {
-  return tuples.map((tuple) => `[${tuple.join(",")}]`).join(",");
-}
-
 /**
  * Every argument tuple of the given arity over a domain, in odometer order
  * (last position varying fastest) so a generated table reads like a table.

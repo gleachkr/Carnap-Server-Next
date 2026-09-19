@@ -16,20 +16,10 @@ export {
   truthTableLanguage,
 } from "./formula";
 export type { CellRole, CellSegment, FormulaSegment } from "./layout";
-export { formulaCells, formulaLayout } from "./layout";
-export type {
-  FormulaColumn,
-  FormulaTable,
-  TruthTable,
-  TruthTableBuildError,
-  TruthTableResult,
-} from "./truth-table";
+export { formulaLayout } from "./layout";
 export {
-  buildTruthTable,
   collectAtoms,
   enumerateValuations,
   evaluate,
-  isTautology,
   MAX_TABLE_ATOMS,
-  subformulaColumns,
 } from "./truth-table";

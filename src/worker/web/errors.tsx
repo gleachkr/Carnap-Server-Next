@@ -82,7 +82,7 @@ export function renderErrorPage(
 
   return renderShell(
     context,
-    { showTitle: false, status: options.status, title: heading },
+    { status: options.status, title: heading },
     <Sheet title={heading}>
       <ErrorSummary>{options.message}</ErrorSummary>
       <p class="error-next">

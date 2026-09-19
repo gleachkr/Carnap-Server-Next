@@ -1,16 +1,16 @@
 import { describe, expect, test } from "bun:test";
+import {
+  correctCells,
+  resolveTable,
+} from "../src/worker/exercises/truth-table/grading";
 import type { Formula } from "../src/worker/exercises/truth-table/logic";
 import {
-  buildTruthTable,
   collectAtoms,
   enumerateValuations,
   evaluate,
-  formulaCells,
+  formulaLayout,
   formulaToString,
-  isTautology,
-  MAX_TABLE_ATOMS,
   parseFormula,
-  subformulaColumns,
 } from "../src/worker/exercises/truth-table/logic";
 import { languageById, languageFromSource } from "../src/worker/logic/specs";
 
@@ -107,22 +107,6 @@ function parse(source: string): Formula {
 
 function evalWith(source: string, values: Record<string, boolean>): boolean {
   return evaluate(parse(source), new Map(Object.entries(values)));
-}
-
-function firstFormulaTable(source: string) {
-  const result = buildTruthTable([source]);
-
-  if (!result.ok) {
-    throw new Error(`Expected '${source}' to build a table.`);
-  }
-
-  const formula = result.table.formulas[0];
-
-  if (formula === undefined) {
-    throw new Error(`Expected a formula table for '${source}'.`);
-  }
-
-  return formula;
 }
 
 describe("parseFormula", () => {
@@ -380,97 +364,45 @@ describe("evaluate", () => {
   });
 });
 
-describe("subformulaColumns", () => {
-  test("one column per connective, atoms excluded", () => {
-    const columns = subformulaColumns(parse("P -> (Q /\\ R)"));
-    expect(columns.map((c) => formulaToString(c.formula))).toEqual([
-      "(P -> (Q /\\ R))",
-      "(Q /\\ R)",
-    ]);
-  });
+describe("resolveTable", () => {
+  test("assembles atoms, valuations, and the value under every cell", () => {
+    const table = resolveTable({ formulas: ["P -> Q"] });
 
-  test("emits columns in left-to-right display order", () => {
-    // For (A /\ B) -> C the /\ column is drawn before the -> column.
-    const columns = subformulaColumns(parse("(A /\\ B) -> C"));
-    expect(columns.map((c) => formulaToString(c.formula))).toEqual([
-      "(A /\\ B)",
-      "((A /\\ B) -> C)",
-    ]);
-  });
+    expect(table).not.toBeNull();
 
-  test("flags the main connective at the root", () => {
-    const columns = subformulaColumns(parse("(A /\\ B) -> C"));
-    const main = columns.filter((c) => c.isMain);
-    expect(main.length).toBe(1);
-    expect(formulaToString(main[0]?.formula ?? parse("A"))).toBe(
-      "((A /\\ B) -> C)",
-    );
-  });
-
-  test("a bare atom has no columns", () => {
-    expect(subformulaColumns(parse("P"))).toEqual([]);
-  });
-});
-
-describe("buildTruthTable", () => {
-  test("assembles atoms, valuations, and per-formula values", () => {
-    const result = buildTruthTable(["P -> Q"]);
-    expect(result.ok).toBe(true);
-
-    if (result.ok) {
-      expect(result.table.atoms).toEqual(["P", "Q"]);
-      expect(result.table.valuations.length).toBe(4);
-
-      const formula = result.table.formulas[0];
-      expect(formula?.mainColumnIndex).toBe(0);
-      // Rows: TT, TF, FT, FF -> P -> Q is T, F, T, T.
-      expect(
-        formula?.values.map((row) => row[formula.mainColumnIndex]),
-      ).toEqual([true, false, true, true]);
+    if (table !== null) {
+      expect(table.atoms).toEqual(["P", "Q"]);
+      expect(table.valuations.length).toBe(4);
+      // A cell under each letter and one under the arrow. Rows: TT, TF, FT,
+      // FF.
+      expect(table.formulas[0]?.cells.map((cell) => cell.text)).toEqual([
+        "P",
+        "->",
+        "Q",
+      ]);
+      expect(correctCells(table)[0]).toEqual([
+        [true, true, true],
+        [true, false, false],
+        [false, true, true],
+        [false, true, false],
+      ]);
     }
   });
 
   test("shares atom order across multiple formulas", () => {
-    const result = buildTruthTable(["Q", "P /\\ Q"]);
-    expect(result.ok).toBe(true);
+    const table = resolveTable({ formulas: ["Q", "P /\\ Q"] });
 
-    if (result.ok) {
-      expect(result.table.atoms).toEqual(["P", "Q"]);
-      expect(result.table.formulas.length).toBe(2);
-      expect(result.table.valuations.length).toBe(4);
+    expect(table).not.toBeNull();
+
+    if (table !== null) {
+      expect(table.atoms).toEqual(["P", "Q"]);
+      expect(table.formulas.length).toBe(2);
+      expect(table.valuations.length).toBe(4);
     }
   });
 
-  test("reports parse errors per formula", () => {
-    const result = buildTruthTable(["P -> Q", "P /\\"]);
-    expect(result.ok).toBe(false);
-
-    if (!result.ok) {
-      expect(result.errors.length).toBe(1);
-      expect(result.errors[0]?.formulaIndex).toBe(1);
-    }
-  });
-
-  test("rejects tables past the atom cap", () => {
-    const atoms = Array.from({ length: MAX_TABLE_ATOMS + 1 }, (_, i) =>
-      String.fromCharCode(65 + i),
-    ).join(" /\\ ");
-    const result = buildTruthTable([atoms]);
-    expect(result.ok).toBe(false);
-  });
-});
-
-describe("isTautology", () => {
-  test("true for a validity like P -> P", () => {
-    expect(isTautology(firstFormulaTable("P -> P"))).toBe(true);
-  });
-
-  test("false for a contingency", () => {
-    expect(isTautology(firstFormulaTable("P /\\ Q"))).toBe(false);
-  });
-
-  test("false for a contradiction", () => {
-    expect(isTautology(firstFormulaTable("P /\\ ~P"))).toBe(false);
+  test("a formula that does not parse resolves no table", () => {
+    expect(resolveTable({ formulas: ["P -> Q", "P /\\"] })).toBeNull();
   });
 });
 
@@ -545,22 +477,23 @@ describe("connectives past the five carnap-prop declares", () => {
 
   test("a truth constant is a column, never a reference column", () => {
     // Nothing varies, so there is no atom to enumerate — but the student
-    // still writes its value under the symbol, which means a column of its
-    // own rather than the silence an atom occurrence gets.
-    const result = buildTruthTable(["P & ⊥"], extended);
+    // still writes its value under the symbol, which means a cell of its
+    // own, beside the letter's and the connective's.
+    const table = resolveTable({
+      formulas: ["P & ⊥"],
+      source: EXTENDED_SPEC,
+    });
 
-    expect(result.ok).toBe(true);
+    expect(table).not.toBeNull();
 
-    if (result.ok) {
-      expect(result.table.atoms).toEqual(["P"]);
+    if (table !== null) {
+      expect(table.atoms).toEqual(["P"]);
       expect(
-        result.table.formulas[0]?.columns.map(
-          (column) => column.formula.type,
-        ),
-      ).toEqual(["and", "falsum"]);
-      expect(result.table.formulas[0]?.values).toEqual([
-        [false, false],
-        [false, false],
+        table.formulas[0]?.cells.map((cell) => cell.formula.type),
+      ).toEqual(["atom", "and", "falsum"]);
+      expect(correctCells(table)[0]).toEqual([
+        [true, false, false],
+        [false, false, false],
       ]);
     }
   });
@@ -576,7 +509,9 @@ describe("connectives past the five carnap-prop declares", () => {
 
     if (result.ok) {
       expect(
-        formulaCells(result.formula, extended).map((c) => c.text),
+        formulaLayout(result.formula, extended)
+          .filter((segment) => segment.kind === "cell")
+          .map((segment) => segment.text),
       ).toEqual(["~", "P", "&", "Q", "|", "R"]);
     }
   });

@@ -10,7 +10,6 @@
  * apart rather than parameterised because each is read alongside its own cases.
  */
 
-import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import type {
   ProofFormulaReader,
   ProofRuleReader,
@@ -34,16 +33,6 @@ if (source === undefined) {
 
 /** The artifact as it is served and as an author reads it, `@syntax` and all. */
 export const MAGNUS_THEORY_SOURCE = source;
-
-/**
- * The same theory as the *engine* sees it: this file is also Magnus's language,
- * so it carries `@syntax` annotations, and the engine rejects an annotation
- * that is not its own. See the note in `forallx-theory.ts`.
- */
-export const MAGNUS_THEORY_MM0 = stripSyntaxAnnotations(source);
-
-/** The `:::aufbau-mm0{name="magnus"}` block wrapping the artifact as authored. */
-export const MAGNUS_THEORY_BLOCK = `:::aufbau-mm0{name="magnus"}\n${MAGNUS_THEORY_SOURCE}\n:::`;
 
 /**
  * What one exercise over this theory freezes, and how its lines are read —

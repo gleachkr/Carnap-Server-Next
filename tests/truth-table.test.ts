@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { SurfaceLanguage } from "@aufbau/syntax";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import { renderCompiledContent } from "../src/worker/application/content/renderer";
 import type {
@@ -14,11 +15,12 @@ import {
   gradeTruthTable,
   referenceFillable,
   resolveTable,
-  sequentHolds,
   truthTableScoreFraction,
 } from "../src/worker/exercises/truth-table/grading";
 import {
-  formulaCells,
+  type CellSegment,
+  type Formula,
+  formulaLayout,
   parseFormula,
   truthTableLanguage,
 } from "../src/worker/exercises/truth-table/logic";
@@ -86,6 +88,16 @@ async function compileCodes(source: string): Promise<string[]> {
 
 function publicDataOf(item: ExerciseManifestItem): TruthTablePublicData {
   return item.publicData as unknown as TruthTablePublicData;
+}
+
+/** Just the fillable cells of a formula, in left-to-right display order. */
+function formulaCells(
+  formula: Formula,
+  lang: SurfaceLanguage,
+): CellSegment[] {
+  return formulaLayout(formula, lang).filter(
+    (segment): segment is CellSegment => segment.kind === "cell",
+  );
 }
 
 describe("truth-table layout", () => {
@@ -855,26 +867,29 @@ describe("truth-table validity", () => {
     variant: "validity",
   };
 
-  test("sequentHolds flags the counterexample row of an invalid argument", () => {
+  test("the counterexample row of an invalid argument is the one the sequent fails on", () => {
     // Affirming the consequent: Q, P -> Q :|-: P. formulas = [Q, (P->Q), P],
     // premiseCount 2. Rows: 0=TT, 1=TF, 2=FT, 3=FF. The counterexample is FT
     // (P=F, Q=T): both premises true, conclusion P false.
     const table = resolveTable({ formulas: ["Q", "(P -> Q)", "P"] });
     expect(table).not.toBeNull();
     if (table !== null) {
-      expect(sequentHolds(table, 2, 0)).toBe(true);
-      expect(sequentHolds(table, 2, 1)).toBe(true);
-      expect(sequentHolds(table, 2, 2)).toBe(false); // FT — the counterexample
-      expect(sequentHolds(table, 2, 3)).toBe(true);
+      expect(
+        table.valuations.map((_row, i) =>
+          counterexampleHolds(table, i, "tautology", 2),
+        ),
+      ).toEqual([false, false, true, false]);
     }
   });
 
-  test("a valid argument's turnstile column is all T", () => {
+  test("a valid argument has no counterexample row", () => {
     const table = resolveTable(modusPonens);
     if (table !== null) {
       expect(
-        table.valuations.map((_row, i) => sequentHolds(table, 2, i)),
-      ).toEqual([true, true, true, true]);
+        table.valuations.map((_row, i) =>
+          counterexampleHolds(table, i, "tautology", 2),
+        ),
+      ).toEqual([false, false, false, false]);
     }
   });
 

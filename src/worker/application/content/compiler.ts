@@ -35,7 +35,6 @@ import { createMathCompiler, type MathFailure } from "./math";
 import type { ExerciseRegistry } from "./registry";
 import { createDefaultExerciseRegistry } from "./registry";
 
-export type { CompilerDiagnostic } from "./diagnostics";
 export { CONTENT_SANITIZE_SCHEMA } from "./markdown";
 
 export type CompileMarkdownResult =

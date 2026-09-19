@@ -437,7 +437,6 @@ function actorFor(user: User): AuthenticatedActor {
     createdAt: NOW,
     expiresAt: "2999-01-01T00:00:00.000Z",
     revokedAt: null,
-    lastSeenAt: null,
     frameAncestorOrigin: null,
   };
 

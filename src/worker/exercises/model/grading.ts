@@ -133,22 +133,6 @@ export function resolveModel(
 }
 
 /**
- * The seeded value for a field, or `""`.
- *
- * A locked given (`strictGivens`) is a requirement rather than a hint, so
- * grading substitutes it for whatever arrived: the field renders inert, and an
- * answer that disagrees with it has been tampered with rather than worked. The
- * original crashes the widget in that case (`Prelude.error "input not equal to
- * given"`); ignoring the submitted value grades the exercise that was set.
- */
-export function givenFor(
-  publicData: ModelPublicData,
-  label: string,
-): string | null {
-  return publicData.givens?.[label] ?? null;
-}
-
-/**
  * The rows a function's given fixes, keyed by argument tuple.
  *
  * A given for a function names the arguments it decides and leaves the rest to
@@ -201,6 +185,13 @@ function withFunctionGiven(
 
 /**
  * The model to grade: the student's fields, with any locked given put back.
+ *
+ * A locked given (`strictGivens`) is a requirement rather than a hint, so
+ * grading substitutes it for whatever arrived: the field renders inert, and
+ * an answer that disagrees with it has been tampered with rather than worked.
+ * The original crashes the widget in that case (`Prelude.error "input not
+ * equal to given"`); ignoring the submitted value grades the exercise that
+ * was set.
  *
  * The signature says which fields are functions, whose givens go back cell by
  * cell; pass the resolved one where it is already at hand rather than paying for

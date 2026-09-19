@@ -198,20 +198,6 @@ export interface AutomaticEvaluation {
   readonly status: AutomaticEvaluationStatus;
 }
 
-export interface RubricCriterionSpec {
-  readonly description: string;
-  readonly id: string;
-  readonly maxPoints: number;
-}
-
-export interface RubricSpec {
-  readonly criteria: readonly RubricCriterionSpec[];
-}
-
-export interface ManualGradingSpec {
-  readonly rubric?: RubricSpec;
-}
-
 export interface ComponentRegistryMetadata {
   readonly assetId: string;
   readonly capabilities: ExerciseCapabilities;

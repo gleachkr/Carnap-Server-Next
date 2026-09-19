@@ -337,9 +337,10 @@ export function formulaToString(
  * The language a truth-table exercise is set in, or `null` where its stored
  * data no longer names one.
  *
- * The mirror of the formula kit's reader (`exercise-kit/formula/`). `source` is the language's own text,
- * joined in from the document's systems table; `dialect` and the absence of
- * both fall back to what this type has always spoken.
+ * The mirror of the formula kit's reader (`exercise-kit/formula/`). `source`
+ * is the language's own text, joined in from the document's systems table;
+ * its absence — an artifact stored before the table had a `system=` — is
+ * what this type has always spoken.
  *
  * `null` means there is no language here, not that this one is unsuitable. A
  * predicate language is a perfectly good one to set a table in — `F(a)` and
@@ -348,10 +349,9 @@ export function formulaToString(
  * which construct it was.
  */
 export function truthTableLanguage(data: {
-  readonly dialect?: string;
   readonly source?: string;
 }): SurfaceLanguage | null {
   return data.source === undefined
-    ? languageById(data.dialect ?? PROP_LANGUAGE_ID)
+    ? languageById(PROP_LANGUAGE_ID)
     : languageFromSource(data.source);
 }

@@ -277,7 +277,7 @@ from public formulas, so submitted dimensions must match that layout.
 ## Implementation and tests
 
 - `logic/formula.ts`: language parsing, formula tree, and printing.
-- `logic/truth-table.ts`: atoms, valuations, evaluation, and table building.
+- `logic/truth-table.ts`: atoms, valuations, and evaluation.
 - `logic/layout.ts`: displayed parentheses and cells.
 - `types.ts`: public data, options, and answer contracts.
 - `grading.ts`: fill masks, correct grids, scores, and structural checks.

@@ -690,7 +690,7 @@ export function renderBootstrap(context: Context<AppBindings>): Response {
 
   return renderShell(
     context,
-    { showTitle: false, title },
+    { title },
     <Sheet title={title}>
       <p>
         {i18n.t(
