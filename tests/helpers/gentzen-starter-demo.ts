@@ -18,7 +18,7 @@ import { GENTZEN_CASES } from "./gentzen-cases";
  * `GENTZEN_CASES` that `scripts/gentzen-verify.ts` compiles + verifies against the
  * real engine, so the worked ones are guaranteed to check and can never drift.
  * Shared by the authoring compile-check test and the seed script
- * (`scripts/seed-gentzen-starter-demo.ts`).
+ * (`scripts/seed-demo.ts gentzen-starter`).
  */
 
 /** The engine-verified case with `name` starting with `prefix`. */

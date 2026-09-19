@@ -9,7 +9,7 @@
  * a starter-seeded rerun of the K combinator (the editor opens mid-proof).
  * Every goal is one of the engine-verified shapes in `prawitz-cases.ts`.
  * Shared by the authoring compile-check test and the local seed script
- * (`scripts/seed-prawitz-demo.ts`) so the two never drift.
+ * (`scripts/seed-demo.ts prawitz`) so the two never drift.
  */
 export const PRAWITZ_DEMO_SOURCE = `# Natural deduction — Prawitz trees
 

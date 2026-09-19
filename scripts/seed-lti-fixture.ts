@@ -49,6 +49,7 @@
  * than rejected as a duplicate, and an assignment already pointing at it is
  * left alone.
  */
+import { baseFlag, flag, LocalClient, pick } from "./lib/local-client";
 
 /**
  * A graded lesson with points on every exercise, which the fixture needs to be
@@ -123,17 +124,14 @@ const FIXTURES: Record<string, { readonly source: string }> = {
   homework1: { source: HOMEWORK1_SOURCE },
 };
 
-const args = process.argv.slice(2);
-const opt = (name: string, fallback: string): string => {
-  const hit = args.find((a) => a.startsWith(`${name}=`));
-  return hit ? hit.slice(name.length + 1) : fallback;
-};
-const COURSE = opt("--course", "");
-const ASSIGNMENT = opt("--assignment", "");
-const ITEM = opt("--item", "");
-const BASE = opt("--base", "http://localhost:8787").replace(/\/$/, "");
-const EMAIL = opt("--email", "teacher1@example.test");
-const FIXTURE = opt("--fixture", "homework1");
+const COURSE = flag("--course", "");
+const ASSIGNMENT = flag("--assignment", "");
+const ITEM = flag("--item", "");
+const FIXTURE = flag("--fixture", "homework1");
+const client = new LocalClient(
+  baseFlag(),
+  flag("--email", "teacher1@example.test"),
+);
 
 if (!COURSE || !ASSIGNMENT) {
   throw new Error(
@@ -149,117 +147,8 @@ if (FIXTURE_SOURCE === undefined) {
   );
 }
 
-/** Accumulated cookies (name → value) across the session. */
-const jar = new Map<string, string>();
-
-function absorb(response: Response): void {
-  for (const line of response.headers.getSetCookie?.() ?? []) {
-    const [pair] = line.split(";");
-    const eq = pair?.indexOf("=") ?? -1;
-    if (pair && eq > 0) {
-      jar.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim());
-    }
-  }
-}
-
-function cookieHeader(): string {
-  return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
-}
-
-async function login(): Promise<void> {
-  const start = await fetch(`${BASE}/login`, {
-    body: new URLSearchParams({ email: EMAIL, name: "LTI Fixture Seed" }),
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    method: "POST",
-    redirect: "manual",
-  });
-  absorb(start);
-  const html = await start.text();
-  const match = html.match(/href="([^"]*\/login\/confirm[^"]+)"/);
-
-  if (!match?.[1]) {
-    throw new Error(
-      `No local login-confirm link for ${EMAIL} (status ${start.status}). ` +
-        "Is the dev server running in local mode?",
-    );
-  }
-
-  const confirm = await fetch(
-    new URL(match[1].replace(/&amp;/g, "&"), BASE),
-    {
-      headers: { Cookie: cookieHeader() },
-      method: "GET",
-      redirect: "manual",
-    },
-  );
-  absorb(confirm);
-
-  if (!jar.has("carnap_session")) {
-    throw new Error(
-      `Login did not set a session cookie (status ${confirm.status}).`,
-    );
-  }
-}
-
-async function getJson(path: string): Promise<Record<string, unknown>> {
-  const response = await fetch(`${BASE}${path}`, {
-    headers: { Accept: "application/json", Cookie: cookieHeader() },
-    redirect: "manual",
-  });
-  absorb(response);
-  const text = await response.text();
-
-  if (response.status >= 300) {
-    throw new Error(
-      `GET ${path} → ${response.status}: ${text.slice(0, 400)}`,
-    );
-  }
-
-  return JSON.parse(text) as Record<string, unknown>;
-}
-
-async function postJson(
-  path: string,
-  body: unknown,
-): Promise<Record<string, unknown>> {
-  const response = await fetch(`${BASE}${path}`, {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
-      Cookie: cookieHeader(),
-      "X-CSRF-Token": jar.get("carnap_csrf") ?? "",
-    },
-    method: "POST",
-    redirect: "manual",
-  });
-  absorb(response);
-  const text = await response.text();
-
-  if (response.status >= 300) {
-    throw new Error(
-      `POST ${path} → ${response.status}: ${text.slice(0, 400)}`,
-    );
-  }
-
-  return text ? (JSON.parse(text) as Record<string, unknown>) : {};
-}
-
-function pick(object: Record<string, unknown>, ...keys: string[]): string {
-  let current: unknown = object;
-
-  for (const key of keys) {
-    current = (current as Record<string, unknown> | undefined)?.[key];
-  }
-
-  if (typeof current !== "string") {
-    throw new Error(`missing ${keys.join(".")} in ${JSON.stringify(object)}`);
-  }
-
-  return current;
-}
-
-await login();
-console.log(`Logged in as ${EMAIL}.`);
+await client.login();
+console.log(`Logged in as ${client.email}.`);
 
 // Reading the assignment renders its artifact, so a broken artifact takes this
 // endpoint down with it — the ordinary case for this script is the one where
@@ -270,7 +159,7 @@ let itemId = ITEM;
 let currentRevisionId = "";
 
 try {
-  const detail = await getJson(
+  const detail = await client.getJson(
     `/courses/${COURSE}/instructor/assignments/${ASSIGNMENT}`,
   );
   itemId = pick(detail, "contentItem", "id");
@@ -296,7 +185,7 @@ try {
 // (item_id, content_hash) is unique, so a second run with the same source is
 // refused rather than duplicated. Look before leaping: reusing the matching
 // revision is what makes this safe to run twice.
-const listing = await getJson(`/content/${itemId}`);
+const listing = await client.getJson(`/content/${itemId}`);
 const revisions = Array.isArray(listing.revisions) ? listing.revisions : [];
 const existing = revisions.find(
   (revision) =>
@@ -306,7 +195,7 @@ const existing = revisions.find(
 let revisionId: string;
 
 if (existing === undefined) {
-  const created = await postJson(`/content/${itemId}/revisions`, {
+  const created = await client.postJson(`/content/${itemId}/revisions`, {
     details: "Recompiled for the LTI acceptance fixture.",
     sourceText: FIXTURE_SOURCE,
   });
@@ -320,7 +209,7 @@ if (existing === undefined) {
 if (revisionId === currentRevisionId) {
   console.log("The assignment already points at it. Nothing to do.");
 } else {
-  await postJson(
+  await client.postJson(
     `/courses/${COURSE}/instructor/assignments/${ASSIGNMENT}/content-revision`,
     {
       contentRevisionId: revisionId,
@@ -332,8 +221,8 @@ if (revisionId === currentRevisionId) {
 
 console.log("\nOpen (as the local admin):");
 console.log(
-  `  Instructor: ${BASE}/courses/${COURSE}/instructor/assignments/${ASSIGNMENT}`,
+  `  Instructor: ${client.base}/courses/${COURSE}/instructor/assignments/${ASSIGNMENT}`,
 );
 console.log(
-  `  Student:    ${BASE}/courses/${COURSE}/assignments/${ASSIGNMENT}`,
+  `  Student:    ${client.base}/courses/${COURSE}/assignments/${ASSIGNMENT}`,
 );

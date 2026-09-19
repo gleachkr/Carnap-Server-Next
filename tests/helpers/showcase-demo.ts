@@ -6,7 +6,7 @@
  * truth-functional fragment in Carnap ascii notation).
  *
  * Shared by `tests/showcase-demo.test.ts` (which compiles it, so a directive that
- * changes shape breaks a test rather than a demo) and `scripts/seed-showcase-demo.ts`.
+ * changes shape breaks a test rather than a demo) and `scripts/seed-demo.ts showcase`.
  * The four worked proofs and the two playground starters are engine-verified by
  * `scripts/showcase-verify.ts`; the two Fitch exercises before the playgrounds
  * are deliberately unfinished.

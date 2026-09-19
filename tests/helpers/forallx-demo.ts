@@ -6,7 +6,7 @@
  * (∀E + →E), existential elimination (∃E), and one written in the ASCII the
  * book uses, since the theory is also the language its lines are read in.
  * Shared by the authoring
- * compile-check test and the local seed script (`scripts/seed-forallx-demo.ts`)
+ * compile-check test and the local seed script (`scripts/seed-demo.ts forallx`)
  * so the two never drift.
  */
 export const FORALLX_DEMO_SOURCE = `# Natural deduction — *forallx: Calgary*

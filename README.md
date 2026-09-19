@@ -174,17 +174,21 @@ are invoked directly with `bun run scripts/<name>.ts`.
 
 Seeding a running local server (`bun run dev`, signed in as the local
 `site_admin` through the passwordless flow) with a lesson, as a published
-practice assignment in a fresh course:
+practice assignment in a fresh course — or, with `--course=SUBSTRING`, in an
+existing one:
 
 | Script | Lesson |
 | --- | --- |
-| `seed-lesson.ts <path>` | any carnap-markdown file |
-| `seed-showcase-demo.ts` | every exercise type, each beside its source |
-| `seed-forallx-demo.ts` | forallx: Calgary Fitch proofs |
-| `seed-prawitz-demo.ts` | forallx natural deduction as Prawitz trees |
-| `seed-gentzen-demo.ts` | Gentzen LK sequent-calculus trees |
-| `seed-gentzen-starter-demo.ts` | the LK demo with starters, into an existing course |
+| `seed-lesson.ts --file=<path>` | any carnap-markdown file |
+| `seed-demo.ts showcase` | every exercise type, each beside its source |
+| `seed-demo.ts forallx` | forallx: Calgary Fitch proofs |
+| `seed-demo.ts prawitz` | forallx natural deduction as Prawitz trees |
+| `seed-demo.ts gentzen` | Gentzen LK sequent-calculus trees |
+| `seed-demo.ts gentzen-starter` | the LK demo with starters, into an existing course |
 | `seed-lti-fixture.ts` | re-author the LTI acceptance fixture's content |
+
+The HTTP client and the seeding sequence they share live in
+`scripts/lib/local-client.ts`.
 
 Engine batteries, which compile every worked proof in a suite with the real
 `@aufbau/compiler` and verify the result. They are typechecked with the rest

@@ -4,7 +4,7 @@
  * difficulty — a one-step ∀-left/∃-right, the ∃-monotonicity chain, excluded
  * middle under a quantifier, and ∃ distributing over ∨ (a branching proof with
  * two subtrees under ∨-left). Shared by the authoring compile-check test and the
- * local seed script (`scripts/seed-gentzen-demo.ts`) so the two never drift.
+ * local seed script (`scripts/seed-demo.ts gentzen`) so the two never drift.
  */
 export const GENTZEN_DEMO_SOURCE = `# Sequent calculus — Gentzen's *LK*
 

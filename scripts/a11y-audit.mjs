@@ -5,9 +5,10 @@
  * renders the page, so colour-contrast, target-size, the content iframe, open
  * shadow DOM, and post-hydration (enhanced) widget states all get audited.
  *
- * Node builtins only (Node >= 22 for global WebSocket) — same CDP approach as
- * the page-shot skill; nothing is installed for the driver. axe-core is read
- * from node_modules and injected into every frame.
+ * Builtins only (a global WebSocket) — same CDP approach as the page-shot
+ * skill; nothing is installed for the driver. axe-core is read from
+ * node_modules and injected into every frame. Run under `bun`, as the
+ * package.json entries do: the login comes from `lib/local-client.ts`.
  *
  * Prereqs: `bun run dev` (or `wrangler dev`) serving the base URL, and a login
  * account (defaults to the local site_admin used for screenshots).
@@ -44,6 +45,7 @@ import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { LocalClient } from "./lib/local-client";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BASELINE_PATH = join(
@@ -110,26 +112,6 @@ class CDP {
   }
 }
 
-/** Passwordless local login: POST /login, pull the dev confirm link. */
-async function loginConfirmPath() {
-  const response = await fetch(`${BASE}/login`, {
-    body: new URLSearchParams({ email: EMAIL }),
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    method: "POST",
-    redirect: "manual",
-  });
-  const html = await response.text();
-  const match = html.match(/href="([^"]*\/login\/confirm[^"]+)"/);
-  if (!match) {
-    throw new Error(
-      `Could not find a local login-confirm link for ${EMAIL}. Is the dev ` +
-        `server in local mode? (status ${response.status})`,
-    );
-  }
-  const url = new URL(match[1], BASE);
-  return `${url.pathname}${url.search}`;
-}
-
 function flattenTarget(target) {
   return Array.isArray(target)
     ? target.map(flattenTarget).join(" ")
@@ -166,7 +148,9 @@ function normalizeRoute(route) {
 }
 
 async function main() {
-  const confirmPath = await loginConfirmPath();
+  // The browser has to follow the confirm link itself, so the cookies land
+  // in its jar rather than ours.
+  const confirmPath = await new LocalClient(BASE, EMAIL).loginConfirmPath();
 
   const chrome = spawn(
     CHROME,
