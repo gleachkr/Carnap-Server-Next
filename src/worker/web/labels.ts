@@ -4,6 +4,7 @@ import type {
   AssessmentMode,
   AssignmentState,
   GradesVisibility,
+  LatePolicyKind,
 } from "../domain/assignments";
 import type { CourseRole, MembershipStatus } from "../domain/courses";
 import type { ExternalIdentityProvider } from "../domain/users";
@@ -213,6 +214,24 @@ export function capabilityLabel(
   }
 }
 
+/**
+ * The late-policy kinds as the instructor's form offers them: what happens to
+ * work that arrives after the due date.
+ */
+export function latePolicyKindLabel(
+  i18n: Translator,
+  kind: LatePolicyKind,
+): string {
+  switch (kind) {
+    case "none":
+      return i18n.t("No late penalty");
+    case "percent_once_after_due":
+      return i18n.t("Percent once after due");
+    case "percent_per_day":
+      return i18n.t("Percent per day late");
+  }
+}
+
 export function identityProviderLabel(
   i18n: Translator,
   provider: ExternalIdentityProvider,
@@ -262,6 +281,21 @@ export const MEMBERSHIP_STATUS_ORDER: readonly MembershipStatus[] = [
   "dropped",
 ];
 
+/** No penalty first — the form's default — then the two shapes of one. */
+export const LATE_POLICY_KIND_ORDER: readonly LatePolicyKind[] = [
+  "none",
+  "percent_once_after_due",
+  "percent_per_day",
+];
+
+/** Least to most sweeping, as with the course roles. */
+export const PLATFORM_CAPABILITY_ORDER: readonly PlatformCapability[] = [
+  "content_author",
+  "course_creator",
+  "support_operator",
+  "site_admin",
+];
+
 export interface SelectOption {
   readonly label: string;
   readonly value: string;
@@ -298,5 +332,21 @@ export function membershipStatusOptions(
   return MEMBERSHIP_STATUS_ORDER.map((status) => ({
     label: membershipStatusLabel(i18n, status),
     value: status,
+  }));
+}
+
+export function latePolicyKindOptions(
+  i18n: Translator,
+): readonly SelectOption[] {
+  return LATE_POLICY_KIND_ORDER.map((kind) => ({
+    label: latePolicyKindLabel(i18n, kind),
+    value: kind,
+  }));
+}
+
+export function capabilityOptions(i18n: Translator): readonly SelectOption[] {
+  return PLATFORM_CAPABILITY_ORDER.map((capability) => ({
+    label: capabilityLabel(i18n, capability),
+    value: capability,
   }));
 }

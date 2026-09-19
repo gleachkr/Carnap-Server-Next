@@ -473,12 +473,20 @@ export class SubmissionService {
     };
   }
 
+  /**
+   * The attempt's submissions, one entry each, for the student who made them.
+   *
+   * `i18n` is what each entry's `answerReview` is rendered in; `null` renders
+   * none (every `answerReview` is null). A review is an element built per
+   * submission, and the attempt page, which wants only the verdicts to seed
+   * its runtime, was building one per exercise on every load to throw away.
+   */
   async listForStudentAttempt(
     actor: AuthenticatedActor,
     courseId: AppId,
     assignmentId: AppId,
     attemptId: AppId,
-    i18n: Translator,
+    i18n: Translator | null,
   ): Promise<SubmissionHistoryEntry[]> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
@@ -682,7 +690,7 @@ export class SubmissionService {
   private async historyForAttempt(
     attemptId: AppId,
     audience: ExerciseReviewAudience,
-    i18n: Translator,
+    i18n: Translator | null,
     preferEffective = false,
   ): Promise<SubmissionHistoryEntry[]> {
     const attempt =
@@ -725,13 +733,16 @@ export class SubmissionService {
           this.evaluationSealed(assignment, declaration, now);
 
         return {
-          answerReview: this.answerReviewForSubmission(
-            submission,
-            declarations,
-            audience,
-            i18n,
-            !sealed,
-          ),
+          answerReview:
+            i18n === null
+              ? null
+              : this.answerReviewForSubmission(
+                  submission,
+                  declarations,
+                  audience,
+                  i18n,
+                  !sealed,
+                ),
           attemptId,
           evaluation:
             audience === "instructor"

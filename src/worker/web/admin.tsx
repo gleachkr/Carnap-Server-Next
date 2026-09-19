@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import type { FC } from "hono/jsx";
-
+import type { UserDirectory } from "../application/users";
 import type {
   AdminAuditEvent,
   AdminGlobalStats,
@@ -25,13 +25,14 @@ import {
 } from "./components";
 import {
   capabilityLabel,
+  capabilityOptions,
   courseRoleOptions,
   identityProviderLabel,
   membershipStatusOptions,
   type SelectOption,
 } from "./labels";
 import { renderShell, useI18n } from "./layout";
-import { type UserDirectory, userDisplayName } from "./users";
+import { userDisplayName } from "./users";
 
 const SelectOptions: FC<{
   readonly options: readonly SelectOption[];
@@ -141,18 +142,10 @@ const CapabilityGrantBar: FC<{
       submitLabel={i18n.t("Grant capability")}
     >
       <select aria-label={i18n.t("Capability")} name="capability" required>
-        <option value="content_author">
-          {capabilityLabel(i18n, "content_author")}
-        </option>
-        <option value="course_creator">
-          {capabilityLabel(i18n, "course_creator")}
-        </option>
-        <option value="support_operator">
-          {capabilityLabel(i18n, "support_operator")}
-        </option>
-        <option value="site_admin">
-          {capabilityLabel(i18n, "site_admin")}
-        </option>
+        <SelectOptions
+          options={capabilityOptions(i18n)}
+          selected="content_author"
+        />
       </select>
     </CreateBar>
   );

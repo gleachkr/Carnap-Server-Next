@@ -2448,7 +2448,7 @@ msgstr "Es wurden noch keine Einschreibelinks angelegt."
 msgid "No external identities."
 msgstr "Keine externen Identitäten."
 
-#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
 msgid "No late penalty"
 msgstr "Kein Verspätungsabzug"
 
@@ -2749,7 +2749,7 @@ msgstr "Tragen Sie diese Carnap-Endpunkte im LMS ein, wenn Sie das externe Werkz
 msgid "Per-student overrides and the late policy for this assignment."
 msgstr "Abweichungen einzelner Studierender und die Verspätungsregel dieser Aufgabe."
 
-#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
 msgid "Percent once after due"
 msgstr "Einmaliger Prozentabzug nach Fristende"
 
@@ -2757,7 +2757,7 @@ msgstr "Einmaliger Prozentabzug nach Fristende"
 msgid "Percent penalty"
 msgstr "Abzug in Prozent"
 
-#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
 msgid "Percent per day late"
 msgstr "Prozentabzug pro Verspätungstag"
 

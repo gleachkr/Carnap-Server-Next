@@ -1,5 +1,9 @@
 import type { Attempt } from "../domain/assessment";
-import type { Assignment, AssignmentOverride } from "../domain/assignments";
+import {
+  type Assignment,
+  type AssignmentOverride,
+  assignmentAvailability,
+} from "../domain/assignments";
 import type { CourseAccommodation } from "../domain/courses";
 import type { Timestamp } from "../domain/time";
 
@@ -161,14 +165,11 @@ export function effectiveAssignmentPolicy(
     reasons.push("assignment_draft");
   }
 
-  if (assignment.availableFrom !== null && assignment.availableFrom > now) {
-    reasons.push("before_available_from");
-  }
+  const availability = assignmentAvailability(assignment, now);
 
-  if (
-    assignment.availableUntil !== null &&
-    assignment.availableUntil <= now
-  ) {
+  if (availability === "upcoming") {
+    reasons.push("before_available_from");
+  } else if (availability === "closed") {
     reasons.push("assignment_closed");
   }
 
@@ -227,14 +228,11 @@ export function effectiveSubmissionPolicy(
     reasons.push("assignment_draft");
   }
 
-  if (assignment.availableFrom !== null && assignment.availableFrom > now) {
-    reasons.push("before_available_from");
-  }
+  const availability = assignmentAvailability(assignment, now);
 
-  if (
-    assignment.availableUntil !== null &&
-    assignment.availableUntil <= now
-  ) {
+  if (availability === "upcoming") {
+    reasons.push("before_available_from");
+  } else if (availability === "closed") {
     reasons.push("assignment_closed");
   }
 

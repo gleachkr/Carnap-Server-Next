@@ -112,11 +112,13 @@ a[data-footnote-backref]:focus-visible {
   text-decoration: underline;
 }
 
+/* The same gold as the shell's noscript banner, and drawn from the same
+   tokens, so it follows the palette into dark like everything else here. */
 .content-noscript {
-  background: #fff4d6;
-  border: 1px solid #d9b45a;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
   border-radius: 0.5rem;
-  color: #6b4e00;
+  color: var(--gold);
   margin: 0 0 1rem;
   padding: 0.75rem 1rem;
 }

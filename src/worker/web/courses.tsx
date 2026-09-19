@@ -3,6 +3,7 @@ import type { FC } from "hono/jsx";
 
 import type { GradeSyncFailure } from "../application/grade-passback";
 import type { StudentScorecardEntry } from "../application/gradebook";
+import type { UserDirectory } from "../application/users";
 import type { Assignment } from "../domain/assignments";
 import type {
   Course,
@@ -50,7 +51,7 @@ import {
 } from "./labels";
 import { renderShell, useI18n } from "./layout";
 import { SortHeader, sortRank } from "./table-sort";
-import { type UserDirectory, UserLabel, userDisplayName } from "./users";
+import { UserLabel, userDisplayName } from "./users";
 
 const DEFAULT_TIMEZONE = "UTC";
 const FALLBACK_TIMEZONES = [
@@ -1581,7 +1582,7 @@ export function renderCourseDetail(
               title={i18n.t("Enrollment links")}
             >
               {model.newEnrollmentLinkUrl === null ? null : (
-                <div class="notice" role="status">
+                <Notice>
                   <p>
                     {i18n.t(
                       "Enrollment link created. Copy it now — for security it is not stored and cannot be shown again.",
@@ -1591,7 +1592,7 @@ export function renderCourseDetail(
                     id="new-enrollment-link"
                     value={model.newEnrollmentLinkUrl}
                   />
-                </div>
+                </Notice>
               )}
               <EnrollmentLinksTable
                 context={context}

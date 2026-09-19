@@ -21,13 +21,9 @@ function pageWith(evaluation: unknown): string {
   const state = {
     exercises: {
       q1: {
-        answerReview: null,
         evaluation,
         submission: {
-          answer: {},
-          answerKind: "multiple-choice-answer@1",
           exerciseId: "q1",
-          id: "sub-1",
           submittedAt: "2026-08-07T12:00:00.000Z",
         },
       },

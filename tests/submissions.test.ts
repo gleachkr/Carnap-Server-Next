@@ -74,6 +74,7 @@ interface SubmissionResponse {
     readonly declarationHash: string;
     readonly exerciseId: string;
     readonly id: string;
+    readonly submittedAt: string;
     readonly userId: string;
   };
 }
@@ -709,16 +710,20 @@ theorem mp (a b: wff): $ (a → b) , a ⊢ b $
 
       expect(pageResponse.status).toBe(200);
       expect(stateJson).toBeDefined();
-      expect(JSON.parse(stateJson ?? "{}")).toMatchObject({
+      // Exactly what the runtime reads: the verdict and numbers, and when the
+      // work went in. Not the answer, its kind or its review — those are the
+      // submissions endpoint's, and the answer is in the hydration payload.
+      expect(JSON.parse(stateJson ?? "{}")).toEqual({
         exercises: {
           q1: {
             evaluation: {
               maxScore: 2,
               score: 2,
+              verdict: "correct",
             },
             submission: {
               exerciseId: "q1",
-              id: submission.submission.id,
+              submittedAt: submission.submission.submittedAt,
             },
           },
         },

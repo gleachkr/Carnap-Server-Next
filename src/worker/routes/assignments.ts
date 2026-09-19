@@ -16,6 +16,7 @@ import { CourseService } from "../application/courses";
 import { AppHttpError, badRequest } from "../application/errors";
 import { ManualGradingService } from "../application/manual-grading";
 import {
+  type AttemptActivity,
   attemptActivity,
   type EffectiveAssignmentPolicy,
   effectiveAssignmentPolicy,
@@ -24,6 +25,7 @@ import {
   type SubmissionHistoryEntry,
   SubmissionService,
 } from "../application/submissions";
+import { resolveUsers } from "../application/users";
 import {
   type Attempt,
   type Submission,
@@ -57,7 +59,6 @@ import { storesForContext } from "../stores";
 import {
   type AssignmentDetail,
   type AssignmentRevisionOption,
-  activeAttemptFor,
   editAssignmentAction,
   type InlineSubmissionContext,
   type InstructorSubmissionReviewEntry,
@@ -81,7 +82,6 @@ import {
   redirect,
   wantsHtml,
 } from "../web/html";
-import { resolveUsers } from "../web/users";
 
 interface CreateAssignmentBody {
   readonly availableFrom?: unknown;
@@ -1260,8 +1260,8 @@ async function excuseAssignmentExercise(
 }
 
 interface StudentAssignmentView {
+  readonly activity: AttemptActivity;
   readonly attempts: readonly Attempt[];
-  readonly attemptsUsed: number;
   readonly detail: AssignmentDetail;
   readonly policy: EffectiveAssignmentPolicy;
   readonly showWorkView: boolean;
@@ -1310,14 +1310,16 @@ async function loadStudentAssignmentView(
       : practiceAttempt === null
         ? []
         : [practiceAttempt];
-  const activeAttempt = activeAttemptFor(attempts);
-  const showWorkView = activeAttempt !== null;
   // `detail.assignment` is already this student's own (getForStudent applies
   // their override and accommodation), so the policy computed from it is the
   // one the begin-attempt route will enforce — which is what lets the briefing
-  // stop offering a button that would be refused.
+  // stop offering a button that would be refused. The open attempt is the
+  // policy's too: one whose clock has run out is not open, whatever its row
+  // still says.
   const now = timestampNow(new Date());
   const activity = attemptActivity(attempts, now);
+  const activeAttempt = activity.activeAttempt;
+  const showWorkView = activeAttempt !== null;
   const policy = effectiveAssignmentPolicy(detail.assignment, attempts, now);
   const runtimeState =
     activeAttempt === null
@@ -1328,7 +1330,7 @@ async function loadStudentAssignmentView(
             courseId,
             assignmentId,
             activeAttempt.id,
-            context.get("i18n"),
+            null,
           ),
         );
   const submissionContext =
@@ -1369,8 +1371,8 @@ async function loadStudentAssignmentView(
         };
 
   return {
+    activity,
     attempts,
-    attemptsUsed: activity.attemptsUsed,
     detail,
     policy,
     showWorkView,
@@ -1400,8 +1402,8 @@ async function studentDetailPage(
 
   return renderStudentAssignmentPage(context, {
     assignmentId,
+    activity: view.activity,
     attempts: view.attempts,
-    attemptsUsed: view.attemptsUsed,
     courseId,
     courseTitle: await courseTitleFor(context, courseId),
     detail: view.detail,
@@ -1465,8 +1467,8 @@ async function attemptGatePage(
 
   return renderAttemptGatePage(context, {
     assignmentId,
+    activity: view.activity,
     attempts: view.attempts,
-    attemptsUsed: view.attemptsUsed,
     courseId,
     detail: view.detail,
     policy: view.policy,
@@ -1712,7 +1714,7 @@ async function instructorDetailPage(
     (membership) => membership.role === "student",
   );
   const directory = await resolveUsers(
-    context,
+    storesForContext(context),
     students.map((membership) => membership.userId),
   );
 
@@ -1739,6 +1741,7 @@ async function instructorDetailPage(
     notices: instructorNotices(context.get("i18n"))
       .filter((entry) => url.searchParams.has(entry.param))
       .map((entry) => entry.message),
+    now: timestampNow(new Date()),
     overrides,
     revisions,
     students,
@@ -1773,7 +1776,7 @@ async function instructorSubmissionReviewEntries(
   entries: readonly SubmissionHistoryEntry[],
 ): Promise<InstructorSubmissionReviewEntry[]> {
   const directory = await resolveUsers(
-    context,
+    storesForContext(context),
     entries.map((entry) => entry.submission.userId),
   );
 
@@ -1875,7 +1878,7 @@ async function listInstructorAttempts(
       courseId,
       courseTitle: await courseTitleFor(context, courseId),
       directory: await resolveUsers(
-        context,
+        storesForContext(context),
         attempts.map((attempt) => attempt.userId),
       ),
       staffTier: await staffTierFor(context, actor, courseId),

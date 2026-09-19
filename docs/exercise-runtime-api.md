@@ -113,13 +113,10 @@ An active attempt includes one JSON bootstrap for all its exercises:
   "exercises": {
     "q1": {
       "submission": {
-        "id": "sub_123",
         "exerciseId": "q1",
-        "answerKind": "multiple-choice-answer@1",
         "submittedAt": "2026-07-07T12:34:56.000Z"
       },
-      "evaluation": null,
-      "answerReview": { "summary": "Yes" }
+      "evaluation": { "score": null, "maxScore": null, "verdict": "correct" }
     }
   }
 }
@@ -129,7 +126,9 @@ An active attempt includes one JSON bootstrap for all its exercises:
 The map is keyed by stable exercise ID and contains the latest submission in
 the active attempt. An absent ID means no submission in that attempt.
 Evaluation data is filtered for the viewer; it may be absent or have numeric
-scores withheld.
+scores withheld. The bootstrap carries only what the runtime reads — when the
+work went in, and its verdict and numbers — not the answer itself or its
+review; those are the submissions endpoint's.
 
 This is display state, not authorization. The server checks each new request
 against current policy.

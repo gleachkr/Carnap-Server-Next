@@ -2,7 +2,11 @@ import type { Context } from "hono";
 import type { FC } from "hono/jsx";
 
 import type { StudentScorecardEntry } from "../application/gradebook";
-import type { Assignment } from "../domain/assignments";
+import {
+  type Assignment,
+  type AssignmentAvailability,
+  assignmentAvailability,
+} from "../domain/assignments";
 import type { Timestamp } from "../domain/time";
 import type { AppBindings } from "../http";
 import { splitAtValue, VALUE } from "../i18n/translator";
@@ -89,33 +93,6 @@ const ScoreCell: FC<{
   );
 };
 
-type AvailabilityState = "closed" | "open" | "upcoming";
-
-/**
- * Where an assignment sits in its availability window relative to now: "upcoming"
- * before its start date, "closed" past its hard cutoff, or "open" in between (or
- * with no window at all). Only "open" assignments are reachable — the detail page
- * stays gated before an assignment opens and after it closes — so upcoming and
- * closed rows render their title as plain text rather than a dead link.
- */
-function availabilityState(
-  assignment: Assignment,
-  now: Timestamp,
-): AvailabilityState {
-  if (assignment.availableFrom !== null && assignment.availableFrom > now) {
-    return "upcoming";
-  }
-
-  if (
-    assignment.availableUntil !== null &&
-    assignment.availableUntil <= now
-  ) {
-    return "closed";
-  }
-
-  return "open";
-}
-
 /**
  * A student's availability cell: "Opens <date>" for upcoming work, "Closed
  * <date>" for work past its cutoff (which lingers, greyed, for reference),
@@ -124,7 +101,7 @@ function availabilityState(
  */
 const AvailabilityCell: FC<{
   readonly assignment: Assignment;
-  readonly state: AvailabilityState;
+  readonly state: AssignmentAvailability;
 }> = ({ assignment, state }) => {
   const i18n = useI18n();
 
@@ -196,7 +173,11 @@ const AssignmentRow: FC<{
   const href = instructor
     ? `/courses/${courseId}/instructor/assignments/${assignment.id}`
     : `/courses/${courseId}/assignments/${assignment.id}`;
-  const state = availabilityState(assignment, now);
+  // Only "open" assignments are reachable — the detail page stays gated
+  // before an assignment opens and after it closes, by the same reading of
+  // the window — so upcoming and closed rows render their title as plain
+  // text rather than a dead link.
+  const state = assignmentAvailability(assignment, now);
   // Instructors always link through; for students only open assignments are
   // reachable, and closed ones linger greyed out for reference.
   const linked = instructor || state === "open";
@@ -319,7 +300,7 @@ function statusSortValue(assignment: Assignment): string {
 }
 
 /** Open work first, then what is yet to open, then what is over. */
-const AVAILABILITY_ORDER: readonly AvailabilityState[] = [
+const AVAILABILITY_ORDER: readonly AssignmentAvailability[] = [
   "open",
   "upcoming",
   "closed",

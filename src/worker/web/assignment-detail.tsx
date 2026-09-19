@@ -9,8 +9,12 @@ import {
   renderCompiledContent,
 } from "../application/content/renderer";
 import { renderTheoryPanel } from "../application/content/theory-panel";
-import type { EffectiveAssignmentPolicy } from "../application/policies";
+import type {
+  AttemptActivity,
+  EffectiveAssignmentPolicy,
+} from "../application/policies";
 import type { SubmissionHistoryEntry } from "../application/submissions";
+import type { UserDirectory } from "../application/users";
 import {
   type Attempt,
   type EvaluationVerdict,
@@ -19,12 +23,14 @@ import {
   submissionNeedsReview,
   type ViewerEvaluation,
 } from "../domain/assessment";
-import type {
-  Assignment,
-  AssignmentContentVersion,
-  AssignmentExerciseExcuse,
-  AssignmentLatePolicy,
-  AssignmentOverride,
+import {
+  type Assignment,
+  type AssignmentContentVersion,
+  type AssignmentExerciseExcuse,
+  type AssignmentLatePolicy,
+  type AssignmentOverride,
+  assignmentAvailability,
+  gradesReleased,
 } from "../domain/assignments";
 import type {
   CompiledContentArtifact,
@@ -36,6 +42,7 @@ import type {
 } from "../domain/content";
 import type { CourseMembership, CourseStaffTier } from "../domain/courses";
 import type { JsonValue } from "../domain/json";
+import type { Timestamp } from "../domain/time";
 import type { User } from "../domain/users";
 import { exerciseActionsHtml } from "../exercise-kit/actions";
 import { exerciseGroupLabel } from "../exercise-kit/group";
@@ -90,6 +97,7 @@ import {
   attemptStatusLabel,
   evaluatorKindLabel,
   gradesVisibilityOptions,
+  latePolicyKindOptions,
   type ReviewState,
   reviewStateLabel,
 } from "./labels";
@@ -107,11 +115,7 @@ import {
   reviewUiStrings,
   uiStringsScript,
 } from "./ui-strings";
-import {
-  type UserDirectory,
-  userDisplayMeta,
-  userDisplayName,
-} from "./users";
+import { userDisplayMeta, userDisplayName } from "./users";
 
 /** The types, for the forms: which element a node gets, and what it posts as. */
 const exercises = createDefaultExerciseRegistry();
@@ -170,14 +174,20 @@ interface RuntimeEvaluation {
   readonly verdict: EvaluationVerdict;
 }
 
+/**
+ * An exercise's latest submission in the open attempt, as the page needs it:
+ * the answer seeds the widget's hydration, the rest draws the status line and
+ * the correctness mark. Only the rest goes to the browser as runtime state
+ * (`exerciseRuntimeStateScript`); the answer is already in the widget's own
+ * payload, and the submission id, answer kind and rendered review this once
+ * carried too were read by nothing — the review was being rendered, per
+ * submission, on every load of the page to be thrown away.
+ */
 interface ExerciseRuntimeSubmissionState {
-  readonly answerReview: ExerciseAnswerReview | null;
   readonly evaluation: RuntimeEvaluation | null;
   readonly submission: {
     readonly answer: JsonValue;
-    readonly answerKind: string | null;
     readonly exerciseId: string;
-    readonly id: string;
     readonly submittedAt: string;
   };
 }
@@ -234,14 +244,11 @@ function publicRuntimeSubmissionState(
   }
 
   return {
-    answerReview: entry.answerReview,
     evaluation:
       entry.evaluation === null ? null : runtimeEvaluation(entry.evaluation),
     submission: {
       answer: entry.submission.answer,
-      answerKind: entry.submission.answerKind,
       exerciseId,
-      id: entry.submission.id,
       submittedAt: entry.submission.submittedAt,
     },
   };
@@ -261,12 +268,6 @@ export function latestExerciseRuntimeState(
   }
 
   return state;
-}
-
-export function activeAttemptFor(
-  attempts: readonly Attempt[],
-): Attempt | null {
-  return attempts.find((attempt) => attempt.status === "active") ?? null;
 }
 
 export function editAssignmentAction(
@@ -608,12 +609,26 @@ const AssignmentForm: FC<{
   );
 };
 
+/**
+ * The runtime's bootstrap: what `assignment-scripts.ts` reads for each
+ * exercise, and nothing else — see docs/exercise-runtime-api.md.
+ */
 function exerciseRuntimeStateScript(state: ExerciseRuntimeState): string {
+  const exercises = Object.fromEntries(
+    Object.entries(state).map(([exerciseId, entry]) => [
+      exerciseId,
+      {
+        evaluation: entry.evaluation,
+        submission: {
+          exerciseId: entry.submission.exerciseId,
+          submittedAt: entry.submission.submittedAt,
+        },
+      },
+    ]),
+  );
+
   return `<script type="application/json" data-carnap-exercise-runtime-state>${jsonScriptContent(
-    {
-      exercises: state,
-      version: 1,
-    },
+    { exercises, version: 1 },
   )}</script>`;
 }
 
@@ -1105,12 +1120,12 @@ function attemptRefusalText(
 const StudentAttemptPanel: FC<{
   /** Where "Start attempt" posts — which decides where it comes back to. */
   readonly action: string;
+  readonly activity: AttemptActivity;
   readonly attempts: readonly Attempt[];
   readonly context: Context<AppBindings>;
   readonly policy: EffectiveAssignmentPolicy;
-}> = ({ action, attempts, context, policy }) => {
+}> = ({ action, activity, attempts, context, policy }) => {
   const i18n = useI18n();
-  const activeAttempt = activeAttemptFor(attempts);
 
   return (
     <>
@@ -1126,7 +1141,7 @@ const StudentAttemptPanel: FC<{
           ))}
         </ol>
       )}
-      {activeAttempt !== null ? (
+      {activity.activeAttempt !== null ? (
         <p>{i18n.t("Use the exercise controls above to submit answers.")}</p>
       ) : policy.canBegin ? (
         <form action={action} method="post">
@@ -1152,21 +1167,15 @@ const StudentAttemptPanel: FC<{
  */
 const AttemptBriefing: FC<{
   readonly action: string;
+  /** Which attempt is open now and how many have been used — the policy's
+   *  own reading of `attempts`, so the panel and the button agree on it. */
+  readonly activity: AttemptActivity;
   readonly assignment: Assignment;
   readonly attempts: readonly Attempt[];
-  readonly attemptsUsed: number;
   readonly context: Context<AppBindings>;
   readonly policy: EffectiveAssignmentPolicy;
   readonly title: string;
-}> = ({
-  action,
-  assignment,
-  attempts,
-  attemptsUsed,
-  context,
-  policy,
-  title,
-}) => {
+}> = ({ action, activity, assignment, attempts, context, policy, title }) => {
   const i18n = useI18n();
 
   return (
@@ -1176,7 +1185,11 @@ const AttemptBriefing: FC<{
       )}
       summary={
         <SummaryStrip
-          items={attemptBriefingItems(i18n, assignment, attemptsUsed)}
+          items={attemptBriefingItems(
+            i18n,
+            assignment,
+            activity.attemptsUsed,
+          )}
         />
       }
       title={title}
@@ -1186,6 +1199,7 @@ const AttemptBriefing: FC<{
       )}
       <StudentAttemptPanel
         action={action}
+        activity={activity}
         attempts={attempts}
         context={context}
         policy={policy}
@@ -1213,9 +1227,9 @@ const AttemptBriefing: FC<{
 export function renderAttemptGatePage(
   context: Context<AppBindings>,
   model: {
+    readonly activity: AttemptActivity;
     readonly assignmentId: string;
     readonly attempts: readonly Attempt[];
-    readonly attemptsUsed: number;
     readonly courseId: string;
     readonly detail: AssignmentDetail;
     readonly policy: EffectiveAssignmentPolicy;
@@ -1228,9 +1242,9 @@ export function renderAttemptGatePage(
     { chromeless: true, title: assignment.title },
     <AttemptBriefing
       action={`/courses/${model.courseId}/assignments/${model.assignmentId}/start`}
+      activity={model.activity}
       assignment={assignment}
       attempts={model.attempts}
-      attemptsUsed={model.attemptsUsed}
       context={context}
       policy={model.policy}
       // The assignment's own name, since there is no breadcrumb above it to say
@@ -1531,21 +1545,11 @@ const LatePolicyForm: FC<{
           {i18n.t("Assignment late policy")}
           <br />
           <select name="kind" required>
-            <option selected={kind === "none"} value="none">
-              {i18n.t("No late penalty")}
-            </option>
-            <option
-              selected={kind === "percent_once_after_due"}
-              value="percent_once_after_due"
-            >
-              {i18n.t("Percent once after due")}
-            </option>
-            <option
-              selected={kind === "percent_per_day"}
-              value="percent_per_day"
-            >
-              {i18n.t("Percent per day late")}
-            </option>
+            {latePolicyKindOptions(i18n).map((option) => (
+              <option selected={option.value === kind} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </label>
         <label>
@@ -2385,9 +2389,9 @@ export function renderEditAssignmentPage(
 export function renderStudentAssignmentPage(
   context: Context<AppBindings>,
   model: {
+    readonly activity: AttemptActivity;
     readonly assignmentId: string;
     readonly attempts: readonly Attempt[];
-    readonly attemptsUsed: number;
     readonly courseId: string;
     readonly courseTitle: string;
     readonly detail: AssignmentDetail;
@@ -2461,9 +2465,9 @@ export function renderStudentAssignmentPage(
       {showAttemptPanel ? (
         <AttemptBriefing
           action={`/courses/${model.courseId}/assignments/${model.assignmentId}/attempts`}
+          activity={model.activity}
           assignment={detail.assignment}
           attempts={model.attempts}
-          attemptsUsed={model.attemptsUsed}
           context={context}
           policy={model.policy}
           title={i18n.t("Before you start")}
@@ -2492,7 +2496,8 @@ const GradeReleaseButtons: FC<{
   readonly assignment: Assignment;
   readonly context: Context<AppBindings>;
   readonly courseId: string;
-}> = ({ assignment, context, courseId }) => {
+  readonly now: Timestamp;
+}> = ({ assignment, context, courseId, now }) => {
   const i18n = useI18n();
   const action = `/courses/${courseId}/instructor/assignments/${assignment.id}/grade-visibility`;
   const form = (intent: "release" | "hide", label: string) => (
@@ -2502,19 +2507,16 @@ const GradeReleaseButtons: FC<{
       <button type="submit">{label}</button>
     </form>
   );
-  const now = new Date().toISOString();
-  const visibleAt = assignment.gradesVisibleAt;
-  const stillOpen =
-    assignment.availableUntil === null || assignment.availableUntil > now;
-  const openWarning = stillOpen ? (
-    <p class="notice">
-      {i18n.t(
-        "Submissions are still open. Releasing grades now lets students keep working with feedback the others did not have.",
-      )}
-    </p>
-  ) : null;
+  const openWarning =
+    assignmentAvailability(assignment, now) === "closed" ? null : (
+      <Notice tone="warn">
+        {i18n.t(
+          "Submissions are still open. Releasing grades now lets students keep working with feedback the others did not have.",
+        )}
+      </Notice>
+    );
 
-  if (visibleAt === null) {
+  if (assignment.gradesVisibleAt === null) {
     return (
       <>
         {openWarning}
@@ -2523,7 +2525,7 @@ const GradeReleaseButtons: FC<{
     );
   }
 
-  if (visibleAt <= now) {
+  if (gradesReleased(assignment, now)) {
     return form("hide", i18n.t("Hide grades"));
   }
 
@@ -2547,6 +2549,9 @@ export function renderInstructorAssignmentPage(
     readonly gradedWorkExists: boolean;
     readonly latePolicy: AssignmentLatePolicy | null;
     readonly notices: readonly string[];
+    /** The request's clock — what the release controls read the window and
+     *  the release date against, so the view keeps none of its own. */
+    readonly now: Timestamp;
     readonly overrides: ReadonlyMap<string, AssignmentOverride>;
     readonly revisions: readonly AssignmentRevisionOption[];
     readonly students: readonly CourseMembership[];
@@ -2591,6 +2596,7 @@ export function renderInstructorAssignmentPage(
               assignment={assignment}
               context={context}
               courseId={courseId}
+              now={model.now}
             />
           ) : null}
           <form action={`${gradingBase}/unpublish`} method="post">

@@ -5,6 +5,7 @@ import { CourseService } from "../application/courses";
 import { AppHttpError, badRequest } from "../application/errors";
 import { GradePassbackService } from "../application/grade-passback";
 import { GradebookService } from "../application/gradebook";
+import { resolveUsers } from "../application/users";
 import {
   type Course,
   type CourseAccommodation,
@@ -36,7 +37,6 @@ import {
   redirect,
   wantsHtml,
 } from "../web/html";
-import { resolveUsers } from "../web/users";
 import { ltiServiceForContext } from "./lti";
 
 interface CreateCourseBody {
@@ -416,7 +416,7 @@ async function courseDetailPage(
         }).listFailedJobs(actor, detail.course.id)
       : [];
 
-    const directory = await resolveUsers(context, [
+    const directory = await resolveUsers(storesForContext(context), [
       detail.course.createdById,
       ...detail.memberships.map((membership) => membership.userId),
     ]);

@@ -6,6 +6,7 @@ import {
   type SupportMembershipCommand,
 } from "../application/admin";
 import { AppHttpError, badRequest } from "../application/errors";
+import { resolveUsers, type UserDirectory } from "../application/users";
 import type {
   AdminAuditEvent,
   AdminUserProfile,
@@ -30,7 +31,6 @@ import {
   redirect,
   wantsHtml,
 } from "../web/html";
-import { resolveUsers, type UserDirectory } from "../web/users";
 
 interface BootstrapBody {
   readonly bootstrapToken?: unknown;
@@ -256,7 +256,7 @@ function auditUserDirectory(
       : [event.actorUserId, event.targetUserId],
   );
 
-  return resolveUsers(context, ids);
+  return resolveUsers(storesForContext(context), ids);
 }
 
 async function dashboardPage(

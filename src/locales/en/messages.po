@@ -2448,7 +2448,7 @@ msgstr "No enrollment links have been created yet."
 msgid "No external identities."
 msgstr "No external identities."
 
-#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
 msgid "No late penalty"
 msgstr "No late penalty"
 
@@ -2749,7 +2749,7 @@ msgstr "Paste these Carnap endpoints into the LMS when registering the external 
 msgid "Per-student overrides and the late policy for this assignment."
 msgstr "Per-student overrides and the late policy for this assignment."
 
-#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
 msgid "Percent once after due"
 msgstr "Percent once after due"
 
@@ -2757,7 +2757,7 @@ msgstr "Percent once after due"
 msgid "Percent penalty"
 msgstr "Percent penalty"
 
-#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/labels.ts
 msgid "Percent per day late"
 msgstr "Percent per day late"
 

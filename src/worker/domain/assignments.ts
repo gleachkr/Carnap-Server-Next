@@ -40,6 +40,33 @@ export interface Assignment {
  */
 export type GradesVisibility = "immediate" | "manual" | "scheduled";
 
+export type AssignmentAvailability = "closed" | "open" | "upcoming";
+
+/**
+ * Where an assignment sits in its availability window: "upcoming" before it
+ * opens, "closed" from its hard cutoff on, "open" in between or with no window
+ * at all. The one reading of `availableFrom`/`availableUntil` that the
+ * begin-attempt and submit policies refuse on and the assignment list greys
+ * out by, so the two cannot disagree about a boundary.
+ */
+export function assignmentAvailability(
+  assignment: Pick<Assignment, "availableFrom" | "availableUntil">,
+  now: Timestamp,
+): AssignmentAvailability {
+  if (assignment.availableFrom !== null && assignment.availableFrom > now) {
+    return "upcoming";
+  }
+
+  if (
+    assignment.availableUntil !== null &&
+    assignment.availableUntil <= now
+  ) {
+    return "closed";
+  }
+
+  return "open";
+}
+
 /**
  * Whether the assignment's grades are visible to students. A null
  * `gradesVisibleAt` means the instructor has not released them at all.

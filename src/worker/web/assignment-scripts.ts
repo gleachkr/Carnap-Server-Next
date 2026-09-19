@@ -206,12 +206,9 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
 
   function stateFromResponse(body) {
     return {
-      answerReview: null,
       evaluation: body.evaluation,
       submission: {
-        answerKind: body.submission.answerKind,
         exerciseId: body.submission.exerciseId,
-        id: body.submission.id,
         submittedAt: body.submission.submittedAt,
       },
     };
