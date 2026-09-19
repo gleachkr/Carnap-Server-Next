@@ -1,7 +1,4 @@
-import {
-  diagnostic,
-  diagnosticFrom,
-} from "../../application/content/diagnostics";
+import { diagnosticFrom } from "../../application/content/diagnostics";
 import { renderMarkdownSource } from "../../application/content/markdown";
 import {
   buildCompiledExercise,
@@ -16,8 +13,8 @@ import {
   validateExerciseId,
 } from "../../exercise-kit/authoring";
 import {
-  extractStarterBody,
   goalBinderWarnings,
+  optionalStarterBody,
   PLAYGROUND_HEADER,
   parseAllowSorryAttribute,
   parsePlaygroundAttribute,
@@ -25,7 +22,9 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireGoalFormula,
   starterFormulaReader,
+  starterLine,
   starterRuleReader,
   unreadableStarterFormula,
 } from "../../exercise-kit/proof/authoring";
@@ -96,21 +95,13 @@ export async function compileAufbauProofTree(
     validateExerciseId(block, id, diagnostics);
   }
 
-  if (header !== null && header.goalFormula.length === 0) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "missing_goal_formula",
-        "The goal header must state the goal formula inside '$ … $'.",
-      ),
-    );
-  }
+  const goalStated = requireGoalFormula(block, header, diagnostics);
 
   if (
     id === null ||
     theory === undefined ||
     (header === null && playgroundBody === null) ||
-    (header !== null && header.goalFormula.length === 0)
+    !goalStated
   ) {
     return null;
   }
@@ -145,16 +136,7 @@ export async function compileAufbauProofTree(
   // An optional `----` + `.auf` body pre-populates the tree. A body that parses
   // to a graph (or is otherwise malformed) fails the compile with author feedback.
   let starterTree: ProofTreeNode | undefined;
-  const starter =
-    header !== null
-      ? extractStarterBody(block.bodyLines, header.headerIndex)
-      : playgroundBody?.underlineIndex === null ||
-          playgroundBody?.underlineIndex === undefined
-        ? null
-        : {
-            starterBody: playgroundBody.starterBody,
-            underlineIndex: playgroundBody.underlineIndex,
-          };
+  const starter = optionalStarterBody(block, header, playgroundBody);
   if (starter !== null && starter.starterBody.length > 0) {
     const parsed = parseProofTree(starter.starterBody);
     if (parsed.ok) {
@@ -170,13 +152,13 @@ export async function compileAufbauProofTree(
       );
 
       for (const problem of formulaProblems) {
-        const bodyLine = parsed.bodyLineByLabel.get(problem.nodeId);
         diagnostics.push(
           unreadableStarterFormula(
-            block.bodyStartLine +
-              (bodyLine === undefined
-                ? starter.underlineIndex
-                : starter.underlineIndex + 1 + bodyLine),
+            starterLine(
+              block,
+              starter,
+              parsed.bodyLineByLabel.get(problem.nodeId),
+            ),
             problem.formula,
             problem.error,
           ),
@@ -189,13 +171,9 @@ export async function compileAufbauProofTree(
 
       starterTree = parsed.tree;
     } else {
-      const offset =
-        parsed.issue.bodyLine === null
-          ? starter.underlineIndex
-          : starter.underlineIndex + 1 + parsed.issue.bodyLine;
       diagnostics.push(
         diagnosticFrom(
-          block.bodyStartLine + offset,
+          starterLine(block, starter, parsed.issue.bodyLine),
           parsed.issue.code,
           parsed.issue,
         ),

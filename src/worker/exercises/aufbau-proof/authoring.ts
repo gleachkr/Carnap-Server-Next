@@ -1,7 +1,4 @@
-import {
-  type CompilerDiagnostic,
-  diagnostic,
-} from "../../application/content/diagnostics";
+import type { CompilerDiagnostic } from "../../application/content/diagnostics";
 import { renderMarkdownSource } from "../../application/content/markdown";
 import {
   buildCompiledExercise,
@@ -21,7 +18,7 @@ import {
   parsePlaygroundBody,
   parseProofOptions,
   parseTheoremHeader,
-  UNDERLINE,
+  requireStarterBody,
 } from "../../exercise-kit/proof/authoring";
 import { PLAYGROUND_GOAL_NAME } from "../../exercise-kit/proof/playground";
 import { requireSystem } from "../../exercise-kit/systems/theory";
@@ -66,7 +63,7 @@ function parseProofBody(
           goalName: PLAYGROUND_GOAL_NAME,
           playground: true,
           promptLines: body.promptLines,
-          starterBody: body.starterBody,
+          starterBody: body.starter?.starterBody ?? "",
           theoremDecl: "",
         };
   }
@@ -77,45 +74,17 @@ function parseProofBody(
     return null;
   }
 
-  const lines = block.bodyLines;
-  // The first non-blank line after the header must be the '----' underline.
-  let underlineIndex = -1;
+  const starter = requireStarterBody(block, header, diagnostics);
 
-  for (let index = header.headerIndex + 1; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-
-    if (line.trim().length === 0) {
-      continue;
-    }
-
-    if (UNDERLINE.test(line)) {
-      underlineIndex = index;
-    }
-
-    break;
-  }
-
-  if (underlineIndex === -1) {
-    diagnostics.push(
-      diagnostic(
-        block.bodyStartLine + header.headerIndex,
-        "missing_proof_underline",
-        "The goal header must be followed by a '----' underline, then the proof body.",
-      ),
-    );
+  if (starter === null) {
     return null;
   }
-
-  const starterBody = lines
-    .slice(underlineIndex + 1)
-    .join("\n")
-    .trim();
 
   return {
     goalName: header.goalName,
     playground: false,
     promptLines: header.promptLines,
-    starterBody,
+    starterBody: starter.starterBody,
     theoremDecl: header.theoremDecl,
   };
 }

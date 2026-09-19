@@ -17,16 +17,18 @@ import {
   validateExerciseId,
 } from "../../exercise-kit/authoring";
 import {
-  extractStarterBody,
   goalBinderWarnings,
+  optionalStarterBody,
   PLAYGROUND_HEADER,
   parsePlaygroundAttribute,
   parsePlaygroundBody,
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireGoalFormula,
   requireProofNotations,
   starterFormulaReader,
+  starterLine,
   starterRuleReader,
   unreadableStarterFormula,
 } from "../../exercise-kit/proof/authoring";
@@ -148,22 +150,14 @@ export async function compileAufbauProofPrawitz(
     validateExerciseId(block, id, diagnostics);
   }
 
-  if (header !== null && header.goalFormula.length === 0) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "missing_goal_formula",
-        "The goal header must state the goal formula inside '$ … $'.",
-      ),
-    );
-  }
+  const goalStated = requireGoalFormula(block, header, diagnostics);
 
   if (
     id === null ||
     theory === undefined ||
     notations === null ||
     (header === null && playgroundBody === null) ||
-    (header !== null && header.goalFormula.length === 0)
+    !goalStated
   ) {
     return null;
   }
@@ -201,22 +195,10 @@ export async function compileAufbauProofPrawitz(
   // fails to parse — or whose discharge structure the translator rejects —
   // fails the compile with author feedback, not the student's error banner.
   let starterTree: PrawitzProofNode | undefined;
-  const starter =
-    header !== null
-      ? extractStarterBody(block.bodyLines, header.headerIndex)
-      : playgroundBody?.underlineIndex === null ||
-          playgroundBody?.underlineIndex === undefined
-        ? null
-        : {
-            starterBody: playgroundBody.starterBody,
-            underlineIndex: playgroundBody.underlineIndex,
-          };
+  const starter = optionalStarterBody(block, header, playgroundBody);
   if (starter !== null && starter.starterBody.length > 0) {
     const lineFor = (bodyLine: number | null | undefined): number =>
-      block.bodyStartLine +
-      (bodyLine === null || bodyLine === undefined
-        ? starter.underlineIndex
-        : starter.underlineIndex + 1 + bodyLine);
+      starterLine(block, starter, bodyLine);
 
     const readRule = starterRuleReader(theory, scope);
     const parsed = parsePrawitzStarter(

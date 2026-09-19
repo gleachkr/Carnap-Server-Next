@@ -1,12 +1,12 @@
 /**
  * What the four proof directives share at authoring time: the goal header and
- * its declaration, the optional `----` starter, the `playground` shape, the
+ * its declaration, the `----` starter (mandatory under the text-shaped types'
+ * header, optional under the tree-shaped types'), the `playground` shape, the
  * `options=` flags, and the readers a starter is checked with — all over the
  * {@link AufbauTheory} the exercise's `system=` resolved to.
  *
- * The linear type's mandatory underline, and each shape's own starter parser,
- * stay with the type; this is the part every one of them would otherwise
- * repeat.
+ * Each shape's own starter parser stays with the type; this is the part every
+ * one of them would otherwise repeat.
  */
 
 import {
@@ -366,18 +366,24 @@ export function parseTheoremHeader(
   };
 }
 
+/** A starter under its `----`: the text the editor opens with, and where
+ *  the underline sits within `block.bodyLines`, for diagnostics. */
+export interface StarterBody {
+  readonly starterBody: string;
+  readonly underlineIndex: number;
+}
+
 /**
  * Pull an *optional* starter body out of a directive: the lines after a `----`
  * underline that follows the goal header. Returns the body text and the index
  * of the underline within `bodyLines` (for diagnostics), or null when no
  * underline follows the header (the "build from scratch" case). Text between
- * the header and a missing underline is ignored. The tree and Prawitz types
- * share this; the linear type's underline is mandatory (`parseProofBody`).
+ * the header and a missing underline is ignored.
  */
 export function extractStarterBody(
   bodyLines: readonly string[],
   headerIndex: number,
-): { readonly starterBody: string; readonly underlineIndex: number } | null {
+): StarterBody | null {
   for (let index = headerIndex + 1; index < bodyLines.length; index += 1) {
     const line = bodyLines[index] ?? "";
     if (line.trim().length === 0) {
@@ -395,6 +401,91 @@ export function extractStarterBody(
     };
   }
   return null;
+}
+
+/**
+ * The starter of a text-shaped directive (linear, Fitch), whose underline is
+ * mandatory: the first non-blank line after the goal header must be the
+ * `----`, and the starter — which may be empty — is everything after it.
+ * Null with a `missing_proof_underline` diagnostic otherwise.
+ */
+export function requireStarterBody(
+  block: DirectiveBlock,
+  header: TheoremHeader,
+  diagnostics: CompilerDiagnostic[],
+): StarterBody | null {
+  const starter = extractStarterBody(block.bodyLines, header.headerIndex);
+
+  if (starter === null) {
+    diagnostics.push(
+      diagnostic(
+        block.bodyStartLine + header.headerIndex,
+        "missing_proof_underline",
+        "The goal header must be followed by a '----' underline, then the proof body.",
+      ),
+    );
+  }
+
+  return starter;
+}
+
+/**
+ * The starter of a tree-shaped directive (tree, Prawitz), which may have none:
+ * under the goal header's underline when the exercise has a goal, under a
+ * playground's when it does not.
+ */
+export function optionalStarterBody(
+  block: DirectiveBlock,
+  header: TheoremHeader | null,
+  playgroundBody: PlaygroundBody | null,
+): StarterBody | null {
+  return header !== null
+    ? extractStarterBody(block.bodyLines, header.headerIndex)
+    : (playgroundBody?.starter ?? null);
+}
+
+/**
+ * The document line of a starter's `bodyLine` (zero-based, counted from the
+ * line under the underline) — or the underline's own line for a problem that
+ * names no line, which is one about the starter as a whole.
+ */
+export function starterLine(
+  block: DirectiveBlock,
+  starter: StarterBody,
+  bodyLine: number | null | undefined,
+): number {
+  return (
+    block.bodyStartLine +
+    (bodyLine === null || bodyLine === undefined
+      ? starter.underlineIndex
+      : starter.underlineIndex + 1 + bodyLine)
+  );
+}
+
+/**
+ * Whether a goal header states its goal formula. The tree-shaped types draw
+ * the goal as the root node, so a header whose last `$ … $` is empty gives
+ * them nothing to draw; the text-shaped types hand the declaration to the
+ * engine whole and do not ask. True with no header (a playground).
+ */
+export function requireGoalFormula(
+  block: DirectiveBlock,
+  header: TheoremHeader | null,
+  diagnostics: CompilerDiagnostic[],
+): boolean {
+  if (header === null || header.goalFormula.length > 0) {
+    return true;
+  }
+
+  diagnostics.push(
+    diagnostic(
+      block.line,
+      "missing_goal_formula",
+      "The goal header must state the goal formula inside '$ … $'.",
+    ),
+  );
+
+  return false;
 }
 
 /**
@@ -451,9 +542,7 @@ export const PLAYGROUND_HEADER = {
 /** A playground directive body: prose, then an optional `----` + starter. */
 export interface PlaygroundBody {
   readonly promptLines: readonly string[];
-  readonly starterBody: string;
-  /** Index of the underline within `block.bodyLines`, or `null` without one. */
-  readonly underlineIndex: number | null;
+  readonly starter: StarterBody | null;
 }
 
 /**
@@ -488,15 +577,17 @@ export function parsePlaygroundBody(
   const underlineIndex = lines.findIndex((line) => UNDERLINE.test(line));
 
   if (underlineIndex === -1) {
-    return { promptLines: lines, starterBody: "", underlineIndex: null };
+    return { promptLines: lines, starter: null };
   }
 
   return {
     promptLines: lines.slice(0, underlineIndex),
-    starterBody: lines
-      .slice(underlineIndex + 1)
-      .join("\n")
-      .trim(),
-    underlineIndex,
+    starter: {
+      starterBody: lines
+        .slice(underlineIndex + 1)
+        .join("\n")
+        .trim(),
+      underlineIndex,
+    },
   };
 }

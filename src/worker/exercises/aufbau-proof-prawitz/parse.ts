@@ -221,13 +221,8 @@ export function parsePrawitzStarter(
     return parsed;
   }
 
-  const bodyLineByLabel = new Map<string, number>();
-  for (const [bodyLine, line] of stripped.cleaned.entries()) {
-    const label = LINE_LABEL.exec(line)?.[1];
-    if (label !== undefined && !bodyLineByLabel.has(label)) {
-      bodyLineByLabel.set(label, bodyLine);
-    }
-  }
+  // The tree parser read the cleaned lines, so its line numbers are ours.
+  const { bodyLineByLabel } = parsed;
 
   const convert = (
     node: ProofTreeNode,

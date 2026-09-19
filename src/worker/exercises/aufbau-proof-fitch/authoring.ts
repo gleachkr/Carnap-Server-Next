@@ -1,4 +1,3 @@
-import { diagnostic } from "../../application/content/diagnostics";
 import { renderMarkdownSource } from "../../application/content/markdown";
 import {
   buildCompiledExercise,
@@ -22,7 +21,9 @@ import {
   parseTheoremHeader,
   readGoalDeclaration,
   requireProofNotations,
+  requireStarterBody,
   starterFormulaReader,
+  starterLine,
   starterRuleReader,
   unreadableStarterFormula,
 } from "../../exercise-kit/proof/authoring";
@@ -39,9 +40,6 @@ import {
   AUFBAU_PROOF_FITCH_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
 } from "./types";
-
-/** The underline separating the goal header from the starter Fitch body. */
-const UNDERLINE = /^\s*-{3,}\s*$/;
 
 /** What `::::aufbau-proof-fitch{…}` accepts beyond the shared exercise set. */
 const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
@@ -104,44 +102,13 @@ export async function compileAufbauProofFitch(
   // The goal header must be followed by a '----' underline; the starter Fitch
   // proof (which may be empty) is everything after it. A playground has no
   // header, and its underline is optional.
-  let starterBody = playgroundBody?.starterBody ?? "";
-  let underlineIndex = playgroundBody?.underlineIndex ?? -1;
-  if (header !== null) {
-    const lines = block.bodyLines;
+  const starter =
+    header !== null
+      ? requireStarterBody(block, header, diagnostics)
+      : (playgroundBody?.starter ?? null);
 
-    for (
-      let index = header.headerIndex + 1;
-      index < lines.length;
-      index += 1
-    ) {
-      const line = lines[index] ?? "";
-
-      if (line.trim().length === 0) {
-        continue;
-      }
-
-      if (UNDERLINE.test(line)) {
-        underlineIndex = index;
-      }
-
-      break;
-    }
-
-    if (underlineIndex === -1) {
-      diagnostics.push(
-        diagnostic(
-          block.bodyStartLine + header.headerIndex,
-          "missing_proof_underline",
-          "The goal header must be followed by a '----' underline, then the proof body.",
-        ),
-      );
-      return null;
-    }
-
-    starterBody = lines
-      .slice(underlineIndex + 1)
-      .join("\n")
-      .trim();
+  if (header !== null && starter === null) {
+    return null;
   }
 
   if (
@@ -185,10 +152,9 @@ export async function compileAufbauProofFitch(
   // language refuses is a proof the student is handed already broken. Read it
   // through the translator rather than line by line here, so the author's
   // diagnostic and the student's squiggle come from one walk of the source.
-  if (starterBody.length > 0) {
-    const starterLine = block.bodyStartLine + underlineIndex + 1;
+  if (starter !== null && starter.starterBody.length > 0) {
     const translated = fitchToAuf(
-      starterBody,
+      starter.starterBody,
       scope.goalName,
       assumptionRule,
       sequentSymbol,
@@ -201,7 +167,7 @@ export async function compileAufbauProofFitch(
     for (const problem of translated.formulaProblems) {
       diagnostics.push(
         unreadableStarterFormula(
-          starterLine + problem.sourceLine,
+          starterLine(block, starter, problem.sourceLine),
           problem.formula,
           problem.error,
         ),
@@ -228,7 +194,7 @@ export async function compileAufbauProofFitch(
       lineOffset: block.bodyStartLine - 1,
     }),
     sequentSymbol,
-    starterBody,
+    starterBody: starter?.starterBody ?? "",
     system: theory.name,
   };
 
