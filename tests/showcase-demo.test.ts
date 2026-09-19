@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import { createDefaultExerciseRegistry } from "../src/worker/application/content/registry";
 import { renderCompiledContent } from "../src/worker/application/content/renderer";
 import { i18nFor } from "../src/worker/i18n";
 import { SHOWCASE_DEMO_SOURCE } from "./helpers/showcase-demo";
@@ -15,19 +16,6 @@ import { SHOWCASE_DEMO_SOURCE } from "./helpers/showcase-demo";
  * `bun run scripts/showcase-verify.ts`, kept out of `bun test` for its cost:
  * every proof through the compiler's wasm, on every run.
  */
-
-const EXPECTED_KINDS = [
-  "multiple-choice@1",
-  "free-response@1",
-  "short-answer@1",
-  "truth-table@1",
-  "model@1",
-  "translation@1",
-  "aufbau-proof@1",
-  "aufbau-proof-tree@1",
-  "aufbau-proof-fitch@1",
-  "aufbau-proof-prawitz@1",
-];
 
 describe("showcase demo lesson", () => {
   test("compiles with every exercise kind represented", async () => {
@@ -81,11 +69,15 @@ describe("showcase demo lesson", () => {
       "pz_scratch",
     ]);
 
+    // "Every" is the registry's every, so that a type registered after this
+    // lesson was written is missing from it here rather than quietly absent.
     const kinds = new Set(
       compiled.artifact.manifest.map((entry) => entry.kind),
     );
-    for (const kind of EXPECTED_KINDS) {
-      expect(kinds, `${kind} is missing from the showcase`).toContain(kind);
+    for (const type of createDefaultExerciseRegistry().types()) {
+      expect(kinds, `${type.kind} is missing from the showcase`).toContain(
+        type.kind,
+      );
     }
   });
 

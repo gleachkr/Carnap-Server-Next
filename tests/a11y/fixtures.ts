@@ -1,5 +1,7 @@
 import { exportJWK, generateKeyPair } from "jose";
 
+import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
+import { createDefaultExerciseRegistry } from "../../src/worker/application/content/registry";
 import type { AppStores } from "../../src/worker/application/stores";
 import type { Env } from "../../src/worker/env";
 import { appRequest, createTestApp } from "../helpers/app";
@@ -54,6 +56,12 @@ interface LoginResult {
  * a kind both this gate and the pseudolocale gate cannot see. The short-answer
  * one carries a `title` and the free-response one does not, so the titled and
  * untitled group-label branches are both covered.
+ *
+ * "Every" is checked against the registry below (`assertEveryKind`), because
+ * this lesson once said so while three kinds were missing from it. The model,
+ * translation and Fitch exercises are set over the shipped forallx system —
+ * the first two by default, the Fitch one by name — rather than the local
+ * `prop` block, which declares no quantifiers for them to read.
  */
 const LESSON_SOURCE = `# Accessibility fixture lesson
 
@@ -115,7 +123,53 @@ theorem thm_tree: $ top $
 Build a Prawitz tree for top.
 
 theorem thm_prawitz: $ top $
-:::`;
+:::
+
+:::aufbau-proof-fitch{system="forallx-calgary-2019" id="fi" points="1"}
+Prove P from P.
+
+theorem fitch_id: $ P ⊢ P $
+----
+P :AS
+:::
+
+::::model{#md points="1"}
+Build a model in which this is true.
+
+- ExF(x)
+::::
+
+::::translation{#tl points="1"}
+Symbolize *it rains and it pours* with \`P\` for rain and \`Q\` for pour.
+
+- P /\\ Q
+::::`;
+
+/**
+ * The lesson instantiates every registered kind, or this throws before a
+ * fixture is collected: a kind missing here is a kind neither gate can see.
+ */
+async function assertEveryKind(): Promise<void> {
+  const compiled = await compileCarnapMarkdown(LESSON_SOURCE);
+
+  if (!compiled.ok) {
+    throw new Error(
+      `the fixture lesson does not compile: ${compiled.diagnostics.map((one) => one.code).join(", ")}`,
+    );
+  }
+
+  const kinds = new Set(compiled.artifact.manifest.map((item) => item.kind));
+  const missing = createDefaultExerciseRegistry()
+    .types()
+    .filter((type) => !kinds.has(type.kind))
+    .map((type) => type.kind);
+
+  if (missing.length > 0) {
+    throw new Error(
+      `the fixture lesson has no exercise of kind ${missing.join(", ")}`,
+    );
+  }
+}
 
 /**
  * A lesson that fails to compile, several ways at once. The revision editor's
@@ -362,9 +416,11 @@ export async function collectFixtures(
   const storage = await createTestStorage();
   const env: Env = { CARNAP_ENV: "local", DB: storage.db };
   try {
+    await assertEveryKind();
     const instructor = await login(env, "a11y-instructor@example.test");
     const student = await login(env, "a11y-student@example.test");
     const newcomer = await login(env, "a11y-newcomer@example.test");
+    const assistant = await login(env, "a11y-assistant@example.test");
     await grantCapability(env, instructor.actorId, "course_creator");
     await grantCapability(env, instructor.actorId, "site_admin");
 
@@ -379,7 +435,19 @@ export async function collectFixtures(
       (await courseResponse.json()) as { course: { id: string } }
     ).course.id;
 
-    // Content item + revision (all four exercise kinds).
+    // A teaching assistant: the course page has a third shape for one (the
+    // grading table, no console), and the staff pages carry the view switch.
+    await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/staff`,
+      jsonRequest(
+        { role: "teacher_assistant", userId: assistant.actorId },
+        instructor,
+      ),
+      env,
+    );
+
+    // Content item + revision (every exercise kind).
     const itemResponse = await appRequest(
       createTestApp(),
       "/content",
@@ -601,6 +669,14 @@ export async function collectFixtures(
     await add("courses-index", "/courses", instructor);
     await add("course-detail-instructor", `/courses/${courseId}`, instructor);
     await add("course-detail-student", `/courses/${courseId}`, student);
+    await add("course-detail-assistant", `/courses/${courseId}`, assistant);
+    // The staff side's other half: what the Staff | Student switch shows an
+    // instructor who presses it — the student page, with the switch kept.
+    await add(
+      "course-detail-student-view",
+      `/courses/${courseId}?view=student`,
+      instructor,
+    );
     // Every course-detail flash notice at once: they are query-parameter
     // driven and mutually independent, so one request renders them all.
     await add(
@@ -783,6 +859,13 @@ export async function collectFixtures(
       "instructor-attempts",
       `${instructorBase}/attempts${noticeQuery("attemptReset")}`,
       instructor,
+    );
+    // The review page as an assistant's own: it carries the view switch in
+    // its header, which the instructor's does not.
+    await add(
+      "instructor-submissions-assistant",
+      `${instructorBase}/submissions`,
+      assistant,
     );
 
     await add("student-results", `${assignmentPath}/results`, student);

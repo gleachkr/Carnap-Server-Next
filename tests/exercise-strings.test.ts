@@ -4,18 +4,10 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import { createDefaultExerciseRegistry } from "../src/worker/application/content/registry";
 import { exerciseHydrationForArtifact } from "../src/worker/application/content/renderer";
 import { buildExerciseHelpStrings } from "../src/worker/exercise-kit/help-strings";
-import { buildAufbauProofStrings } from "../src/worker/exercises/aufbau-proof/strings";
-import { AUFBAU_PROOF_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof/types";
 import {
   buildAufbauProofFitchStrings,
   FITCH_DIAGNOSTIC_MESSAGES,
 } from "../src/worker/exercises/aufbau-proof-fitch/strings";
-import { AUFBAU_PROOF_FITCH_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-fitch/types";
-import { buildAufbauProofPrawitzStrings } from "../src/worker/exercises/aufbau-proof-prawitz/strings";
-import { AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-prawitz/types";
-import { buildAufbauProofTreeStrings } from "../src/worker/exercises/aufbau-proof-tree/strings";
-import { AUFBAU_PROOF_TREE_COMPONENT_METADATA } from "../src/worker/exercises/aufbau-proof-tree/types";
-import { buildTruthTableStrings } from "../src/worker/exercises/truth-table/strings";
 import { TRUTH_TABLE_COMPONENT_METADATA } from "../src/worker/exercises/truth-table/types";
 import { DEFAULT_LOCALE, i18nFor } from "../src/worker/i18n";
 import {
@@ -30,21 +22,35 @@ import {
  * English rather than to a key), and the map actually reaches the payload.
  */
 
-const BUILDERS = [
-  ["aufbau-proof", buildAufbauProofStrings],
-  ["aufbau-proof-fitch", buildAufbauProofFitchStrings],
-  ["aufbau-proof-prawitz", buildAufbauProofPrawitzStrings],
-  ["aufbau-proof-tree", buildAufbauProofTreeStrings],
-  ["truth-table", buildTruthTableStrings],
-] as const;
+/**
+ * Every type whose element shows text, asked of the registry rather than
+ * listed here: a list once named five builders and omitted the two heaviest
+ * `placeholders(...)` users, so a missing placeholder in the model or
+ * translation widget was exactly the mistake nothing caught.
+ */
+const WITH_STRINGS = createDefaultExerciseRegistry()
+  .types()
+  .filter((type) => type.strings !== undefined);
 
 /** The widgets that offer usage instructions behind a `(?)` in their toolbar. */
-const HELP_BUILDERS = [
-  ["aufbau-proof-prawitz", buildAufbauProofPrawitzStrings],
-  ["aufbau-proof-tree", buildAufbauProofTreeStrings],
-] as const;
+const HELP_KINDS: readonly string[] = [
+  "aufbau-proof-prawitz",
+  "aufbau-proof-tree",
+];
 
 describe("widget string maps", () => {
+  test("every widget with text is covered", () => {
+    expect(WITH_STRINGS.map((type) => type.directiveName).sort()).toEqual([
+      "aufbau-proof",
+      "aufbau-proof-fitch",
+      "aufbau-proof-prawitz",
+      "aufbau-proof-tree",
+      "model",
+      "translation",
+      "truth-table",
+    ]);
+  });
+
   // The client's fallback is `strings[id] ?? id`, which only reads as English if
   // each id *is* the English text it stands for. A disambiguated id
   // ("Delete (proof line)") must therefore be paired with an explicit
@@ -56,11 +62,11 @@ describe("widget string maps", () => {
   // pass `placeholders(...)` or it arrives with its `{slots}` already eaten —
   // which the passthrough, having no formatter, cannot show. Comparing against
   // the id catches both mistakes at once.
-  for (const [name, build] of BUILDERS) {
+  for (const type of WITH_STRINGS) {
     for (const i18n of [passthroughTranslator, i18nFor(DEFAULT_LOCALE)]) {
-      test(`${name} ids are their own English text`, () => {
-        for (const [id, text] of Object.entries(build(i18n))) {
-          expect(text).toBe(id);
+      test(`${type.directiveName} ids are their own English text`, () => {
+        for (const [id, text] of Object.entries(type.strings?.(i18n) ?? {})) {
+          expect(text, id).toBe(id);
         }
       });
     }
@@ -70,16 +76,16 @@ describe("widget string maps", () => {
   // that spreads the shared instructions but drops the frame around them would
   // render a panel with an untranslated close button and no heading — and no
   // type error, since the ids would simply be absent from its union.
-  for (const [name, build] of HELP_BUILDERS) {
-    test(`${name} carries the shared help-dialog frame`, () => {
-      const strings = build(passthroughTranslator);
+  for (const type of WITH_STRINGS) {
+    const name = type.directiveName;
+    const offersHelp = HELP_KINDS.includes(name);
+    test(`${name} ${offersHelp ? "carries" : "does not carry"} the shared help-dialog frame`, () => {
+      const strings = type.strings?.(passthroughTranslator) ?? {};
 
       for (const id of Object.keys(
         buildExerciseHelpStrings(passthroughTranslator),
       )) {
-        expect(Object.hasOwn(strings, id), `${name} is missing ${id}`).toBe(
-          true,
-        );
+        expect(Object.hasOwn(strings, id), `${name}: ${id}`).toBe(offersHelp);
       }
     });
   }
@@ -112,18 +118,12 @@ describe("exerciseStrings", () => {
   });
 
   test("covers every widget whose element shows text", () => {
-    for (const metadata of [
-      AUFBAU_PROOF_COMPONENT_METADATA,
-      AUFBAU_PROOF_FITCH_COMPONENT_METADATA,
-      AUFBAU_PROOF_PRAWITZ_COMPONENT_METADATA,
-      AUFBAU_PROOF_TREE_COMPONENT_METADATA,
-      TRUTH_TABLE_COMPONENT_METADATA,
-    ]) {
-      const strings = exerciseStrings(metadata.assetId, i18nFor("de"));
+    for (const type of WITH_STRINGS) {
+      const strings = exerciseStrings(type.component.assetId, i18nFor("de"));
 
       expect(
         Object.keys(strings).length,
-        `strings for ${metadata.assetId}`,
+        `strings for ${type.component.assetId}`,
       ).toBeGreaterThan(0);
     }
   });

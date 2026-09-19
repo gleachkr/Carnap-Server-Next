@@ -117,16 +117,4 @@ describe("built-in theories", () => {
 
     expect(response.headers.get("ETag")).toMatch(/^"[a-z0-9]+"$/);
   });
-
-  test("the shipped theories are the ones the proof suites run against", async () => {
-    const { FORALLX_THEORY_SOURCE } = await import(
-      "./helpers/forallx-theory"
-    );
-    const { GENTZEN_THEORY_MM0 } = await import("./helpers/gentzen-theory");
-
-    expect(FORALLX_THEORY_SOURCE).toBe(
-      THEORY_SOURCES["forallx-calgary-2019.mm0"] ?? "",
-    );
-    expect(GENTZEN_THEORY_MM0).toBe(THEORY_SOURCES["gentzen-lk.mm0"] ?? "");
-  });
 });

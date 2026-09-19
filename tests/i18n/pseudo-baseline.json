@@ -1,13 +1,8 @@
 {
   "note": "English words still visible under the en-XA pseudolocale, i.e. text not yet routed through i18n (minus an allowlist of the product name, acronyms, fixture-seeded data, and logic notation). Advisory, not a gate: regenerate with `bun run i18n:baseline`. A shrinking list is progress; the hard gate is tests/i18n-pseudo.test.ts.",
   "residue": {
-    "login": [
-      "Deutsch",
-      "English"
-    ],
+    "login": [],
     "donate": [
-      "Deutsch",
-      "English",
       "Fund",
       "Rescue",
       "Risk",
@@ -16,13 +11,22 @@
     ],
     "courses-index": [],
     "course-detail-instructor": [
+      "assistant",
       "briefing",
       "draft"
     ],
     "course-detail-student": [
       "briefing"
     ],
+    "course-detail-assistant": [
+      "assistant",
+      "briefing"
+    ],
+    "course-detail-student-view": [
+      "briefing"
+    ],
     "course-detail-notices": [
+      "assistant",
       "briefing",
       "draft"
     ],
@@ -43,39 +47,141 @@
     "content-library": [],
     "content-item": [],
     "content-revision": [
+      "answer",
+      "argument",
+      "assumption",
+      "calgary",
       "choice",
+      "coercion",
+      "context",
+      "Explain",
+      "fitch",
+      "forallx",
+      "free",
+      "from",
+      "inference",
+      "infixl",
+      "join",
+      "model",
+      "modus",
       "multiple",
       "name",
+      "Name",
       "page",
       "points",
+      "ponens",
+      "pour",
+      "pours",
+      "prawitz",
+      "Prawitz",
+      "prec",
       "proof",
       "prop",
+      "rain",
+      "rains",
+      "response",
+      "role",
+      "rule",
+      "show",
+      "Symbolize",
+      "syntax",
+      "system",
       "table",
-      "theory",
       "this",
+      "title",
+      "translation",
       "tree",
-      "truth"
+      "truth",
+      "turnstile",
+      "used",
+      "valid",
+      "which",
+      "with"
     ],
     "content-revision-document": [
+      "argument",
+      "assumption",
+      "coercion",
+      "context",
+      "Explain",
+      "from",
+      "inference",
+      "infixl",
+      "join",
+      "model",
+      "Name",
       "page",
+      "pour",
+      "pours",
+      "Prawitz",
+      "prec",
       "proof",
       "prop",
-      "Theory",
-      "this"
-    ],
-    "revision-editor": [
-      "choice",
-      "multiple",
-      "name",
-      "page",
-      "points",
-      "proof",
-      "prop",
-      "table",
-      "theory",
+      "rain",
+      "rains",
+      "role",
+      "rule",
+      "Symbolize",
+      "syntax",
       "this",
       "tree",
-      "truth"
+      "turnstile",
+      "used",
+      "valid",
+      "which",
+      "with"
+    ],
+    "revision-editor": [
+      "answer",
+      "argument",
+      "assumption",
+      "calgary",
+      "choice",
+      "coercion",
+      "context",
+      "Explain",
+      "fitch",
+      "forallx",
+      "free",
+      "from",
+      "inference",
+      "infixl",
+      "join",
+      "model",
+      "modus",
+      "multiple",
+      "name",
+      "Name",
+      "page",
+      "points",
+      "ponens",
+      "pour",
+      "pours",
+      "prawitz",
+      "Prawitz",
+      "prec",
+      "proof",
+      "prop",
+      "rain",
+      "rains",
+      "response",
+      "role",
+      "rule",
+      "show",
+      "Symbolize",
+      "syntax",
+      "system",
+      "table",
+      "this",
+      "title",
+      "translation",
+      "tree",
+      "truth",
+      "turnstile",
+      "used",
+      "valid",
+      "which",
+      "with"
     ],
     "revision-editor-diagnostics": [
       "choice",
@@ -119,33 +225,87 @@
       "started"
     ],
     "content-document": [
+      "argument",
+      "assumption",
+      "coercion",
+      "context",
+      "Explain",
+      "from",
+      "inference",
+      "infixl",
+      "join",
+      "model",
+      "Name",
       "page",
+      "pour",
+      "pours",
+      "Prawitz",
+      "prec",
       "proof",
       "prop",
-      "Theory",
-      "this"
+      "rain",
+      "rains",
+      "role",
+      "rule",
+      "Symbolize",
+      "syntax",
+      "this",
+      "tree",
+      "turnstile",
+      "used",
+      "valid",
+      "which",
+      "with"
+    ],
+    "assignment-attempt-gate": [
+      "briefing",
+      "started"
     ],
     "assignment-instructor-detail": [
-      "Initial",
-      "published",
-      "revision"
+      "Name",
+      "rule"
     ],
     "assignment-instructor-draft": [
       "draft",
       "published"
     ],
     "assignment-instructor-content": [
+      "argument",
+      "assumption",
+      "coercion",
+      "context",
+      "Explain",
+      "from",
+      "inference",
+      "infixl",
+      "join",
+      "model",
+      "Name",
       "page",
+      "pour",
+      "pours",
+      "Prawitz",
+      "prec",
       "proof",
       "prop",
-      "Theory",
-      "this"
+      "rain",
+      "rains",
+      "role",
+      "rule",
+      "Symbolize",
+      "syntax",
+      "this",
+      "tree",
+      "turnstile",
+      "used",
+      "valid",
+      "which",
+      "with"
     ],
     "assignment-instructor-unreleased": [
       "briefing",
-      "Initial",
-      "published",
-      "revision",
+      "Name",
+      "rule",
       "started"
     ],
     "instructor-submissions-empty": [
@@ -162,6 +322,9 @@
     "assignment-edit-published": [],
     "instructor-submissions": [],
     "instructor-attempts": [],
+    "instructor-submissions-assistant": [
+      "assistant"
+    ],
     "student-results": [],
     "student-results-withheld": [],
     "course-gradebook": [
@@ -169,7 +332,9 @@
     ],
     "assignment-gradebook": [],
     "admin-dashboard": [],
-    "admin-users": [],
+    "admin-users": [
+      "assistant"
+    ],
     "admin-user-profile": [
       "course",
       "Empty"
@@ -184,14 +349,8 @@
     ],
     "error-course": [],
     "error-content": [],
-    "error-login": [
-      "Deutsch",
-      "English"
-    ],
-    "login-sent": [
-      "Deutsch",
-      "English"
-    ],
+    "error-login": [],
+    "login-sent": [],
     "error-form": [],
     "error-assignment-form": [],
     "error-content-create": [],
@@ -199,29 +358,18 @@
     "error-admin-form": [],
     "error-admin-lti-form": [],
     "lti-error": [
-      "Deutsch",
-      "English",
       "invalid",
       "login"
     ],
-    "lti-deep-link-select": [
-      "Deutsch",
-      "English"
-    ],
+    "lti-deep-link-select": [],
     "lti-deep-link-return": [],
     "lti-link-pending": [
-      "Deutsch",
-      "English",
       "linked"
     ],
     "lti-link-confirm": [
-      "Deutsch",
-      "English",
       "linked"
     ],
     "lti-link-confirmed": [
-      "Deutsch",
-      "English",
       "linked"
     ],
     "course-detail-lti": [

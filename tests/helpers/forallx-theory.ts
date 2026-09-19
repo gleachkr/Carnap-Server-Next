@@ -4,9 +4,10 @@
  * The theory itself ships at `src/worker/logic/theories/forallx-calgary-2019.mm0`
  * and is served at `/theories/forallx-calgary-2019.mm0`; its header is where the
  * rule→axiom table, the eigenvariable discussion, and the warning about
- * dependency lists now live. This module is a re-export so that the demo
- * lessons and `scripts/{forallx,prawitz,showcase}-verify.ts` exercise the text
- * an author actually gets, and cannot drift from it.
+ * dependency lists now live. This module is a re-export so that the Fitch
+ * and Prawitz suites and `scripts/{forallx,prawitz}-verify.ts` exercise the
+ * text an author actually gets, and cannot drift from it; a missing
+ * registration throws here, at import.
  */
 
 import { stripSyntaxAnnotations } from "@aufbau/syntax";

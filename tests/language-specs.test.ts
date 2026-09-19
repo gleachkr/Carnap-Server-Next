@@ -101,31 +101,45 @@ describe("language specs", () => {
    * would fail here.
    */
   test("a spec's only warnings name its engine-only notations", () => {
+    // The proof-theory notations both forallx systems declare and neither
+    // surfaces: the substitution layer and the judgement symbols.
+    const PROOF_THEORY_NOTATIONS: readonly string[] = [
+      "tsub",
+      "/", // the substitution slash: an engine notation, and no delimiter
+      "subst",
+      "_",
+      "⊢",
+      "⟺",
+      "≐",
+      "≗",
+      "≜",
+      "⟚",
+    ];
     const engineOnly: Readonly<Record<string, readonly string[]>> = {
       "carnap-prop": [],
-      "forallx-calgary-2019": [
-        "tsub",
-        "/", // the substitution slash: an engine notation, and no delimiter
-        "subst",
-        "_",
-        "⊢",
-        "⟺",
-        "≐",
-        "≗",
-        "≜",
-        "⟚",
-      ],
+      "forallx-calgary-2019": PROOF_THEORY_NOTATIONS,
+      "forallx-magnus": PROOF_THEORY_NOTATIONS,
     };
 
-    for (const [id, tokens] of Object.entries(engineOnly)) {
-      const warnings = parseSpec(LANGUAGE_SPEC_SOURCES[id] ?? "").diagnostics;
+    // Every registered spec, not every entry above: a spec this map does not
+    // know is a spec whose warnings nobody has read, which is the one way a
+    // real one goes unnoticed. Magnus went unread for a while this way.
+    for (const [id, source] of Object.entries(LANGUAGE_SPEC_SOURCES)) {
+      const tokens = engineOnly[id];
+
+      expect(tokens, `${id} has no expected-warnings entry`).toBeDefined();
+
+      const warnings = parseSpec(source).diagnostics;
 
       expect({
         id,
         seen: warnings.map((one) => [one.id, one.params.token]),
       }).toEqual({
         id,
-        seen: tokens.map((token) => ["delimiter_token_not_delimited", token]),
+        seen: (tokens ?? []).map((token) => [
+          "delimiter_token_not_delimited",
+          token,
+        ]),
       });
     }
   });

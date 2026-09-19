@@ -166,6 +166,42 @@ RESEND_API_KEY="re_..."
 preview, or production. Preview and production login starts fail with a clear
 configuration error if Resend settings are missing.
 
+## Developer scripts
+
+`scripts/` holds tools that are run by hand rather than by `validate`. The
+`bun run` entries (`a11y:*`, `i18n:*`) are listed in `package.json`; the rest
+are invoked directly with `bun run scripts/<name>.ts`.
+
+Seeding a running local server (`bun run dev`, signed in as the local
+`site_admin` through the passwordless flow) with a lesson, as a published
+practice assignment in a fresh course:
+
+| Script | Lesson |
+| --- | --- |
+| `seed-lesson.ts <path>` | any carnap-markdown file |
+| `seed-showcase-demo.ts` | every exercise type, each beside its source |
+| `seed-forallx-demo.ts` | forallx: Calgary Fitch proofs |
+| `seed-prawitz-demo.ts` | forallx natural deduction as Prawitz trees |
+| `seed-gentzen-demo.ts` | Gentzen LK sequent-calculus trees |
+| `seed-gentzen-starter-demo.ts` | the LK demo with starters, into an existing course |
+| `seed-lti-fixture.ts` | re-author the LTI acceptance fixture's content |
+
+Engine batteries, which compile every worked proof in a suite with the real
+`@aufbau/compiler` and verify the result. They are typechecked with the rest
+of the tree but kept out of `bun test` for their cost; run the relevant one
+after touching a theory, a translator, or its cases:
+
+| Script | Checks |
+| --- | --- |
+| `forallx-verify.ts` | the Calgary Fitch cases |
+| `magnus-verify.ts` | the Magnus Fitch cases and playgrounds |
+| `prawitz-verify.ts` | the Prawitz cases |
+| `gentzen-verify.ts` | the LK tree cases |
+| `showcase-verify.ts` | every proof in the showcase lesson |
+
+`copy-fonts.ts` is part of `build:client` and `a11y-audit.mjs` is behind
+`a11y:audit`; neither is run on its own.
+
 ## Documentation
 
 - [Authoring](docs/carnap-markdown-v1.md): Markdown, directives, exercises,

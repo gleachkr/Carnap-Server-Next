@@ -49,9 +49,16 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
   ["unknown directive", "::::carnap-nonexistent{#x}\n::::"],
   ["raw html", "<script>alert(1)</script>\n"],
   ["bad item link", "[a link](item:not valid)\n"],
+  // Both wordings of the miss: with no block declared, and with one, which
+  // the message then lists. The fixture used to write `theory=absent`, which
+  // since #192 is an unknown *attribute*, so neither template was reached.
   [
-    "unknown theory",
-    "::::aufbau-proof{#p points=1 theory=absent}\ntheorem t: $ P $\n----\n::::",
+    "unknown system, no blocks declared",
+    '::::aufbau-proof{#p points=1 system="absent"}\ntheorem t: $ P $\n----\n::::',
+  ],
+  [
+    "unknown system beside a declared block",
+    ':::aufbau-mm0{name="ours"}\nprovable sort wff;\n:::\n\n::::aufbau-proof{#p points=1 system="absent"}\ntheorem t: $ P $\n----\n::::',
   ],
   [
     "missing goal header",
