@@ -1636,6 +1636,34 @@ Plain reading prose.`,
     });
   });
 
+  test("the new-assignment page is the instructor's alone", async () => {
+    // The page reads nothing an outsider could not guess, but it names the
+    // course — and it used to do so for anyone signed in, because it was the
+    // one instructor page with no service call in front of it.
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "new-page-teacher@example.test");
+      const student = await login(env, "new-page-student@example.test");
+      const outsider = await login(env, "new-page-outsider@example.test");
+      const course = await createCourse(env, instructor);
+      await enrollStudent(env, instructor, student, course.course.id);
+
+      const url = `/courses/${course.course.id}/instructor/assignments/new`;
+      const statusFor = async (cookie: string): Promise<number> =>
+        (
+          await appRequest(
+            createTestApp(),
+            url,
+            { headers: { Accept: "text/html", Cookie: cookie } },
+            env,
+          )
+        ).status;
+
+      expect(await statusFor(instructor.cookieHeader)).toBe(200);
+      expect(await statusFor(student.cookieHeader)).toBe(403);
+      expect(await statusFor(outsider.cookieHeader)).toBe(403);
+    });
+  });
+
   test("content documents enforce course access", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "access-teacher@example.test");

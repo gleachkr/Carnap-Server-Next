@@ -6,6 +6,7 @@ import type { AuthenticatedActor } from "../application/auth";
 import {
   courseStaffTierFor,
   requireAuthenticated,
+  requireInstructor,
 } from "../application/authorization";
 import { ContentService } from "../application/content";
 import {
@@ -576,7 +577,14 @@ async function newAssignmentPage(
     return loginRedirect;
   }
 
+  const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
+
+  // The form itself gives nothing away, but the page around it names the
+  // course, and the sibling pages all ask the service before naming one.
+  // There is no service call to hide behind here — nothing is read yet — so
+  // the question the create will ask is asked up front instead.
+  await requireInstructor(storesForContext(context), actor, courseId);
 
   return renderNewAssignmentPage(
     context,
