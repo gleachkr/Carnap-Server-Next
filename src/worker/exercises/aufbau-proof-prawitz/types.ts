@@ -78,10 +78,6 @@ export interface PrawitzProofNode {
 
 /**
  * Everything the widget and grader need, frozen at authoring time.
- *   - `allowSorry`     set when a line may be admitted with `sorry!`: the
- *                      widget marks such a line as a warning, not an error,
- *                      and (outside an exam) will not submit the proof while
- *                      one stands; it never scores either way
  *   - `assumptionRule` the theory's assumption axiom (`ax` by default): a node
  *                      citing it is an assumption leaf, and the translator
  *                      emits every leaf through it
@@ -127,7 +123,6 @@ export interface PrawitzProofNode {
  *                      `exercise-kit/proof/playground.ts`)
  */
 export interface AufbauProofPrawitzPublicData {
-  readonly allowSorry?: boolean;
   readonly assumptionRule: string;
   readonly contextSymbol?: string;
   readonly goalDecl?: string;

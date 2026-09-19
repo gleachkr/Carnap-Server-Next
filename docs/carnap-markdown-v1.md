@@ -656,13 +656,16 @@ Browser success state and submitted proof text are not trusted for grading.
 The engine's `sorry!` justification admits a line without a rule. Exercises
 reject it: the widget reports a problem and sends no certificate, and server
 verification rejects certificates containing such admissions. With the
-boolean `allow-sorry` attribute (on any of the four proof directives) an
-admitted line is shown as a warning instead of an error, and once every other
-line checks the widget says so — but the proof is still not correct, and
-never scores. Outside an exam the widget will not submit a proof with
-admitted lines, and says why; on an exam it submits, for zero. The attribute
-is for practice: a student can see that the shape of a proof is right before
-every gap in it is filled.
+boolean `allow-sorry` attribute (on `aufbau-proof`, `aufbau-proof-fitch` and
+`aufbau-proof-tree`) an admitted line is shown as a warning instead of an
+error, and once every other line checks the widget says so — but the proof
+is still not correct, and never scores. Outside an exam the widget will not
+submit a proof with admitted lines, and says why; on an exam it submits, for
+zero. The attribute is for practice: a student can see that the shape of a
+proof is right before every gap in it is filled. `sorry!` admits a leaf and
+takes no premises, so in a tree it can only stand where a leaf can; the
+Prawitz directive does not take the attribute, since a leaf there has no
+assumptions above it and so proves nothing that depends on any.
 
 `aufbau-proof` is the linear proof-script editor. Its body contains a prompt,
 a `theorem` declaration, a `----` separator, and a starter proof body. The

@@ -115,17 +115,18 @@ theorem thm_top: $ top $
     });
   });
 
-  test("allow-sorry is frozen on the exercise (see aufbau-proof.test.ts)", async () => {
-    const compiled = await compileCarnapMarkdown(
-      prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" allow-sorry}
+  test("allow-sorry is not an attribute here: sorry! admits a leaf, and a leaf has no context", async () => {
+    // The engine's `sorry!` takes no premises, and a non-assumption leaf in
+    // this widget carries an empty dependency context, so an admitted line
+    // could only ever prove a goal with no premises. The other three proof
+    // directives take the attribute (`tests/aufbau-proof.test.ts`).
+    expect(
+      await diagnosticsFor(
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" allow-sorry}
 theorem thm_top: $ top $
 :::`),
-    );
-    expect(compiled.ok).toBe(true);
-    if (!compiled.ok) {
-      return;
-    }
-    expect(prawitzPublicData(compiled.artifact, "p1").allowSorry).toBe(true);
+      ),
+    ).toContain("unknown_attribute");
   });
 
   test("the assumption axiom the translator keys on is the theory's `role assumption`", async () => {

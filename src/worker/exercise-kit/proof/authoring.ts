@@ -422,6 +422,9 @@ export function parsePlaygroundAttribute(
  * told, and whether the widget will let the proof leave (it will on an exam,
  * for nothing; otherwise it holds it back and says so). A bare `{allow-sorry}`
  * means true.
+ *
+ * Three of the four proof directives take it; the Prawitz one does not, and
+ * says why in its widget's `gate`.
  */
 export function parseAllowSorryAttribute(
   block: DirectiveBlock,
