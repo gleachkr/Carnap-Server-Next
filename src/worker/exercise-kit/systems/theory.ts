@@ -10,13 +10,12 @@
  * knows which type is asking.
  */
 
-import { parseSpec, SurfaceLanguage } from "@aufbau/syntax";
 import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../../application/content/diagnostics";
 import { libraryDiagnostic, lineAt } from "../../application/content/mm0";
-import { readLanguage } from "../../logic/specs";
+import { languageFromSource, readLanguage } from "../../logic/specs";
 import { roleIndex } from "../../logic/specs/roles";
 import type { TheoryResolver } from "../../logic/theories";
 import {
@@ -96,18 +95,20 @@ export interface DeclaredNotations {
  * theory that declares nothing legible.
  */
 function declaredNotations(source: string): DeclaredNotations | null {
-  try {
-    const index = roleIndex(new SurfaceLanguage(parseSpec(source).spec));
+  const language = languageFromSource(source);
 
-    return {
-      assumptionRule: index.ruleFor("assumption"),
-      contextSymbol: index.spellingFor("context-join"),
-      sequentSpellings: index.spellingsFor("turnstile"),
-      sequentSymbol: index.spellingFor("turnstile"),
-    };
-  } catch {
+  if (language === null) {
     return null;
   }
+
+  const index = roleIndex(language);
+
+  return {
+    assumptionRule: index.ruleFor("assumption"),
+    contextSymbol: index.spellingFor("context-join"),
+    sequentSpellings: index.spellingsFor("turnstile"),
+    sequentSymbol: index.spellingFor("turnstile"),
+  };
 }
 
 /**

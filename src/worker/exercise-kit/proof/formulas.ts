@@ -54,18 +54,18 @@ import type {
   MathString,
   Scope,
   Statement,
+  SurfaceLanguage,
   Term,
 } from "@aufbau/syntax";
 import {
-  parseSpec,
   printTerm,
-  SurfaceLanguage,
   stripSyntaxAnnotations,
   surfaceVocabulary,
   walkTerm,
 } from "@aufbau/syntax";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
+import { languageFromSource } from "../../logic/specs/read";
 import { roleIndex, sentenceSort } from "../../logic/specs/roles";
 
 /**
@@ -106,27 +106,26 @@ export type ProofFormulaReading =
 /** Surface text in, engine text out. */
 export type ProofFormulaReader = (text: string) => ProofFormulaReading;
 
-/**
- * Reading a ~30 KB artifact into notation tables is not something to do twice
- * for the same text, so it is done once and kept.
- *
- * The key is the joined text, which carries the *goal declaration* appended to
- * the theory — so two exercises over one theory do not in fact share an entry,
- * and a page setting several from the same artifact parses it once each. That
- * is the price of the goal being part of the text rather than beside it, which
- * is also what {@link goalBinderScope} reads it back out of. The document's
- * systems table shares the theory itself (see `../systems/join.ts`); what is
- * not shared is the parse. Worth revisiting if a lesson ever gets big enough
- * for it to show; nothing measured says it does.
- */
-const languages = new Map<string, ProofLanguage | null>();
-
 /** A theory read as a language, and the sort it calls a sentence if it says. */
 interface ProofLanguage {
   readonly language: SurfaceLanguage;
   /** `undefined` where the spec carries no `@syntax role sentence`. */
   readonly sentence: string | undefined;
 }
+
+/**
+ * The sentence sort, once per language object. The parse itself is
+ * `readLanguage`'s, memoized on the text — which carries the *goal
+ * declaration* appended to the theory, so two exercises over one theory do
+ * not in fact share an entry, and a page setting several from the same
+ * artifact parses it once each. That is the price of the goal being part of
+ * the text rather than beside it, which is also what {@link goalBinderScope}
+ * reads it back out of. The document's systems table shares the theory
+ * itself (see `../systems/join.ts`); what is not shared is the parse. Worth
+ * revisiting if a lesson ever gets big enough for it to show; nothing
+ * measured says it does.
+ */
+const sentences = new WeakMap<SurfaceLanguage, ProofLanguage>();
 
 /**
  * The theory read as a language, or `null` where the text will not read at all.
@@ -144,26 +143,18 @@ interface ProofLanguage {
  * artifact, which froze only the stripped engine text).
  */
 function proofLanguage(source: string): ProofLanguage | null {
-  const cached = languages.get(source);
+  const language = languageFromSource(source);
 
-  if (cached !== undefined) {
-    return cached;
+  if (language === null) {
+    return null;
   }
 
-  let read: ProofLanguage | null = null;
+  let read = sentences.get(language);
 
-  try {
-    const { spec, diagnostics } = parseSpec(source);
-
-    if (!diagnostics.some((one) => one.severity === "error")) {
-      const language = new SurfaceLanguage(spec);
-      read = { language, sentence: sentenceSort(language) };
-    }
-  } catch {
-    read = null;
+  if (read === undefined) {
+    read = { language, sentence: sentenceSort(language) };
+    sentences.set(language, read);
   }
-
-  languages.set(source, read);
 
   return read;
 }
