@@ -240,6 +240,14 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     this.scheduleCompile();
   }
 
+  /** A widget taken out of the page has nothing left to check. */
+  disconnectedCallback(): void {
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+    }
+  }
+
   /**
    * The submit gate. A compile still pending or running would leave this
    * submission without its certificate — and, with `allow-sorry`, without

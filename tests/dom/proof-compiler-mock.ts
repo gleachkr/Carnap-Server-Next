@@ -1,4 +1,5 @@
 import { afterAll, type Mock, mock } from "bun:test";
+import { domDocument } from "../helpers/dom";
 
 /**
  * Stand the client's proof-compiler *loader* in with a mock, for the widget
@@ -38,6 +39,16 @@ export async function mockProofCompiler(
   }));
 
   afterAll(() => {
+    // The file's fixtures come out of the shared document first: a widget
+    // left in it with a compile still debounced would run that compile
+    // under the *next* file's mock — and consume a `mockImplementationOnce`
+    // that file had set for its own widget. Disconnecting cancels the
+    // debounce (every proof widget's `disconnectedCallback` does).
+    for (const form of Array.from(
+      domDocument.querySelectorAll("form.exercise-submission"),
+    )) {
+      form.remove();
+    }
     mock.module(PROOF_COMPILER, () => ({ ...realProofCompiler }));
   });
 

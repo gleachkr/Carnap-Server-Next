@@ -1,17 +1,17 @@
 import { describe, expect, mock, test } from "bun:test";
-import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../../src/worker/domain/content";
-import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
-import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercise-kit/correctness-mark";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
-import { renderTranslationElement } from "../../src/worker/exercises/translation/read-only-view";
-import { buildTranslationStrings } from "../../src/worker/exercises/translation/strings";
-import type {
-  TranslationPublicData,
-  TranslationSubmission,
-} from "../../src/worker/exercises/translation/types";
-import { i18nFor } from "../../src/worker/i18n";
-import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
+import type { TranslationSubmission } from "../../src/worker/exercises/translation/types";
+import { dom } from "../helpers/dom";
+import {
+  compileExercise,
+  type ExerciseFixture,
+  type MountedExercise,
+  type MountOptions,
+  markState,
+  mountExercise,
+  statusText,
+  until,
+} from "./mount-exercise";
+import { mockProofCompiler } from "./proof-compiler-mock";
 
 /**
  * `<carnap-translation>`'s side of the widget: the live preview, the answer
@@ -34,96 +34,30 @@ mock.module("../../src/client/proof-search", () => ({
   findEquivalenceProof,
 }));
 
-const compile = mock((_mm0: string, _proof: string) => ({
-  mmbBytes: new Uint8Array([1, 2, 3]),
-  ok: true,
-}));
-
-mock.module("../../src/client/proof-compiler", () => ({
-  loadProofCompiler: async () => ({ compile }),
-  proofCompilerLocale: () => undefined,
-}));
+await mockProofCompiler();
 
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`
 // resolves and `register` lands in the window the fixtures are built in.
 await import("../../src/client/components/carnap-translation-v1");
 
-async function publicDataFor(
-  body: string,
-  attrs = "#t1",
-): Promise<TranslationPublicData> {
-  const result = await compileCarnapMarkdown(
-    `::::translation{${attrs}}\n${body}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      `compile failed: ${result.diagnostics.map((d) => d.code).join(", ")}`,
-    );
-  }
-
-  const item = result.artifact.manifest[0] as ExerciseManifestItem;
-
-  return item.publicData as unknown as TranslationPublicData;
+function translationExercise(body: string, attrs = "#t1") {
+  return compileExercise(`::::translation{${attrs}}\n${body}\n::::`);
 }
 
-interface Mounted {
-  readonly answerData: HTMLInputElement;
-  readonly element: HTMLElement;
-  readonly form: HTMLFormElement;
+interface Mounted extends MountedExercise {
   readonly input: HTMLInputElement;
-  readonly root: ShadowRoot;
 }
 
-/** Render an exercise server-side, then upgrade it the way a browser would. */
 function mount(
-  publicData: TranslationPublicData,
-  priorAnswer: TranslationSubmission | null = null,
-  options: { readonly feedback?: string } = {},
+  fixture: ExerciseFixture,
+  options: MountOptions = {},
 ): Mounted {
-  const i18n = i18nFor("en");
-  // The real bar, not a hand-written stand-in: the widget writes its verdict to
-  // the check status line inside it, and a fixture spelling its own markup would
-  // keep passing after that line had moved.
-  const actions = exerciseActionsHtml(i18n, { slotted: true });
-  const hydration = {
-    mode: "answer",
-    options,
-    priorAnswer,
-    publicData,
-    strings: buildTranslationStrings(i18n),
-    version: EXERCISE_HYDRATION_VERSION,
-  };
-  const html = renderTranslationElement(
-    publicData,
-    {
-      component: "carnap-translation",
-      componentVersion: "1",
-      exerciseId: "t1",
-      exerciseKind: "translation@1",
-      i18n,
-      title: null,
-    },
-    `${actions}<script data-exercise-hydration type="application/json">${JSON.stringify(hydration)}</script>`,
-  );
-
-  const form = domDocument.createElement("form");
-  form.className = "exercise-submission";
-  form.innerHTML = `<input name="answerData" type="hidden">${html}`;
-  adoptShadowRoots(form);
-  domDocument.body.append(form);
-
-  const element = form.querySelector("carnap-translation") as HTMLElement;
-  const root = element.shadowRoot as ShadowRoot;
-
+  const mounted = mountExercise(fixture, options);
   return {
-    answerData: form.querySelector(
-      'input[name="answerData"]',
+    ...mounted,
+    input: mounted.root.querySelector(
+      'input[data-role="text"]',
     ) as HTMLInputElement,
-    element,
-    form,
-    input: root.querySelector('input[data-role="text"]') as HTMLInputElement,
-    root,
   };
 }
 
@@ -152,46 +86,12 @@ function previewText(mounted: Mounted): string {
   );
 }
 
-/**
- * The Check's verdict, on the line the shared action bar keeps for it — light
- * DOM, outside the shadow root, the same element every locally-checking type
- * writes to. The preview above stays inside the card: it reads the student's own
- * keystrokes back and belongs beside the input, not down in the button row.
- */
-function statusText(mounted: Mounted): string {
-  return (
-    mounted.form.querySelector<HTMLElement>("[data-exercise-check-status]")
-      ?.textContent ?? ""
-  );
-}
-
-function markState(mounted: Mounted): string {
-  const mark = mounted.form.querySelector<HTMLElement>(
-    `.${CORRECTNESS_MARK_CLASS}`,
-  );
-
-  return mark?.dataset.state ?? "";
-}
-
-async function until(
-  condition: () => boolean,
-  timeoutMs = 1_000,
-): Promise<void> {
-  const start = Date.now();
-  while (!condition()) {
-    if (Date.now() - start > timeoutMs) {
-      throw new Error("condition never held");
-    }
-    await new Promise((resolve) => setTimeout(resolve, 10));
-  }
-}
-
 const PROP = "People danced and sang.\n\n- P/\\Q";
 
 describe("upgrading", () => {
   test("the input comes alive, prefilled from the starter", async () => {
     const mounted = mount(
-      await publicDataFor(PROP, '#t1 starter="P /\\ ..."'),
+      await translationExercise(PROP, '#t1 starter="P /\\ ..."'),
     );
 
     expect(mounted.element.dataset.enhanced).toBe("true");
@@ -204,8 +104,8 @@ describe("upgrading", () => {
 
   test("a prior answer wins over the starter and is mirrored", async () => {
     const mounted = mount(
-      await publicDataFor(PROP, '#t1 starter="P /\\ ..."'),
-      { text: "Q/\\P" },
+      await translationExercise(PROP, '#t1 starter="P /\\ ..."'),
+      { priorAnswer: { text: "Q/\\P" } },
     );
 
     expect(mounted.input.value).toBe("Q/\\P");
@@ -215,7 +115,7 @@ describe("upgrading", () => {
 
 describe("the live preview", () => {
   test("reads well-formed ASCII back in logical symbols", async () => {
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
 
     type(mounted, "P/\\Q");
 
@@ -223,7 +123,7 @@ describe("the live preview", () => {
   });
 
   test("words the parser's complaint while it does not parse", async () => {
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
 
     type(mounted, "P /\\");
 
@@ -238,7 +138,7 @@ describe("the live preview", () => {
 describe("checking", () => {
   test("a verbatim solution goes green with no engine at all", async () => {
     searchResult = null; // any search would throw
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
 
     type(mounted, "(P & Q)");
     pressEnter(mounted);
@@ -252,7 +152,7 @@ describe("checking", () => {
 
   test("an equivalent answer earns a certificate naming its solution", async () => {
     searchResult = async () => "expanded proof";
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
 
     type(mounted, "Q/\\P");
     pressEnter(mounted);
@@ -267,7 +167,7 @@ describe("checking", () => {
 
   test("a refused search reads as not equivalent", async () => {
     searchResult = async () => null;
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
 
     type(mounted, "P\\/Q");
     pressEnter(mounted);
@@ -283,7 +183,7 @@ describe("checking", () => {
 
   test("a dead engine is a malfunction, not a verdict", async () => {
     searchResult = () => Promise.reject(new Error("worker gone"));
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
 
     type(mounted, "Q/\\P");
     pressEnter(mounted);
@@ -292,7 +192,9 @@ describe("checking", () => {
 
   test("the tests gate words its complaint before any search runs", async () => {
     searchResult = null;
-    const mounted = mount(await publicDataFor(PROP, '#t1 tests="maxNot:0"'));
+    const mounted = mount(
+      await translationExercise(PROP, '#t1 tests="maxNot:0"'),
+    );
 
     type(mounted, "~~(P/\\Q)");
     pressEnter(mounted);
@@ -305,7 +207,9 @@ describe("checking", () => {
 
   test("exact refuses an equivalent that is not the formula", async () => {
     searchResult = null;
-    const mounted = mount(await publicDataFor(PROP, '#t1 variant="exact"'));
+    const mounted = mount(
+      await translationExercise(PROP, '#t1 variant="exact"'),
+    );
 
     type(mounted, "Q/\\P");
     pressEnter(mounted);
@@ -320,8 +224,10 @@ describe("checking", () => {
 describe("feedback", () => {
   test("terse keeps the mark and drops the sentences", async () => {
     searchResult = async () => null;
-    const mounted = mount(await publicDataFor(PROP), null, {
-      feedback: "terse",
+    const mounted = mount(await translationExercise(PROP), {
+      options: {
+        feedback: "terse",
+      },
     });
 
     type(mounted, "P\\/Q");
@@ -334,8 +240,10 @@ describe("feedback", () => {
 
   test("none still computes the certificate but never goes green", async () => {
     searchResult = async () => "expanded proof";
-    const mounted = mount(await publicDataFor(PROP), null, {
-      feedback: "none",
+    const mounted = mount(await translationExercise(PROP), {
+      options: {
+        feedback: "none",
+      },
     });
 
     type(mounted, "Q/\\P");
@@ -372,7 +280,7 @@ function recordSubmissions(mounted: Mounted): TranslationSubmission[] {
 describe("the submit hold", () => {
   test("a submit during the typing pause runs the check first", async () => {
     searchResult = async () => "expanded proof";
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
     const sent = recordSubmissions(mounted);
 
     type(mounted, "Q/\\P");
@@ -393,7 +301,7 @@ describe("the submit hold", () => {
       new Promise<string | null>((resolve) => {
         release = resolve;
       });
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
     const sent = recordSubmissions(mounted);
 
     type(mounted, "Q/\\P");
@@ -414,7 +322,7 @@ describe("the submit hold", () => {
 
   test("a settled check goes straight through", async () => {
     searchResult = async () => "expanded proof";
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
     const sent = recordSubmissions(mounted);
 
     type(mounted, "Q/\\P");
@@ -430,7 +338,7 @@ describe("the submit hold", () => {
 
   test("a verbatim answer settles at once and needs no wait", async () => {
     searchResult = null;
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
     const sent = recordSubmissions(mounted);
 
     type(mounted, "(P & Q)");
@@ -446,7 +354,7 @@ describe("the submit hold", () => {
       new Promise<string | null>((resolve) => {
         release = resolve;
       });
-    const mounted = mount(await publicDataFor(PROP));
+    const mounted = mount(await translationExercise(PROP));
     const sent = recordSubmissions(mounted);
 
     type(mounted, "Q/\\P");
@@ -464,7 +372,7 @@ describe("the submit hold", () => {
 describe("the checksyntax gate", () => {
   test("refuses to submit text that does not parse, and says why", async () => {
     const mounted = mount(
-      await publicDataFor(PROP, '#t1 options="checksyntax"'),
+      await translationExercise(PROP, '#t1 options="checksyntax"'),
     );
 
     type(mounted, "P /\\");
@@ -480,7 +388,7 @@ describe("the checksyntax gate", () => {
   test("lets a parsed answer through, right or wrong", async () => {
     searchResult = async () => null;
     const mounted = mount(
-      await publicDataFor(PROP, '#t1 options="checksyntax"'),
+      await translationExercise(PROP, '#t1 options="checksyntax"'),
     );
 
     type(mounted, "P\\/Q");

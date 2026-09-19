@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mountExercise, typeInto, until } from "./mount-exercise";
 import { mockProofCompiler } from "./proof-compiler-mock";
-import {
-  mountTree,
-  toolbarButton,
-  treePublicDataFor,
-  treeRootField,
-  typeInto,
-  until,
-} from "./tree-widget";
+import { toolbarButton, treeExercise, treeRootField } from "./tree-widget";
 
 /**
  * `<carnap-aufbau-proof-tree>` in playground mode (#305): the root is the
@@ -24,8 +18,8 @@ await import("../../src/client/components/carnap-aufbau-proof-tree-v1");
 
 describe("a playground tree", () => {
   test("the root is the student's to write, and the compiler gets the goal it makes", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
+    const mounted = mountExercise(
+      await treeExercise(
         `:::aufbau-proof-tree{system="fx" id="t1" playground}\nBuild anything.\n:::`,
       ),
     );
@@ -63,8 +57,8 @@ describe("a playground tree", () => {
   });
 
   test("an ordinary exercise keeps its fixed root and says nothing about proving", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
+    const mounted = mountExercise(
+      await treeExercise(
         `:::aufbau-proof-tree{system="fx" id="t1"}\nProve it.\n\ntheorem t {a: name}: $ Fa ⊢ Fa $\n:::`,
       ),
     );

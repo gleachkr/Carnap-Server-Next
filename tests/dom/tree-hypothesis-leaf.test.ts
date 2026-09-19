@@ -1,14 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { dom } from "../helpers/dom";
+import { type MountedExercise, mountExercise, until } from "./mount-exercise";
 import { mockProofCompiler } from "./proof-compiler-mock";
-import {
-  type MountedTree,
-  mountTree,
-  toolbarButton,
-  treePublicDataFor,
-  treeRootField,
-  until,
-} from "./tree-widget";
+import { toolbarButton, treeExercise, treeRootField } from "./tree-widget";
 
 /**
  * A hypothesis leaf in `<carnap-aufbau-proof-tree>` is a citation of one of
@@ -40,26 +34,26 @@ function tree(goal: string, starter = ""): string {
   return `:::aufbau-proof-tree{system="mini" id="t1"}\nProve it.\n\n${goal}${starter.length === 0 ? "" : `\n----\n${starter}`}\n:::`;
 }
 
-function leaves(mounted: MountedTree): HTMLElement[] {
+function leaves(mounted: MountedExercise): HTMLElement[] {
   return Array.from(
     mounted.root.querySelectorAll<HTMLElement>(".tree-hypothesis"),
   );
 }
 
-function choice(mounted: MountedTree): HTMLSelectElement | null {
+function choice(mounted: MountedExercise): HTMLSelectElement | null {
   return mounted.root.querySelector<HTMLSelectElement>(
     ".tree-hypothesis-choice",
   );
 }
 
-function storedTree(mounted: MountedTree): unknown {
+function storedTree(mounted: MountedExercise): unknown {
   return (JSON.parse(mounted.answerData.value) as { tree: unknown }).tree;
 }
 
 describe("a hypothesis leaf", () => {
   test("shows the cited hypothesis, fixed, and a select to change which", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
+    const mounted = mountExercise(
+      await treeExercise(
         tree("theorem goal (p q: wff): $ p $ > $ p -> q $ > $ q $"),
         MINI,
       ),
@@ -97,11 +91,8 @@ describe("a hypothesis leaf", () => {
   });
 
   test("over a goal with one hypothesis the citation is a label, not a control", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
-        tree("theorem goal (p: wff): $ p $ > $ p $"),
-        MINI,
-      ),
+    const mounted = mountExercise(
+      await treeExercise(tree("theorem goal (p: wff): $ p $ > $ p $"), MINI),
     );
 
     toolbarButton(mounted, "Add hypothesis").click();
@@ -114,8 +105,8 @@ describe("a hypothesis leaf", () => {
   });
 
   test("a goal that declares no hypotheses offers none to add", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
+    const mounted = mountExercise(
+      await treeExercise(
         ':::aufbau-proof-tree{system="fx" id="t1"}\nProve it.\n\ntheorem t {a: name}: $ Fa ⊢ Fa $\n:::',
       ),
     );
@@ -133,8 +124,8 @@ describe("a hypothesis leaf", () => {
   });
 
   test("a starter's leaves show the goal's text, whatever the starter said", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
+    const mounted = mountExercise(
+      await treeExercise(
         tree(
           "theorem goal (p q: wff): $ p $ > $ p -> q $ > $ q $",
           "l1: $ q $ by mp [#1, #2]",
@@ -151,20 +142,22 @@ describe("a hypothesis leaf", () => {
   });
 
   test("a restored leaf citing past the goal's last hypothesis says so", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(
+    const mounted = mountExercise(
+      await treeExercise(
         tree("theorem goal (p q: wff): $ p $ > $ p -> q $ > $ q $"),
         MINI,
       ),
       {
-        proofText: "",
-        tree: {
-          formula: "q",
-          id: "r",
-          premises: [
-            { formula: "stale", hyp: 3, id: "h", premises: [], rule: "" },
-          ],
-          rule: "mp",
+        priorAnswer: {
+          proofText: "",
+          tree: {
+            formula: "q",
+            id: "r",
+            premises: [
+              { formula: "stale", hyp: 3, id: "h", premises: [], rule: "" },
+            ],
+            rule: "mp",
+          },
         },
       },
     );

@@ -547,6 +547,14 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     this.scheduleCompile();
   }
 
+  /** A widget taken out of the page has nothing left to check. */
+  disconnectedCallback(): void {
+    if (this.debounceHandle !== null) {
+      clearTimeout(this.debounceHandle);
+      this.debounceHandle = null;
+    }
+  }
+
   /**
    * The submit gate: settle a pending compile first (the certificate, and
    * under `allow-sorry` the answer to whether the proof may go, both come out

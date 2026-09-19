@@ -4,15 +4,21 @@ import { exerciseHydrationForArtifact } from "../../src/worker/application/conte
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
 import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
 import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercise-kit/correctness-mark";
-import { EXERCISE_HYDRATION_VERSION } from "../../src/worker/exercise-kit/hydration";
 import { renderModelElement } from "../../src/worker/exercises/model/read-only-view";
-import { buildModelStrings } from "../../src/worker/exercises/model/strings";
 import type {
   ModelAnswerData,
   ModelPublicData,
 } from "../../src/worker/exercises/model/types";
 import { i18nFor } from "../../src/worker/i18n";
 import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
+import {
+  checkStatus,
+  compileExercise,
+  type MountedExercise as Mounted,
+  markState,
+  mountExercise,
+  statusText,
+} from "./mount-exercise";
 
 /**
  * `<carnap-model>`'s side of the widget: that it enables the fields, keeps the
@@ -23,92 +29,14 @@ import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
  * server renders each field's markup as a string and the element rebuilds two of
  * them with DOM calls, so a class or `data-` name changing on one side and not
  * the other is a real failure mode. Nothing else would catch it.
- *
- * jsdom does not implement declarative shadow DOM — `<template shadowrootmode>`
- * stays a template — so {@link mount} performs the adoption a browser's parser
- * does, then inserts the element so it upgrades with its shadow root already in
- * place. That ordering is the point: `enhance()` reads `this.shadowRoot`.
  */
 
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`
 // resolves and `register` lands in the window the fixtures are built in.
 await import("../../src/client/components/carnap-model-v1");
 
-async function publicDataFor(
-  body: string,
-  attrs = "#m1",
-): Promise<ModelPublicData> {
-  const result = await compileCarnapMarkdown(
-    `::::model{${attrs}}\n${body}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      `compile failed: ${result.diagnostics.map((d) => d.code).join(", ")}`,
-    );
-  }
-
-  const item = result.artifact.manifest[0] as ExerciseManifestItem;
-
-  return item.publicData as unknown as ModelPublicData;
-}
-
-interface Mounted {
-  readonly answerData: HTMLInputElement;
-  readonly element: HTMLElement;
-  readonly root: ShadowRoot;
-}
-
-/** Render an exercise server-side, then upgrade it the way a browser would. */
-function mount(
-  publicData: ModelPublicData,
-  priorAnswer: ModelAnswerData | null = null,
-  options: { readonly feedback?: string } = {},
-): Mounted {
-  const i18n = i18nFor("en");
-  // The real bar, not a hand-written stand-in for it. Everything the widget
-  // writes to — the correctness mark, the check status line — lives in it, in
-  // light DOM outside the shadow root, and a fixture that spelled its own would
-  // go on passing after the bar had changed underneath it.
-  const actions = exerciseActionsHtml(i18n, { slotted: true });
-  const hydration = {
-    mode: "answer",
-    options,
-    priorAnswer,
-    publicData,
-    strings: buildModelStrings(i18n),
-    version: EXERCISE_HYDRATION_VERSION,
-  };
-  const html = renderModelElement(
-    publicData,
-    {
-      component: "carnap-model",
-      componentVersion: "1",
-      exerciseId: "m1",
-      exerciseKind: "model@1",
-      i18n,
-      title: null,
-    },
-    `${actions}<script data-exercise-hydration type="application/json">${JSON.stringify(hydration)}</script>`,
-  );
-
-  // A fresh form appended to the shared body, never a replacement of it: other
-  // element tests keep their fixtures in the same document.
-  const form = domDocument.createElement("form");
-  form.className = "exercise-submission";
-  form.innerHTML = `<input name="answerData" type="hidden">${html}`;
-  adoptShadowRoots(form);
-  domDocument.body.append(form);
-
-  const element = form.querySelector("carnap-model") as HTMLElement;
-
-  return {
-    answerData: form.querySelector(
-      'input[name="answerData"]',
-    ) as HTMLInputElement,
-    element,
-    root: element.shadowRoot as ShadowRoot,
-  };
+function modelExercise(body: string, attrs = "#m1") {
+  return compileExercise(`::::model{${attrs}}\n${body}\n::::`);
 }
 
 function rowFor(root: ShadowRoot, label: string): HTMLElement {
@@ -153,32 +81,6 @@ function answerOf(mounted: Mounted): ModelAnswerData {
   return JSON.parse(mounted.answerData.value) as ModelAnswerData;
 }
 
-/**
- * The Check's verdict, on the line the shared action bar keeps for it. Light
- * DOM, outside the shadow root: it is the same element for every type that
- * checks locally, which is what makes the sentence come out the same size and in
- * the same place as the truth table's.
- */
-function checkStatus(mounted: Mounted): HTMLElement | null {
-  return (
-    mounted.element
-      .closest("form")
-      ?.querySelector<HTMLElement>("[data-exercise-check-status]") ?? null
-  );
-}
-
-function statusText(mounted: Mounted): string {
-  return checkStatus(mounted)?.textContent ?? "";
-}
-
-function markState(mounted: Mounted): string {
-  const mark = mounted.element
-    .closest("form")
-    ?.querySelector<HTMLElement>(`.${CORRECTNESS_MARK_CLASS}`);
-
-  return mark?.dataset.state ?? "";
-}
-
 function clickCheck(mounted: Mounted): void {
   const button = mounted.element.querySelector<HTMLButtonElement>(
     "button.model-check",
@@ -193,7 +95,7 @@ function clickCheck(mounted: Mounted): void {
 
 describe("upgrading", () => {
   test("the fields come alive and the busy flag goes", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x), G(a)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x), G(a)"));
 
     expect(mounted.element.dataset.enhanced).toBe("true");
     expect(
@@ -204,7 +106,7 @@ describe("upgrading", () => {
   });
 
   test("the answer is mirrored into the form on connect", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x)"));
 
     // Carnap seeds the domain with `0`, so an untouched exercise already has a
     // model in it — a one-element domain and an empty extension.
@@ -215,8 +117,8 @@ describe("upgrading", () => {
   });
 
   test("a locked given stays inert", async () => {
-    const mounted = mount(
-      await publicDataFor(
+    const mounted = mountExercise(
+      await modelExercise(
         "- AxF(x)\n| Domain : 0,1",
         '#m1 options="strictGivens"',
       ),
@@ -229,7 +131,7 @@ describe("upgrading", () => {
 
 describe("the domain drives the other fields", () => {
   test("a constant's options follow the domain", async () => {
-    const mounted = mount(await publicDataFor("- F(a)"));
+    const mounted = mountExercise(await modelExercise("- F(a)"));
     const constant = valueControl(
       mounted.root,
       "a",
@@ -247,7 +149,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a chosen constant survives a widening of the domain", async () => {
-    const mounted = mount(await publicDataFor("- F(a)"));
+    const mounted = mountExercise(await modelExercise("- F(a)"));
 
     type(valueControl(mounted.root, "Domain"), "0,1,2");
     choose(valueControl(mounted.root, "a") as HTMLSelectElement, "2");
@@ -257,7 +159,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a constant outside a narrowed domain falls back inside it", async () => {
-    const mounted = mount(await publicDataFor("- F(a)"));
+    const mounted = mountExercise(await modelExercise("- F(a)"));
 
     type(valueControl(mounted.root, "Domain"), "0,1,2");
     choose(valueControl(mounted.root, "a") as HTMLSelectElement, "2");
@@ -268,7 +170,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a function gets one control per argument tuple", async () => {
-    const mounted = mount(await publicDataFor("- Axf(x) = x"));
+    const mounted = mountExercise(await modelExercise("- Axf(x) = x"));
     const table = () =>
       rowFor(mounted.root, "f(_)").querySelectorAll("select[data-argument]");
 
@@ -285,7 +187,9 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a binary function's table is the whole square", async () => {
-    const mounted = mount(await publicDataFor("- AxAyf(x,y) = f(y,x)"));
+    const mounted = mountExercise(
+      await modelExercise("- AxAyf(x,y) = f(y,x)"),
+    );
 
     type(valueControl(mounted.root, "Domain"), "0,1");
 
@@ -299,7 +203,9 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a rebuilt binary table is the same square the server renders", async () => {
-    const mounted = mount(await publicDataFor("- AxAyf(x,y) = f(y,x)"));
+    const mounted = mountExercise(
+      await modelExercise("- AxAyf(x,y) = f(y,x)"),
+    );
 
     type(valueControl(mounted.root, "Domain"), "0,1");
 
@@ -332,7 +238,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a rebuilt unary table has no header column either", async () => {
-    const mounted = mount(await publicDataFor("- Axf(x) = x"));
+    const mounted = mountExercise(await modelExercise("- Axf(x) = x"));
 
     type(valueControl(mounted.root, "Domain"), "0,1,2");
 
@@ -350,7 +256,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a function serializes to the spelling Carnap stores", async () => {
-    const mounted = mount(await publicDataFor("- Axf(x) = x"));
+    const mounted = mountExercise(await modelExercise("- Axf(x) = x"));
 
     type(valueControl(mounted.root, "Domain"), "0,1");
 
@@ -369,7 +275,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("choices already made survive a function's rebuild", async () => {
-    const mounted = mount(await publicDataFor("- Axf(x) = x"));
+    const mounted = mountExercise(await modelExercise("- Axf(x) = x"));
 
     type(valueControl(mounted.root, "Domain"), "0,1");
 
@@ -385,8 +291,8 @@ describe("the domain drives the other fields", () => {
   });
 
   test("a seeded function row is what the answer carries, and survives a rebuild", async () => {
-    const mounted = mount(
-      await publicDataFor("- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]"),
+    const mounted = mountExercise(
+      await modelExercise("- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]"),
     );
 
     // The given is the model the exercise starts from: an untouched widget
@@ -399,8 +305,8 @@ describe("the domain drives the other fields", () => {
   });
 
   test("strictGivens locks the rows a function's given names, and no others", async () => {
-    const mounted = mount(
-      await publicDataFor(
+    const mounted = mountExercise(
+      await modelExercise(
         "- Axf(x) = x\n| Domain : 0,1\n| f(_) : [0;1]",
         '#m2 options="strictGivens"',
       ),
@@ -427,7 +333,7 @@ describe("the domain drives the other fields", () => {
   });
 
   test("an unreadable domain leaves the dependent controls alone", async () => {
-    const mounted = mount(await publicDataFor("- F(a)"));
+    const mounted = mountExercise(await modelExercise("- F(a)"));
 
     type(valueControl(mounted.root, "Domain"), "0,1,2");
     type(valueControl(mounted.root, "Domain"), "0,x");
@@ -442,7 +348,7 @@ describe("the domain drives the other fields", () => {
 
 describe("warnings", () => {
   test("a field that will not read is marked, and unmarked when fixed", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x)"));
     const warning = () =>
       rowFor(mounted.root, "F(_)").querySelector<HTMLElement>(
         '[data-role="warning"]',
@@ -465,7 +371,7 @@ describe("warnings", () => {
   });
 
   test("an empty extension is not a warning", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x)"));
 
     // The empty relation is a perfectly good interpretation.
     expect(
@@ -478,7 +384,7 @@ describe("warnings", () => {
 
 describe("the local Check", () => {
   test("agrees with the server on a model that works", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x), ExG(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x), ExG(x)"));
 
     type(valueControl(mounted.root, "Domain"), "0,1");
     type(valueControl(mounted.root, "F(_)"), "0,1");
@@ -492,7 +398,7 @@ describe("the local Check", () => {
   });
 
   test("names the formulas that came out wrong", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x)"));
 
     type(valueControl(mounted.root, "Domain"), "0,1");
     type(valueControl(mounted.root, "F(_)"), "0");
@@ -504,7 +410,7 @@ describe("the local Check", () => {
   });
 
   test("reports an unreadable model rather than judging it", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x)"));
 
     type(valueControl(mounted.root, "Domain"), "");
     clickCheck(mounted);
@@ -513,7 +419,7 @@ describe("the local Check", () => {
   });
 
   test("an edit clears the last verdict", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"));
+    const mounted = mountExercise(await modelExercise("- AxF(x)"));
 
     clickCheck(mounted);
     expect(statusText(mounted)).not.toBe("");
@@ -524,7 +430,9 @@ describe("the local Check", () => {
   });
 
   test("check=off offers no button", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)", '#m1 check="off"'));
+    const mounted = mountExercise(
+      await modelExercise("- AxF(x)", '#m1 check="off"'),
+    );
 
     expect(mounted.element.querySelector("button.model-check")).toBeNull();
   });
@@ -532,9 +440,14 @@ describe("the local Check", () => {
   test('feedback="none" takes the button and refuses the mark', async () => {
     const answer = { domain: "0", fields: { "F(_)": "0" } };
     // A correct model, so the mark would go green if anything let it.
-    const withFeedback = mount(await publicDataFor("- AxF(x)"), answer);
-    const sealed = mount(await publicDataFor("- AxF(x)"), answer, {
-      feedback: "none",
+    const withFeedback = mountExercise(await modelExercise("- AxF(x)"), {
+      priorAnswer: answer,
+    });
+    const sealed = mountExercise(await modelExercise("- AxF(x)"), {
+      options: {
+        feedback: "none",
+      },
+      priorAnswer: answer,
     });
 
     clickCheck(withFeedback);
@@ -551,8 +464,10 @@ describe("the local Check", () => {
    * the base class, where a widget cannot route around it by forgetting.
    */
   test("a widget that asks for a green check under none still does not get one", async () => {
-    const sealed = mount(await publicDataFor("- AxF(x)"), null, {
-      feedback: "none",
+    const sealed = mountExercise(await modelExercise("- AxF(x)"), {
+      options: {
+        feedback: "none",
+      },
     });
     const element = sealed.element as unknown as {
       setMark(state: string, title?: string): void;
@@ -636,9 +551,11 @@ describe("the local Check", () => {
 
 describe("restoring a prior answer", () => {
   test("text fields and the domain come back", async () => {
-    const mounted = mount(await publicDataFor("- AxF(x)"), {
-      domain: "0,1,2",
-      fields: { "F(_)": "0,1,2" },
+    const mounted = mountExercise(await modelExercise("- AxF(x)"), {
+      priorAnswer: {
+        domain: "0,1,2",
+        fields: { "F(_)": "0,1,2" },
+      },
     });
 
     expect(valueControl(mounted.root, "Domain").value).toBe("0,1,2");
@@ -650,9 +567,11 @@ describe("restoring a prior answer", () => {
   });
 
   test("a function's table comes back from its serialized form", async () => {
-    const mounted = mount(await publicDataFor("- Axf(x) = x"), {
-      domain: "0,1",
-      fields: { "f(_)": "[0;1],[1;0]" },
+    const mounted = mountExercise(await modelExercise("- Axf(x) = x"), {
+      priorAnswer: {
+        domain: "0,1",
+        fields: { "f(_)": "[0;1],[1;0]" },
+      },
     });
 
     // The table has to be rebuilt for the restored domain first, or there is
@@ -661,9 +580,11 @@ describe("restoring a prior answer", () => {
   });
 
   test("a constant's choice comes back", async () => {
-    const mounted = mount(await publicDataFor("- F(a)"), {
-      domain: "0,1,2",
-      fields: { a: "2", "F(_)": "" },
+    const mounted = mountExercise(await modelExercise("- F(a)"), {
+      priorAnswer: {
+        domain: "0,1,2",
+        fields: { a: "2", "F(_)": "" },
+      },
     });
 
     expect(answerOf(mounted).fields.a).toBe("2");

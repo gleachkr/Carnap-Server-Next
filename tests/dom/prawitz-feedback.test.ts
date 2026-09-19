@@ -1,15 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { mountExercise, typeInto, until } from "./mount-exercise";
 import {
-  mountPrawitz,
   PRAWITZ_THEORY,
   prawitzButton,
+  prawitzExercise,
   prawitzFormulaFieldOf,
   prawitzItems,
-  prawitzPublicData,
-  prawitzTypeInto,
 } from "./prawitz-widget";
 import { mockProofCompiler } from "./proof-compiler-mock";
-import { until } from "./tree-widget";
 
 /**
  * What `<carnap-aufbau-proof-prawitz>` says on a line, and when it says
@@ -46,13 +44,13 @@ async function typedLine(
   feedback: "full" | "terse",
   text: string,
 ): Promise<HTMLElement> {
-  const mounted = mountPrawitz(await prawitzPublicData("", READING_THEORY), {
-    feedback,
+  const mounted = mountExercise(await prawitzExercise("", READING_THEORY), {
+    options: { feedback },
   });
   prawitzButton(mounted, "New assumption").click();
   const [only] = prawitzItems(mounted);
   const field = prawitzFormulaFieldOf(only as HTMLElement);
-  prawitzTypeInto(field, text);
+  typeInto(field, text);
   return field;
 }
 

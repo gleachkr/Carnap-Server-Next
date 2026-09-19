@@ -1,13 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mountExercise, typeInto, until } from "./mount-exercise";
 import { mockProofCompiler } from "./proof-compiler-mock";
-import {
-  mountTree,
-  treePublicDataFor,
-  treeRootField,
-  treeRootRule,
-  typeInto,
-  until,
-} from "./tree-widget";
+import { treeExercise, treeRootField, treeRootRule } from "./tree-widget";
 
 /**
  * A compiler that throws rather than reports used to leave
@@ -39,7 +33,7 @@ const TREE = `:::aufbau-proof-tree{system="mini" id="t1"}\nProve it.\n\ntheorem 
 
 describe("a compiler that throws", () => {
   test("is reported on the root line", async () => {
-    const mounted = mountTree(await treePublicDataFor(TREE, MINI));
+    const mounted = mountExercise(await treeExercise(TREE, MINI));
 
     typeInto(treeRootRule(mounted), "mp");
     await until(() => compile.mock.calls.length > 0);
@@ -50,8 +44,8 @@ describe("a compiler that throws", () => {
 
   test("says nothing under terse feedback, like any other reason", async () => {
     const calls = compile.mock.calls.length;
-    const mounted = mountTree(await treePublicDataFor(TREE, MINI), null, {
-      feedback: "terse",
+    const mounted = mountExercise(await treeExercise(TREE, MINI), {
+      options: { feedback: "terse" },
     });
 
     typeInto(treeRootRule(mounted), "mp");

@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { dom } from "../helpers/dom";
-import { mockProofCompiler } from "./proof-compiler-mock";
 import {
-  type MountedTree,
-  mountTree,
-  treePublicDataFor,
-  treeRootField,
-  treeRootRule,
+  markState,
+  mountExercise,
+  statusText as status,
+  submitForm as submit,
+  typeInto,
   until,
-} from "./tree-widget";
+} from "./mount-exercise";
+import { mockProofCompiler } from "./proof-compiler-mock";
+import { treeExercise, treeRootField, treeRootRule } from "./tree-widget";
 
 /**
  * `allow-sorry` in `<carnap-aufbau-proof-tree>`, standing in for all four
@@ -62,33 +62,6 @@ function tree(attributes: string): string {
   return `:::aufbau-proof-tree{system="mini" id="t1"${attributes}}\nProve it.\n\ntheorem goal (p: wff): $ p $\n:::`;
 }
 
-function mark(mounted: MountedTree): HTMLElement {
-  return mounted.form.querySelector(".exercise-mark") as HTMLElement;
-}
-
-function status(mounted: MountedTree): string {
-  return (
-    mounted.form.querySelector("[data-exercise-check-status]")?.textContent ??
-    ""
-  );
-}
-
-function typeInto(field: HTMLElement, text: string): void {
-  field.textContent = text;
-  field.dispatchEvent(new dom.window.Event("input", { bubbles: true }));
-}
-
-/** Submit the form the way the page runtime sees it: cancelable, and — as
- *  the runtime does — never allowed to navigate. */
-function submit(mounted: MountedTree): Event {
-  const event = new dom.window.Event("submit", {
-    bubbles: true,
-    cancelable: true,
-  });
-  mounted.form.dispatchEvent(event);
-  return event;
-}
-
 const REFUSAL =
   "A proof with lines admitted with sorry! cannot be submitted.";
 const HOMEWORK =
@@ -98,8 +71,8 @@ const EXAM =
 
 describe("allow-sorry on the tree widget", () => {
   test("an admitted rule is a warning, the rest checks, and the proof is held back", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(tree(" allow-sorry"), MINI),
+    const mounted = mountExercise(
+      await treeExercise(tree(" allow-sorry"), MINI),
     );
     // The page runtime's bubbling listener: a submit that is not cancelled
     // would be fetched, never navigated.
@@ -117,7 +90,7 @@ describe("allow-sorry on the tree widget", () => {
     expect(treeRootRule(mounted).getAttribute("title")).toContain("admitted");
     // Not an error anywhere: the line itself is clean.
     expect(treeRootField(mounted).classList.contains("is-error")).toBe(false);
-    expect(mark(mounted).dataset.state).toBe("idle");
+    expect(markState(mounted)).toBe("idle");
     expect(status(mounted)).toBe(HOMEWORK);
     // No certificate: the verifier would refuse one, so none is sent.
     expect(JSON.parse(mounted.answerData.value)).toMatchObject({ mmb: "" });
@@ -130,7 +103,7 @@ describe("allow-sorry on the tree widget", () => {
     // Prove the line and it goes.
     typeInto(treeRootRule(mounted), "mp");
     expect(status(mounted)).toBe("");
-    await until(() => mark(mounted).dataset.state === "ok");
+    await until(() => markState(mounted) === "ok");
     expect(treeRootRule(mounted).classList.contains("is-warning")).toBe(
       false,
     );
@@ -139,10 +112,9 @@ describe("allow-sorry on the tree widget", () => {
   });
 
   test("on an exam the admitted proof is let go, and told what it is worth", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(tree(" allow-sorry"), MINI),
-      null,
-      { exam: true },
+    const mounted = mountExercise(
+      await treeExercise(tree(" allow-sorry"), MINI),
+      { options: { exam: true } },
     );
     const sent: Event[] = [];
     mounted.form.addEventListener("submit", (event) => {
@@ -161,8 +133,8 @@ describe("allow-sorry on the tree widget", () => {
   });
 
   test("a submit during a pending compile waits for it, then is judged", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(tree(" allow-sorry"), MINI),
+    const mounted = mountExercise(
+      await treeExercise(tree(" allow-sorry"), MINI),
     );
     const sent: Event[] = [];
     mounted.form.addEventListener("submit", (event) => {
@@ -184,7 +156,7 @@ describe("allow-sorry on the tree widget", () => {
   });
 
   test("without allow-sorry an admitted rule is an error on the line, and nothing is held", async () => {
-    const mounted = mountTree(await treePublicDataFor(tree(""), MINI));
+    const mounted = mountExercise(await treeExercise(tree(""), MINI));
     const sent: Event[] = [];
     mounted.form.addEventListener("submit", (event) => {
       if (!event.defaultPrevented) {
@@ -206,10 +178,9 @@ describe("allow-sorry on the tree widget", () => {
   });
 
   test("terse feedback withholds the warning and the sentence, not the refusal", async () => {
-    const mounted = mountTree(
-      await treePublicDataFor(tree(" allow-sorry"), MINI),
-      null,
-      { feedback: "terse" },
+    const mounted = mountExercise(
+      await treeExercise(tree(" allow-sorry"), MINI),
+      { options: { feedback: "terse" } },
     );
 
     typeInto(treeRootRule(mounted), "sorry!");
@@ -223,6 +194,6 @@ describe("allow-sorry on the tree widget", () => {
     expect(treeRootRule(mounted).classList.contains("is-warning")).toBe(
       false,
     );
-    expect(mark(mounted).dataset.state).toBe("idle");
+    expect(markState(mounted)).toBe("idle");
   });
 });

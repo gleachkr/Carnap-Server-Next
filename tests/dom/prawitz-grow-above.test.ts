@@ -1,16 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { mountExercise, typeInto, until } from "./mount-exercise";
 import {
   prawitzButton as button,
+  prawitzExercise as exercise,
   prawitzItems as items,
   prawitzLineOf as lineOf,
-  mountPrawitz,
   prawitzPress as press,
-  prawitzPublicData as publicData,
   prawitzRuleFieldOf as ruleFieldOf,
-  prawitzTypeInto as typeInto,
 } from "./prawitz-widget";
 import { mockProofCompiler } from "./proof-compiler-mock";
-import { until } from "./tree-widget";
 
 /**
  * Growing a Prawitz proof upward from an assumption. The workspace is
@@ -30,7 +28,7 @@ await import("../../src/client/components/carnap-aufbau-proof-prawitz-v1");
 
 describe("growing a Prawitz proof above an assumption", () => {
   test("p on a fresh assumption makes it a derived line with a premise", async () => {
-    const mounted = mountPrawitz(await publicData());
+    const mounted = mountExercise(await exercise());
     expect(mounted.element.dataset.enhanced).toBe("true");
     // The workspace opens empty; the first line is an assumption.
     expect(items(mounted)).toHaveLength(0);
@@ -64,7 +62,7 @@ describe("growing a Prawitz proof above an assumption", () => {
   });
 
   test("h makes it a derived line with an assumption above, and undo restores it", async () => {
-    const mounted = mountPrawitz(await publicData());
+    const mounted = mountExercise(await exercise());
     button(mounted, "New assumption").click();
     const [only] = items(mounted);
 
@@ -89,7 +87,7 @@ describe("growing a Prawitz proof above an assumption", () => {
   });
 
   test("a labelled assumption still refuses to grow", async () => {
-    const mounted = mountPrawitz(await publicData());
+    const mounted = mountExercise(await exercise());
     button(mounted, "New assumption").click();
     const [only] = items(mounted);
     (only as HTMLElement).click();
