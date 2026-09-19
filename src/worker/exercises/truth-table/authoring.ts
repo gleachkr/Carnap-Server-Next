@@ -16,6 +16,7 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../exercise-kit/authoring";
+import { splitFormulaList } from "../../exercise-kit/formula";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import {
@@ -59,23 +60,26 @@ const FORMULA_LINE = /^\s*-\s+(.+?)\s*$/;
 const TURNSTILE = ":|-:";
 
 /**
- * Whether a line belongs to the trailing given grid. `prop` formulas never contain
- * a bare `|` (disjunction is `\/`), so a `|` in a table body reliably marks the
- * grid — the sole exception being the validity `:|-:` sequent, which callers
- * classify first. A `|`-bearing line whose left segment is the atom names (a
- * `P Q | P -> Q` header echo) is skipped in {@link parseGivenGrid}; every other is
- * a data row.
+ * Whether a line belongs to the trailing given grid.
+ *
+ * A grid row is a `|`-bearing line that is *not* a formula bullet, and the
+ * callers ask in that order. Containing a `|` alone is not enough: the
+ * propositional profile spells disjunction `\/`, but `system=` accepts any
+ * language, and forallx spells it `|` and bottom `_|_` — so `- P | Q` is a
+ * formula wherever it is a bullet, and a data row (`T F | . F .`) never is.
+ * The validity `:|-:` sequent is classified before either. A `|`-bearing
+ * line whose left segment is the atom names (a `P Q | P -> Q` header echo)
+ * is skipped in {@link parseGivenGrid}; every other is a data row.
  */
 function isGridLine(line: string): boolean {
-  return line.includes("|");
+  return line.includes("|") && !FORMULA_LINE.test(line);
 }
 
 /**
- * The bare-flag vocabulary Carnap accepts in a truth-table option string. We
- * implement `autoAtoms`, `nodash`, `nocheck`, `nocounterexample`, `hiddenGivens`,
- * and `strictGivens`; the rest are recognised so existing Carnap problems port
- * without a compile error, but are inert until the phase that adds them. Anything
- * outside this set is a typo and is rejected.
+ * The bare-flag vocabulary Carnap accepts in a truth-table option string. All
+ * but two are implemented; `turnstilemark` and `immutable` are recognised so
+ * existing Carnap problems port without a compile error, but are inert.
+ * Anything outside this set is a typo and is rejected.
  */
 const KNOWN_OPTION_FLAGS: ReadonlySet<string> = new Set([
   "autoAtoms",
@@ -352,9 +356,16 @@ function turnstileGlyphFromFlags(flags: {
   return flags.doubleTurnstile ? "double" : "single";
 }
 
-function parseBody(
+/**
+ * Parse a `simple` or `partial` body: prose before the first formula is the
+ * prompt; `- formula` list items (comma-separated allowed) are the table's
+ * formulas; a trailing given grid seeds the table (`simple`) or supplies the
+ * accepted row(s) (`partial`) — the one place the two variants differ.
+ */
+function parseListBody(
   block: DirectiveBlock,
   system: string,
+  variant: "partial" | "simple",
   diagnostics: CompilerDiagnostic[],
 ): {
   formulas: string[];
@@ -368,8 +379,8 @@ function parseBody(
   for (const [index, line] of block.bodyLines.entries()) {
     const lineNumber = block.bodyStartLine + index;
 
-    // A `|` line after the first formula is the trailing given grid; before any
-    // formula it is still prompt prose.
+    // A grid line after the first formula is the trailing given grid; before
+    // any formula it is still prompt prose.
     if (formulas.length > 0 && isGridLine(line)) {
       gridRows.push({ line: lineNumber, text: line });
       continue;
@@ -402,15 +413,16 @@ function parseBody(
 
   return {
     formulas,
-    givens: parseGivenGrid(gridRows, formulas, system, "simple", diagnostics),
+    givens: parseGivenGrid(gridRows, formulas, system, variant, diagnostics),
     promptLines,
   };
 }
 
 /**
  * Parse one side of a sequent — a comma-separated list of formulas — into
- * canonical `prop` sources, collecting a diagnostic per unparseable formula.
- * Commas never occur inside a `prop` formula, so a plain split is unambiguous.
+ * canonical sources in the exercise's language, collecting a diagnostic per
+ * unparseable formula. The split respects brackets, because a first-order
+ * language's `R(a,b)` has a comma of its own.
  */
 function parseFormulaList(
   source: string,
@@ -428,7 +440,7 @@ function parseFormulaList(
     return formulas;
   }
 
-  for (const piece of source.split(",")) {
+  for (const piece of splitFormulaList(source)) {
     const trimmed = piece.trim();
 
     if (trimmed.length === 0) {
@@ -584,69 +596,6 @@ function parseValidityBody(
       diagnostics,
     ),
     premiseCount: premises.length,
-    promptLines,
-  };
-}
-
-/**
- * Parse a partial body: prose before the first formula is the prompt; `- formula`
- * list items (comma-separated allowed) are the table's formulas; a trailing given
- * grid supplies the accepted row(s). Structurally identical to {@link parseBody},
- * with the grid interpreted per the `partial` variant.
- */
-function parsePartialBody(
-  block: DirectiveBlock,
-  system: string,
-  diagnostics: CompilerDiagnostic[],
-): {
-  formulas: string[];
-  givens: TruthTableGivenRow[];
-  promptLines: string[];
-} {
-  const promptLines: string[] = [];
-  const formulas: string[] = [];
-  const gridRows: { text: string; line: number }[] = [];
-
-  for (const [index, line] of block.bodyLines.entries()) {
-    const lineNumber = block.bodyStartLine + index;
-
-    if (formulas.length > 0 && isGridLine(line)) {
-      gridRows.push({ line: lineNumber, text: line });
-      continue;
-    }
-
-    const match = FORMULA_LINE.exec(line);
-
-    if (match === null) {
-      if (formulas.length === 0) {
-        promptLines.push(line);
-      } else if (line.trim().length > 0) {
-        diagnostics.push(
-          diagnostic(
-            lineNumber,
-            "invalid_truth_table_body",
-            "Only formula list items or a given grid may appear after the first formula.",
-          ),
-        );
-      }
-
-      continue;
-    }
-
-    formulas.push(
-      ...parseFormulaList(match[1] ?? "", system, lineNumber, diagnostics),
-    );
-  }
-
-  return {
-    formulas,
-    givens: parseGivenGrid(
-      gridRows,
-      formulas,
-      system,
-      "partial",
-      diagnostics,
-    ),
     promptLines,
   };
 }
@@ -968,15 +917,12 @@ export async function compileTruthTable(
   // sequent; simple and partial read one formula per list item. All three may
   // carry a trailing given grid.
   const isValidity = variant === "validity";
-  const isPartial = variant === "partial";
   const body = isValidity
     ? parseValidityBody(block, system.source, diagnostics)
-    : isPartial
-      ? {
-          premiseCount: 0,
-          ...parsePartialBody(block, system.source, diagnostics),
-        }
-      : { premiseCount: 0, ...parseBody(block, system.source, diagnostics) };
+    : {
+        premiseCount: 0,
+        ...parseListBody(block, system.source, variant, diagnostics),
+      };
 
   if (id === null) {
     return null;

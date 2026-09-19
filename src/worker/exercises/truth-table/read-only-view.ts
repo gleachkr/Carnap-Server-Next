@@ -14,6 +14,7 @@ import { reviewHydrationScript } from "../../exercise-kit/hydration";
 import type { ExerciseRenderContext } from "../../exercise-kit/type";
 import type { Translator } from "../../i18n/translator";
 import {
+  boolToCell,
   cellFillable,
   correctCells,
   givenCellValue,
@@ -23,6 +24,7 @@ import {
   referenceFillable,
   resolveCounterexample,
   resolveTable,
+  validityPremiseCount,
 } from "./grading";
 import shadowStyles from "./shadow.css" with { type: "text" };
 import { buildTruthTableStrings, type TruthTableStrings } from "./strings";
@@ -74,10 +76,6 @@ function cellGlyph(value: TruthTableCellValue, marks: CellMarks): string {
   return marks.nodash ? "" : "–";
 }
 
-function boolToCell(value: boolean): TruthTableCellValue {
-  return value ? "T" : "F";
-}
-
 /** The glyph heading a validity table's mark column (cf. Carnap turnstile flags). */
 function turnstileGlyphFor(options: TruthTableOptions): string {
   switch (options.turnstileGlyph) {
@@ -88,24 +86,6 @@ function turnstileGlyphFor(options: TruthTableOptions): string {
     default:
       return "⊢";
   }
-}
-
-/**
- * The premise/conclusion split of a validity table, or `null` for a table with
- * no turnstile column (the simple variant, or malformed data).
- */
-function turnstileSplit(publicData: TruthTablePublicData): number | null {
-  if (publicData.variant !== "validity") {
-    return null;
-  }
-
-  const count = publicData.premiseCount;
-
-  return typeof count === "number" &&
-    count >= 1 &&
-    count < publicData.formulas.length
-    ? count
-    : null;
 }
 
 /** The written-out header cells for one formula (no turnstile handling). */
@@ -584,7 +564,7 @@ export function renderTruthTableElement(
   }
 
   const keyCells = correctCells(table);
-  const premiseCount = turnstileSplit(publicData);
+  const premiseCount = validityPremiseCount(publicData);
   const marks = marksOf(publicData.options);
   // The same map the element reads out of its hydration payload, so the name a
   // cell is born with and the name the client re-computes on the first click are
@@ -814,7 +794,7 @@ export function renderTruthTableReview(
 
   const keyCells = correctCells(table);
   const ceRow = grade.counterexample?.row ?? null;
-  const premiseCount = turnstileSplit(publicData);
+  const premiseCount = validityPremiseCount(publicData);
   const isPartial = publicData.variant === "partial";
   const rows = isPartial
     ? partialReviewRow(

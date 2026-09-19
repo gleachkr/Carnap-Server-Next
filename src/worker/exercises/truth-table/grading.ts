@@ -306,7 +306,7 @@ export function resolveCounterexample(options: TruthTableOptions): {
  * graded). Guards stored data defensively: `premiseCount` must be an integer in
  * `[1, formulas.length - 1]` (at least one premise and one conclusion).
  */
-function validityPremiseCount(
+export function validityPremiseCount(
   publicData: TruthTablePublicData,
 ): number | null {
   if (publicData.variant !== "validity") {
@@ -403,7 +403,7 @@ export function partialFillableCellCount(table: ResolvedTable): number {
   return table.atoms.length + formulaCells;
 }
 
-function boolToCell(value: boolean): TruthTableCellValue {
+export function boolToCell(value: boolean): TruthTableCellValue {
   return value ? "T" : "F";
 }
 

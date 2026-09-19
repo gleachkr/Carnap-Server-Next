@@ -248,6 +248,39 @@ describe("truth-table compile", () => {
     expect(data.formulas).toEqual(["(P -> Q)", "(Q -> P)"]);
   });
 
+  test("the body reads in the exercise's language, not the propositional profile", async () => {
+    // forallx spells disjunction `|` and bottom `_|_`, and a two-place
+    // predicate has a comma of its own. The body parser used to know only
+    // carnap-prop: it split every side on `,` and took any `|`-bearing line
+    // for a given-grid row — so this table came back with `R(a` and a
+    // `given_row_arity` complaint against its own formula.
+    const artifact = await compileArtifact(
+      directive(
+        '#fx system="forallx-calgary-2019" variant="validity"',
+        "Valid?\n\nR(a,b) | F(a), _|_ :|-: R(a,b)",
+      ),
+    );
+    const data = publicDataOf(artifact.manifest[0] as ExerciseManifestItem);
+
+    expect(data.formulas).toEqual(["(R(a,b) ∨ F(a))", "⊥", "R(a,b)"]);
+    expect(data.premiseCount).toBe(2);
+  });
+
+  test("a bulleted formula with `|` in it is a formula, and the grid still follows it", async () => {
+    // The second bullet is the one that used to be taken for a grid row: the
+    // first formula was already in, and `|` was the whole test.
+    const artifact = await compileArtifact(
+      directive(
+        '#fx2 system="forallx-calgary-2019"',
+        "- F(a)\n- F(a) | F(b)\n\nT F | T | . T .",
+      ),
+    );
+    const data = publicDataOf(artifact.manifest[0] as ExerciseManifestItem);
+
+    expect(data.formulas).toEqual(["F(a)", "(F(a) ∨ F(b))"]);
+    expect(data.givens).toHaveLength(1);
+  });
+
   test("carries authoring options into public data", async () => {
     const artifact = await compileArtifact(
       directive(
