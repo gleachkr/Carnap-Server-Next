@@ -67,10 +67,9 @@ import {
   unionVariables,
 } from "../../exercise-kit/proof/formulas";
 import type { ProofStatement } from "../../exercise-kit/proof/playground";
+import type { ProofLineSpan } from "../../exercise-kit/proof/proof-text";
+import { assembleProofText } from "../../exercise-kit/proof/proof-text";
 import type { PrawitzProofNode } from "./types";
-
-/** The header that separates the goal name from the proof body in `.auf`. */
-const HEADER_SEPARATOR = "\n----\n";
 
 /** The structural problems this translator can report. */
 export type PrawitzDiagnosticCode =
@@ -95,12 +94,8 @@ export interface PrawitzDiagnostic {
 }
 
 /** Where a tree node's generated proof line sits in the assembled `proofText`. */
-export interface PrawitzLineSpan {
-  /** Character offset of the line start within `proofText`. */
-  readonly from: number;
+export interface PrawitzLineSpan extends ProofLineSpan {
   readonly nodeId: string;
-  /** Character offset of the line end (exclusive) within `proofText`. */
-  readonly to: number;
 }
 
 export interface TranslatedPrawitzProof {
@@ -280,7 +275,7 @@ export function prawitzToAuf(
 
   // Postorder emission with per-leaf context sets.
   const lines: string[] = [];
-  const owners: string[] = [];
+  const owners: { readonly nodeId: string }[] = [];
   const contextLeaves = new Map<number, readonly number[]>();
   const contexts = new Map<string, readonly string[]>();
   let counter = 0;
@@ -330,7 +325,7 @@ export function prawitzToAuf(
 
     counter += 1;
     const label = `l${counter}`;
-    owners.push(walked.node.id);
+    owners.push({ nodeId: walked.node.id });
     const sequent = `${contextText} ${sequentSymbol} ${walked.node.formula}`;
     lines.push(
       `${label}: $ ${sequent} $ by ${readRule(walked.node.rule)} [${refs.join(", ")}]`,
@@ -355,27 +350,11 @@ export function prawitzToAuf(
 
   emit(rootWalked);
 
-  const proofText = `${goalName}${HEADER_SEPARATOR}${lines.join("\n")}`;
-  const bodyStart = goalName.length + HEADER_SEPARATOR.length;
-
-  const lineSpans: PrawitzLineSpan[] = [];
-  let offset = bodyStart;
-  for (const [index, line] of lines.entries()) {
-    lineSpans.push({
-      from: offset,
-      nodeId: owners[index] ?? "",
-      to: offset + line.length,
-    });
-    // + 1 for the newline joining this line to the next.
-    offset += line.length + 1;
-  }
-
   return {
+    ...assembleProofText(goalName, lines, owners),
     contexts,
     diagnostics,
     formulaProblems,
-    lineSpans,
-    proofText,
     statement,
   };
 }

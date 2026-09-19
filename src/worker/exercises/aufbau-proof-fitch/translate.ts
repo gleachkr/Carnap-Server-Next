@@ -83,10 +83,9 @@ import {
   unionVariables,
 } from "../../exercise-kit/proof/formulas";
 import type { ProofStatement } from "../../exercise-kit/proof/playground";
+import type { ProofLineSpan } from "../../exercise-kit/proof/proof-text";
+import { assembleProofText } from "../../exercise-kit/proof/proof-text";
 import type { SpecFormulaError } from "../../logic/specs/diagnostics";
-
-/** The header that separates the goal name from the proof body in `.auf`. */
-const HEADER_SEPARATOR = "\n----\n";
 
 /** The structural problems this translator can report. */
 export type FitchDiagnosticCode =
@@ -141,13 +140,9 @@ export interface FitchFormulaProblem {
 }
 
 /** Where a generated `.auf` line sits, and which source line produced it. */
-export interface FitchLineSpan {
-  /** Character offset of the line start within `proofText`. */
-  readonly from: number;
+export interface FitchLineSpan extends ProofLineSpan {
   /** Zero-based index of the source Fitch line. */
   readonly sourceLine: number;
-  /** Character offset of the line end (exclusive) within `proofText`. */
-  readonly to: number;
 }
 
 export interface TranslatedFitchProof {
@@ -773,21 +768,16 @@ export function fitchToAuf(
     }
   }
 
-  const proofText = `${goalName}${HEADER_SEPARATOR}${bodyLines.join("\n")}`;
-  const bodyStart = goalName.length + HEADER_SEPARATOR.length;
-  const lineSpans: FitchLineSpan[] = [];
-  let offset = bodyStart;
-  for (const [index, body] of bodyLines.entries()) {
-    lineSpans.push({
-      from: offset,
-      sourceLine: parsed[index]?.sourceLine ?? 0,
-      to: offset + body.length,
-    });
-    // + 1 for the newline joining this line to the next.
-    offset += body.length + 1;
-  }
-
-  return { diagnostics, formulaProblems, lineSpans, proofText, statement };
+  return {
+    ...assembleProofText(
+      goalName,
+      bodyLines,
+      parsed.map(({ sourceLine }) => ({ sourceLine })),
+    ),
+    diagnostics,
+    formulaProblems,
+    statement,
+  };
 }
 
 /** One line's scope-bar geometry: the absolute indentation columns of its

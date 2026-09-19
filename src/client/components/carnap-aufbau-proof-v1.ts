@@ -34,6 +34,10 @@ import {
   playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
+import {
+  PROOF_HEADER_SEPARATOR,
+  proofTextOf,
+} from "../../worker/exercise-kit/proof/proof-text";
 import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/strings";
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
 import {
@@ -46,11 +50,6 @@ import shadowStyles from "./carnap-aufbau-proof-v1.css" with { type: "text" };
 import goalStyles from "./proof-goal.css" with { type: "text" };
 
 const DEBOUNCE_MS = 400;
-
-// The header the assembled proof carries above the editable body: the goal name,
-// then the `----` underline. The body the editor holds starts after it, so the
-// compiler's byte spans shift left by this many (ASCII) characters.
-const PROOF_HEADER_SEPARATOR = "\n----\n";
 
 function utf8Length(codePoint: number): number {
   if (codePoint < 0x80) {
@@ -348,7 +347,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   }
 
   private assemble(body: string): string {
-    return `${this.goalName}\n----\n${body}`;
+    return proofTextOf(this.goalName, body);
   }
 
   private currentBody(): string {
@@ -515,6 +514,8 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     }
 
     const docLength = editor.state.doc.length;
+    // The body the editor holds starts after the header, so the compiler's
+    // byte spans shift left by this many (ASCII) characters.
     const headerLength = this.goalName.length + PROOF_HEADER_SEPARATOR.length;
     const diagnostics: Diagnostic[] = [];
 

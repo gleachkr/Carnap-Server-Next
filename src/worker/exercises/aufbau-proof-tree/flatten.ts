@@ -37,18 +37,13 @@ import {
   readNodeFormulas,
 } from "../../exercise-kit/proof/formulas";
 import type { ProofStatement } from "../../exercise-kit/proof/playground";
+import type { ProofLineSpan } from "../../exercise-kit/proof/proof-text";
+import { assembleProofText } from "../../exercise-kit/proof/proof-text";
 import type { ProofTreeNode } from "./types";
 
-/** The header that separates the goal name from the proof body in `.auf`. */
-const HEADER_SEPARATOR = "\n----\n";
-
 /** Where a tree node's generated proof line sits in the assembled `proofText`. */
-export interface ProofTreeLineSpan {
-  /** Character offset of the line start within `proofText`. */
-  readonly from: number;
+export interface ProofTreeLineSpan extends ProofLineSpan {
   readonly nodeId: string;
-  /** Character offset of the line end (exclusive) within `proofText`. */
-  readonly to: number;
 }
 
 export interface FlattenedProofTree {
@@ -79,7 +74,7 @@ export function flattenProofTree(
   readRule: ProofRuleReader = ENGINE_RULE,
 ): FlattenedProofTree {
   const lines: string[] = [];
-  const owners: string[] = [];
+  const owners: { readonly nodeId: string }[] = [];
   let counter = 0;
   // A `hyp` leaf cites the goal's n-th hypothesis and emits no line at all, so
   // whatever text it holds is never read and never reaches the compiler.
@@ -97,7 +92,7 @@ export function flattenProofTree(
     const refs = node.premises.map(visit);
     counter += 1;
     const label = `l${counter}`;
-    owners.push(node.id);
+    owners.push({ nodeId: node.id });
     lines.push(
       `${label}: $ ${node.formula} $ by ${readRule(node.rule)} [${refs.join(", ")}]`,
     );
@@ -114,20 +109,9 @@ export function flattenProofTree(
         }
       : null;
 
-  const proofText = `${goalName}${HEADER_SEPARATOR}${lines.join("\n")}`;
-  const bodyStart = goalName.length + HEADER_SEPARATOR.length;
-
-  const lineSpans: ProofTreeLineSpan[] = [];
-  let offset = bodyStart;
-  for (const [index, line] of lines.entries()) {
-    lineSpans.push({
-      from: offset,
-      nodeId: owners[index] ?? "",
-      to: offset + line.length,
-    });
-    // + 1 for the newline joining this line to the next.
-    offset += line.length + 1;
-  }
-
-  return { formulaProblems: read.problems, lineSpans, proofText, statement };
+  return {
+    ...assembleProofText(goalName, lines, owners),
+    formulaProblems: read.problems,
+    statement,
+  };
 }

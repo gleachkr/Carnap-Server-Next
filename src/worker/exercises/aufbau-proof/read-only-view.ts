@@ -11,6 +11,7 @@ import {
   exerciseLegendHtml,
 } from "../../exercise-kit/group";
 import { reviewHydrationScript } from "../../exercise-kit/hydration";
+import { proofTextOf } from "../../exercise-kit/proof/proof-text";
 import type { ExerciseRenderContext } from "../../exercise-kit/type";
 import type { Translator } from "../../i18n/translator";
 import shadowStyles from "./shadow.css" with { type: "text" };
@@ -35,7 +36,7 @@ interface AufbauProofElementMeta extends ExerciseElementMeta {
 
 /** The `.auf` source the student starts from: the goal header, then the body. */
 export function starterProofText(publicData: AufbauProofPublicData): string {
-  return `${publicData.goalName}\n----\n${publicData.starterBody}`;
+  return proofTextOf(publicData.goalName, publicData.starterBody);
 }
 
 /**

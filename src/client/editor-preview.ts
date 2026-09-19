@@ -24,6 +24,7 @@ import {
 } from "../worker/application/content/renderer";
 import type { CompiledContentArtifact } from "../worker/domain/content";
 import { proofTheoryText } from "../worker/exercise-kit/proof/formulas";
+import { proofTextOf } from "../worker/exercise-kit/proof/proof-text";
 import {
   AUFBAU_PROOF_KIND,
   type AufbauProofPublicData,
@@ -155,7 +156,7 @@ async function proofChecksFor(
     try {
       const result = compiler.compile(
         mm0,
-        `${goalName}\n----\n${starterBody}`,
+        proofTextOf(goalName, starterBody),
       );
       const verified = readCompileResult(result).certificate !== null;
       return {
@@ -219,7 +220,7 @@ async function goalChecksFor(
     const { goalName } = goal.publicData;
     const { mm0 } = proofTheoryText(goal.publicData);
     try {
-      const result = compiler.compile(mm0, `${goalName}\n----\n`);
+      const result = compiler.compile(mm0, proofTextOf(goalName, ""));
       const message = firstProblem(result);
       const declaresCleanly =
         result.ok === true ||
