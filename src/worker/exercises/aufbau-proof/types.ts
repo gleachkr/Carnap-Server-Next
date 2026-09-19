@@ -14,6 +14,7 @@ import type { Translator } from "../../i18n/translator";
  * [[aufbau-engine-packages]].
  */
 
+import { isObject } from "../../exercise-kit/assessment";
 import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
 import { isAufbauProofOptions } from "../../exercise-kit/proof/options";
 import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
@@ -107,10 +108,6 @@ export interface AufbauProofAnswerData {
   /** A playground's derived goal — what its certificate is verified against. */
   readonly goal?: PlaygroundGoal;
   readonly proofText: string;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 export function isAufbauProofPublicData(

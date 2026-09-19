@@ -17,7 +17,10 @@ import type { Translator } from "../../i18n/translator";
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
+import { isObject } from "../../exercise-kit/assessment";
+import { hasTheoryText } from "../../exercise-kit/proof/formulas";
 import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import { isAufbauProofOptions } from "../../exercise-kit/proof/options";
 import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
 import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
 
@@ -154,10 +157,6 @@ export interface AufbauProofPrawitzAnswerData {
   readonly tree: PrawitzProofNode;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 export function isPrawitzProofNode(
   value: unknown,
 ): value is PrawitzProofNode {
@@ -185,7 +184,7 @@ export function isAufbauProofPrawitzPublicData(
     typeof value.goalName === "string" &&
     // Either theory text will do, and exactly one is ever written; which of
     // them arrived is what says whether the proof is read as surface text.
-    (typeof value.mm0 === "string" || typeof value.source === "string") &&
+    hasTheoryText(value) &&
     typeof value.promptHtml === "string" &&
     (value.sequentSymbol === undefined ||
       typeof value.sequentSymbol === "string") &&
@@ -193,9 +192,7 @@ export function isAufbauProofPrawitzPublicData(
       typeof value.contextSymbol === "string") &&
     (value.starterTree === undefined ||
       isPrawitzProofNode(value.starterTree)) &&
-    isObject(value.options) &&
-    typeof value.options.allowAuto === "boolean" &&
-    typeof value.options.allowCompletion === "boolean"
+    isAufbauProofOptions(value.options)
   );
 }
 

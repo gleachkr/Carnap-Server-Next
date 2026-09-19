@@ -38,9 +38,17 @@ export function sameSet(
   return second.every((value) => values.has(value));
 }
 
+/**
+ * A plain object, not an array. The `JsonValue` overload is for the answer
+ * guards, whose envelope data is already JSON; the `unknown` one is for the
+ * `publicData` guards, which read what a stored artifact or a hydration
+ * payload happens to carry.
+ */
 export function isObject(
   value: JsonValue,
-): value is Record<string, JsonValue> {
+): value is Record<string, JsonValue>;
+export function isObject(value: unknown): value is Record<string, unknown>;
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

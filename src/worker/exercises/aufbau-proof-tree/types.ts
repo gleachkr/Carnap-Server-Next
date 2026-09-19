@@ -15,7 +15,10 @@ import type { Translator } from "../../i18n/translator";
  * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
+import { isObject } from "../../exercise-kit/assessment";
+import { hasTheoryText } from "../../exercise-kit/proof/formulas";
 import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import { isAufbauProofOptions } from "../../exercise-kit/proof/options";
 import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
 import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
 import type { ProofTreeNode } from "../../exercise-kit/proof/tree-parse";
@@ -115,10 +118,6 @@ export interface AufbauProofTreeAnswerData {
   readonly tree: ProofTreeNode;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 export function isAufbauProofTreePublicData(
   value: unknown,
 ): value is AufbauProofTreePublicData {
@@ -128,12 +127,10 @@ export function isAufbauProofTreePublicData(
     typeof value.goalName === "string" &&
     // Either theory text will do, and exactly one is ever written; which of
     // them arrived is what says whether the proof is read as surface text.
-    (typeof value.mm0 === "string" || typeof value.source === "string") &&
+    hasTheoryText(value) &&
     typeof value.promptHtml === "string" &&
     (value.starterTree === undefined || isProofTreeNode(value.starterTree)) &&
-    isObject(value.options) &&
-    typeof value.options.allowAuto === "boolean" &&
-    typeof value.options.allowCompletion === "boolean"
+    isAufbauProofOptions(value.options)
   );
 }
 

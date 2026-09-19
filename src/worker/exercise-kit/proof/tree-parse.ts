@@ -14,6 +14,7 @@
 
 import type { DiagnosticMessageId } from "../../application/content/diagnostic-strings";
 import type { TranslatableMessage } from "../../i18n/translator";
+import { isObject } from "../assessment";
 
 /**
  * One node of a proof tree: a conclusion `formula` justified by a `rule` citing
@@ -30,10 +31,6 @@ export interface ProofTreeNode {
   readonly id: string;
   readonly premises: readonly ProofTreeNode[];
   readonly rule: string;
-}
-
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 export function isProofTreeNode(value: unknown): value is ProofTreeNode {

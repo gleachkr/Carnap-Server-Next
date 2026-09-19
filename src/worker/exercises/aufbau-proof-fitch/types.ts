@@ -16,7 +16,10 @@ import type { Translator } from "../../i18n/translator";
  * See [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
+import { isObject } from "../../exercise-kit/assessment";
+import { hasTheoryText } from "../../exercise-kit/proof/formulas";
 import type { AufbauProofOptions } from "../../exercise-kit/proof/options";
+import { isAufbauProofOptions } from "../../exercise-kit/proof/options";
 import type { PlaygroundGoal } from "../../exercise-kit/proof/playground";
 import { isPlaygroundGoal } from "../../exercise-kit/proof/playground";
 
@@ -138,10 +141,6 @@ export interface AufbauProofFitchAnswerData {
   readonly proofText: string;
 }
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
-
 export function isAufbauProofFitchPublicData(
   value: unknown,
 ): value is AufbauProofFitchPublicData {
@@ -151,16 +150,14 @@ export function isAufbauProofFitchPublicData(
     typeof value.goalName === "string" &&
     // Either theory text will do, and exactly one is ever written; which of
     // them arrived is what says whether the proof is read as surface text.
-    (typeof value.mm0 === "string" || typeof value.source === "string") &&
+    hasTheoryText(value) &&
     typeof value.promptHtml === "string" &&
     typeof value.starterBody === "string" &&
     (value.sequentSymbol === undefined ||
       typeof value.sequentSymbol === "string") &&
     (value.contextSymbol === undefined ||
       typeof value.contextSymbol === "string") &&
-    isObject(value.options) &&
-    typeof value.options.allowAuto === "boolean" &&
-    typeof value.options.allowCompletion === "boolean"
+    isAufbauProofOptions(value.options)
   );
 }
 

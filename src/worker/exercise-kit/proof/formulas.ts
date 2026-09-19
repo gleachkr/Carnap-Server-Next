@@ -671,13 +671,14 @@ export function theoryLanguageSource(
 /**
  * Whether a `publicData` carries a theory at all, in either of its two shapes.
  *
- * The three widgets each keep a loose structural guard over the payload they
- * hydrate from, and each has to ask this question; asking it in three places is
- * how the tree and Prawitz widgets came to go on demanding `mm0` after the
- * compiler had started freezing `source` instead, which left every concrete
- * forallx exercise unhydrated with the inert server view standing in silence
- * and nothing anywhere saying why. One predicate, so a third shape — if there
- * ever is one — cannot reach two of them and miss the third.
+ * The three shaped types' `publicData` guards, and the loose structural guard
+ * each of their widgets keeps over the payload it hydrates from, all have to
+ * ask this question; asking it in several places is how the tree and Prawitz
+ * widgets came to go on demanding `mm0` after the compiler had started
+ * freezing `source` instead, which left every concrete forallx exercise
+ * unhydrated with the inert server view standing in silence and nothing
+ * anywhere saying why. One predicate, so a third shape — if there ever is one
+ * — cannot reach some of them and miss the rest.
  */
 export function hasTheoryText(value: unknown): boolean {
   if (typeof value !== "object" || value === null) {
