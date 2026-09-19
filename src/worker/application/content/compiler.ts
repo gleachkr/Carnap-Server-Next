@@ -356,38 +356,45 @@ function mathDiagnostic(failure: MathFailure): CompilerDiagnostic {
  * declares, then an id the server ships.
  *
  * A block wins, which is what lets a course extend forallx and go on calling
- * the result `forallx`. A shipped id that *is* named is entered into the same
- * map, so it lands in the systems table below on exactly the terms a block
- * does — one frozen copy per document either way — and so the second exercise
- * naming it reads the same object as the first.
+ * the result `forallx`. Whichever namespace answers, the answer is entered
+ * into `named`, which is what the systems table below is read off — one
+ * frozen copy per document either way, and the second exercise naming a
+ * system reads the same object as the first. The two maps stay apart because
+ * they answer different questions: `declared` is what the *document* says,
+ * which is what the duplicate check and the miss below are about, and a
+ * shipped id an exercise happened to name is not something the author
+ * declared.
  *
  * The miss names both namespaces. It has to: a mistyped block name falls
  * through to the id lookup, and a message that listed only the shipped ids
  * would answer a question the author did not ask.
  */
-function systemResolver(theories: Map<string, AufbauTheory>): SystemResolver {
+function systemResolver(
+  declared: ReadonlyMap<string, AufbauTheory>,
+  named: Map<string, AufbauTheory>,
+): SystemResolver {
   return (name, line, diagnostics) => {
-    const known = theories.get(name) ?? builtInSystem(name);
+    const known = declared.get(name) ?? builtInSystem(name);
 
     if (known !== null && known !== undefined) {
-      theories.set(name, known);
+      named.set(name, known);
 
       return known;
     }
 
-    const declared = [...theories.keys()].sort();
+    const blocks = [...declared.keys()].sort();
 
     diagnostics.push(
       diagnostic(
         line,
         "unknown_system",
-        declared.length === 0
+        blocks.length === 0
           ? "No system named “{name}” is in scope. This document declares no aufbau-mm0 block, and this site ships: {available}."
           : "No system named “{name}” is in scope. This document declares: {declared}. This site ships: {available}.",
         {
           params: {
             available: BUILT_IN_SYSTEM_IDS.join(", "),
-            declared: declared.join(", "),
+            declared: blocks.join(", "),
             name,
           },
         },
@@ -481,11 +488,13 @@ export async function compileCarnapMarkdown(
   const nodes: ContentNode[] = [];
   const manifest: ExerciseManifestItem[] = [];
   const exerciseIds = new Set<string>();
-  // Every system this document's exercises can name: the `:::aufbau-mm0` blocks
-  // it declares, plus the shipped ids any exercise asks for, entered as they
-  // are asked for. `referencedSystems` freezes the ones that were used.
-  const theories = new Map<string, AufbauTheory>();
-  const resolveSystem = systemResolver(theories);
+  // The `:::aufbau-mm0` blocks this document declares, by name, and every
+  // system an exercise resolved — those blocks plus whichever shipped ids were
+  // asked for, entered as they are asked for. `referencedSystems` freezes the
+  // second map.
+  const declaredTheories = new Map<string, AufbauTheory>();
+  const namedSystems = new Map<string, AufbauTheory>();
+  const resolveSystem = systemResolver(declaredTheories, namedSystems);
   const cssParts: string[] = [];
   const cssHrefs: string[] = [];
   let cssReset = false;
@@ -513,9 +522,45 @@ export async function compileCarnapMarkdown(
     math: createMathCompiler(),
   };
 
+  // A theory block is in scope for the whole document, like a footnote
+  // definition or a `:::style` block, so the blocks are compiled before any
+  // exercise resolves a name. Walking them in place would make position
+  // load-bearing in a way nothing tells the author about: a truth table set
+  // in no system defaults to `carnap-prop`, and a block of that name written
+  // below it would find the shipped id already frozen under its own name.
+  // What each block compiled to is kept by node, because the walk below
+  // still has to put a `show` panel where the author wrote the block.
+  const theoryBlocks = new Map<MarkdownNode, AufbauTheory | null>();
+
   for (const child of tree.children as MarkdownNode[]) {
     if (child.type === "footnoteDefinition") {
       footnoteDefinitions.set(child.identifier, child);
+    }
+
+    if (isAufbauMm0Directive(child)) {
+      const block = directiveBlockFromNode(child, lines);
+      const theory = await compileAufbauMm0(
+        block,
+        diagnostics,
+        resolveTheory,
+      );
+
+      if (theory !== null) {
+        if (declaredTheories.has(theory.name)) {
+          diagnostics.push(
+            diagnostic(
+              block.line,
+              "duplicate_theory",
+              "A theory named “{name}” is already declared.",
+              { params: { name: theory.name } },
+            ),
+          );
+        } else {
+          declaredTheories.set(theory.name, theory);
+        }
+      }
+
+      theoryBlocks.set(child, theory);
     }
   }
 
@@ -594,40 +639,20 @@ export async function compileCarnapMarkdown(
       continue;
     }
 
-    // `:::aufbau-mm0` declares a named theory (not an exercise). Collect it so
-    // later proof blocks can reference it; it reaches the page only when the
-    // author asked for the read-only panel with `show`.
+    // `:::aufbau-mm0` declares a named theory (not an exercise), compiled and
+    // collected above. It reaches the page only when the author asked for the
+    // read-only panel with `show`, and then where the block stands.
     if (isAufbauMm0Directive(child)) {
       await flushMarkdown();
 
-      const block = directiveBlockFromNode(child, lines);
-      const theory = await compileAufbauMm0(
-        block,
-        diagnostics,
-        resolveTheory,
-      );
+      const theory = theoryBlocks.get(child);
 
-      if (theory !== null) {
-        if (theories.has(theory.name)) {
-          diagnostics.push(
-            diagnostic(
-              block.line,
-              "duplicate_theory",
-              "A theory named “{name}” is already declared.",
-              { params: { name: theory.name } },
-            ),
-          );
-        } else {
-          theories.set(theory.name, theory);
-        }
-
-        if (theory.show) {
-          nodes.push({
-            kind: "theory",
-            mm0: theory.source,
-            name: theory.name,
-          });
-        }
+      if (theory?.show === true) {
+        nodes.push({
+          kind: "theory",
+          mm0: theory.source,
+          name: theory.name,
+        });
       }
 
       continue;
@@ -726,7 +751,7 @@ export async function compileCarnapMarkdown(
   }
 
   const css = cssParts.join("\n\n");
-  const systems = referencedSystems(theories, manifest);
+  const systems = referencedSystems(namedSystems, manifest);
 
   return {
     // Joined, not keyed. A compiled artifact is nearly always about to be

@@ -465,6 +465,94 @@ Everything is a cube.
     expect(data.solutions).toEqual(["∀xCube(x)"]);
   });
 
+  test("a block may be declared below the exercises that name it", async () => {
+    // A block is in scope for the whole document, like a footnote definition.
+    // Before the blocks were collected ahead of the walk, the exercise above
+    // found nothing under `forallx` and the author was sent to a diagnostic
+    // that never mentioned the block was right there, one paragraph down.
+    const artifact = await compile(
+      `${fitch("ex1", "andcomm")}\n\n${THEORY_BLOCK}`,
+    );
+
+    expect(artifact.systems?.forallx).toBe(FORALLX_SOURCE);
+  });
+
+  test("a block under a shipped id's name is the document's, wherever it stands", async () => {
+    // A truth table set in no system means `carnap-prop`, and an exercise
+    // naming a shipped id used to enter it into the same map the blocks were
+    // declared in — so a block of that name written *below* the table was
+    // refused as "already declared", by a document that had declared nothing.
+    const artifact = await compile(
+      `::::truth-table{#tt1}
+Fill it in.
+
+- P /\\ Q
+::::
+
+:::aufbau-mm0{name="carnap-prop" src="/theories/carnap-prop.mm0"}
+-- ours, extended by nothing but this remark
+:::`,
+    );
+
+    expect(artifact.systems?.["carnap-prop"]).toContain("-- ours");
+  });
+
+  test("a broken block under the default's own name is diagnosed, not thrown", async () => {
+    // The default is resolved when the named system fails, so that the rest
+    // of the block still compiles and every complaint is listed at once. It
+    // used to be resolved through the same block-first lookup — which handed
+    // back the very block that had just failed, and the compiler threw out
+    // of the fallback: a 500 on save and on preview, where the author wanted
+    // to be told which line of their MM0 was wrong.
+    const compiled = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="carnap-prop"}
+this is not mm0 (((
+:::
+
+::::truth-table{#tt1}
+Fill it in.
+
+- P /\\ Q
+::::`,
+    );
+
+    expect(compiled.ok).toBe(false);
+    expect(compiled.diagnostics.map((one) => one.code)).toContain(
+      "system_unreadable",
+    );
+  });
+
+  test("a broken block under a semantic type's default is diagnosed the same way", async () => {
+    const compiled = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="forallx-calgary-2019"}
+this is not mm0 (((
+:::
+
+::::model{#m1 variant="first-order"}
+Make it true.
+
+- ExF(x)
+::::`,
+    );
+
+    expect(compiled.ok).toBe(false);
+    expect(compiled.diagnostics.map((one) => one.code)).toContain(
+      "system_unreadable",
+    );
+  });
+
+  test("the miss lists the blocks the document declares, not the ids its exercises named", async () => {
+    const compiled = await compileCarnapMarkdown(
+      `${fitch("ex1", "andcomm", "forallx-calgary-2019")}\n\n${fitch("ex2", "andcomm", "forallks")}`,
+    );
+    const miss = compiled.diagnostics.find(
+      (one) => one.code === "unknown_system",
+    );
+
+    expect(miss?.message).toContain("declares no aufbau-mm0 block");
+    expect(miss?.params?.declared).toBe("");
+  });
+
   test("an unresolvable name names both places it was looked for", async () => {
     const compiled = await compileCarnapMarkdown(
       `${THEORY_BLOCK}\n\n${fitch("ex1", "andcomm", "forallks")}`,

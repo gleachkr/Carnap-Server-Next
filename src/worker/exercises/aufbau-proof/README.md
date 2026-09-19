@@ -82,7 +82,7 @@ preview. Remote-origin URLs are rejected. See the authoring reference's
 ### Attributes
 
 - `id`: required stable exercise ID.
-- `system`: required preceding theory-block name or built-in system ID.
+- `system`: required theory-block name or built-in system ID.
   Unknown names produce `unknown_system`.
 - `title`, `points`, `exam`, `feedback`: common exercise settings.
 - `options`: space-separated `auto` and `complete` flags, both off by

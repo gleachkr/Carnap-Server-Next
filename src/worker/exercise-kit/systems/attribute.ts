@@ -45,7 +45,7 @@ import {
 } from "../../application/content/diagnostics";
 import { languageFromSource } from "../../logic/specs";
 import type { DirectiveBlock } from "../authoring";
-import type { SystemResolver } from "./theory";
+import { builtInSystem, type SystemResolver } from "./theory";
 
 /**
  * The language an exercise is written in, and the name it is stored under.
@@ -116,21 +116,25 @@ export function parseSystemAttribute(
     );
   }
 
-  return fallbackLanguage(resolveSystem, block, diagnostics, requirement);
+  return fallbackLanguage(requirement);
 }
 
-/** The type's default system, which ships and therefore reads. */
-function fallbackLanguage(
-  resolveSystem: SystemResolver,
-  block: DirectiveBlock,
-  diagnostics: CompilerDiagnostic[],
-  requirement: SystemRequirement,
-): SystemLanguage {
-  const resolved = resolveSystem(
-    requirement.defaultId,
-    block.line,
-    diagnostics,
-  );
+/**
+ * The type's default system, which ships and therefore reads.
+ *
+ * Resolved as a shipped id directly, not through the resolver: the resolver
+ * looks in the document first, and a document is free to declare a block
+ * under the default's own name. If that block is the one that just failed,
+ * asking the resolver again would hand it straight back — which is how a
+ * broken `carnap-prop` block over a bare truth table used to throw here
+ * instead of diagnosing. The default is what the type means when nobody
+ * names anything, and only the site can say what that is.
+ *
+ * The throw that remains is a fact about the build, not about the document:
+ * a type's default must be a system this server ships.
+ */
+function fallbackLanguage(requirement: SystemRequirement): SystemLanguage {
+  const resolved = builtInSystem(requirement.defaultId);
   const language =
     resolved === null ? null : languageFromSource(resolved.source);
 

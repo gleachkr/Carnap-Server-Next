@@ -70,7 +70,7 @@ must parse as a tree and pass structural discharge checks, but need not be a
 finished proof.
 
 Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
-`options`, and `playground`. `system` names a preceding theory block or a built-in system.
+`options`, and `playground`. `system` names a theory block or a built-in system.
 The theory must declare `assumption`, `turnstile`, and `context-join` roles.
 Missing roles produce authoring errors. Starter separators accept any
 turnstile spelling declared by the theory; emitted sequents use its canonical

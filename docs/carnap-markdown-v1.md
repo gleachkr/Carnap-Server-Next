@@ -479,7 +479,7 @@ In addition to the common attributes:
   all-true and the target applies to the conclusions and turnstile column.
 - `trueMark` and `falseMark`: displayed glyphs; answer data still uses
   `T`/`F`.
-- `system`: a preceding `aufbau-mm0` block name or built-in system ID.
+- `system`: an `aufbau-mm0` block name or built-in system ID.
   Defaults to `carnap-prop`.
 - `options`: space-separated flags: `autoAtoms`, `nodash`, `nocheck`,
   `nocounterexample`, `hiddenGivens`, `strictGivens`, `double-turnstile`,
@@ -625,7 +625,7 @@ Nothing is not bananas.
 `starter` prefills the input and may contain incomplete text or prose.
 `options` accepts `nocheck` (equivalent to hiding feedback) and `checksyntax`
 (block submission of text that does not parse). Common attributes apply.
-`system` selects a preceding theory block or built-in language; the default
+`system` selects a theory block or built-in language; the default
 is forallx: Calgary notation.
 
 ### Checking and security
@@ -698,7 +698,7 @@ receive their combined engine text as `publicData.mm0`. In current artifacts,
 shared theory source is stored once in a systems table and joined with each
 exercise's goal, rather than duplicated per exercise.
 
-The common attributes apply. `system` is required and names a preceding
+The common attributes apply. `system` is required and names an
 `aufbau-mm0` block or a built-in system. `options` accepts `auto` and
 `complete`, both off by default. These flags are parsed, but the linear
 editor's proof-search and completion controls are not yet wired up.
@@ -717,9 +717,11 @@ terms, axioms, and proof rules. A language adds `@syntax` annotations that
 define student spellings, canonical output, and parsing restrictions.
 One file can provide both, as the forallx systems do.
 
-Resolution checks a named `aufbau-mm0` block declared earlier in the document
-first, then a built-in ID. An unknown name reports both sets of available
-names. This lets a course extend a built-in and use the extension consistently
+Resolution checks a named `aufbau-mm0` block declared anywhere in the
+document first, then a built-in ID. A block is in scope for the whole
+document, so it may follow the exercises that name it, and a block named after
+a built-in shadows that built-in wherever it stands. An unknown name reports
+both sets of available names. This lets a course extend a built-in and use the extension consistently
 in proofs, models, truth tables, and translations.
 
 ### Naming a theory the site serves

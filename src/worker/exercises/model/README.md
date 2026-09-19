@@ -29,7 +29,7 @@ Build a model in which both sentences are true.
 - `id` / `#id`: required, unique within the document. IDs allow 1–64
   non-whitespace characters, excluding control and formatting characters.
 - `variant`: `simple` (default), `validity`, or `constraint`.
-- `system`: a preceding theory-block name or built-in system ID; defaults to
+- `system`: a theory-block name or built-in system ID; defaults to
   `forallx-calgary-2019`. `forallx-magnus` uses the original book's notation.
 - `counterexample-to`: `validity`/`tautology`, `equivalence`, or
   `inconsistency`/`contradiction`; defaults depend on the variant below.

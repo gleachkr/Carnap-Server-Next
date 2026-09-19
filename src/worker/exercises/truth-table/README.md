@@ -35,7 +35,7 @@ Fill in both tables and compare their results.
   `inconsistency`/`contradiction`.
 - `trueMark` / `falseMark`: display strings of 1–8 characters, defaulting to
   T and F. Stored answers always use `T` and `F`.
-- `system`: preceding theory-block name or built-in system ID, defaulting
+- `system`: theory-block name or built-in system ID, defaulting
   to `carnap-prop`.
 - `options`: space-separated flags, listed below.
 - `title`, `points`, `exam`, `feedback`: common settings. Points default to

@@ -244,7 +244,12 @@ l1: $ top $ by top_i []
     ).toContain("unknown_system");
   });
 
-  test("a proof declared before its theory cannot see it (declare before use)", async () => {
+  test("a proof declared before its theory can see it (a block is in scope for the whole document)", async () => {
+    // This used to pin declare-before-use. A block is scoped like a footnote
+    // definition or a `:::style` block now, because position was doing
+    // something the author was never told about: a block named after a
+    // shipped id, written below an exercise that defaulted to that id, was
+    // refused as a duplicate of the id the exercise had just pulled in.
     expect(
       await diagnosticsFor(`:::aufbau-proof{system="prop" id="p1"}
 theorem thm_top: $ top $
@@ -253,7 +258,7 @@ l1: $ top $ by top_i []
 :::
 
 ${THEORY}`),
-    ).toContain("unknown_system");
+    ).not.toContain("unknown_system");
   });
 
   test("a missing theorem header is rejected", async () => {

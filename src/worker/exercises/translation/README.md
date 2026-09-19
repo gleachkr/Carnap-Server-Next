@@ -7,7 +7,7 @@ parsed match. Additional tests can require a normal form or limit connective
 counts.
 
 The default language is forallx: Calgary 2019. `system` can select another
-built-in or a preceding theory block; parsing uses the shared first-order
+built-in or a theory block; parsing uses the shared first-order
 core and `@aufbau/syntax`, not a per-exercise notation table.
 
 ## Checking and verification
@@ -86,7 +86,7 @@ Attributes:
   quantifiers, identity, and predicates with individual arguments in both
   solutions and submitted answers. `exact` compares parsed formulas without
   equivalence search.
-- `system`: preceding theory-block name or built-in system ID; defaults to
+- `system`: theory-block name or built-in system ID; defaults to
   `forallx-calgary-2019`. For example, use `carnap-prop` for its propositional
   notation with `variant="prop"`.
 - `tests`: space-separated `CNF`, `DNF`, `PNF` (first-order only),
