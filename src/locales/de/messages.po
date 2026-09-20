@@ -2869,7 +2869,8 @@ msgstr "Problem"
 msgid "Problem here."
 msgstr "Hier liegt ein Problem."
 
-#: src/worker/exercise-kit/proof/engine-strings.ts
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+#: src/worker/exercises/aufbau-proof/strings.ts
 msgid "Problem in the proof."
 msgstr "Problem im Beweis."
 
@@ -2897,7 +2898,9 @@ msgstr "Beweiseditor"
 msgid "Proof tree"
 msgstr "Beweisbaum"
 
-#: src/worker/exercise-kit/proof/engine-strings.ts
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof/strings.ts
 msgid "Prove"
 msgstr "Zu zeigen"
 
@@ -3471,7 +3474,7 @@ msgstr "Abgegeben am {when} · {score}/{maxScore}."
 msgid "Submitted at {when}."
 msgstr "Abgegeben am {when}."
 
-#: src/worker/exercise-kit/proof/engine-strings.ts
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "Submitted proof"
 msgstr "Abgegebener Beweis"
 

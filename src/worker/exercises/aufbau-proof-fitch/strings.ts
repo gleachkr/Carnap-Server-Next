@@ -26,6 +26,16 @@ export function buildAufbauProofFitchStrings(i18n: Translator) {
     ...buildFormulaParserStrings(i18n),
     /** Accessible name of the editor; see `Proof editor` in the linear widget. */
     "Fitch proof editor": i18n.t("Fitch proof editor"),
+    /** Fallback when a compiler diagnostic arrives with no readable message. */
+    "Problem in the proof.": i18n.t("Problem in the proof."),
+    /** Label on the goal row, before the sequent the student must derive. */
+    Prove: i18n.t("Prove"),
+    /**
+     * Accessible name of the read-only editor a marked proof is shown in. A
+     * CodeMirror view has role `textbox` and no name of its own, so without
+     * this a reviewer meets an unlabelled text box.
+     */
+    "Submitted proof": i18n.t("Submitted proof"),
   };
 }
 

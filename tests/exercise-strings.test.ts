@@ -4,6 +4,7 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import { createDefaultExerciseRegistry } from "../src/worker/application/content/registry";
 import { exerciseHydrationForArtifact } from "../src/worker/application/content/renderer";
 import { buildExerciseHelpStrings } from "../src/worker/exercise-kit/help-strings";
+import { buildProofEngineStrings } from "../src/worker/exercise-kit/proof/engine-strings";
 import {
   buildAufbauProofFitchStrings,
   FITCH_DIAGNOSTIC_MESSAGES,
@@ -86,6 +87,26 @@ describe("widget string maps", () => {
         buildExerciseHelpStrings(passthroughTranslator),
       )) {
         expect(Object.hasOwn(strings, id), `${name}: ${id}`).toBe(offersHelp);
+      }
+    });
+  }
+
+  // The client's shared proof pipeline (`components/proof-element.ts`) widens
+  // each proof widget's `t` to the engine set, so a proof type's `strings.ts`
+  // could drop the spread without a type error — and its widget would then
+  // say "Could not load the proof engine." in English in every locale.
+  for (const type of WITH_STRINGS) {
+    const name = type.directiveName;
+    if (!name.startsWith("aufbau-proof")) {
+      continue;
+    }
+    test(`${name} carries the shared proof-engine set`, () => {
+      const strings = type.strings?.(passthroughTranslator) ?? {};
+
+      for (const id of Object.keys(
+        buildProofEngineStrings(passthroughTranslator),
+      )) {
+        expect(Object.hasOwn(strings, id), `${name}: ${id}`).toBe(true);
       }
     });
   }

@@ -75,6 +75,8 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
       comment:
         "Chip under a selected proof tree; {order} is its 1-based position in the premise order.",
     }),
+    /** Label on the goal line, before the sequent the student must derive. */
+    Prove: i18n.t("Prove"),
     Redo: i18n.t("Redo"),
     "Redo (Ctrl-Y)": i18n.t("Redo (Ctrl-Y)"),
     /** Accessible name of a derived line's rule field. */

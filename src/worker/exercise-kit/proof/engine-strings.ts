@@ -1,16 +1,22 @@
 import type { Translator } from "../../i18n/translator";
 
 /**
- * The text the three proof widgets — linear `.auf`, Fitch, and tree — all show,
- * because they all drive the same WASM compiler.
+ * The text every proof widget — linear `.auf`, Fitch, tree and Prawitz — has
+ * to be able to say, because they all drive the same WASM compiler through
+ * the same pipeline (the client's `components/proof-element.ts`): the engine
+ * failing, the proof it could not read, a playground with no readable goal,
+ * and the `allow-sorry` protocol. The Prawitz widget cannot admit a line
+ * (its `enhance` says why), so the last of those never fires there — but the
+ * gate that would say it is the one it shares.
  *
  * The verdict itself is not here: it is the shared correctness mark in the
  * action bar, which the server renders with the names for all four of its
- * states on it, so no widget carries text for it.
- *
- * Shared rather than repeated so a translator sees each sentence once. Each
- * widget's own `strings.ts` spreads this into its map, so the ids stay identical
- * across the three and the catalog holds one entry apiece.
+ * states on it, so no widget carries text for it. Nor is text that only some
+ * of the four read — the `Prove` label, the two CodeMirror editors' fallback
+ * for a diagnostic with no message, Fitch's read-only review editor — which
+ * each of those widgets' own `strings.ts` carries, so a widget ships only the
+ * ids it looks up. Ids are the English text, so a sentence two of them share
+ * is still one catalog entry.
  *
  * Note what is *not* here: the compiler's own diagnostics. Those are translated
  * upstream, not by us — `@aufbau/compiler` carries its own catalogs and picks
@@ -52,21 +58,16 @@ export function buildProofEngineStrings(i18n: Translator) {
     "Could not work out what the last line states.": i18n.t(
       "Could not work out what the last line states.",
     ),
-    /** Fallback when a compiler diagnostic arrives with no readable message. */
-    "Problem in the proof.": i18n.t("Problem in the proof."),
-    /** Label on the goal row, before the sequent the student must derive. */
-    Prove: i18n.t("Prove"),
-    /** The same row in a playground, before the sequent the proof derives. */
+    /** Label on a playground's goal row, before the sequent the proof derives. */
     Proves: i18n.t("Proves"),
-    /**
-     * Accessible name of the read-only editor a marked proof is shown in. A
-     * CodeMirror view has role `textbox` and no name of its own, so without this a
-     * reviewer meets an unlabelled text box.
-     */
-    "Submitted proof": i18n.t("Submitted proof"),
     "The proof engine couldn't read this proof — check for unexpected characters.":
       i18n.t(
         "The proof engine couldn't read this proof — check for unexpected characters.",
       ),
   };
 }
+
+/** What every proof widget can say; the shared pipeline's `t` is typed to it. */
+export type ProofEngineStringId = keyof ReturnType<
+  typeof buildProofEngineStrings
+>;
