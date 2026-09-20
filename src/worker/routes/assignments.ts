@@ -1501,15 +1501,6 @@ async function instructorContentDocument(
 }
 
 /**
- * The target of a compiled `item:` link: resolve a content item to the
- * assignment publishing it in this course and redirect there, instructors to
- * the instructor page and everyone else to the student page. Registered at
- * both `go` depths so the relative `../../go/<id>` in compiled content
- * resolves here from the student and instructor content documents alike. An
- * unresolvable item renders a friendly page instead of the JSON envelope —
- * this is always a browser navigation.
- */
-/**
  * Was this link followed from a content document standing on its own — a
  * fullscreen tab, or a lesson framed by an LMS — rather than from one sitting
  * in a card on an assignment page?
@@ -1547,6 +1538,15 @@ function fromStandaloneContentDocument(
   }
 }
 
+/**
+ * The target of a compiled `item:` link: resolve a content item to the
+ * assignment publishing it in this course and redirect there, instructors to
+ * the instructor page and everyone else to the student page. Registered at
+ * both `go` depths so the relative `../../go/<id>` in compiled content
+ * resolves here from the student and instructor content documents alike. An
+ * unresolvable item renders a friendly page instead of the JSON envelope —
+ * this is always a browser navigation.
+ */
 async function contentItemRedirect(
   context: Context<AppBindings>,
 ): Promise<Response> {

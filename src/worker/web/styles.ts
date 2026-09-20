@@ -24,8 +24,9 @@ import utilityStyles from "./utilities.css" with { type: "text" };
  * The rules themselves are in `./content.css`, the kit's `exercise.css`,
  * `./utilities.css` and `./chrome.css`, read as text (see `src/text-modules.d.ts`). What is left
  * here is the assembly, which is all this module was ever doing that CSS
- * cannot do for itself: two generated blocks whose URLs carry content hashes,
- * and two shared blocks other modules also serve into shadow roots.
+ * cannot do for itself: two generated `@font-face` blocks whose URLs carry
+ * package versions, and two shared blocks other modules also serve into shadow
+ * roots.
  */
 export const CONTENT_STYLES = [
   // Generated, not authored: both carry hashed URLs a stylesheet cannot spell.

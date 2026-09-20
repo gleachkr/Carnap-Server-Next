@@ -425,14 +425,14 @@ describe("courses and enrollment", () => {
   test("a second instructor can teach while TAs remain limited", async () => {
     await withStorage(async (_storage, env) => {
       const owner = await login(env, "owner@example.test");
-      const coInstructor = await login(env, "second@example.test");
+      const secondInstructor = await login(env, "second@example.test");
       const assistant = await login(env, "ta@example.test");
       const created = await createCourse(env, owner);
       const coStaffResponse = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/staff`,
         jsonRequest(
-          { role: "instructor", userId: coInstructor.actorId },
+          { role: "instructor", userId: secondInstructor.actorId },
           owner,
         ),
         env,
@@ -450,7 +450,7 @@ describe("courses and enrollment", () => {
       const coEnrollmentLink = await appRequest(
         createTestApp(),
         `/courses/${created.course.id}/enrollment-links`,
-        jsonRequest({}, coInstructor),
+        jsonRequest({}, secondInstructor),
         env,
       );
       const taEnrollmentLink = await appRequest(

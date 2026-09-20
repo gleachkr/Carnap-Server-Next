@@ -20,9 +20,10 @@ export const FONT_ROUTE_PREFIX = "/assets/fonts/";
 export const FONT_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 /**
- * Absolute, so it resolves the same from a page, an iframe, or the `srcdoc`
- * document the revision editor previews into — which has origin `null` and
- * would resolve a relative URL against nothing.
+ * Root-relative, so it resolves the same from a page, an iframe, or the
+ * `srcdoc` document the revision editor previews into — which has no URL of
+ * its own (`about:srcdoc`) and resolves against its parent's base URL, which
+ * is ours.
  */
 export function fontHref(file: string): string {
   return `${FONT_ROUTE_PREFIX}${file}`;

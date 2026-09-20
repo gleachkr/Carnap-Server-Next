@@ -2,7 +2,7 @@
  * Inline icons from the Solar icon set (480 Design, CC BY 4.0), Bold Duotone
  * variant — a solid foreground glyph over a backing layer. The two layers are
  * colored distinctly through the `.icon-duo-back` / `.icon-duo-fore` classes
- * (gold behind, blue in front; see styles.ts) rather than as two shades of a
+ * (gold behind, blue in front; see chrome.css) rather than as two shades of a
  * single text color.
  * https://github.com/480-Design/Solar-Icon-Set
  */

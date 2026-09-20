@@ -22,7 +22,7 @@
     "check": "tsc --noEmit && tsc -p tsconfig.client.json --noEmit && tsc -p tsconfig.dom-tests.json --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate:local": "wrangler d1 migrations apply carnap-server-local --local",
-    "db:migrate:remote": "wrangler d1 migrations apply carnap-server-local --remote",
+    "db:migrate:demo": "wrangler d1 migrations apply carnap-server-demo --remote --env demo",
     "dev": "bun run build:client && wrangler dev --local",
     "format": "biome format --write .",
     "format:check": "biome format .",

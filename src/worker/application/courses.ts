@@ -205,8 +205,8 @@ function assertStaffRole(
 
 /**
  * An active membership that can manage the course — an instructor who has
- * not been suspended or dropped. Used to guard against
- * demoting or deactivating the last such member and orphaning the course.
+ * not been suspended or dropped. Used to guard against demoting the last such
+ * member and orphaning the course.
  */
 function managesCourse(membership: CourseMembership): boolean {
   return membership.status === "active" && membership.role === "instructor";

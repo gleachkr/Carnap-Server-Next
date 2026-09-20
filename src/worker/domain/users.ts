@@ -145,12 +145,11 @@ export const STUDENT_ID_MAX_LENGTH = 200;
  * rather than omitting it, and a stored `""` would read as "this account has
  * an ID" everywhere that asks.
  *
- * The length test lives here rather than at the caller — the arrangement
- * {@link normalizeName} makes, where the caller applies
- * {@link NAME_MAX_LENGTH} itself — so that every path a value can reach the
- * column by is bounded by construction. There is more than one: a launch that
- * finds an existing account adopts, and a launch that creates one passes
- * straight to the insert.
+ * The length test lives here rather than at the caller, as
+ * {@link normalizeAssertedName} does for a launch's name, so that every path a
+ * value can reach the column by is bounded by construction. There is more than
+ * one: a launch that finds an existing account adopts, and a launch that
+ * creates one passes straight to the insert.
  */
 export function normalizeStudentId(
   studentId: string | null | undefined,

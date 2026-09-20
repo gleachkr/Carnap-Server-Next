@@ -1199,9 +1199,11 @@ export class AssignmentService {
 
   /**
    * Resolve a content item to the assignment publishing it in this course:
-   * the target of an `item:` link followed from a content document. Staff can
-   * land on drafts (published still wins); everyone else resolves published
-   * assignments only. When several assignments publish revisions of the same
+   * the target of an `item:` link followed from a content document.
+   * Instructors can land on drafts (published still wins); everyone else — a
+   * TA included, whose `listForAssistant` leaves drafts out for the same
+   * reason — resolves published assignments only. When several assignments
+   * publish revisions of the same
    * item, listed ones win, then course display order (the `listForCourse`
    * ordering) decides. The returned role lets the route pick the instructor
    * or student assignment page.
@@ -1225,8 +1227,8 @@ export class AssignmentService {
     const candidates = (
       await this.options.stores.assignments.listForCourse(courseId)
     ).filter((assignment) => revisionIds.has(assignment.contentRevisionId));
-    const staff = membership.role === "instructor";
-    const pool = staff
+    const instructor = membership.role === "instructor";
+    const pool = instructor
       ? candidates
       : candidates.filter((assignment) => assignment.state === "published");
     const resolved =

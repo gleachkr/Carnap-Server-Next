@@ -64,7 +64,7 @@ export interface Finding {
  * jsdom's parser does not do declarative shadow DOM (verified against 29.1.1:
  * the host's `shadowRoot` stays null and the `<template>` sits there inertly), and
  * axe does not look inside a template. Without this the audit sees only the light
- * DOM of the six exercise widgets — their prompt, their slotted labels, their
+ * DOM of the exercise widgets — their prompt, their slotted labels, their
  * action bar — and none of the chrome that *is* the widget: the group and its
  * legend, the option inputs, the grid of cells, the proof source. Every finding
  * in there was invisible to this tier.

@@ -900,12 +900,6 @@ const LtiLinksSheet: FC<{
 };
 
 /**
- * Grade deliveries to the LMS that ran out of retries. Surfacing them here —
- * next to the LMS activity links they belong to — is how an instructor
- * learns a student's LMS gradebook is stale, and the retry re-queues the
- * delivery after the underlying problem is fixed.
- */
-/**
  * What a stored grade-delivery reason code means to an instructor. The prose
  * lives here, in the view, rather than in the record: a failed job is read long
  * after it was written, so its explanation must be produced in the reader's
@@ -968,6 +962,12 @@ const GradeFailureReason: FC<{ readonly job: GradeSyncFailure["job"] }> = ({
   );
 };
 
+/**
+ * Grade deliveries to the LMS that ran out of retries. Surfacing them here —
+ * next to the LMS activity links they belong to — is how an instructor
+ * learns a student's LMS gradebook is stale, and the retry re-queues the
+ * delivery after the underlying problem is fixed.
+ */
 const GradeSyncSheet: FC<{
   readonly context: Context<AppBindings>;
   readonly courseId: string;

@@ -65,7 +65,7 @@ const CharityMark: FC<{ readonly charity: Charity }> = ({ charity }) => {
 const CharityEntry: FC<{ readonly charity: Charity }> = ({ charity }) => (
   // Flat, not wrapped: the mark and the name share the first row, and the blurb
   // spans both columns so it starts at the margin rather than indenting under
-  // the name (see `.charity` in styles.ts).
+  // the name (see `.charity` in chrome.css).
   <li class="charity">
     <CharityMark charity={charity} />
     <a

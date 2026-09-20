@@ -8,7 +8,7 @@ import { dom, domDocument } from "../helpers/dom";
  * It used to be drawn by each widget's own toolbar, inside that widget's shadow
  * root: a different position in every widget that had one, and no position at all
  * in the ones with no toolbar. It is now one light-DOM button at the head of the
- * exercise's action bar, which is the row every one of the nine types ends with.
+ * exercise's action bar, which is the row every one of the ten types ends with.
  *
  * The point of testing it here rather than through a widget is that the widgets
  * that use it are Preact islands over a WASM proof engine, and none of that is

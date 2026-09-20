@@ -301,6 +301,15 @@ export const Sheet: FC<{
 };
 
 /**
+ * The document URL as this frame's body: the same URL the fullscreen link
+ * opens, plus the marker that tells the document it is inside our chrome and
+ * its links have a frame to escape.
+ */
+function framedSrc(src: string): string {
+  return `${src}${src.includes("?") ? "&" : "?"}${APP_FRAME_PARAM}=1`;
+}
+
+/**
  * A sheet-styled host for the isolated content document. The iframe fills
  * the card edge to edge (the document brings its own padding and surface), a
  * layout script sizes it to the height the document reports, and the
@@ -312,15 +321,6 @@ export const Sheet: FC<{
  * show. It renders inert, and the CSS reveals it only inside a split marked
  * `preview-empty` — the caller owns the wording, this owns where it sits.
  */
-/**
- * The document URL as this frame's body: the same URL the fullscreen link
- * opens, plus the marker that tells the document it is inside our chrome and
- * its links have a frame to escape.
- */
-function framedSrc(src: string): string {
-  return `${src}${src.includes("?") ? "&" : "?"}${APP_FRAME_PARAM}=1`;
-}
-
 export const ContentFrame: FC<{
   readonly fullscreenHref?: string;
   readonly placeholder?: Child;

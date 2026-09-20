@@ -334,9 +334,9 @@ describe("multiple-choice submissions", () => {
 
   /**
    * The correctness mark is the one place every exercise says whether the work
-   * is right, and "every" is the whole claim: before it, six of the nine types
-   * drew their own verdict in their own shadow root and the three text types
-   * drew none. A type that renders its action bar some other way would lose the
+   * is right, and "every" is the whole claim: before it, each widget type drew
+   * its own verdict in its own shadow root and the text types drew none. A
+   * type that renders its action bar some other way would lose the
    * mark silently — the exercise would work, grade and record exactly as
    * before — so the count is asserted against the number of forms rather than
    * against a list of kinds someone has to remember to extend.

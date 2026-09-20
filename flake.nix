@@ -38,7 +38,6 @@
 
               git
               gh
-              just
               ripgrep
               fd
 

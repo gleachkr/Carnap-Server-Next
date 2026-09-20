@@ -1,3 +1,11 @@
+/**
+ * The standalone content document: compiled markdown and exercise forms as a
+ * complete HTML page with no app chrome. It is served into the content
+ * iframes on the assignment and revision pages and opened directly by their
+ * fullscreen links. The iframe is the isolation boundary that lets author
+ * CSS restyle content freely without touching the app shell — and keeps the
+ * shell's styles from fighting the author's.
+ */
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
@@ -16,14 +24,6 @@ import { CONTENT_SCRIPT_ASSET } from "./script-assets";
 import { CONTENT_STYLE_SHEET } from "./style-assets";
 import { CONTENT_STYLES } from "./styles";
 
-/**
- * The standalone content document: compiled markdown and exercise forms as a
- * complete HTML page with no app chrome. It is served into the content
- * iframes on the assignment and revision pages and opened directly by their
- * fullscreen links. The iframe is the isolation boundary that lets author
- * CSS restyle content freely without touching the app shell — and keeps the
- * shell's styles from fighting the author's.
- */
 /**
  * Query marker meaning "this request is for the body of one of our own content
  * frames", added by `ContentFrame` to its iframe `src` and by nothing else. It

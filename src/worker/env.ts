@@ -1,7 +1,12 @@
-export type EnvironmentName = "local" | "preview" | "production";
-
 export interface Env {
-  readonly CARNAP_ENV?: EnvironmentName | string;
+  /**
+   * The deployment's name — `local`, `preview`, `demo`, `production`, or
+   * whatever an operator calls theirs. Only `local` is ever tested for: it lets
+   * a login or LTI-link token come back in the response when no email sender
+   * is configured, so a developer can sign in without one. Nothing else keys
+   * on it; cookie security follows the request's protocol (`cookies.ts`).
+   */
+  readonly CARNAP_ENV?: string;
   readonly ADMIN_BOOTSTRAP_TOKEN?: string;
   readonly AUTH_LOGIN_CONFIRM_URL?: string;
   readonly AUTH_LOGIN_EMAIL_FROM?: string;

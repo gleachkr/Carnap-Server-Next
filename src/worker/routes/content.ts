@@ -680,16 +680,16 @@ async function revisionSourceDownload(
  * opposite of what an address is for here.
  *
  * **It serves exactly what a lesson can resolve, by asking the same question.**
- * The resolver is the one place the rule lives — yours, and a theory — so the
- * route cannot come to disagree with the compiler about what is at an address.
- * That also gives every miss one answer: no such revision, not yours, and not
- * a theory are all 404, where reading the revision through the service would
- * have said 403 to the second and told a stranger it exists.
+ * The resolver is the one place the rule lives — a theory, and one its scope
+ * admits you to — so the route cannot come to disagree with the compiler about
+ * what is at an address. That also gives every miss one answer: no such
+ * revision, not shared with you, and not a theory are all 404, where reading
+ * the revision through the service would have said 403 to the second and told
+ * a stranger it exists.
  *
- * A revision never changes, so its bytes can be cached hard. `private` because
- * a hosted theory is its owner's alone — there is no sharing layer yet, and a
- * shared cache holding one keyed by URL would be the beginnings of one nobody
- * designed.
+ * A revision never changes, so its bytes can be cached hard. Whether a shared
+ * cache may hold them is the revision's sharing scope, decided per response by
+ * `theorySourceCacheControl` above.
  */
 async function revisionTheorySource(
   context: Context<AppBindings>,

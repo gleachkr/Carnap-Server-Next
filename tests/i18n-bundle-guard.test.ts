@@ -62,7 +62,7 @@ async function clientEntryPoints(): Promise<string[]> {
     }
 
     // Positional arguments up to the first flag are the entry points; they
-    // may be globs (`aufbau-*.ts`).
+    // may be globs (`carnap-*.ts`).
     for (const token of tokens.slice(2)) {
       if (token.startsWith("-")) {
         break;

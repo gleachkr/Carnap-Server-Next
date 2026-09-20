@@ -52,7 +52,8 @@
       // `wrangler deploy --env demo`. The env name makes the worker
       // carnap-server-demo.<subdomain>.workers.dev (honest "this is a demo"
       // URL). CARNAP_ENV is any non-"local" value → production behaviour
-      // (secure cookies, real email).
+      // (login tokens only ever leave by email; cookies follow the request's
+      // protocol whatever the value).
       "vars": {
         "CARNAP_ENV": "demo",
         "AUTH_LOGIN_EMAIL_FROM": "noreply@grahamlk.me"

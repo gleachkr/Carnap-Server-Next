@@ -1245,9 +1245,9 @@ a::after { content: "[x](item:!bang)"; }
   });
 
   test("the sanitize schema keeps class attributes and nothing else new", async () => {
-    // No dialect syntax emits classes yet, so exercise the schema directly:
-    // inject hast properties on a parsed paragraph the way a future
-    // class-bearing construct would.
+    // What emits classes today (GFM footnotes, the MathML post-pass) emits a
+    // fixed set, so exercise the schema directly: inject hast properties on a
+    // parsed paragraph the way a class-bearing construct would.
     const render = unified()
       .use(remarkParse)
       .use(() => (tree: Root) => {

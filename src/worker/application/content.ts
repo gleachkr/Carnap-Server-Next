@@ -545,7 +545,7 @@ export class ContentService {
   /**
    * A revision and the item it belongs to, if you may read it.
    *
-   * The scope check is written out rather than delegated to `readItem` so that
+   * The scope check is written out rather than delegated to `getItem` so that
    * **both** ways of missing answer in the same words. Both are already 404s,
    * but a stranger's id would say `content_item_not_found` where a made up one
    * says `content_revision_not_found`, and a caller who can tell those apart

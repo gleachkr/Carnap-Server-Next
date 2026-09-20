@@ -80,9 +80,10 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
  * line current, and warns before a navigation would discard an answer that has
  * not been recorded.
  *
- * Exported only so `tests/unsaved-changes.test.ts` can drive it in jsdom. The
- * alternative — seeding a course, an assignment and an open attempt just to get
- * at the script this returns — tests the seeding, not the runtime.
+ * Exported only so the jsdom tests (`tests/unsaved-changes.test.ts` and the
+ * `tests/dom` runtime tests) can drive it. The alternative — seeding a course,
+ * an assignment and an open attempt just to get at the script — tests the
+ * seeding, not the runtime.
  */
 const EXERCISE_RUNTIME_SCRIPT = `
 (() => {

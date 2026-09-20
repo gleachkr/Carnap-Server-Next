@@ -345,7 +345,7 @@ describe("the LTI account-link branch adopts the launch's language", () => {
     }, EMAIL_ENV);
   }
 
-  /** A launch whose asserted email already belongs to an Carnap account. */
+  /** A launch whose asserted email already belongs to a Carnap account. */
   async function launch(
     app: WorkerApp,
     env: Env,

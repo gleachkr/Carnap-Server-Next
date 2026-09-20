@@ -52,8 +52,9 @@ const CONTENT_RESIZE_SCRIPT = `
   }
 
   const post = () => {
-    // targetOrigin "*" is load-bearing: srcdoc documents (the revision
-    // editor preview) have origin "null", so naming our own origin would
+    // targetOrigin "*" is load-bearing: a srcdoc document (the revision
+    // editor preview) inherits its parent's origin but reads its own
+    // location.origin as "null", so naming our origin from in here would
     // never deliver. The payload is an inert height; the parent validates
     // event.origin and event.source before acting on it.
     window.parent.postMessage(

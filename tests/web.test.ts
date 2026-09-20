@@ -647,7 +647,7 @@ describe("native web workflow", () => {
     });
   });
 
-  test("Milestone 9 course tools are reachable from course pages", async () => {
+  test("course tools are reachable from course pages", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await webLogin(env, "instructor@example.test");
       const student = await webLogin(env, "student@example.test");

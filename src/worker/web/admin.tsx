@@ -490,7 +490,7 @@ const AuditTable: FC<{
               </td>
             </tr>
             {/* One event is two rows, and the rule belongs after the pair —
-                see the .audit-event rules in styles.ts. */}
+                see the .audit-event rules in chrome.css. */}
             <tr class="audit-event-detail">
               <td colspan={4}>
                 <AuditDetail event={event} />

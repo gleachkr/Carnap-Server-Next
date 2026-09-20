@@ -46,7 +46,7 @@ function auditFindings(): Promise<Finding[]> {
 }
 
 /**
- * The runner's own self-test, and it earns its place: the six exercise widgets
+ * The runner's own self-test, and it earns its place: the exercise widgets
  * put all their chrome in a Declarative Shadow Root, jsdom's parser ignores
  * `shadowrootmode` entirely, and axe does not look inside a `<template>`. That
  * combination fails *silently* — the audit still runs, still reports the light

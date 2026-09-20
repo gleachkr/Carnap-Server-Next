@@ -295,7 +295,8 @@ export function assignmentValues(
  * The exercise status line. Two whole messages rather than a stem plus an
  * appended score: a translator needs to control the word order and the
  * separator, which a concatenation decides for them. The client half of this
- * (`exerciseRuntimeScript`) uses the same two ids, so the line reads identically
+ * (`EXERCISE_RUNTIME_SCRIPT` in `./assignment-scripts`) uses the same two ids,
+ * so the line reads identically
  * whether the server rendered it or the runtime replaced it after a submit.
  */
 function exerciseStatusText(
@@ -1846,14 +1847,10 @@ function evaluationText(
 }
 
 /**
- * A plain-text word for where a submission stands in review: waiting on the
- * instructor, signed off by hand, or full marks the autograder is trusted for.
- */
-/**
  * Which of the three review states a submission is in. Deliberately a value and
  * not a word: the review queue's enhancement script keys off this, so the count
  * and the needs-review filter keep working in every language. `reviewStateLabel`
- * in `ui-strings.ts` turns it into prose, once, for both halves.
+ * in `labels.ts` turns it into prose, once, for both halves.
  */
 function reviewState(evaluation: ViewerEvaluation | null): ReviewState {
   if (submissionNeedsReview(evaluation)) {

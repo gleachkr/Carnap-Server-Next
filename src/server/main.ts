@@ -45,9 +45,10 @@ function present<K extends string>(
  * is written against the key being missing.
  *
  * `CARNAP_ENV` defaults to `production`, which is the safe default rather than
- * the convenient one — `local` weakens cookies and hands the login token back
- * in the response body, and a self-hosted instance that quietly did that would
- * be a security hole with no symptom.
+ * the convenient one — `local` hands a login token back in the response when
+ * no email sender is configured, and a self-hosted instance that quietly did
+ * that would be a security hole with no symptom. (Cookies are not part of it:
+ * `Secure` follows the request's protocol, whatever the environment is called.)
  */
 function readEnv(): Env {
   return {

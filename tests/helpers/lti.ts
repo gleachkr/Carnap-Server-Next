@@ -283,7 +283,7 @@ function launchCookies(response: Response): {
 /**
  * Run a complete launch: initiation, token minting with the returned nonce,
  * and the form_post to /lti/launch. Token fields can be overridden to drive
- * every negative case in the milestone's test list.
+ * every negative case the launch tests cover.
  */
 export async function performLaunch(
   app: WorkerApp,

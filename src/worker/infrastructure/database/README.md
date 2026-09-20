@@ -36,10 +36,12 @@ For Cloudflare D1, enter `nix develop`, then run:
 
 ```sh
 bun run db:migrate:local
-bun run db:migrate:remote
+bun run db:migrate:demo
 ```
 
-The remote command requires an actual database ID in Wrangler configuration.
+The demo command targets the `demo` environment's database; a deployment of
+your own needs a `wrangler.jsonc` environment with its real database ID and the
+same `d1 migrations apply <name> --remote --env <env>` invocation.
 
 A standalone server applies pending migrations at startup through
 `migrate.ts`. Each migration and its history entry run in one batch. History

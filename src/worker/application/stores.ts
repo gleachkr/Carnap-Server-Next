@@ -762,8 +762,8 @@ export interface UpsertAssignmentScoreInput {
  * is sent anything, and so that deliveries order by `calculatedAt`. It is
  * written by the paths that change a score and read by grade passback; a
  * page never writes it, and a write path that missed it would delay an LMS
- * sync, not misreport a grade. See `docs/grading-model.md`, "Score
- * projections".
+ * sync, not misreport a grade. See `docs/grading-model.md`, "Displayed scores
+ * and the passback ledger".
  */
 export interface ScoreStore {
   getAssignmentScore(
@@ -777,7 +777,7 @@ export interface ScoreStore {
   ): Promise<AssignmentScore[]>;
   /**
    * Write the score and its outbound grade-passback jobs in one transaction,
-   * so a grade can never change without the LMS send being queued (PLAN §11.4).
+   * so a grade can never change without the LMS send being queued.
    * There is no job-less write: a change that owes nothing passes `[]`, and
    * the planner is the one that decides that.
    */

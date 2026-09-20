@@ -15,7 +15,8 @@ import {
 } from "./labels";
 
 /**
- * Strings for the server-generated inline enhancement scripts.
+ * Strings for the server-generated enhancement scripts (served as hashed
+ * assets, see `./script-assets`).
  *
  * Those scripts are JavaScript we emit as text, so they cannot call `i18n.t`
  * themselves — and interpolating translated prose into a script body would put

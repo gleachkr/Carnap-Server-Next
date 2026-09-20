@@ -268,7 +268,7 @@ function cspForResponse(context: Context<AppBindings>): string {
 const CSP_HEADER_NAME = "Content-Security-Policy";
 
 /**
- * Four headers that each close a door we have no use for.
+ * Three headers that each close a door we have no use for.
  *
  * `nosniff` stops a browser from second-guessing a `Content-Type`. It is what
  * holds the CSP above together, because the scripts are served from our own

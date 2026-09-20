@@ -32,8 +32,8 @@ export const MATH_FONT_HREF = fontHref(MATH_FONT_FILE);
 
 /**
  * The `@font-face` itself, generated here rather than written in
- * `./content.css` because the URL carries a content hash and a stylesheet has
- * nowhere to compute one. `./styles` joins it into the content layer beside
+ * `./content.css` because the URL carries the font package's version
+ * (`./fonts`) and a stylesheet has nowhere to read one. `./styles` joins it into the content layer beside
  * the interface families, which are generated for the same reason.
  *
  * A rule that *uses* the family — `math { font-family }` — is ordinary CSS and

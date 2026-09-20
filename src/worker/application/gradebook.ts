@@ -63,8 +63,8 @@ export interface StudentAssignmentScore {
 export interface StudentScorecardEntry {
   readonly assignmentId: AppId;
   // Whether this score counts toward the course total. Only graded assignments
-  // count; practice and reading scores are recorded and shown to the student as
-  // a signal but excluded from the total.
+  // count; a practice score is shown to the student as a signal but excluded
+  // from the total. A reading takes no work, so it has no entry at all.
   readonly counts: boolean;
   readonly earned: number | null;
   readonly released: boolean;
@@ -816,9 +816,10 @@ export class GradebookService {
    * The ledger rows these students' scores on these assignments come to,
    * each with the passback jobs its change owes, from rows already read.
    *
-   * Scores are recorded for every mode — practice and reading work too, so
-   * the passback rules have one shape of row to read — but only graded
-   * scores are ever sent (planGradeJob) or counted toward the course total.
+   * Scores are recorded for practice as well as graded work, so the passback
+   * rules have one shape of row to read — a reading records nothing, since it
+   * takes no submissions — but only graded scores are ever sent
+   * (planGradeJob) or counted toward the course total.
    * Stamped after the reads, so `calculatedAt` orders projections by data
    * recency: the upserts refuse to let an older stamp overwrite a newer one,
    * and the LMS orders deliveries by the same value.
@@ -929,9 +930,10 @@ export class GradebookService {
   }
 
   /**
-   * A bulk refresh calls this once per student against the same assignment,
-   * and the answer only depends on the assignment — memoized per service
-   * instance (one request), like the context → platform hop below.
+   * The answer depends on the assignment alone, and a request can refresh the
+   * same assignment more than once (`passbackTargets` runs once per refresh),
+   * so it is memoized per service instance — one request — like the context →
+   * platform hop below.
    */
   private async resourceLinksForAssignment(
     assignmentId: AppId,
@@ -953,8 +955,9 @@ export class GradebookService {
   }
 
   /**
-   * A bulk refresh calls this per student against the same few links, so the
-   * context → platform hop is memoized per service instance (one request).
+   * Every link in a course tends to share one context, and `passbackTargets`
+   * asks once per link, so the context → platform hop is memoized per service
+   * instance (one request).
    */
   private async platformIdForContext(
     contextRowId: AppId,
@@ -1144,9 +1147,9 @@ export class GradebookService {
           } satisfies StudentScorecardEntry;
         }
 
-        // Practice and reading show their recorded score immediately, but only
-        // once the student has answered something — an untouched assignment
-        // reads as a dash rather than a misleading 0.
+        // Practice shows its score immediately, but only once the student has
+        // answered something — an untouched assignment reads as a dash rather
+        // than a misleading 0, and so does a reading, which takes no answers.
         if (score.status !== "partial" && score.status !== "complete") {
           return null;
         }

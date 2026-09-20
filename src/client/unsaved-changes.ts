@@ -9,7 +9,8 @@
  * The interactive exercises answer that question a different way — their answer
  * lives in a shadow-DOM widget rather than in the form's own fields, and their
  * runtime is an inline script in a document this bundle never reaches, so it
- * carries its own guard. See `exerciseRuntimeScript` in `assignment-detail.tsx`.
+ * carries its own guard. See `EXERCISE_RUNTIME_SCRIPT` in
+ * `web/assignment-scripts.ts`.
  */
 
 /**

@@ -2,8 +2,8 @@
  * The usage-instructions modal every interactive widget can offer behind a `(?)`
  * in the exercise's action bar.
  *
- * Framework-free on purpose. Two of the widgets that want one are Preact
- * islands and three are hand-written DOM, so this builds plain elements and
+ * Framework-free on purpose. The two widgets that offer one today are Preact
+ * islands and the rest are hand-written DOM, so this builds plain elements and
  * takes plain, already-translated strings — a widget passes what its `t()`
  * returned and never has to reach a catalog from here. The panel is created once
  * and appended to the widget's shadow root, outside any render tree; the trigger

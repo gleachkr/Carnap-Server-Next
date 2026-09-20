@@ -16,8 +16,8 @@ import type * as schema from "./schema";
  * `batch` is declared here rather than inherited because neither driver puts it
  * on the base class; each redeclares it, identically. It matters more than it
  * looks: D1 has no interactive transactions, so a batch is the only way to make
- * several writes commit or fail together, and seven places in `stores.ts` depend
- * on that. A driver without it could not run this code.
+ * several writes commit or fail together, and every multi-write call site in
+ * `stores.ts` depends on that. A driver without it could not run this code.
  *
  * `TRunResult` is `unknown` — it is the driver's own row-metadata shape (D1's
  * `D1Result`, libsql's `ResultSet`), it appears only in return positions, and no

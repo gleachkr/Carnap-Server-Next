@@ -302,9 +302,9 @@ const Layout: FC<LayoutProps> = ({
 
 /**
  * Render a full HTML document around `children` and return it as a response.
- * This is the single source of truth for the page chrome; the legacy
- * string-based `page()` helper in `html.ts` delegates here so string-built and
- * JSX-built views share identical navigation, styling, and scripts.
+ * This is the single source of truth for the page chrome: every view is JSX
+ * rendered through here, so navigation, styling and scripts cannot differ
+ * between pages.
  */
 export function renderShell(
   context: Context<AppBindings>,
