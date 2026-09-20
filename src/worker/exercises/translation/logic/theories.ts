@@ -85,8 +85,10 @@ sort ctx;
  * {@link PROPOSITIONAL_RULES} and are always present — partly because the
  * remaining twelve are stated over `¬` and the succedent alone and need no
  * more than that, and partly because a theory that dropped an unused core
- * connective would change the mm0 of every formula ever graded, and a stored
- * certificate is only valid against the bytes it was found for. */
+ * connective would change the mm0 every formula is checked against, and a
+ * recorded verdict should stay reproducible from the answer text — the
+ * certificate itself is not kept, so the theory is all that ties a verdict
+ * to the check that made it. */
 const CORE_NOTATION = {
   and: "∧",
   if: "→",

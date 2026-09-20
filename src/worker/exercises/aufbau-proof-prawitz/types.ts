@@ -12,9 +12,8 @@ import type { Translator } from "../../i18n/translator";
  * ({@link ./translate prawitzToAuf}) infers each node's sequent context from
  * that structure alone and emits the linear `.auf` the engine consumes; the
  * browser compiles it to an MMB certificate against the frozen theory. The
- * trust boundary is unchanged from the sibling types: the worker re-verifies
- * the MMB against the frozen theory + goal, never the student's tree. See
- * [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
+ * trust boundary is unchanged from the sibling types: the worker verifies
+ * the MMB against the frozen theory + goal, never the student's tree.
  */
 
 import { isObject } from "../../exercise-kit/assessment";
@@ -86,14 +85,17 @@ export interface PrawitzProofNode {
  *                      emits every leaf through it
  *   - `goalFormula`    the goal's conclusion (inside `$ … $`)
  *   - `goalName`       the theorem name the root proves
- *   - `source`         the resolved theory plus the appended goal declaration
- *                      `theorem <goalName> …: $ … $;`, `@syntax` intact — the
- *                      language a node's formula is read in, and (once
- *                      stripped) the sole verification input. Absent where the
- *                      proof stays engine text; see {@link proofTheoryText}
- *   - `mm0`            the same text already stripped, for artifacts compiled
- *                      before `source` existed. Read the pair through
- *                      {@link proofTheoryText}, never directly
+ *   - `source`         the system's text plus the appended goal declaration
+ *                      `theorem <goalName> …: $ … $;` as the author wrote it,
+ *                      `@syntax` intact — the language a node's formula is
+ *                      read in
+ *   - `mm0`            the same text in engine form: `@syntax` stripped and the
+ *                      declaration re-printed as `goalEngineDecl` — the sole
+ *                      verification input. The join (`exercise-kit/systems/
+ *                      join.ts`) fills in *both* from `system` on every read;
+ *                      only an artifact frozen before the table carries one
+ *                      inline. Read the pair through {@link proofTheoryText},
+ *                      never directly
  *   - `options`        the shared editor-assistance toggles (reused from the
  *                      linear proof type)
  *   - `promptHtml`     the rendered prose above the goal
@@ -115,6 +117,10 @@ export interface PrawitzProofNode {
  *                      the join appends to the system's text. Stored beside the
  *                      key rather than inside the frozen text, because the key
  *                      is per document and the declaration is per exercise
+ *   - `goalEngineDecl` the same declaration with its formulas re-printed in
+ *                      engine text (`goalEngineDeclaration`), which is what the
+ *                      join puts in `mm0` while `source` keeps `goalDecl` as
+ *                      written. Absent where the theory reads nothing
  *   - `system`         which of the document's systems this exercise is set in;
  *                      `source`/`mm0` above are what the join fills in from it.
  *                      Absent in an artifact compiled before the table existed,
@@ -182,8 +188,8 @@ export function isAufbauProofPrawitzPublicData(
     typeof value.assumptionRule === "string" &&
     typeof value.goalFormula === "string" &&
     typeof value.goalName === "string" &&
-    // Either theory text will do, and exactly one is ever written; which of
-    // them arrived is what says whether the proof is read as surface text.
+    // Either theory text will do: the join hands over both, an artifact frozen
+    // before the table carries one, and `proofTheoryText` resolves the pair.
     hasTheoryText(value) &&
     typeof value.promptHtml === "string" &&
     (value.sequentSymbol === undefined ||

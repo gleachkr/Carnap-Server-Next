@@ -4,8 +4,9 @@
  *
  * A lesson compiles to a document. A theory compiles to a *verdict* plus a
  * summary — there is nothing to render, and the text a lesson eventually uses
- * is the source itself, frozen into `publicData.mm0` when an `aufbau-mm0`
- * block names this revision's URL. So the job here is to refuse a file that
+ * is the source itself, frozen into that lesson's systems table
+ * (`artifact.systems[name]`) when an `aufbau-mm0` block names this revision's
+ * URL. So the job here is to refuse a file that
  * will not read, at the moment its author can still fix it, instead of letting
  * the failure surface days later inside somebody's proof exercise.
  *

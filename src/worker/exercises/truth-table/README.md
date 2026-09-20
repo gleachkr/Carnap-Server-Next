@@ -288,9 +288,10 @@ from public formulas, so submitted dimensions must match that layout.
   (path relative to the repository root).
 
 Use `tests/truth-table.test.ts`, `tests/truth-table-logic.test.ts`, language
-tests, and DOM tests when changing these contracts. Registration also needs
-metadata, compiler/assessment/renderer dispatch, and active assignment forms;
-see `AGENTS.md`.
+tests, and DOM tests when changing these contracts. The type is registered
+once, as the `ExerciseType` object in `index.ts` listed in
+`src/worker/exercises/index.ts`; compiler, assessment and renderer dispatch
+all read that one registration.
 
 [feedback]: ../../../../docs/carnap-markdown-v1.md#recording-and-feedback
 [languages]: ../../../../docs/carnap-markdown-v1.md#languages-and-theories

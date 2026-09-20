@@ -7,11 +7,12 @@ import type { Translator } from "../../i18n/translator";
  *
  * The trust boundary is the MMB certificate: the student's browser compiles the
  * proof against the frozen theory (see {@link AufbauProofPublicData.mm0}) and
- * submits `{ proofText, mmb }`; the worker re-verifies the MMB against that same
- * mm0 with `@aufbau/verifier`. Verification attests only mm0-declared theorems,
- * so the goal is frozen into `mm0` as a `theorem <goalName>: $ … $;` — the proof
- * is correct iff the certificate proves that declared goal. See
- * [[aufbau-engine-packages]].
+ * submits `{ proofText, mmb }`; the worker verifies the MMB against that same
+ * mm0 with `@aufbau/verifier`, and then keeps the verdict and the text, not
+ * the certificate. Verification attests only mm0-declared theorems, so the
+ * goal is stored as `goalDecl` (a `theorem <goalName>: $ … $;`) and the join
+ * appends it to the system's text — the proof is correct iff the certificate
+ * proves that declared goal.
  */
 
 import { isObject } from "../../exercise-kit/assessment";

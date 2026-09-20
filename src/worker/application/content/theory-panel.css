@@ -4,8 +4,8 @@
  *
  * Closed, it is a single line — a small-caps kicker in the exercise-legend
  * idiom, then the theory's name set in the source face, since the name is an
- * identifier the author writes in `theory="…"`. Open, the source hangs below a
- * hairline inside the same box.
+ * identifier the author writes in the block's `name="…"` and an exercise's
+ * `system="…"`. Open, the source hangs below a hairline inside the same box.
  *
  * The `<pre>` has to undo the page's own block-code framing (fill, border,
  * radius): nested inside the panel it would draw a second box a hairline inside

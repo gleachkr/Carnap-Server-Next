@@ -17,7 +17,8 @@
  * editor, alongside the compiler's own complaints, and the editor ships a
  * catalog. In the browser no catalog ships, so each widget carries the strings
  * it can say inside its hydration payload — and the translation exercise, the
- * three proof types, and whatever comes next must all carry the *same* ones.
+ * three shaped proof types, and whatever comes next must all carry the *same*
+ * ones.
  *
  * The literals sit at the `i18n.t(...)` call sites on purpose: Lingui's
  * extractor reads string literals passed to a receiver named `i18n`, so

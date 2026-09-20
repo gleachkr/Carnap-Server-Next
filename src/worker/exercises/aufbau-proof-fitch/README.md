@@ -5,7 +5,8 @@ to mark subproofs. The editor draws scope lines. `fitchToAuf` translates the
 text into sequents for the Aufbau compiler; the server verifies the resulting
 MMB certificate against the saved theory and goal.
 
-Compiler loading, verification, and certificate storage are shared with
+Compiler loading, verification, and the certificate's handling (verified at
+the boundary, never stored) are shared with
 [linear proofs](../aufbau-proof/README.md). The server grades the certificate,
 not the student's Fitch text or the browser's structural checks.
 

@@ -24,7 +24,7 @@ One instance serves the document's proof widgets, using the document locale.
 After edits, the widget compiles the theory and proof and updates
 `answerData` with the proof text and base64 certificate.
 
-The server decodes the certificate and calls `verifyPair` against its own
+The server decodes the certificate and calls `verifyMmb` against its own
 frozen MM0. Credit is all-or-nothing. A certificate for a different statement
 cannot satisfy the saved goal. Verification establishes validity, not
 originality: copied valid proofs remain a plagiarism concern.
@@ -128,8 +128,8 @@ verdict is about, and what the review names as the goal.
   block, system resolution and the goal header are the kit's
   (`src/worker/exercise-kit/systems/theory.ts`,
   `src/worker/exercise-kit/proof/authoring.ts`);
-  `application/content/mm0.ts` provides shared diagnostics and standalone
-  theory-source validation.
+  `application/content/mm0.ts` compiles a hosted theory revision (the `mm0`
+  content format) and lends the block its library diagnostics.
 - `src/worker/exercise-kit/proof/certificate.ts`: certificate decoding.
 - `src/worker/exercise-kit/proof/verifier.ts`: `@aufbau/verifier` integration.
 - `assessment.ts`: normalization, evaluation, and review.

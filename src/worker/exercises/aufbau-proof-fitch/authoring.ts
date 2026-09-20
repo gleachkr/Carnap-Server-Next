@@ -51,18 +51,20 @@ const AUFBAU_PROOF_FITCH_ATTRIBUTES = [
 ] as const;
 
 /**
- * Compile an `:::aufbau-proof-fitch` exercise. Like `:::aufbau-proof` it resolves
- * a named theory and freezes `theory + goal declaration` into `publicData.mm0`
- * (the sole verification input); its body reads prose (the prompt), a `theorem
- * <name>: $ Γ ⊢ φ $` goal line, a `----` underline, then a starter *Fitch* proof
- * the editor opens with. Which axiom opens a hypothesis, and how a sequent
+ * Compile an `:::aufbau-proof-fitch` exercise. Like `:::aufbau-proof` it names
+ * the system its `system=` resolves to and keeps the goal declaration beside
+ * it, so the join (`exercise-kit/systems/join.ts`) can hand the widget and
+ * the grader `publicData.mm0` — theory plus declaration, the sole verification
+ * input; its body reads prose (the prompt), a `theorem <name>: $ Γ ⊢ φ $` goal
+ * line, a `----` underline, then a starter *Fitch* proof the editor opens
+ * with. Which axiom opens a hypothesis, and how a sequent
  * is spelled — the turnstile, and the separator between a context's formulas
  * (`;` in a theory that is also a language and has spent the comma on
  * `R(a,b)`) — are read off the theory's `@syntax role` annotations
  * ({@link requireProofNotations}); the translator writes both symbols into
  * every emitted sequent, and the student's Fitch source never spells either.
  * Grading is identical to the linear type: the translated Fitch text compiles
- * to `.auf`, and the worker verifies the MMB against this frozen mm0.
+ * to `.auf`, and the worker verifies the MMB against that joined mm0.
  *
  * With `playground`, the body has no goal line: prose, then optionally the
  * underline and a starter. Nothing is frozen beside the theory, and the goal

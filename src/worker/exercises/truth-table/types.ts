@@ -44,7 +44,7 @@ export type TruthTableVariant = "simple" | "validity" | "partial";
 
 /**
  * Which cells the student fills — an authoring choice, not a property of the
- * type (see [[truth-tables-plan]]):
+ * type:
  *   - `all`         every atom-occurrence and connective cell (Carnap default)
  *   - `connectives` only the sub-formula (connective) columns
  *   - `main`        only the main-connective column of each formula

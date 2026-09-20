@@ -3,9 +3,10 @@ import visuallyHiddenStyles from "./visually-hidden.css" with {
 };
 
 /**
- * Shared helpers for the no-submission exercise renderers (the previews:
- * `submission === null`). A leaf module the per-type `read-only-view.ts` files
- * depend on.
+ * Shared helpers for whatever writes exercise markup by hand: the per-type
+ * `read-only-view.ts` files (live form and review alike), the hydration
+ * scripts (`jsonScriptContent`), the theory panel. A leaf module — DOM-free
+ * and bundled into the browser preview — so nothing here may import upward.
  */
 
 export const VISUALLY_HIDDEN_STYLES = visuallyHiddenStyles;

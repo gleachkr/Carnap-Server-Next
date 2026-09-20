@@ -2,7 +2,6 @@ import {
   type ExerciseElementMeta,
   escapeHtml,
   exerciseRootAttributes,
-  VISUALLY_HIDDEN_STYLES,
 } from "../../application/content/render-support";
 import type { ContentNode } from "../../domain/content";
 import { previewExerciseActionsHtml } from "../../exercise-kit/actions";
@@ -41,11 +40,9 @@ import type {
 import { MODEL_KIND, modelName } from "./types";
 import { describeVerdict } from "./verdict-text";
 
-const MODEL_SHADOW_STYLES = [
-  EXERCISE_GROUP_SHADOW_STYLES,
-  shadowStyles,
-  VISUALLY_HIDDEN_STYLES,
-].join("\n");
+const MODEL_SHADOW_STYLES = [EXERCISE_GROUP_SHADOW_STYLES, shadowStyles].join(
+  "\n",
+);
 
 const TURNSTILES: Readonly<Record<ModelTurnstileGlyph, string>> = {
   double: "⊨",

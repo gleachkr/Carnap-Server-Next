@@ -95,9 +95,11 @@ const AUFBAU_PROOF_PRAWITZ_ATTRIBUTES = [
 ] as const;
 
 /**
- * Compile an `:::aufbau-proof-prawitz` exercise. Like its siblings it resolves
- * a named theory and freezes `theory + goal declaration` into `publicData.mm0`
- * (the sole verification input). Its body is prose + a `theorem …` header,
+ * Compile an `:::aufbau-proof-prawitz` exercise. Like its siblings it names
+ * the system its `system=` resolves to and keeps the goal declaration beside
+ * it, so the join (`exercise-kit/systems/join.ts`) can hand the widget and
+ * the grader `publicData.mm0` — theory plus declaration, the sole verification
+ * input. Its body is prose + a `theorem …` header,
  * and — optionally — a `----` underline followed by starter lines in the tree
  * type's linear form, extended two ways: each line is a full sequent whose
  * context (left of the sequent symbol) is discarded — the labels re-derive

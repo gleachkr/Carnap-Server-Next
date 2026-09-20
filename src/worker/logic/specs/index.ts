@@ -22,8 +22,10 @@
  * notation table and they did not. Splitting the specs by the type that happens
  * to read them first would preserve exactly that.
  *
- * Per-exercise languages authored in content are a separate matter: those
- * arrive as strings from the database and want none of this.
+ * A language an author declares in an `:::aufbau-mm0` block is read by the
+ * same reader (`languageFromSource`) but is not registered here: it arrives as
+ * text in the document, and `exercise-kit/systems` resolves it by name, block
+ * before shipped id, into the document's own systems table.
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
@@ -35,9 +37,10 @@ export { type LanguageRead, languageFromSource, readLanguage } from "./read";
 /**
  * Every language an author can name, by the id they write.
  *
- * **An id is its file's stem.** Keeping the two equal is what will let
- * `system=` take the URL a proof exercise's `theory` already takes, rather than
- * a second kind of name for the same artifact.
+ * **An id is its file's stem.** Keeping the two equal is what lets one
+ * `system=` name a shipped file by its stem and an `aufbau-mm0` block by its
+ * name, and what lets a block's `src="/theories/<id>.mm0"` and a bare
+ * `system="<id>"` mean the same bytes — one artifact, not two kinds of name.
  */
 const LANGUAGE_IDS: readonly string[] = [
   "carnap-prop",
@@ -63,10 +66,10 @@ function sourceFor(id: string): string {
 }
 
 /**
- * Every spec that ships, by the id an author names it with. The ids match the
- * incumbent `exercises/first-order/dialect.ts` where a language exists in both,
- * so content authored against `system=` kept working when the exercise types
- * swapped over.
+ * Every spec that ships, by the id an author names it with. The ids kept the
+ * spellings of the hand-written dialect table this replaced, so content
+ * authored against `system=` kept working when the exercise types swapped
+ * over.
  *
  * **A language and a proof system can be one file, and where they are, they
  * are.** forallx: Calgary's entry is the same text a proof exercise resolves

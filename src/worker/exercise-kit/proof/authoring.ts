@@ -300,8 +300,8 @@ export function parseProofOptions(
   };
 }
 
-/** The goal header parsed out of a proof directive body, shared by both proof
- * types (linear and tree). */
+/** The goal header parsed out of a proof directive body, shared by all four
+ * proof types. */
 export interface TheoremHeader {
   /** The goal's conclusion, the content of the last `$ … $` in the header. */
   readonly goalFormula: string;
@@ -320,7 +320,7 @@ export interface TheoremHeader {
  * `goalFormula` is the content of the header's last `$ … $` group (the
  * conclusion, since MM0 hypotheses precede it via `>`). Returns null (with a
  * `missing_theorem_header` diagnostic) when no header line is present. Shared by
- * the linear and tree proof types.
+ * all four proof types.
  */
 export function parseTheoremHeader(
   block: DirectiveBlock,

@@ -111,9 +111,9 @@ export function exerciseHydrationScript(
  * every element asks to tell the two states apart.
  *
  * The type passes its own `strings` (its `build…Strings(i18n)`), rather than
- * this looking them up by asset id: the lookup table enumerates every type,
- * and a type's review should not need the list of all the others to name
- * itself.
+ * this resolving them through the registry: the kit does not import the
+ * registry (a type imports the kit, never the reverse), and a type's review
+ * should not need the list of all the others to name itself.
  */
 export function reviewHydrationScript(
   strings: Readonly<Record<string, string>>,

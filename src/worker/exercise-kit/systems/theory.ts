@@ -384,8 +384,10 @@ export type SystemResolver = (
  * The system an exercise's `system=` names, with both the missing attribute and
  * the unresolvable name already reported.
  *
- * Shared by all four proof types (and, through the same resolver, by the two
- * semantic ones), so that "which logic am I in" is asked one way everywhere.
+ * Shared by all four proof types; the three formula-reading types (model,
+ * translation, truth table) go through the same resolver by way of
+ * `./attribute.ts`, which also supplies their default — so that "which logic
+ * am I in" is asked one way everywhere.
  */
 export function requireSystem(
   block: DirectiveBlock,

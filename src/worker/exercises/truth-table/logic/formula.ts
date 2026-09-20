@@ -1,34 +1,36 @@
 /**
  * Formula syntax for the truth-table exercise type.
  *
- * The language is not written here. It is `logic/theories/carnap-prop.mm0`,
- * registered as a language by `logic/specs` — an
- * ordinary MM0 signature with `@syntax` annotations, read by `@aufbau/syntax`
- * — and this module only converts what that parser returns into the
- * {@link Formula} tree a table is built from, and writes one back out. The
- * spec is the same kind of artifact a proof exercise's `theory=` names, and
- * the same kind the model and translation types read; before it there were
- * two hand parsers here and next door, with no way to make a course's truth
- * tables and its models agree about what `A` means.
+ * The language is not written here. It is whatever the exercise's `system=`
+ * names — `logic/theories/carnap-prop.mm0`, registered by `logic/specs`, when
+ * the author names nothing — an ordinary MM0 signature with `@syntax`
+ * annotations, read by `@aufbau/syntax`; this module only converts what that
+ * parser returns into the {@link Formula} tree a table is built from, and
+ * writes one back out. The spec is the same kind of artifact a proof
+ * exercise's `system=` names, and the same kind the model and translation
+ * types read; before it there were two hand parsers here and next door, with
+ * no way to make a course's truth tables and its models agree about what `A`
+ * means.
  *
  * This module is DOM-free and imported by BOTH the worker (to compile a table
  * and grade authoritatively) and the client element (for instant local
  * checking), so it must not reach for any platform globals. The spec arrives
  * as a text import: no fetch, and the same reading on both sides.
  *
- * Notation is Carnap's default `prop` system:
+ * The default, `carnap-prop`, declares Carnap's `prop` notation:
  *   - `~`    negation      (unary prefix)
  *   - `/\`   conjunction
  *   - `\/`   disjunction
  *   - `->`   conditional   (right-associative)
  *   - `<->`  biconditional
  *
- * Those are the five `carnap-prop` declares, not the five this module can
- * read: it reads **all sixteen** binary truth functions plus `⊤` and `⊥`, one
+ * Those are the five that file declares, not the five this module can read:
+ * it reads **all sixteen** binary truth functions plus `⊤` and `⊥`, one
  * `@syntax role` each (`logic/specs/connectives.ts`). A course whose textbook
  * uses the Sheffer stroke or exclusive disjunction declares the constructor in
- * an `aufbau-mm0` block extending `carnap-prop`, annotates it, and the table
- * gives it a column with nothing changed here.
+ * an `aufbau-mm0` block extending `carnap-prop`, annotates it, names the
+ * block with `system=`, and the table gives it a column with nothing changed
+ * here.
  *
  * Sentence letters are a single Roman letter of either case. The hand parser
  * this replaced also read a bare-digit subscript (`P0`, `R12`); an MM0
@@ -36,8 +38,9 @@
  * Graham's call on 2026-08-24 was to accept the loss rather than hold the
  * unification for a library feature to restore it.
  *
- * Precedence, loosest to tightest: `<->` < `->` < `\/` < `/\` < `~`.
- * `/\`, `\/`, and `<->` are left-associative; `->` is right-associative.
+ * In `carnap-prop`, precedence loosest to tightest is `<->` < `->` < `\/` <
+ * `/\` < `~`; `/\`, `\/`, and `<->` are left-associative, `->` right. Another
+ * system's ladder is its own.
  */
 
 import type {

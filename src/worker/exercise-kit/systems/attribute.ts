@@ -3,7 +3,7 @@
  *
  * The four proof types resolve the same attribute through the same resolver
  * (see `./theory.ts`); what those three need on top of it is a
- * *language*, and a requirement about it. Before this existed each carried its
+ * *language*, and a default to fall back on. Before this existed each carried its
  * own copy of the resolution and could only name a global by id, while the
  * proof types could only name a document-local block. One attribute, one
  * resolution order, and a course that extends forallx with its own vocabulary
@@ -65,9 +65,12 @@ export interface SystemLanguage {
   readonly system: string;
 }
 
-/** What a type asks of the language it is set in. */
-export interface SystemRequirement {
-  /** What `system=` means when the author does not write it. */
+/**
+ * What a type says about the language it is set in — now only what `system=`
+ * means when the author writes none. This carried a capability predicate
+ * once; the header says why it no longer does.
+ */
+export interface SystemDefault {
   readonly defaultId: string;
 }
 
@@ -84,11 +87,11 @@ export function parseSystemAttribute(
   block: DirectiveBlock,
   resolveSystem: SystemResolver,
   diagnostics: CompilerDiagnostic[],
-  requirement: SystemRequirement,
+  fallback: SystemDefault,
 ): SystemLanguage {
   const named = block.attrs.system?.trim();
   const system =
-    named === undefined || named === "" ? requirement.defaultId : named;
+    named === undefined || named === "" ? fallback.defaultId : named;
   const resolved = resolveSystem(system, block.line, diagnostics);
   const language =
     resolved === null ? null : languageFromSource(resolved.source);
@@ -116,7 +119,7 @@ export function parseSystemAttribute(
     );
   }
 
-  return fallbackLanguage(requirement);
+  return fallbackLanguage(fallback);
 }
 
 /**
@@ -133,20 +136,18 @@ export function parseSystemAttribute(
  * The throw that remains is a fact about the build, not about the document:
  * a type's default must be a system this server ships.
  */
-function fallbackLanguage(requirement: SystemRequirement): SystemLanguage {
-  const resolved = builtInSystem(requirement.defaultId);
+function fallbackLanguage(fallback: SystemDefault): SystemLanguage {
+  const resolved = builtInSystem(fallback.defaultId);
   const language =
     resolved === null ? null : languageFromSource(resolved.source);
 
   if (resolved === null || language === null) {
-    throw new Error(
-      `the ${requirement.defaultId} spec is no longer registered`,
-    );
+    throw new Error(`the ${fallback.defaultId} spec is no longer registered`);
   }
 
   return {
     language,
     source: resolved.source,
-    system: requirement.defaultId,
+    system: fallback.defaultId,
   };
 }

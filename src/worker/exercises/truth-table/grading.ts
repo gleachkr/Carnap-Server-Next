@@ -791,7 +791,7 @@ function isOptions(value: unknown): value is TruthTableOptions {
     typeof candidate.autoAtoms === "boolean" &&
     typeof candidate.nodash === "boolean" &&
     // `hiddenGivens`/`strictGivens` were added with the partial variant; the
-    // Phase-6 marks/turnstile options later still. All are tolerated absent so
+    // marks and turnstile options later still. All are tolerated absent so
     // earlier-compiled data validates (readers default them).
     (candidate.hiddenGivens === undefined ||
       typeof candidate.hiddenGivens === "boolean") &&

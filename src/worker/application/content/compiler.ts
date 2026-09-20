@@ -304,14 +304,6 @@ function collectInvalidItemLinkDiagnostics(
 }
 
 /**
- * A formula that would not typeset, as a complaint the author can act on.
- *
- * Failing the save is the point. MathJax's own habit is to render an unparseable
- * formula as an `<merror>` box and carry on, which would store the words
- * "Undefined control sequence" in the artifact and leave a student to discover
- * them; an author watching the preview finds out instead, next to the line.
- */
-/**
  * The same resolver, asked at most once per path. Undefined in, undefined out:
  * a caller with nothing to resolve with should not acquire a cache.
  */
@@ -341,6 +333,14 @@ function memoizeTheoryResolver(
   };
 }
 
+/**
+ * A formula that would not typeset, as a complaint the author can act on.
+ *
+ * Failing the save is the point. MathJax's own habit is to render an unparseable
+ * formula as an `<merror>` box and carry on, which would store the words
+ * "Undefined control sequence" in the artifact and leave a student to discover
+ * them; an author watching the preview finds out instead, next to the line.
+ */
 function mathDiagnostic(failure: MathFailure): CompilerDiagnostic {
   return diagnostic(
     failure.line,

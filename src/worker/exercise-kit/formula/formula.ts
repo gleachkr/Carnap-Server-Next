@@ -18,7 +18,7 @@
  * what that parser returns into the {@link Formula} tree the two types
  * evaluate, and writes one back out. The notation table, the precedence
  * ladder, the bracket conventions and the refusals all live in the spec, which
- * is quite literally the same artifact a proof exercise's `theory=` names.
+ * is quite literally the same artifact a proof exercise's `system=` names.
  *
  * DOM-free and imported by BOTH the worker (to compile an exercise and grade
  * authoritatively) and the client elements (for the local Check), so it must

@@ -2,7 +2,7 @@
  * Worker-side MMB verifier — the trust boundary's arbiter. Binds the
  * `@aufbau/verifier` wasm ABI directly instead of importing the package's
  * `index.js`, whose top-level `new URL("./verifier.wasm", import.meta.url)`
- * throws under workerd (Stage 0 finding; see [[aufbau-engine-packages]]).
+ * throws under workerd.
  *
  * The `.wasm` is imported as a build-time module so workerd can instantiate it —
  * workerd forbids `WebAssembly.instantiate(bytes)` at runtime. The import is a

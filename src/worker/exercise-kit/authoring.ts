@@ -272,9 +272,10 @@ export const COMMON_EXERCISE_ATTRIBUTES = [
  * Silently discarding an instruction is the worst of the three options; the
  * other two are obeying it and saying you can't.
  *
- * It is a hard error rather than a warning because every diagnostic is one (see
- * `compileCarnapMarkdown`, which fails the compile on a non-empty list) and
- * there is no severity channel to put a softer one in. The cost is real and
+ * It is a hard error rather than a warning, though the severity channel
+ * exists (`diagnostics.ts`, and `compileCarnapMarkdown` fails the compile only
+ * on an error): a warning is for something the author may legitimately want,
+ * and an attribute nothing reads is never that. The cost is real and
  * accepted: a stored revision carrying a stray attribute will refuse to re-save
  * until its author deletes it.
  *

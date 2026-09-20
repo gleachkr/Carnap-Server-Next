@@ -1,8 +1,9 @@
 /**
- * Wording for a failed `tests=` check, shared by the widget's local Check and
- * any server-side rendering of the same complaint. DOM-free and free of any
- * i18n import: it speaks through a {@link TranslationStrings} lookup, exactly
- * as `model/verdict-text.ts` does.
+ * Wording for a failed `tests=` check, for the widget's local Check. DOM-free
+ * and free of any i18n import: it speaks through a {@link TranslationStrings}
+ * lookup, exactly as `model/verdict-text.ts` does — though unlike that one it
+ * has no server-side reader, since the review page records no verdict of its
+ * own for this type.
  */
 
 import type { TranslationTestFailure } from "./logic/tests";

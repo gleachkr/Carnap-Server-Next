@@ -5,8 +5,9 @@ node has a conclusion and rule, with child nodes supplying premises. The
 browser flattens the tree to Aufbau proof text, compiles an MMB certificate,
 and submits it for independent server verification.
 
-The compiler, verifier, frozen-theory contract, and certificate storage rules
-are shared with [linear proofs](../aufbau-proof/README.md).
+The compiler, verifier, frozen-theory contract, and the certificate's handling
+(verified at the boundary, never stored) are shared with
+[linear proofs](../aufbau-proof/README.md).
 
 ## Flattening
 

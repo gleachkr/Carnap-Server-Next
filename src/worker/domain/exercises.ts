@@ -8,7 +8,7 @@ export type AnswerKind = string;
 /**
  * How much a student is told about whether their work is right.
  *
- * One vocabulary for all nine types, because it is one question. Before this
+ * One vocabulary for all ten types, because it is one question. Before this
  * there were two spellings of it — the truth table's `check="cells|terse|off"`
  * and the model's `check="on|off"` — and the four proof types, which give the
  * loudest feedback of the lot, had no say at all: they compiled on a debounce
@@ -26,11 +26,11 @@ export type AnswerKind = string;
  * no feedback setting can open early and none can close late. This is the
  * middle one: what they are told, and in how much detail.
  *
- * What it is *not* is a security boundary. Six of the nine types are checked in
- * the browser — the four proof types compile there (the worker holds only the
- * verifier), and the truth table and the model are computable from public data
- * by construction — so a student with devtools can run the same check the widget
- * runs. The seal that does hold is the recorded evaluation, which the server
+ * What it is *not* is a security boundary. Seven of the ten types are checked
+ * in the browser — the four proof types compile there (the worker holds only
+ * the verifier), the translation's equivalence search runs there, and the
+ * truth table and the model are computable from public data by construction —
+ * so a student with devtools can run the same check the widget runs. The seal that does hold is the recorded evaluation, which the server
  * withholds on its own authority. See `resolveExerciseFeedback`.
  */
 export type ExerciseFeedback = "full" | "terse" | "none";

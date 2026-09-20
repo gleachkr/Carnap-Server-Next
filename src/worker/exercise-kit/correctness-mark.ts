@@ -2,7 +2,7 @@
  * The correctness mark: the one place every exercise type says whether the work
  * is right.
  *
- * Before this, six of the nine types had their own answer to that. The four
+ * Before this, six of the types had their own answer to that. The four
  * proof types drew a bracketed `[✓]` — two of them at the right of the goal
  * line, two at the right of the editor toolbar — while the truth table and the
  * model turned a line of prose green and the three text types said nothing at
@@ -11,14 +11,16 @@
  *
  * So the mark is a single light-DOM element in the action bar. Living outside
  * every widget's shadow root is what makes "the same place" achievable at all:
- * the nine types share no internal layout, but they all end in that one row, and
+ * the ten types share no internal layout, but they all end in that one row, and
  * one rule in `styles.ts` then describes the mark for all of them.
  *
  * Its own leaf module, for the reason `answer-events.ts` is one — the client
  * base class imports these as *values*, and a value import that reaches the
  * content document's escaping helpers drags that chain into every widget bundle.
- * The worker's renderer, the runtime script and all six widgets import from
- * here, which is the point: there is no second spelling of the glyph.
+ * The worker's action bar, the runtime script, the client base class (which
+ * every widget writes the mark through) and the two Preact islands that draw
+ * their own status all import from here, which is the point: there is no
+ * second spelling of the glyph.
  */
 
 /** The mark's element class, and the selector each writer finds it by. */
@@ -30,11 +32,13 @@ export const CORRECTNESS_MARK_CLASS = "exercise-mark";
  * still know where the verdict appears, and a mark that pops into being would
  * reflow the button row under it.
  *
- * `working` belongs to the proof types, whose verdict comes from a compile that
- * takes a moment. `error` is *could not check* rather than *wrong* — today its
- * only cause is the WASM proof engine failing to load, and a widget that reaches
- * it says why in the mark's `title`. A wrong answer is `idle`: nothing has said
- * the work is right, which is all the mark ever claims.
+ * `working` belongs to the proof and translation types, whose verdict comes
+ * from a compile or a search that takes a moment. `error` is *could not check*
+ * rather than *wrong* — a WASM engine that failed to load, a playground whose
+ * last line states nothing the goal can be made from, an equivalence checker
+ * that did not answer — and a widget that reaches it says why in the mark's
+ * `title`. A wrong answer is `idle`: nothing has said the work is right, which
+ * is all the mark ever claims.
  */
 export type CorrectnessMarkState = "idle" | "working" | "ok" | "error";
 
@@ -42,9 +46,9 @@ export type CorrectnessMarkState = "idle" | "working" | "ok" | "error";
  * The glyph for each state that has one; `working` gets a spinner instead.
  *
  * The check is U+2713, drawn in the page's own UI font rather than in whatever
- * the surrounding widget happens to use — two of the six draw their marks in a
- * monospace toolbar, and the same codepoint in Fira Code is a visibly different
- * check. The brackets the proof types used to wrap it in are gone: they were
+ * the surrounding widget happens to use — the two CodeMirror proof widgets used
+ * to draw their marks in a monospace toolbar, and the same codepoint in Fira
+ * Code is a visibly different check. The brackets the proof types used to wrap it in are gone: they were
  * standing in for the outline the mark now actually has.
  */
 export const CORRECTNESS_MARK_GLYPHS: Readonly<

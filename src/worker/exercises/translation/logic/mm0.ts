@@ -53,8 +53,10 @@ export interface EquivalenceCheckSources {
   readonly placeholder: { readonly line: number; readonly character: number };
 }
 
-/** `F_2` → `Fs2`. Dialect names are one letter plus an optional `_digits`
- * subscript, so this cannot collide. */
+/** `F_2` → `Fs2`. The mangled forms below use `_` as their own separator, so
+ * a name may not carry one. Names now come from the spec's constructors, and
+ * an MM0 identifier may contain `_`, so a spec declaring both `F_2` and `Fs2`
+ * would collide here; the shipped languages declare neither. */
 function encodeName(name: string): string {
   return name.replace(/_/g, "s");
 }

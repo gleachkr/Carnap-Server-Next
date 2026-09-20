@@ -52,7 +52,7 @@ interface AufbauProofPrawitzElementMeta extends ExerciseElementMeta {
  * leaves stay forest-less — an assumption has no inference line above it —
  * while every derived node keeps a `<proof-forest>` even when empty, which is
  * what makes ProofML draw (and restyle) the line for zero-premise rules. Used
- * for the read-only review; the client editor (Stage 3) draws its own.
+ * for the read-only review; the client editor draws its own.
  */
 export function prawitzTreeMarkup(
   node: PrawitzProofNode,

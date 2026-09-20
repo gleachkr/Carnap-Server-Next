@@ -51,15 +51,18 @@ const AUFBAU_PROOF_TREE_ATTRIBUTES = [
 ] as const;
 
 /**
- * Compile an `:::aufbau-proof-tree` exercise. Like `:::aufbau-proof` it resolves
- * a named theory and freezes `theory + goal declaration` into `publicData.mm0`
- * (the sole verification input). Its body is prose + a `theorem …` header, and —
- * optionally — a `----` underline followed by a starter proof written in the same
- * linear `.auf` form the tree flattens to. When present, that starter is parsed
- * back into a tree ({@link ./parse parseProofTree}) and the editor seeds from it
- * instead of a bare goal root; a starter that is a graph rather than a tree is
- * reported as malformed. Grading is identical to the linear type (a flattened
- * tree compiles to the same `.auf`, verified against this frozen mm0).
+ * Compile an `:::aufbau-proof-tree` exercise. Like `:::aufbau-proof` it names
+ * the system its `system=` resolves to and keeps the goal declaration beside
+ * it, so the join (`exercise-kit/systems/join.ts`) can hand the widget and
+ * the grader `publicData.mm0` — theory plus declaration, the sole verification
+ * input. Its body is prose + a `theorem …` header, and — optionally — a `----`
+ * underline followed by a starter proof written in the same linear `.auf` form
+ * the tree flattens to. When present, that starter is parsed back into a tree
+ * (`parseProofTree` in `exercise-kit/proof/tree-parse.ts`) and the editor
+ * seeds from it instead of a bare goal root; a starter that is a graph rather
+ * than a tree is reported as malformed. Grading is identical to the linear
+ * type (a flattened tree compiles to the same `.auf`, verified against that
+ * joined mm0).
  *
  * With `playground`, the body has no goal line and the root is the student's
  * to write: nothing is frozen beside the theory, and the goal is whatever the

@@ -42,11 +42,12 @@ export function buildExerciseActionsStrings(i18n: Translator) {
     // Only one of those is incomplete, and the mark cannot tell them apart — all
     // it knows is that nothing has said the work is right.
     //
-    // `error` is "could not check", not "not correct": every widget that reaches
-    // that state does so because the WASM proof engine failed to load, and a red
-    // mark reading "not correct" would blame the reader for the machine. The
-    // widget's own message goes in the tooltip, so the name only has to be the
-    // honest general case.
+    // `error` is "could not check", not "not correct": a widget reaches that
+    // state because the machine could not answer — an engine that failed to
+    // load, a playground goal that could not be worked out, a checker that
+    // did not come back — and a red mark reading "not correct" would blame the
+    // reader for it. The widget's own message goes in the tooltip, so the name
+    // only has to be the honest general case.
     error: i18n.t("Could not check"),
     idle: i18n.t("Not correct yet"),
     ok: i18n.t("Correct"),

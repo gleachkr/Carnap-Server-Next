@@ -1,12 +1,11 @@
 /*
  * Shadow-DOM chrome styles for the tree proof element. The prompt is slotted
  * from light DOM (so author `:::style` CSS and the document's math font reach
- * it) while
- * the tree canvas is isolated. The tree itself is drawn by the vendored ProofML
- * custom elements (`<proof-tree>` etc.); these rules only theme them (border
- * colour, fonts) — ProofML computes the fitch-bar layout client-side. The client
- * editor (Stage 3) adopts this same shadow root and rebuilds the tree with
- * editing affordances.
+ * it) while the tree canvas is isolated. The tree itself is drawn by the
+ * vendored ProofML custom elements (`<proof-tree>` etc.); these rules only
+ * theme them (border colour, fonts) — ProofML computes the fitch-bar layout
+ * client-side. The client editor adopts this same shadow root and rebuilds
+ * the tree with editing affordances.
  */
 
 .proof-tree-canvas {

@@ -11,9 +11,8 @@ import type { Translator } from "../../i18n/translator";
  * ../aufbau-proof-fitch/translate fitchToAuf}) turns indentation into
  * comma-separated sequent contexts and emits the exact linear `.auf` the
  * compiler consumes; the browser compiles that to an MMB certificate against the
- * frozen theory. The trust boundary is unchanged: the worker re-verifies the MMB
+ * frozen theory. The trust boundary is unchanged: the worker verifies the MMB
  * against `publicData.mm0` (the frozen theory + goal), never the student's text.
- * See [[aufbau-engine-packages]], [[aufbau-proof-exercise]].
  */
 
 import { isObject } from "../../exercise-kit/assessment";
@@ -68,16 +67,18 @@ export const DEFAULT_CONTEXT_SYMBOL = ",";
  *                      translator treats a line citing it with no premises as an
  *                      assumption, adding its formula to the active context
  *   - `goalName`       the theorem name the proof establishes
- *   - `source`         the resolved theory plus the appended goal declaration
- *                      `theorem <goalName> …: $ Γ ⊢ φ $;`, `@syntax` intact —
- *                      the language a student's line is read in — and, since
- *                      the declaration comes with it, the binder scope that
- *                      line is read in too — and (once stripped) the sole
- *                      verification input. Absent where the proof stays engine
- *                      text; see {@link proofTheoryText}
- *   - `mm0`            the same text already stripped, for artifacts compiled
- *                      before `source` existed. Never read directly — go
- *                      through {@link proofTheoryText}, which resolves the two
+ *   - `source`         the system's text plus the appended goal declaration
+ *                      `theorem <goalName> …: $ Γ ⊢ φ $;` as the author wrote
+ *                      it, `@syntax` intact — the language a student's line is
+ *                      read in — and, since the declaration comes with it, the
+ *                      binder scope that line is read in too
+ *   - `mm0`            the same text in engine form: `@syntax` stripped and the
+ *                      declaration re-printed as `goalEngineDecl` — the sole
+ *                      verification input. The join (`exercise-kit/systems/
+ *                      join.ts`) fills in *both* from `system` on every read;
+ *                      only an artifact frozen before the table carries one
+ *                      inline. Never read either directly — go through
+ *                      {@link proofTheoryText}, which resolves the pair
  *   - `options`        the shared editor-assistance toggles (reused from the
  *                      linear proof type)
  *   - `promptHtml`     the rendered prose above the goal
@@ -148,8 +149,8 @@ export function isAufbauProofFitchPublicData(
     isObject(value) &&
     typeof value.assumptionRule === "string" &&
     typeof value.goalName === "string" &&
-    // Either theory text will do, and exactly one is ever written; which of
-    // them arrived is what says whether the proof is read as surface text.
+    // Either theory text will do: the join hands over both, an artifact frozen
+    // before the table carries one, and `proofTheoryText` resolves the pair.
     hasTheoryText(value) &&
     typeof value.promptHtml === "string" &&
     typeof value.starterBody === "string" &&

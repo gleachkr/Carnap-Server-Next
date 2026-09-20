@@ -7,8 +7,8 @@ rule. A complete answer is one tree ending in the goal.
 
 `prawitzToAuf` translates the tree into sequents for the Aufbau compiler.
 The server verifies the resulting MMB against the frozen theory and goal.
-Verification and certificate storage follow the
-[linear proof contract](../aufbau-proof/README.md).
+Verification, and the rule that the certificate is checked but not kept,
+follow the [linear proof contract](../aufbau-proof/README.md).
 
 ## Discharge and dependency contexts
 

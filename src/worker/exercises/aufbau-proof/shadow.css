@@ -2,7 +2,7 @@
  * Shadow-DOM chrome styles for the proof element, server-rendered into its
  * Declarative Shadow Root so author `:::style` CSS cannot reach the chrome. The
  * prompt is slotted from light DOM so author CSS and the document's math
- * font still reach it. The client (Stage 3) replaces the inert `<pre>` with a
+ * font still reach it. The client element replaces the inert `<pre>` with a
  * CodeMirror editor.
  */
 

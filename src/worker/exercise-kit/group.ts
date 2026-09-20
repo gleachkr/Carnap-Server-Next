@@ -64,10 +64,10 @@ export const EXERCISE_GROUP_STYLES = groupStyles;
  * — and the exercise tokens' defaults (`tokens.css`), so it cannot render the
  * group without the colours its own rules read.
  *
- * The first coupling is the fix for a shipped bug — the three proof widgets
- * interpolated the group styles alone, so every *untitled* proof printed "PROOF" /
- * "PROOF TREE" / "FITCH PROOF" above its editor: `visually-hidden` with nothing in
- * the root to act on it. `tests/exercise-contract.test.ts` now checks every shadow
+ * The first coupling is the fix for a shipped bug — the three proof widgets of
+ * the day interpolated the group styles alone, so every *untitled* proof
+ * printed "PROOF" / "PROOF TREE" / "FITCH PROOF" above its editor:
+ * `visually-hidden` with nothing in the root to act on it. `tests/exercise-contract.test.ts` now checks every shadow
  * root that emits the class also carries the rule, and that every root carries
  * the token block.
  *

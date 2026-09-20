@@ -4,10 +4,11 @@ import { buildFormulaParserStrings } from "../../logic/specs/strings";
 /**
  * Every string the translation widget can show, in the viewer's language.
  *
- * One list for both sides of the boundary: the interactive element reads these
- * out of its hydration payload (see `ExerciseHydration.strings`), and the
- * server-rendered review wording reads the same map, so Check and the review
- * page speak identically.
+ * One list, read on the client side of the boundary: the interactive element
+ * takes these out of its hydration payload (see `ExerciseHydration.strings`).
+ * The server-rendered review has no verdict to word — equivalence cannot be
+ * recomputed without the search engine — so, unlike the model's, its renderer
+ * does not read this map.
  *
  * Keys are the English source text, which is what the client falls back to.
  * The literals must sit at the `i18n.t(...)` call sites: Lingui's extractor
