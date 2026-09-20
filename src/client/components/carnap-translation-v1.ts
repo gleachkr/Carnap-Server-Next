@@ -47,19 +47,11 @@ import type { TranslationStringId } from "../../worker/exercises/translation/str
 import type { TranslationPublicData } from "../../worker/exercises/translation/types";
 import { isTranslationPublicData } from "../../worker/exercises/translation/types";
 import { describeTestFailure } from "../../worker/exercises/translation/verdict-text";
-import { loadProofCompiler } from "../proof-compiler";
+import { bytesToBase64, loadProofCompiler } from "../proof-compiler";
 import { findEquivalenceProof } from "../proof-search";
 import { CarnapExerciseElement, register } from "./base";
 
 const DEBOUNCE_MS = 600;
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
   private data: TranslationPublicData | null = null;

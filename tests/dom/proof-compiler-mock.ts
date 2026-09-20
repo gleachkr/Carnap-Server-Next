@@ -17,17 +17,22 @@ import { domDocument } from "../helpers/dom";
  *
  *   const compile = await mockProofCompiler();
  *   await import("../../src/client/components/carnap-aufbau-proof-tree-v1");
+ *
+ * `loading`, when given, is awaited by every load before the engine is handed
+ * over — the way to hold a widget between "compile started" and "engine in
+ * hand", which is where an edit has to supersede a run.
  */
 
 type CompileMock = Mock<(mm0: string, proof: string) => unknown>;
 
 /** A compile that succeeds with a placeholder certificate. */
-function compilesFine(_mm0: string, _proof: string): unknown {
+export function compilesFine(_mm0: string, _proof: string): unknown {
   return { mmbBytes: new Uint8Array([1, 2, 3]), ok: true };
 }
 
 export async function mockProofCompiler(
   implementation: (mm0: string, proof: string) => unknown = compilesFine,
+  loading: () => Promise<void> = () => Promise.resolve(),
 ): Promise<CompileMock> {
   const compile: CompileMock = mock(implementation);
   const PROOF_COMPILER = "../../src/client/proof-compiler";
@@ -35,7 +40,10 @@ export async function mockProofCompiler(
 
   mock.module(PROOF_COMPILER, () => ({
     ...realProofCompiler,
-    loadProofCompiler: async () => ({ compile }),
+    loadProofCompiler: async () => {
+      await loading();
+      return { compile };
+    },
   }));
 
   afterAll(() => {

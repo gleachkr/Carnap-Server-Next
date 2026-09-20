@@ -4,8 +4,12 @@
  * is this project's owner). Display-only custom elements — <proof-tree>,
  * <proof-forest>, <proof-proposition>, <proof-inference> — that lay out a
  * proof tree with fitch-bar struts (layout computed client-side via
- * ResizeObserver). Kept verbatim; not linted/formatted (Biome scopes *.ts only).
- * Source: https://github.com/gleachkr/ProofML/blob/main/src/proof.mjs
+ * ResizeObserver). Not linted/formatted (Biome scopes *.ts only).
+ *
+ * Upstream: https://github.com/gleachkr/ProofML/blob/main/src/proof.mjs at
+ * 05fc7392db9ecaedf9e8f9a147388885c20d8acd (2026-07-19, "Fix stale widths
+ * after parent-driven width changes"), verbatim but for one two-line comment
+ * added in `handleResize` where a premise's `--prop-min` is rewritten.
  */
 function mergeBoxes(box1, box2) {
   const leftEdge = Math.min(box1.x, box2.x)

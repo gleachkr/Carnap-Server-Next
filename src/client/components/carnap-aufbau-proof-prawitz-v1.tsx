@@ -35,10 +35,11 @@
  * byte span into the translated text) is mapped back through the translator's
  * line map onto the tree node that produced the offending line; the
  * translator's own structural diagnostics (a discharge mark with no matching
- * assumption, mixed formulas under one mark) surface the same way.
+ * assumption, mixed formulas under one mark) surface the same way. The
+ * debounce, the superseding compile, the certificate and the submit gate are
+ * `./proof-element.ts`, shared with the other three.
  */
 
-import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { CorrectnessMarkState } from "../../worker/exercise-kit/correctness-mark";
@@ -71,12 +72,8 @@ import {
   DEFAULT_SEQUENT_SYMBOL,
   type PrawitzProofNode,
 } from "../../worker/exercises/aufbau-proof-prawitz/types";
-import {
-  type CompileDiagnostic,
-  loadProofCompiler,
-  readCompileResult,
-} from "../proof-compiler";
-import { CarnapExerciseElement, register, withoutCertificate } from "./base";
+import { byteToCharIndex, type CompileDiagnostic } from "../proof-compiler";
+import { register } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-prawitz-v1.css" with {
   type: "text",
 };
@@ -86,6 +83,7 @@ import {
   mountHelpTrigger,
   openHelpDialog,
 } from "./help-dialog";
+import { ProofExerciseElement } from "./proof-element";
 import goalStyles from "./proof-goal.css" with { type: "text" };
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
@@ -104,52 +102,12 @@ declare module "preact" {
   }
 }
 
-const DEBOUNCE_MS = 400;
 const HISTORY_LIMIT = 100;
 
 type Translate = (
   id: AufbauProofPrawitzStringId,
   values?: Readonly<Record<string, number | string>>,
 ) => string;
-
-// ---------------------------------------------------------------------------
-// Byte/base64 helpers (shared shape with the sibling editors).
-// ---------------------------------------------------------------------------
-
-function utf8Length(codePoint: number): number {
-  if (codePoint < 0x80) {
-    return 1;
-  }
-  if (codePoint < 0x800) {
-    return 2;
-  }
-  if (codePoint < 0x10000) {
-    return 3;
-  }
-  return 4;
-}
-
-/** Map a UTF-8 byte offset (as the compiler reports spans) to a JS string index. */
-function byteToCharIndex(text: string, byteOffset: number): number {
-  let bytes = 0;
-  let index = 0;
-  for (const char of text) {
-    if (bytes >= byteOffset) {
-      break;
-    }
-    bytes += utf8Length(char.codePointAt(0) ?? 0);
-    index += char.length;
-  }
-  return index;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 function isPrawitzPublicData(
   value: unknown,
@@ -1032,7 +990,7 @@ function Editor(props: {
 // mounts the Preact island into the server-rendered shadow root.
 // ---------------------------------------------------------------------------
 
-class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringId> {
+class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId> {
   /** The frozen theory: with the goal appended for an ordinary exercise, and
    *  bare for a playground, whose goal is appended per compile. */
   private theory: { readonly mm0: string; readonly source: string | null } = {
@@ -1078,11 +1036,6 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   private structural: readonly PrawitzDiagnostic[] = [];
   /** Nodes the theory's language refused; empty where nothing reads them. */
   private formulaProblems: readonly NodeFormulaProblem[] = [];
-  private mmb = "";
-  private compileToken = 0;
-  private debounceHandle: ReturnType<typeof setTimeout> | null = null;
-  /** The compile now running, if any — what a submit waits on. */
-  private inFlight: Promise<void> | null = null;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -1099,6 +1052,13 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     const theory = proofTheoryText(data);
     this.theory = theory;
     this.playground = data.playground === true;
+    // No `allow-sorry` here, unlike the other three, so the shared gate's
+    // refusal never fires: the engine's `sorry!` admits a leaf and takes no
+    // premises, and a leaf in this widget has no dependency context, so it
+    // could only ever prove a goal with no premises. Until the engine can
+    // admit an inference, the attribute would promise what the widget cannot
+    // deliver.
+    this.allowSorry = false;
     this.readFormula = proofFormulaReader(
       theory.source,
       "sentence",
@@ -1181,46 +1141,9 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     this.onModelChanged();
   }
 
-  /**
-   * The submit gate: a compile still pending or running would leave this
-   * submission without its certificate, so it is settled first and the
-   * submit sent again. No `allow-sorry` here, unlike the other three: the
-   * engine's `sorry!` admits a leaf and takes no premises, and a leaf in this
-   * widget has no dependency context, so it could only ever prove a goal
-   * with no premises. Until the engine can admit an inference, the
-   * attribute would promise what the widget cannot deliver.
-   */
-  private gate(event: Event): void {
-    const settling = this.settleCompile();
-    if (settling !== null) {
-      this.holdSubmit(event, settling);
-    }
-  }
-
-  /** Run a pending compile now; the promise to wait on, or null if settled. */
-  private settleCompile(): Promise<void> | null {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-      this.startCompile();
-    }
-    return this.inFlight;
-  }
-
-  private startCompile(): void {
-    const run = this.compile().finally(() => {
-      if (this.inFlight === run) {
-        this.inFlight = null;
-      }
-    });
-    this.inFlight = run;
-  }
-
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.listeners.abort();
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-    }
     if (this.mount !== null) {
       render(null, this.mount);
     }
@@ -1280,11 +1203,6 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       proofText: this.proofText,
       tree: serialize(first, this.assumptionRule),
     };
-  }
-
-  /** The certificate is compiled from the proof, not typed by the reader. */
-  protected override authoredAnswer(): string {
-    return JSON.stringify(withoutCertificate(this.getAnswer()));
   }
 
   private readonly dispatch = (action: Action): void => {
@@ -1649,8 +1567,7 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
   }
 
   private onModelChanged(): void {
-    // A submit held for the old forest was for the old forest.
-    this.dropHold();
+    this.forgetVerdict();
     // Translation (and hence compiling) needs a single derivation; while the
     // forest is split, the answer's proofText stays empty and the mark idle.
     const single =
@@ -1659,13 +1576,9 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       this.proofText = "";
       this.lineSpans = [];
       this.structural = [];
-      this.mmb = "";
       this.goal = null;
       this.compileMm0 = null;
-      if (this.debounceHandle !== null) {
-        clearTimeout(this.debounceHandle);
-      }
-      this.compileToken += 1;
+      this.cancelCompile();
       this.formulaProblems = [];
       this.setStatus({ mark: "idle", markTitle: "", nodeErrors: {} });
       this.syncAnswer();
@@ -1685,17 +1598,12 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     this.lineSpans = translated.lineSpans;
     this.structural = translated.diagnostics;
     this.formulaProblems = translated.formulaProblems;
-    this.mmb = "";
 
     // A node the language refused never reaches the compiler: what it would
     // send is the text the student typed, and the unification failure that
     // comes back names none of the characters they got wrong.
     if (this.formulaProblems.length > 0) {
-      if (this.debounceHandle !== null) {
-        clearTimeout(this.debounceHandle);
-        this.debounceHandle = null;
-      }
-      this.compileToken += 1;
+      this.cancelCompile();
       this.goal = null;
       this.compileMm0 = null;
       this.syncAnswer();
@@ -1716,14 +1624,11 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     this.syncAnswer();
 
     if (this.compileMm0 === null) {
-      if (this.debounceHandle !== null) {
-        clearTimeout(this.debounceHandle);
-        this.debounceHandle = null;
-      }
-      this.compileToken += 1;
+      this.cancelCompile();
       return;
     }
 
+    this.setStatus({ mark: "working" });
     this.scheduleCompile();
   }
 
@@ -1764,17 +1669,6 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     return playgroundTheoryText(this.theory, goal).mm0;
   }
 
-  private scheduleCompile(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-    }
-    this.setStatus({ mark: "working" });
-    this.debounceHandle = setTimeout(() => {
-      this.debounceHandle = null;
-      this.startCompile();
-    }, DEBOUNCE_MS);
-  }
-
   private structuralMessage(diagnostic: PrawitzDiagnostic): string {
     switch (diagnostic.code) {
       case "discharge_without_leaf":
@@ -1792,40 +1686,27 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
     }
   }
 
-  private async compile(): Promise<void> {
-    const token = ++this.compileToken;
+  protected async compile(): Promise<void> {
     const proof = this.proofText;
     const mm0 = this.compileMm0;
 
     if (mm0 === null) {
+      this.cancelCompile();
       return;
     }
 
-    let compiler: LoadedCompiler;
-    try {
-      compiler = await loadProofCompiler();
-    } catch {
-      if (token === this.compileToken) {
-        this.setStatus({
-          mark: "error",
-          markTitle: this.t("Could not load the proof engine."),
-        });
-      }
+    const run = await this.runCompiler(mm0, proof);
+    if (run === null) {
       return;
     }
-
-    if (token !== this.compileToken) {
+    if (run.kind === "unavailable") {
+      this.setStatus({
+        mark: "error",
+        markTitle: this.t("Could not load the proof engine."),
+      });
       return;
     }
-
-    let result: CompileResult;
-    try {
-      result = compiler.compile(mm0, proof);
-    } catch {
-      if (token !== this.compileToken) {
-        return;
-      }
-      this.mmb = "";
+    if (run.kind === "unreadable") {
       this.setStatus({
         mark: "idle",
         markTitle: "",
@@ -1835,21 +1716,18 @@ class AufbauProofPrawitz extends CarnapExerciseElement<AufbauProofPrawitzStringI
       return;
     }
 
-    if (token !== this.compileToken) {
-      return;
-    }
-
-    const verdict = readCompileResult(result);
+    const { verdict } = run;
     const nodeErrors = {
       ...this.collectNodeErrors(verdict.problems, proof),
       ...this.structuralErrors(),
     };
+    // A certificate over a translation the translator itself faulted is not
+    // one to hand in: the structure it encodes is not the one drawn.
     if (
       verdict.certificate !== null &&
       this.structural.length === 0 &&
       this.formulaProblems.length === 0
     ) {
-      this.mmb = bytesToBase64(verdict.certificate);
       this.setStatus({ mark: "ok", markTitle: "", nodeErrors });
     } else {
       this.mmb = "";

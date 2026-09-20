@@ -20,10 +20,14 @@
  * compiler reports UTF-8 byte spans into the proof, which we map back onto the
  * editable body. Author toggles for proof search (`auto?`) and completion are
  * carried in the options but not yet wired to editor assistance.
+ *
+ * The debounce, the superseding compile, the certificate and the submit gate
+ * are `./proof-element.ts`, shared with the other three proof widgets; the
+ * chrome and lint helpers are `./proof-editor.ts`, shared with Fitch.
  */
 
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import { type Diagnostic, setDiagnostics } from "@codemirror/lint";
+import type { Diagnostic } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { proofTheoryText } from "../../worker/exercise-kit/proof/formulas";
@@ -40,49 +44,18 @@ import {
 } from "../../worker/exercise-kit/proof/proof-text";
 import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/strings";
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
+import { byteToCharIndex, type CompileDiagnostic } from "../proof-compiler";
+import { register } from "./base";
 import {
-  type CompileDiagnostic,
-  loadProofCompiler,
-  readCompileResult,
-} from "../proof-compiler";
-import { CarnapExerciseElement, register, withoutCertificate } from "./base";
-import shadowStyles from "./carnap-aufbau-proof-v1.css" with { type: "text" };
+  clamp,
+  goalDeclaration,
+  mountProofEditor,
+  showCompileFailure,
+  showDiagnostics,
+} from "./proof-editor";
+import editorStyles from "./proof-editor.css" with { type: "text" };
+import { ProofExerciseElement } from "./proof-element";
 import goalStyles from "./proof-goal.css" with { type: "text" };
-
-const DEBOUNCE_MS = 400;
-
-function utf8Length(codePoint: number): number {
-  if (codePoint < 0x80) {
-    return 1;
-  }
-  if (codePoint < 0x800) {
-    return 2;
-  }
-  if (codePoint < 0x10000) {
-    return 3;
-  }
-  return 4;
-}
-
-/** Map a UTF-8 byte offset (as the compiler reports spans) to a JS string index. */
-function byteToCharIndex(text: string, byteOffset: number): number {
-  let bytes = 0;
-  let index = 0;
-  for (const char of text) {
-    if (bytes >= byteOffset) {
-      break;
-    }
-    bytes += utf8Length(char.codePointAt(0) ?? 0);
-    index += char.length;
-  }
-  return index;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
-import type { CompileResult } from "@aufbau/compiler";
 
 function isProofPublicData(value: unknown): value is AufbauProofPublicData {
   return (
@@ -93,26 +66,6 @@ function isProofPublicData(value: unknown): value is AufbauProofPublicData {
   );
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
-
-/** The theorem declaration line to show the student ("what to prove"). */
-function goalDeclaration(mm0: string): string {
-  const lines = mm0.split("\n");
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const line = (lines[index] ?? "").trim();
-    if (/^theorem\b/.test(line)) {
-      return line.replace(/;\s*$/, "").replace(/^theorem\s+/, "");
-    }
-  }
-  return "";
-}
-
 /** Strip the `<goalName>\n----\n` header a prior answer's proofText carries. */
 function bodyFromProofText(proofText: string): string {
   const lines = proofText.split("\n");
@@ -120,9 +73,9 @@ function bodyFromProofText(proofText: string): string {
   return underline === -1 ? proofText : lines.slice(underline + 1).join("\n");
 }
 
-const SHADOW_STYLES = [shadowStyles, goalStyles].join("\n");
+const SHADOW_STYLES = [editorStyles, goalStyles].join("\n");
 
-class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
+class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
   /** The frozen theory: with the goal appended for an ordinary exercise, and
    *  bare for a playground, whose goal is appended per compile. */
   private theory: { readonly mm0: string; readonly source: string | null } = {
@@ -139,15 +92,6 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   private goalName = "";
   private editor: EditorView | null = null;
   private proofText = "";
-  private mmb = "";
-  private compileToken = 0;
-  private debounceHandle: ReturnType<typeof setTimeout> | null = null;
-  /** The compile now running, if any — what a submit waits on. */
-  private inFlight: Promise<void> | null = null;
-  /** The exercise's `allow-sorry`: an admitted line is a warning, not an error. */
-  private allowSorry = false;
-  /** Whether the last compile stood only by admitting lines (see `compile`). */
-  private admitted = false;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -164,40 +108,15 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     this.allowSorry = data.allowSorry === true;
     this.goalName = data.goalName;
 
-    const container = root.querySelector<HTMLElement>(".proof");
-    const source = root.querySelector<HTMLElement>(".proof-source");
-    if (container === null) {
+    // A playground's row says what the proof *proves*, and follows the proof.
+    const chrome = mountProofEditor(root, SHADOW_STYLES, {
+      label: this.t(this.playground ? "Proves" : "Prove"),
+      statement: this.playground ? "" : goalDeclaration(data.mm0),
+    });
+    if (chrome === null) {
       return;
     }
-    source?.remove();
-
-    const style = document.createElement("style");
-    style.textContent = SHADOW_STYLES;
-    root.appendChild(style);
-
-    // The projected action bar (slot="exercise-actions") sits at the card's
-    // foot; the goal row and editor go in above it, not appended after.
-    const actionsSlot = container.querySelector<HTMLElement>(
-      'slot[name="exercise-actions"]',
-    );
-
-    const goal = document.createElement("div");
-    goal.className = "proof-goal";
-    const label = document.createElement("span");
-    label.className = "proof-goal-label";
-    // A playground's row says what the proof *proves*, and follows the proof.
-    label.textContent = this.t(this.playground ? "Proves" : "Prove");
-    const decl = document.createElement("span");
-    decl.className = "proof-goal-statement";
-    decl.textContent = this.playground ? "" : goalDeclaration(data.mm0);
-    this.statementView = decl;
-    // The space is for text readers; the row's gap draws the visible one.
-    goal.append(label, " ", decl);
-    container.insertBefore(goal, actionsSlot);
-
-    const host = document.createElement("div");
-    host.className = "proof-editor";
-    container.insertBefore(host, actionsSlot);
+    this.statementView = chrome.statement;
 
     const prior = this.priorAnswer as { proofText?: unknown } | null;
     const initialBody =
@@ -206,7 +125,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
         : data.starterBody;
 
     this.editor = new EditorView({
-      parent: host,
+      parent: chrome.host,
       root: root,
       state: EditorState.create({
         doc: initialBody,
@@ -233,62 +152,11 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     this.gateSubmit((event) => this.gate(event));
     // JS owns the widget now; the SSR markup's "still loading" flag would
     // otherwise stand for the life of the page.
-    container.removeAttribute("aria-busy");
+    chrome.container.removeAttribute("aria-busy");
     this.dataset.enhanced = "true";
     this.syncAnswer();
+    this.setMark("working");
     this.scheduleCompile();
-  }
-
-  /** A widget taken out of the page has nothing left to check. */
-  disconnectedCallback(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-    }
-  }
-
-  /**
-   * The submit gate. A compile still pending or running would leave this
-   * submission without its certificate — and, with `allow-sorry`, without
-   * knowing whether it may go at all — so it is settled first and the submit
-   * sent again. Then, outside an exam, a proof that stands only by admitting
-   * lines is held back and the reader told why: it would score nothing, and
-   * the point of allowing `sorry!` was to let them see the rest check, not to
-   * hand in the gaps. On an exam it goes as it stands, for nothing.
-   */
-  private gate(event: Event): void {
-    const settling = this.settleCompile();
-    if (settling !== null) {
-      this.holdSubmit(event, settling);
-      return;
-    }
-    if (this.admitted && !this.exam) {
-      event.preventDefault();
-      this.setCheckStatus(
-        this.t(
-          "A proof with lines admitted with sorry! cannot be submitted.",
-        ),
-      );
-    }
-  }
-
-  /** Run a pending compile now; the promise to wait on, or null if settled. */
-  private settleCompile(): Promise<void> | null {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-      this.startCompile();
-    }
-    return this.inFlight;
-  }
-
-  private startCompile(): void {
-    const run = this.compile().finally(() => {
-      if (this.inFlight === run) {
-        this.inFlight = null;
-      }
-    });
-    this.inFlight = run;
   }
 
   protected getAnswer(): unknown {
@@ -341,11 +209,6 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     return playgroundTheoryText(this.theory, goal).mm0;
   }
 
-  /** The certificate is compiled from the proof, not typed by the reader. */
-  protected override authoredAnswer(): string {
-    return JSON.stringify(withoutCertificate(this.getAnswer()));
-  }
-
   private assemble(body: string): string {
     return proofTextOf(this.goalName, body);
   }
@@ -357,140 +220,58 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
   private onDocChanged(): void {
     this.proofText = this.assemble(this.currentBody());
     // Reflect the new source immediately; the certificate follows once it compiles.
-    this.mmb = "";
+    this.forgetVerdict();
     this.syncAnswer();
+    this.setMark("working");
     this.scheduleCompile();
   }
 
-  private scheduleCompile(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-    }
-    // A submit held for the old text was for the old text, and so was what
-    // the status line said of it.
-    this.dropHold();
-    this.admitted = false;
-    this.setCheckStatus("");
-    this.setMark("working");
-    this.debounceHandle = setTimeout(() => {
-      this.debounceHandle = null;
-      this.startCompile();
-    }, DEBOUNCE_MS);
-  }
-
-  private async compile(): Promise<void> {
-    const token = ++this.compileToken;
+  protected async compile(): Promise<void> {
     const body = this.currentBody();
     const proof = this.assemble(body);
     const mm0 = this.compileTheory(body);
+    this.proofText = proof;
 
     if (mm0 === null) {
+      this.cancelCompile();
       this.mmb = "";
-      this.proofText = proof;
       this.applyDiagnostics([], proof);
       this.syncAnswer();
       return;
     }
 
-    let compiler: { compile(mm0: string, proof: string): CompileResult };
-    try {
-      compiler = await loadProofCompiler();
-    } catch {
-      if (token === this.compileToken) {
-        this.setMark("error", this.t("Could not load the proof engine."));
-      }
+    const run = await this.runCompiler(mm0, proof);
+    if (run === null) {
       return;
     }
-
-    // A newer edit superseded this run while the engine loaded/compiled.
-    if (token !== this.compileToken) {
+    if (run.kind === "unavailable") {
+      this.setMark("error", this.t("Could not load the proof engine."));
       return;
     }
-
-    let result: CompileResult;
-    try {
-      result = compiler.compile(mm0, proof);
-    } catch {
-      // Some malformed input can make the compiler throw rather than returning
-      // diagnostics. Don't let that reject and strand the spinner — treat it as
-      // "not verified" and surface a generic marker inline.
-      if (token !== this.compileToken) {
-        return;
-      }
-      this.mmb = "";
-      this.proofText = proof;
+    if (run.kind === "unreadable") {
       this.setMark("idle");
-      this.applyCompileFailure();
+      if (this.editor !== null) {
+        showCompileFailure(
+          this.editor,
+          this.showsDetail
+            ? this.t(
+                "The proof engine couldn't read this proof — check for unexpected characters.",
+              )
+            : null,
+        );
+      }
       this.syncAnswer();
       return;
     }
 
-    if (token !== this.compileToken) {
-      return;
-    }
-
-    const verdict = readCompileResult(result, {
-      allowSorry: this.allowSorry,
-    });
-    this.proofText = proof;
-    this.admitted = verdict.admitted;
-    if (verdict.certificate !== null) {
-      this.mmb = bytesToBase64(verdict.certificate);
-      this.setMark("ok");
-    } else {
-      this.mmb = "";
-      this.setMark("idle");
-    }
-
+    this.setMark(run.verdict.certificate !== null ? "ok" : "idle");
     // The verdict lives on the action bar's correctness mark; specific problems
     // surface inline as editor squiggles with hover detail (empty on success —
     // this clears them). An admitted proof also gets the status line: the mark
     // says nothing, and what it is not saying deserves a sentence.
-    this.applyDiagnostics(verdict.problems, proof);
+    this.applyDiagnostics(run.verdict.problems, proof);
     this.setCheckStatus(this.admittedStatus());
     this.syncAnswer();
-  }
-
-  /**
-   * What the status line says of a proof that stands only by admitting lines:
-   * that the rest checks, and what the admissions cost here. Detail, so
-   * withheld under `terse` and `none` like the squiggles beside it; empty for
-   * any other proof, which clears the line.
-   */
-  private admittedStatus(): string {
-    if (!this.admitted || !this.showsDetail) {
-      return "";
-    }
-    return this.t(
-      this.exam
-        ? "Every other line checks; lines admitted with sorry! do not score."
-        : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
-    );
-  }
-
-  /**
-   * The compiler threw before it could report diagnostics. Show a single generic
-   * marker at the start of the body rather than stranding the spinner.
-   */
-  private applyCompileFailure(): void {
-    const editor = this.editor;
-    if (editor === null) {
-      return;
-    }
-    if (!this.showsDetail) {
-      editor.dispatch(setDiagnostics(editor.state, []));
-      return;
-    }
-
-    const diagnostic: Diagnostic = {
-      from: 0,
-      message: this.t(
-        "The proof engine couldn't read this proof — check for unexpected characters.",
-      ),
-      severity: "error",
-      to: Math.min(editor.state.doc.length, 1),
-    };
-    editor.dispatch(setDiagnostics(editor.state, [diagnostic]));
   }
 
   /**
@@ -509,7 +290,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
     }
 
     if (!this.showsDetail) {
-      editor.dispatch(setDiagnostics(editor.state, []));
+      showDiagnostics(editor, []);
       return;
     }
 
@@ -543,7 +324,7 @@ class AufbauProof extends CarnapExerciseElement<AufbauProofStringId> {
       diagnostics.push({ from, message, severity: problem.severity, to });
     }
 
-    editor.dispatch(setDiagnostics(editor.state, diagnostics));
+    showDiagnostics(editor, diagnostics);
   }
 }
 

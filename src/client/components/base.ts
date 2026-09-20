@@ -209,10 +209,10 @@ export abstract class CarnapExerciseElement<
   StringId extends string = never,
 > extends HTMLElement {
   /** The enclosing exercise form, or null if the element is used standalone. */
-  protected form: HTMLFormElement | null = null;
+  private form: HTMLFormElement | null = null;
 
   /** The parsed hydration payload, or null when absent/invalid. */
-  protected hydration: ExerciseHydration | null = null;
+  private hydration: ExerciseHydration | null = null;
 
   /**
    * The authored answer as the server last had it — set to whatever the element
@@ -664,8 +664,8 @@ export abstract class CarnapExerciseElement<
    * `working` both come out `idle`. That is the whole reported bug — the server
    * withheld an exam's verdict and the widget wrote a green check over the top
    * of the same mark, because the mark is one element and the widget was the
-   * last to touch it. Enforcing it here rather than in six widgets means a
-   * seventh cannot reintroduce it by forgetting.
+   * last to touch it. Enforcing it here rather than in every widget means the
+   * next one cannot reintroduce it by forgetting.
    *
    * `error` still passes: a proof engine that will not load is a malfunction,
    * not a verdict, and a student staring at a dead widget should be told.

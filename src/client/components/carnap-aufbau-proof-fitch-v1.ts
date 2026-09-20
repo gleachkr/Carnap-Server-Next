@@ -20,16 +20,20 @@
  * offending source line, and the compiler's problems — reported as byte spans
  * into the generated `.auf` — are mapped back through the translator's
  * `lineSpans` to the Fitch line that produced them.
+ *
+ * The debounce, the superseding compile, the certificate and the submit gate
+ * are `./proof-element.ts`, shared with the other three proof widgets; the
+ * chrome and lint helpers are `./proof-editor.ts`, shared with the linear
+ * editor.
  */
 
-import type { CompileResult } from "@aufbau/compiler";
 import {
   defaultKeymap,
   deleteCharBackwardStrict,
   history,
   historyKeymap,
 } from "@codemirror/commands";
-import { type Diagnostic, setDiagnostics } from "@codemirror/lint";
+import type { Diagnostic } from "@codemirror/lint";
 import { EditorState, Facet, RangeSetBuilder } from "@codemirror/state";
 import {
   Decoration,
@@ -75,18 +79,21 @@ import {
   DEFAULT_CONTEXT_SYMBOL,
   DEFAULT_SEQUENT_SYMBOL,
 } from "../../worker/exercises/aufbau-proof-fitch/types";
-import {
-  type CompileDiagnostic,
-  loadProofCompiler,
-  readCompileResult,
-} from "../proof-compiler";
-import { CarnapExerciseElement, register, withoutCertificate } from "./base";
+import { byteToCharIndex, type CompileDiagnostic } from "../proof-compiler";
+import { register } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-fitch-v1.css" with {
   type: "text",
 };
+import {
+  clamp,
+  goalDeclaration,
+  mountProofEditor,
+  showCompileFailure,
+  showDiagnostics,
+} from "./proof-editor";
+import editorStyles from "./proof-editor.css" with { type: "text" };
+import { ProofExerciseElement } from "./proof-element";
 import goalStyles from "./proof-goal.css" with { type: "text" };
-
-const DEBOUNCE_MS = 400;
 
 /** Left gutter (CSS px) before the outermost scope-line; the bars themselves
  * sit at the student's own indentation columns, not at a fixed per-depth step. */
@@ -106,37 +113,6 @@ const TICK_OVERHANG_CHARS = 3;
  */
 const SCOPE_COLOR = "var(--_scope-line)";
 
-function utf8Length(codePoint: number): number {
-  if (codePoint < 0x80) {
-    return 1;
-  }
-  if (codePoint < 0x800) {
-    return 2;
-  }
-  if (codePoint < 0x10000) {
-    return 3;
-  }
-  return 4;
-}
-
-/** Map a UTF-8 byte offset (as the compiler reports spans) to a JS string index. */
-function byteToCharIndex(text: string, byteOffset: number): number {
-  let bytes = 0;
-  let index = 0;
-  for (const char of text) {
-    if (bytes >= byteOffset) {
-      break;
-    }
-    bytes += utf8Length(char.codePointAt(0) ?? 0);
-    index += char.length;
-  }
-  return index;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
-
 /** Whether the source has a problem of either kind, so nothing should compile. */
 function unreadable(translation: ReturnType<typeof fitchToAuf>): boolean {
   return (
@@ -155,14 +131,6 @@ function isFitchPublicData(
     typeof (value as { goalName?: unknown }).goalName === "string" &&
     typeof (value as { assumptionRule?: unknown }).assumptionRule === "string"
   );
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
 }
 
 /**
@@ -188,18 +156,6 @@ function goalText(
   return (
     goalStatementText(theory.source, goalName) ?? goalDeclaration(theory.mm0)
   );
-}
-
-/** The theorem declaration line, its keyword and trailing `;` taken off. */
-function goalDeclaration(mm0: string): string {
-  const lines = mm0.split("\n");
-  for (let index = lines.length - 1; index >= 0; index -= 1) {
-    const line = (lines[index] ?? "").trim();
-    if (/^theorem\b/.test(line)) {
-      return line.replace(/;\s*$/, "").replace(/^theorem\s+/, "");
-    }
-  }
-  return "";
 }
 
 /** Code-point length — so a formula's astral glyphs count as one monospace cell. */
@@ -362,9 +318,9 @@ const scopeGuides = ViewPlugin.fromClass(
   { decorations: (plugin) => plugin.decorations },
 );
 
-const SHADOW_STYLES = [shadowStyles, goalStyles].join("\n");
+const SHADOW_STYLES = [editorStyles, shadowStyles, goalStyles].join("\n");
 
-class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
+class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
   /** The frozen theory: with the goal appended for an ordinary exercise, and
    *  bare for a playground, whose goal is appended per compile. */
   private theory: { readonly mm0: string; readonly source: string | null } = {
@@ -396,15 +352,6 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
   private editor: EditorView | null = null;
   private proofText = "";
   private fitchText = "";
-  private mmb = "";
-  private compileToken = 0;
-  private debounceHandle: ReturnType<typeof setTimeout> | null = null;
-  /** The compile now running, if any — what a submit waits on. */
-  private inFlight: Promise<void> | null = null;
-  /** The exercise's `allow-sorry`: an admitted line is a warning, not an error. */
-  private allowSorry = false;
-  /** Whether the last compile stood only by admitting lines (see `compile`). */
-  private admitted = false;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -449,42 +396,15 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       this.contextSymbol = data.contextSymbol;
     }
 
-    const container = root.querySelector<HTMLElement>(".proof");
-    const source = root.querySelector<HTMLElement>(".proof-source");
-    if (container === null) {
+    // A playground's row says what the proof *proves*, and follows the proof.
+    const chrome = mountProofEditor(root, SHADOW_STYLES, {
+      label: this.t(this.playground ? "Proves" : "Prove"),
+      statement: this.playground ? "" : goalText(theory, this.goalName),
+    });
+    if (chrome === null) {
       return;
     }
-    source?.remove();
-
-    const style = document.createElement("style");
-    style.textContent = SHADOW_STYLES;
-    root.appendChild(style);
-
-    // The projected action bar (slot="exercise-actions") sits at the card's
-    // foot; the goal row and editor go in above it, not appended after.
-    const actionsSlot = container.querySelector<HTMLElement>(
-      'slot[name="exercise-actions"]',
-    );
-
-    const goal = document.createElement("div");
-    goal.className = "proof-goal";
-    const label = document.createElement("span");
-    label.className = "proof-goal-label";
-    // A playground's row says what the proof *proves*, and follows the proof.
-    label.textContent = this.t(this.playground ? "Proves" : "Prove");
-    const statement = document.createElement("span");
-    statement.className = "proof-goal-statement";
-    statement.textContent = this.playground
-      ? ""
-      : goalText(theory, this.goalName);
-    this.statementView = statement;
-    // The space is for text readers; the row's gap draws the visible one.
-    goal.append(label, " ", statement);
-    container.insertBefore(goal, actionsSlot);
-
-    const host = document.createElement("div");
-    host.className = "proof-editor";
-    container.insertBefore(host, actionsSlot);
+    this.statementView = chrome.statement;
 
     const prior = this.priorAnswer as { fitchText?: unknown } | null;
     const initialText =
@@ -493,7 +413,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
         : data.starterBody;
 
     this.editor = new EditorView({
-      parent: host,
+      parent: chrome.host,
       root: root,
       state: EditorState.create({
         doc: initialText,
@@ -541,59 +461,11 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     this.gateSubmit((event) => this.gate(event));
     // JS owns the widget now; the SSR markup's "still loading" flag would
     // otherwise stand for the life of the page.
-    container.removeAttribute("aria-busy");
+    chrome.container.removeAttribute("aria-busy");
     this.dataset.enhanced = "true";
     this.syncAnswer();
+    this.setMark("working");
     this.scheduleCompile();
-  }
-
-  /** A widget taken out of the page has nothing left to check. */
-  disconnectedCallback(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-    }
-  }
-
-  /**
-   * The submit gate: settle a pending compile first (the certificate, and
-   * under `allow-sorry` the answer to whether the proof may go, both come out
-   * of it), then hold back a proof that stands only by admitting lines unless
-   * this is an exam. The linear widget's `gate` says why.
-   */
-  private gate(event: Event): void {
-    const settling = this.settleCompile();
-    if (settling !== null) {
-      this.holdSubmit(event, settling);
-      return;
-    }
-    if (this.admitted && !this.exam) {
-      event.preventDefault();
-      this.setCheckStatus(
-        this.t(
-          "A proof with lines admitted with sorry! cannot be submitted.",
-        ),
-      );
-    }
-  }
-
-  /** Run a pending compile now; the promise to wait on, or null if settled. */
-  private settleCompile(): Promise<void> | null {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-      this.startCompile();
-    }
-    return this.inFlight;
-  }
-
-  private startCompile(): void {
-    const run = this.compile().finally(() => {
-      if (this.inFlight === run) {
-        this.inFlight = null;
-      }
-    });
-    this.inFlight = run;
   }
 
   /**
@@ -701,11 +573,6 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     return playgroundTheoryText(this.theory, goal).mm0;
   }
 
-  /** The certificate is compiled from the proof, not typed by the reader. */
-  protected override authoredAnswer(): string {
-    return JSON.stringify(withoutCertificate(this.getAnswer()));
-  }
-
   private currentText(): string {
     return this.editor?.state.doc.toString() ?? "";
   }
@@ -728,59 +595,31 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     const translation = this.translateFitch(this.fitchText);
     this.proofText = translation.proofText;
     // Reflect the new source immediately; the certificate follows once it
-    // compiles. A submit held for the old text was for the old text, and so
-    // was what the status line said of it.
-    this.mmb = "";
-    this.dropHold();
-    this.admitted = false;
-    this.setCheckStatus("");
+    // compiles.
+    this.forgetVerdict();
     this.syncAnswer();
 
     if (unreadable(translation)) {
       // Structural problems, or a formula the language refused: show them
       // straight away, don't compile.
-      if (this.debounceHandle !== null) {
-        clearTimeout(this.debounceHandle);
-        this.debounceHandle = null;
-      }
+      this.cancelCompile();
       this.setMark("idle");
       this.applyStructuralDiagnostics(translation);
       return;
     }
 
+    this.setMark("working");
     this.scheduleCompile();
   }
 
-  /** Nothing to compile: an empty playground, or one with no derivable goal. */
-  private settleWithoutCompile(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-    }
-    this.compileToken += 1;
-    this.mmb = "";
-    this.syncAnswer();
-  }
-
-  private scheduleCompile(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-    }
-    this.setMark("working");
-    this.debounceHandle = setTimeout(() => {
-      this.debounceHandle = null;
-      this.startCompile();
-    }, DEBOUNCE_MS);
-  }
-
-  private async compile(): Promise<void> {
-    const token = ++this.compileToken;
+  protected async compile(): Promise<void> {
     const fitchText = this.currentText();
     const translation = this.translateFitch(fitchText);
+    this.fitchText = fitchText;
+    this.proofText = translation.proofText;
 
     if (unreadable(translation)) {
-      this.fitchText = fitchText;
-      this.proofText = translation.proofText;
+      this.cancelCompile();
       this.mmb = "";
       this.setMark("idle");
       this.applyStructuralDiagnostics(translation);
@@ -790,92 +629,50 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
 
     const mm0 = this.compileTheory(translation);
 
+    // Nothing to compile: an empty playground, or one with no derivable goal.
     if (mm0 === null) {
-      this.fitchText = fitchText;
-      this.proofText = translation.proofText;
+      this.cancelCompile();
+      this.mmb = "";
       if (translation.statement === null) {
         this.setMark("idle");
       }
       this.applyCompilerDiagnostics([], translation);
-      this.settleWithoutCompile();
-      return;
-    }
-
-    let compiler: { compile(mm0: string, proof: string): CompileResult };
-    try {
-      compiler = await loadProofCompiler();
-    } catch {
-      if (token === this.compileToken) {
-        this.setMark("error", this.t("Could not load the proof engine."));
-      }
-      return;
-    }
-
-    // A newer edit superseded this run while the engine loaded/compiled.
-    if (token !== this.compileToken) {
-      return;
-    }
-
-    let result: CompileResult;
-    try {
-      result = compiler.compile(mm0, translation.proofText);
-    } catch {
-      // Some malformed input can make the compiler throw rather than returning
-      // diagnostics. Don't let that reject and strand the spinner.
-      if (token !== this.compileToken) {
-        return;
-      }
-      this.mmb = "";
-      this.fitchText = fitchText;
-      this.proofText = translation.proofText;
-      this.setMark("idle");
-      this.applyCompileFailure();
       this.syncAnswer();
       return;
     }
 
-    if (token !== this.compileToken) {
+    const run = await this.runCompiler(mm0, translation.proofText);
+    if (run === null) {
+      return;
+    }
+    if (run.kind === "unavailable") {
+      this.setMark("error", this.t("Could not load the proof engine."));
+      return;
+    }
+    if (run.kind === "unreadable") {
+      this.setMark("idle");
+      if (this.editor !== null) {
+        showCompileFailure(
+          this.editor,
+          this.showsDetail
+            ? this.t(
+                "The proof engine couldn't read this proof — check for unexpected characters.",
+              )
+            : null,
+        );
+      }
+      this.syncAnswer();
       return;
     }
 
-    this.fitchText = fitchText;
-    this.proofText = translation.proofText;
-    const verdict = readCompileResult(result, {
-      allowSorry: this.allowSorry,
-    });
-    this.admitted = verdict.admitted;
-    if (verdict.certificate !== null) {
-      this.mmb = bytesToBase64(verdict.certificate);
-      this.setMark("ok");
-    } else {
-      this.mmb = "";
-      this.setMark("idle");
-    }
-
-    // The verdict lives on the "Prove" mark; specific problems surface inline as
-    // editor squiggles with hover detail (empty on success — this clears them).
-    // An admitted proof also gets the status line: the mark says nothing, and
-    // what it is not saying deserves a sentence.
-    this.applyCompilerDiagnostics(verdict.problems, translation);
+    this.setMark(run.verdict.certificate !== null ? "ok" : "idle");
+    // The verdict lives on the action bar's correctness mark; specific problems
+    // surface inline as editor squiggles with hover detail (empty on success —
+    // this clears them). An admitted proof also gets the status line: the mark
+    // says nothing, and what it is not saying deserves a sentence.
+    this.applyCompilerDiagnostics(run.verdict.problems, translation);
     this.setCheckStatus(this.admittedStatus());
     this.syncAnswer();
-  }
-
-  /**
-   * What the status line says of a proof that stands only by admitting lines:
-   * that the rest checks, and what the admissions cost here. Detail, so
-   * withheld under `terse` and `none` like the squiggles beside it; empty for
-   * any other proof, which clears the line.
-   */
-  private admittedStatus(): string {
-    if (!this.admitted || !this.showsDetail) {
-      return "";
-    }
-    return this.t(
-      this.exam
-        ? "Every other line checks; lines admitted with sorry! do not score."
-        : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
-    );
   }
 
   /** The char range of source line `sourceLine` (0-based) in the editor doc. */
@@ -887,28 +684,6 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     const lineNumber = clamp(sourceLine + 1, 1, doc.lines);
     const line = doc.line(lineNumber);
     return { from: line.from, to: line.to };
-  }
-
-  /** The compiler threw before it could report diagnostics. */
-  private applyCompileFailure(): void {
-    const editor = this.editor;
-    if (editor === null) {
-      return;
-    }
-    if (!this.showsDetail) {
-      editor.dispatch(setDiagnostics(editor.state, []));
-      return;
-    }
-
-    const diagnostic: Diagnostic = {
-      from: 0,
-      message: this.t(
-        "The proof engine couldn't read this proof — check for unexpected characters.",
-      ),
-      severity: "error",
-      to: Math.min(editor.state.doc.length, 1),
-    };
-    editor.dispatch(setDiagnostics(editor.state, [diagnostic]));
   }
 
   /**
@@ -927,7 +702,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       return;
     }
     if (!this.showsDetail) {
-      editor.dispatch(setDiagnostics(editor.state, []));
+      showDiagnostics(editor, []);
       return;
     }
 
@@ -964,7 +739,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       });
     }
 
-    editor.dispatch(setDiagnostics(editor.state, diagnostics));
+    showDiagnostics(editor, diagnostics);
   }
 
   /**
@@ -983,7 +758,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
     }
 
     if (!this.showsDetail) {
-      editor.dispatch(setDiagnostics(editor.state, []));
+      showDiagnostics(editor, []);
       return;
     }
 
@@ -1014,7 +789,7 @@ class AufbauProofFitch extends CarnapExerciseElement<AufbauProofFitchStringId> {
       });
     }
 
-    editor.dispatch(setDiagnostics(editor.state, diagnostics));
+    showDiagnostics(editor, diagnostics);
   }
 }
 

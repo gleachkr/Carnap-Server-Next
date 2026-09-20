@@ -32,10 +32,10 @@
  * and the worker is the arbiter — the compiler here is an untrusted convenience.
  * A compiler diagnostic (a UTF-8 byte span into the flattened text) is mapped
  * back through the flattener's line map onto the tree node that produced the
- * offending line.
+ * offending line. The debounce, the superseding compile, the certificate and
+ * the submit gate are `./proof-element.ts`, shared with the other three.
  */
 
-import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import { render } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { CorrectnessMarkState } from "../../worker/exercise-kit/correctness-mark";
@@ -65,12 +65,8 @@ import type {
   AufbauProofTreePublicData,
   ProofTreeNode,
 } from "../../worker/exercises/aufbau-proof-tree/types";
-import {
-  type CompileDiagnostic,
-  loadProofCompiler,
-  readCompileResult,
-} from "../proof-compiler";
-import { CarnapExerciseElement, register, withoutCertificate } from "./base";
+import { byteToCharIndex, type CompileDiagnostic } from "../proof-compiler";
+import { register } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-tree-v1.css" with {
   type: "text",
 };
@@ -80,6 +76,7 @@ import {
   mountHelpTrigger,
   openHelpDialog,
 } from "./help-dialog";
+import { ProofExerciseElement } from "./proof-element";
 import goalStyles from "./proof-goal.css" with { type: "text" };
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
@@ -100,7 +97,6 @@ declare module "preact" {
   }
 }
 
-const DEBOUNCE_MS = 400;
 const HISTORY_LIMIT = 100;
 
 /**
@@ -112,45 +108,6 @@ type Translate = (
   id: AufbauProofTreeStringId,
   values?: Readonly<Record<string, number | string>>,
 ) => string;
-
-// ---------------------------------------------------------------------------
-// Byte/base64 helpers (unchanged from the imperative version).
-// ---------------------------------------------------------------------------
-
-function utf8Length(codePoint: number): number {
-  if (codePoint < 0x80) {
-    return 1;
-  }
-  if (codePoint < 0x800) {
-    return 2;
-  }
-  if (codePoint < 0x10000) {
-    return 3;
-  }
-  return 4;
-}
-
-/** Map a UTF-8 byte offset (as the compiler reports spans) to a JS string index. */
-function byteToCharIndex(text: string, byteOffset: number): number {
-  let bytes = 0;
-  let index = 0;
-  for (const char of text) {
-    if (bytes >= byteOffset) {
-      break;
-    }
-    bytes += utf8Length(char.codePointAt(0) ?? 0);
-    index += char.length;
-  }
-  return index;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
-}
 
 function isTreePublicData(
   value: unknown,
@@ -860,7 +817,7 @@ function Editor(props: {
 // mounts the Preact island into the server-rendered shadow root.
 // ---------------------------------------------------------------------------
 
-class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
+class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
   /** The frozen theory: with the goal appended for an ordinary exercise, and
    *  bare for a playground, whose goal is appended per compile. */
   private theory: { readonly mm0: string; readonly source: string | null } = {
@@ -915,15 +872,6 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
   private proofText = "";
   private lineSpans: readonly { from: number; nodeId: string; to: number }[] =
     [];
-  private mmb = "";
-  private compileToken = 0;
-  private debounceHandle: ReturnType<typeof setTimeout> | null = null;
-  /** The compile now running, if any — what a submit waits on. */
-  private inFlight: Promise<void> | null = null;
-  /** The exercise's `allow-sorry`: an admitted line is a warning, not an error. */
-  private allowSorry = false;
-  /** Whether the last compile stood only by admitting lines (see `compile`). */
-  private admitted = false;
 
   protected enhance(): void {
     const root = this.shadowRoot;
@@ -1031,69 +979,9 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     this.onModelChanged();
   }
 
-  /**
-   * The submit gate: settle a pending compile first (the certificate, and
-   * under `allow-sorry` the answer to whether the proof may go, both come out
-   * of it), then hold back a proof that stands only by admitting lines unless
-   * this is an exam. The linear widget's `gate` says why.
-   */
-  private gate(event: Event): void {
-    const settling = this.settleCompile();
-    if (settling !== null) {
-      this.holdSubmit(event, settling);
-      return;
-    }
-    if (this.admitted && !this.exam) {
-      event.preventDefault();
-      this.setCheckStatus(
-        this.t(
-          "A proof with lines admitted with sorry! cannot be submitted.",
-        ),
-      );
-    }
-  }
-
-  /** Run a pending compile now; the promise to wait on, or null if settled. */
-  private settleCompile(): Promise<void> | null {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-      this.debounceHandle = null;
-      this.startCompile();
-    }
-    return this.inFlight;
-  }
-
-  private startCompile(): void {
-    const run = this.compile().finally(() => {
-      if (this.inFlight === run) {
-        this.inFlight = null;
-      }
-    });
-    this.inFlight = run;
-  }
-
-  /**
-   * What the status line says of a proof that stands only by admitting lines:
-   * that the rest checks, and what the admissions cost here. Detail, so
-   * withheld under `terse` and `none` like the warnings beside it; empty for
-   * any other proof, which clears the line.
-   */
-  private admittedStatus(): string {
-    if (!this.admitted || !this.showsDetail) {
-      return "";
-    }
-    return this.t(
-      this.exam
-        ? "Every other line checks; lines admitted with sorry! do not score."
-        : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
-    );
-  }
-
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.listeners.abort();
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-    }
     if (this.mount !== null) {
       render(null, this.mount);
     }
@@ -1149,11 +1037,6 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       proofText: this.proofText,
       tree: serialize(this.doc.model),
     };
-  }
-
-  /** The certificate is compiled from the proof, not typed by the reader. */
-  protected override authoredAnswer(): string {
-    return JSON.stringify(withoutCertificate(this.getAnswer()));
   }
 
   private readonly dispatch = (action: Action): void => {
@@ -1489,22 +1372,14 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     );
     this.proofText = flattened.proofText;
     this.lineSpans = flattened.lineSpans;
-    this.mmb = "";
-    // A submit held for the old tree was for the old tree, and so was what
-    // the status line said of it.
-    this.dropHold();
-    this.admitted = false;
-    this.setCheckStatus("");
+    this.forgetVerdict();
 
     // A node the language refused never reaches the compiler: the `.auf` it
     // would produce is the text the student typed, and the unification failure
     // that comes back names none of the characters they got wrong. Show the
     // parser's own complaint against the node instead.
     if (flattened.formulaProblems.length > 0) {
-      if (this.debounceHandle !== null) {
-        clearTimeout(this.debounceHandle);
-        this.debounceHandle = null;
-      }
+      this.cancelCompile();
       this.goal = null;
       this.syncAnswer();
       this.setStatus({
@@ -1522,14 +1397,11 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     this.syncAnswer();
 
     if (this.compileMm0 === null) {
-      if (this.debounceHandle !== null) {
-        clearTimeout(this.debounceHandle);
-        this.debounceHandle = null;
-      }
-      this.compileToken += 1;
+      this.cancelCompile();
       return;
     }
 
+    this.setStatus({ mark: "working" });
     this.scheduleCompile();
   }
 
@@ -1556,51 +1428,27 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
     return errors;
   }
 
-  private scheduleCompile(): void {
-    if (this.debounceHandle !== null) {
-      clearTimeout(this.debounceHandle);
-    }
-    this.setStatus({ mark: "working" });
-    this.debounceHandle = setTimeout(() => {
-      this.debounceHandle = null;
-      this.startCompile();
-    }, DEBOUNCE_MS);
-  }
-
-  private async compile(): Promise<void> {
-    const token = ++this.compileToken;
+  protected async compile(): Promise<void> {
     const proof = this.proofText;
     const mm0 = this.compileMm0;
 
     if (mm0 === null) {
+      this.cancelCompile();
       return;
     }
 
-    let compiler: LoadedCompiler;
-    try {
-      compiler = await loadProofCompiler();
-    } catch {
-      if (token === this.compileToken) {
-        this.setStatus({
-          mark: "error",
-          markTitle: this.t("Could not load the proof engine."),
-        });
-      }
+    const run = await this.runCompiler(mm0, proof);
+    if (run === null) {
       return;
     }
-
-    if (token !== this.compileToken) {
+    if (run.kind === "unavailable") {
+      this.setStatus({
+        mark: "error",
+        markTitle: this.t("Could not load the proof engine."),
+      });
       return;
     }
-
-    let result: CompileResult;
-    try {
-      result = compiler.compile(mm0, proof);
-    } catch {
-      if (token !== this.compileToken) {
-        return;
-      }
-      this.mmb = "";
+    if (run.kind === "unreadable") {
       this.setStatus({
         mark: "idle",
         markTitle: "",
@@ -1611,22 +1459,12 @@ class AufbauProofTree extends CarnapExerciseElement<AufbauProofTreeStringId> {
       return;
     }
 
-    if (token !== this.compileToken) {
-      return;
-    }
-
-    const verdict = readCompileResult(result, {
-      allowSorry: this.allowSorry,
+    const { verdict } = run;
+    this.setStatus({
+      mark: verdict.certificate !== null ? "ok" : "idle",
+      markTitle: "",
+      ...this.collectNodeProblems(verdict.problems, proof),
     });
-    const problems = this.collectNodeProblems(verdict.problems, proof);
-    this.admitted = verdict.admitted;
-    if (verdict.certificate !== null) {
-      this.mmb = bytesToBase64(verdict.certificate);
-      this.setStatus({ mark: "ok", markTitle: "", ...problems });
-    } else {
-      this.mmb = "";
-      this.setStatus({ mark: "idle", markTitle: "", ...problems });
-    }
     // An admitted proof also gets the status line: the mark says nothing, and
     // what it is not saying deserves a sentence.
     this.setCheckStatus(this.admittedStatus());

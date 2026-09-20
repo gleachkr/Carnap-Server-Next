@@ -1,3 +1,10 @@
+/*
+ * The CodeMirror editor the linear and Fitch proof widgets write their proof
+ * in: the frame, the gutter, the formula face, and the repainting of what
+ * CodeMirror's own theme gets wrong in a shadow root under dark mode. The
+ * host `.proof-editor` is what each widget mounts the view into.
+ */
+
 .proof-editor {
   border: 1px solid var(--_border);
   border-radius: 0.4rem;

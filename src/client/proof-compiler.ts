@@ -3,8 +3,9 @@ import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 /**
  * The one Aufbau compiler a page gets, and the one place its language is chosen.
  *
- * Five callers want a compiler — the four proof widgets and the author preview —
- * and they all want the *same* one. The wasm is ~5 MB; the browser caches the
+ * Six callers want a compiler — the four proof widgets, the translation
+ * widget's equivalence check and the author preview — and they all want the
+ * *same* one. The wasm is ~5 MB; the browser caches the
  * download, but a page holding a linear proof and a Fitch proof used to
  * instantiate two modules because each widget memoized its own.
  *
@@ -131,6 +132,49 @@ export interface CompileReadOptions {
 }
 
 const ADMITTED_LINE = "SorryLine";
+
+/**
+ * The certificate as the answer carries it. The MMB is bytes; the answer is
+ * JSON, and the worker's verifier decodes this before it verifies.
+ */
+export function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function utf8Length(codePoint: number): number {
+  if (codePoint < 0x80) {
+    return 1;
+  }
+  if (codePoint < 0x800) {
+    return 2;
+  }
+  if (codePoint < 0x10000) {
+    return 3;
+  }
+  return 4;
+}
+
+/**
+ * A UTF-8 byte offset into `text`, as the engine reports its spans, as the
+ * index of the same position in the JS string — which counts UTF-16 units,
+ * so a `∀` is three of the one and one of the other.
+ */
+export function byteToCharIndex(text: string, byteOffset: number): number {
+  let bytes = 0;
+  let index = 0;
+  for (const char of text) {
+    if (bytes >= byteOffset) {
+      break;
+    }
+    bytes += utf8Length(char.codePointAt(0) ?? 0);
+    index += char.length;
+  }
+  return index;
+}
 
 export function readCompileResult(
   result: CompileResult,

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { dirname, resolve } from "node:path";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import {
   createDefaultExerciseRegistry,
@@ -754,13 +755,16 @@ describe("the interactive submission path", () => {
   });
 
   /**
-   * The widgets that import `pkg`, each with its shadow stylesheet.
+   * The widgets that import `pkg`, each with the stylesheets it writes into
+   * its shadow root.
    *
    * The two checks below are about CSS but keyed on a TypeScript import, and
    * those are no longer the same file: a widget's rules live in the `.css`
-   * beside it (see `src/text-modules.d.ts`). Reading only the module would let
-   * both of these pass by finding nothing to look at — the failure mode a
-   * source-scanning test has to be written against.
+   * files it imports as text (see `src/text-modules.d.ts`) — its own, and
+   * the ones it shares with a sibling, like the CodeMirror theme the linear
+   * and Fitch editors both take from `proof-editor.css`. Reading only the
+   * module would let both of these pass by finding nothing to look at — the
+   * failure mode a source-scanning test has to be written against.
    */
   async function* widgetsImporting(
     pkg: string,
@@ -774,12 +778,16 @@ describe("the interactive submission path", () => {
         continue;
       }
 
-      const sheet = Bun.file(path.replace(/\.tsx?$/, ".css"));
-      const styles = (await sheet.exists()) ? await sheet.text() : "";
+      const sheets = await Promise.all(
+        Array.from(
+          source.matchAll(/from "(\.\/[^"]+\.css)" with \{/g),
+          (match) => Bun.file(resolve(dirname(path), match[1] ?? "")).text(),
+        ),
+      );
 
       // The module still counts: a widget may keep a rule inline, and one that
       // has neither file's worth of CSS must fail rather than be skipped.
-      yield { path, styles: `${source}\n${styles}` };
+      yield { path, styles: [source, ...sheets].join("\n") };
     }
   }
 
