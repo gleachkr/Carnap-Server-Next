@@ -24,7 +24,6 @@
 import type { ExerciseFeedback } from "../../worker/domain/exercises";
 import {
   gradeTruthTable,
-  resolveCounterexample,
   resolveTable,
 } from "../../worker/exercises/truth-table/grading";
 import type { TruthTableStringId } from "../../worker/exercises/truth-table/strings";
@@ -151,10 +150,12 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     this.falseMark = readMark(data.options, "falseMark", "F");
     this.checkMode = readCheckMode(data.options, this.feedback);
     this.partialTable = data.variant === "partial";
-    const ce = resolveCounterexample(data.options);
     // A partial table is already a single-row task, so it offers no separate
     // counterexample shortcut (whatever the default `showCounterexample`).
-    this.ceTarget = ce.showButton && !this.partialTable ? ce.property : null;
+    this.ceTarget =
+      data.options.showCounterexample && !this.partialTable
+        ? data.options.counterexampleTo
+        : null;
     this.validityTable = typeof data.premiseCount === "number";
     this.table = root.querySelector<HTMLTableElement>("table.tt");
     this.cells = Array.from(

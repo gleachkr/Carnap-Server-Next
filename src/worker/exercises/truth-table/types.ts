@@ -97,9 +97,7 @@ export interface TruthTableOptions {
    * The counterexample property (cf. Carnap `counterexample-to`), default
    * `"tautology"`. It defines both what a submitted counterexample row must show
    * and — for a validity table — the correct value of its turnstile column, so
-   * it applies even when the button is hidden. Legacy stored data instead carried
-   * a `counterexample: target | null` field; {@link resolveCounterexample} reads
-   * either shape.
+   * it applies even when the button is hidden.
    */
   readonly counterexampleTo: TruthTableCounterexampleTarget;
   /**

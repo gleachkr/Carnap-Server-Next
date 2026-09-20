@@ -22,7 +22,6 @@ import {
   isTruthTablePublicData,
   type ResolvedTable,
   referenceFillable,
-  resolveCounterexample,
   resolveTable,
   validityPremiseCount,
 } from "./grading";
@@ -577,8 +576,7 @@ export function renderTruthTableElement(
   // The counterexample selector rides along with the button that reveals it. A
   // partial table is already a single-row task, so it offers neither.
   const ceSelect =
-    publicData.variant !== "partial" &&
-    resolveCounterexample(publicData.options).showButton;
+    publicData.variant !== "partial" && publicData.options.showCounterexample;
   // A partial table is one free row; every other variant fills all 2ⁿ rows.
   const rows =
     publicData.variant === "partial"

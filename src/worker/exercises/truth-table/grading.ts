@@ -223,8 +223,8 @@ export function counterexampleHolds(
 }
 
 /**
- * Normalize a `counterexample-to` value (or a legacy stored target) to a
- * counterexample property, folding Carnap's synonyms; `null` if unrecognized.
+ * Normalize a `counterexample-to` value to a counterexample property, folding
+ * Carnap's synonyms; `null` if unrecognized.
  */
 export function normalizeCounterexampleTarget(
   value: unknown,
@@ -241,46 +241,6 @@ export function normalizeCounterexampleTarget(
     default:
       return null;
   }
-}
-
-/**
- * The counterexample configuration for a set of options: the property and
- * whether the button is offered. Reads the current shape (`counterexampleTo` +
- * `showCounterexample`) and tolerates legacy stored data, where `counterexample`
- * held a target string (button on) or `null` (button off).
- */
-export function resolveCounterexample(options: TruthTableOptions): {
-  readonly property: TruthTableCounterexampleTarget;
-  readonly showButton: boolean;
-} {
-  const candidate = options as {
-    counterexampleTo?: unknown;
-    showCounterexample?: unknown;
-    counterexample?: unknown;
-  };
-
-  if (
-    candidate.counterexampleTo !== undefined ||
-    typeof candidate.showCounterexample === "boolean"
-  ) {
-    return {
-      property:
-        normalizeCounterexampleTarget(candidate.counterexampleTo) ??
-        "tautology",
-      showButton: candidate.showCounterexample !== false,
-    };
-  }
-
-  // Legacy: `counterexample` was a target string, or `null` for button-off.
-  if (candidate.counterexample === null) {
-    return { property: "tautology", showButton: false };
-  }
-
-  return {
-    property:
-      normalizeCounterexampleTarget(candidate.counterexample) ?? "tautology",
-    showButton: true,
-  };
 }
 
 /**
@@ -473,8 +433,8 @@ export function gradeTruthTable(
 
   // A counterexample submission grades only its one designated row; it is
   // honoured only while the exercise actually offers the button.
-  const { property, showButton } = resolveCounterexample(options);
-  const ceRow = showButton
+  const property = options.counterexampleTo;
+  const ceRow = options.showCounterexample
     ? normalizeCounterexampleRow(answer, table.valuations.length)
     : null;
   const grades = (rowIndex: number): boolean =>
@@ -778,16 +738,8 @@ function isOptions(value: unknown): value is TruthTableOptions {
       candidate.check === "cells" ||
       candidate.check === "terse" ||
       candidate.check === "off") &&
-    // Counterexample config: accept the current shape (`counterexampleTo` +
-    // `showCounterexample`) and legacy data, where `counterexample` was a target
-    // string or `null`. All are optional so earlier-compiled data validates.
-    (candidate.counterexampleTo === undefined ||
-      normalizeCounterexampleTarget(candidate.counterexampleTo) !== null) &&
-    (candidate.showCounterexample === undefined ||
-      typeof candidate.showCounterexample === "boolean") &&
-    (candidate.counterexample === undefined ||
-      candidate.counterexample === null ||
-      normalizeCounterexampleTarget(candidate.counterexample) !== null) &&
+    normalizeCounterexampleTarget(candidate.counterexampleTo) !== null &&
+    typeof candidate.showCounterexample === "boolean" &&
     typeof candidate.autoAtoms === "boolean" &&
     typeof candidate.nodash === "boolean" &&
     // `hiddenGivens`/`strictGivens` were added with the partial variant; the
