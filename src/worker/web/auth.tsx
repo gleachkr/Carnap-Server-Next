@@ -4,9 +4,7 @@ import type { FC } from "hono/jsx";
 import type { AppBindings } from "../http";
 import { allowTurnstileWidget } from "../middleware/security-headers";
 import { ErrorSummary, Notice, Sheet } from "./components";
-import { renderShell, useI18n } from "./layout";
-
-type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
+import { type PageStatus, renderShell, useI18n } from "./layout";
 
 interface TurnstileWidget {
   /** Turnstile localizes its own copy; this is the page's resolved tag. */
@@ -128,7 +126,7 @@ export function renderLoginError(
     readonly email: string;
     readonly message: string;
     readonly next: string;
-    readonly status: Status;
+    readonly status: PageStatus;
   },
 ): Response {
   const i18n = context.get("i18n");

@@ -42,23 +42,31 @@ export function userDisplayMeta(
  * Render a user by id: their name (or email) with the email as a quiet
  * second line when a name is present. Never prints a raw id when a name or
  * email is known.
+ *
+ * `identified` adds the second line for a user with nothing to put there —
+ * "User ID …" — for a ledger whose rows have to stay tellable apart even
+ * when the directory has no name or email for one of them.
  */
 export const UserLabel: FC<{
   readonly directory: UserDirectory;
+  readonly identified?: boolean;
   readonly userId: string;
-}> = ({ directory, userId }) => {
+}> = ({ directory, identified = false, userId }) => {
   const i18n = useI18n();
   const user = directory.get(userId) ?? null;
+  const name = userDisplayName(i18n, user, userId);
+  const detail =
+    identified || hasName(user) ? userDisplayMeta(i18n, user, userId) : null;
 
   return (
     <>
-      {userDisplayName(i18n, user, userId)}
-      {hasName(user) ? (
+      {name}
+      {detail === null || detail === name ? null : (
         <>
           <br />
-          <span class="small">{user.email}</span>
+          <span class="small">{detail}</span>
         </>
-      ) : null}
+      )}
     </>
   );
 };

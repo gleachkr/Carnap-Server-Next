@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
-
 import { canAuthorContent } from "../application/authorization";
+import type { AppErrorStatus } from "../application/errors";
 import type { AppBindings } from "../http";
 import { I18nProvider, useI18n } from "./i18n-context";
 import { ProfilePrompt } from "./profile-prompt";
@@ -42,6 +42,9 @@ export interface Crumb {
  */
 export type LinkedCrumb = Crumb & { readonly href: string };
 
+/** What a page answers with: the OK, or one of the error statuses a page can wear. */
+export type PageStatus = 200 | AppErrorStatus;
+
 export interface ShellOptions {
   readonly breadcrumb?: readonly Crumb[];
   /**
@@ -58,7 +61,7 @@ export interface ShellOptions {
    * it would otherwise sit in. Renders only where the breadcrumb does.
    */
   readonly headerAside?: Child;
-  readonly status?: 200 | 400 | 401 | 403 | 404 | 429 | 500;
+  readonly status?: PageStatus;
   readonly title: string;
 }
 

@@ -44,7 +44,7 @@ import {
   PeopleIcon,
   UnarchiveIcon,
 } from "./icons";
-import { renderShell, useI18n } from "./layout";
+import { type PageStatus, renderShell, useI18n } from "./layout";
 import { revisionDetailsText } from "./revisions";
 import { SortHeader } from "./table-sort";
 import {
@@ -53,8 +53,6 @@ import {
   markdownFoldStrings,
   uiStringsScript,
 } from "./ui-strings";
-
-type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 
 /**
  * What a fresh item's editor opens with, in the item's own format. A theory
@@ -934,7 +932,7 @@ export function renderContentLibrary(
 
 export function renderContentCreateError(
   context: Context<AppBindings>,
-  options: { readonly message: string; readonly status: Status },
+  options: { readonly message: string; readonly status: PageStatus },
 ): Response {
   // Hoisted, not `context.get("i18n").t(...)`: the extractor matches the
   // receiver by name, so a call expression there extracts nothing at all.
@@ -1002,7 +1000,7 @@ export function renderRevisionCreateError(
   options: {
     readonly itemId: string;
     readonly message: string;
-    readonly status: Status;
+    readonly status: PageStatus;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -1045,7 +1043,7 @@ export function renderRevisionEditor(
      */
     readonly sourceFormat: ContentSourceFormat;
     readonly sourceText: string;
-    readonly status?: Status;
+    readonly status?: PageStatus;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -1340,7 +1338,7 @@ export function renderContentError(
   context: Context<AppBindings>,
   options: {
     readonly message: string;
-    readonly status: Status;
+    readonly status: PageStatus;
     readonly title: string;
   },
 ): Response {

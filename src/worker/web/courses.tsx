@@ -49,7 +49,7 @@ import {
   membershipStatusLabel,
   membershipStatusOptions,
 } from "./labels";
-import { renderShell, useI18n } from "./layout";
+import { type PageStatus, renderShell, useI18n } from "./layout";
 import { SortHeader, sortRank } from "./table-sort";
 import { UserLabel, userDisplayName } from "./users";
 
@@ -1335,7 +1335,7 @@ export function renderCourseListError(
   context: Context<AppBindings>,
   options: {
     readonly message: string;
-    readonly status: 200 | 400 | 401 | 403 | 404 | 429 | 500;
+    readonly status: PageStatus;
     readonly title: string;
   },
 ): Response {
@@ -1352,6 +1352,28 @@ export function renderCourseListError(
     </>,
   );
 }
+
+/** The way from a course's grading sheet to its gradebook and CSV. */
+const GradebookLinks: FC<{ readonly courseId: string }> = ({ courseId }) => {
+  const i18n = useI18n();
+
+  return (
+    <LinkStrip
+      links={[
+        {
+          hint: i18n.t("Scores across every graded assignment"),
+          href: `/courses/${courseId}/instructor/gradebook`,
+          label: i18n.t("Course gradebook"),
+        },
+        {
+          hint: i18n.t("CSV of the whole course's grades"),
+          href: `/courses/${courseId}/instructor/grades.csv`,
+          label: i18n.t("Download CSV"),
+        },
+      ]}
+    />
+  );
+};
 
 export function renderCourseDetail(
   context: Context<AppBindings>,
@@ -1468,20 +1490,7 @@ export function renderCourseDetail(
             assignments={model.assignments}
             courseId={model.course.id}
           />
-          <LinkStrip
-            links={[
-              {
-                hint: i18n.t("Scores across every graded assignment"),
-                href: `/courses/${model.course.id}/instructor/gradebook`,
-                label: i18n.t("Course gradebook"),
-              },
-              {
-                hint: i18n.t("CSV of the whole course's grades"),
-                href: `/courses/${model.course.id}/instructor/grades.csv`,
-                label: i18n.t("Download CSV"),
-              },
-            ]}
-          />
+          <GradebookLinks courseId={model.course.id} />
         </Sheet>
       </>,
     );
@@ -1539,20 +1548,7 @@ export function renderCourseDetail(
                 instructor={true}
                 now={model.now}
               />
-              <LinkStrip
-                links={[
-                  {
-                    hint: i18n.t("Scores across every graded assignment"),
-                    href: `/courses/${model.course.id}/instructor/gradebook`,
-                    label: i18n.t("Course gradebook"),
-                  },
-                  {
-                    hint: i18n.t("CSV of the whole course's grades"),
-                    href: `/courses/${model.course.id}/instructor/grades.csv`,
-                    label: i18n.t("Download CSV"),
-                  },
-                ]}
-              />
+              <GradebookLinks courseId={model.course.id} />
             </Sheet>
             {model.unmappedLtiLinks.length > 0 ? (
               <LtiLinksSheet
@@ -1611,7 +1607,7 @@ export function renderCourseError(
   context: Context<AppBindings>,
   options: {
     readonly message: string;
-    readonly status: 200 | 400 | 401 | 403 | 404 | 429 | 500;
+    readonly status: PageStatus;
     readonly title: string;
   },
 ): Response {

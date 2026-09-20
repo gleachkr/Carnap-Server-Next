@@ -92,7 +92,7 @@ import {
   type ReviewState,
   reviewStateLabel,
 } from "./labels";
-import { renderShell, useI18n } from "./layout";
+import { type PageStatus, renderShell, useI18n } from "./layout";
 import {
   revisionDetailsText,
   revisionOptionLabel,
@@ -106,12 +106,10 @@ import {
   reviewUiStrings,
   uiStringsScript,
 } from "./ui-strings";
-import { userDisplayMeta, userDisplayName } from "./users";
+import { UserLabel, userDisplayMeta, userDisplayName } from "./users";
 
 /** The types, for the forms: which element a node gets, and what it posts as. */
 const exercises = createDefaultExerciseRegistry();
-
-type Status = 200 | 400 | 401 | 403 | 404 | 429 | 500;
 
 export interface AssignmentFormValues {
   readonly assessmentMode?: string;
@@ -1743,8 +1741,9 @@ const OverrideRoster: FC<{
             return (
               <tr>
                 <td>
-                  <UserCell
+                  <UserLabel
                     directory={directory}
+                    identified={true}
                     userId={membership.userId}
                   />
                 </td>
@@ -2102,28 +2101,6 @@ const SubmissionsReview: FC<{
   );
 };
 
-const UserCell: FC<{
-  readonly directory: UserDirectory;
-  readonly userId: string;
-}> = ({ directory, userId }) => {
-  const i18n = useI18n();
-  const user = directory.get(userId) ?? null;
-  const name = userDisplayName(i18n, user, userId);
-  const meta = userDisplayMeta(i18n, user, userId);
-
-  return (
-    <>
-      {name}
-      {meta === name ? null : (
-        <>
-          <br />
-          <span class="small">{meta}</span>
-        </>
-      )}
-    </>
-  );
-};
-
 const AttemptsTable: FC<{
   readonly assignmentId: string;
   readonly attempts: readonly Attempt[];
@@ -2154,7 +2131,11 @@ const AttemptsTable: FC<{
         {attempts.map((attempt) => (
           <tr>
             <td>
-              <UserCell directory={directory} userId={attempt.userId} />
+              <UserLabel
+                directory={directory}
+                identified={true}
+                userId={attempt.userId}
+              />
             </td>
             <td>{attempt.ordinal}</td>
             <td>{attemptStatusLabel(i18n, attempt.status)}</td>
@@ -2224,7 +2205,7 @@ export function renderAssignmentFormError(
     readonly message: string;
     readonly mode?: "draft" | "published";
     readonly revisions: readonly AssignmentRevisionOption[];
-    readonly status: Status;
+    readonly status: PageStatus;
     readonly submitLabel?: string;
     readonly title: string;
     readonly values: AssignmentFormValues;
