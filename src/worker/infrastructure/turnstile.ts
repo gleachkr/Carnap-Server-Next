@@ -9,6 +9,7 @@ import type { Env } from "../env";
 import type { AppBindings } from "../http";
 import { deferred } from "../i18n/deferred";
 import { withUserAgent } from "../user-agent";
+import { type Fetcher, platformFetcher } from "./fetch";
 
 /**
  * Where a token is redeemed. One redemption per token — Turnstile answers a
@@ -34,11 +35,6 @@ const SECRET_ERROR_CODES = new Set([
   "invalid-input-secret",
   "missing-input-secret",
 ]);
-
-type Fetcher = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => Promise<Response>;
 
 export interface CloudflareTurnstileVerifierOptions {
   readonly fetcher?: Fetcher;
@@ -103,9 +99,7 @@ export class CloudflareTurnstileVerifier implements TurnstileVerifier {
   private readonly fetcher: Fetcher;
 
   constructor(private readonly options: CloudflareTurnstileVerifierOptions) {
-    // Wrapped rather than referenced: calling an unbound global `fetch`
-    // through a property throws "Illegal invocation" on Workers.
-    this.fetcher = options.fetcher ?? ((input, init) => fetch(input, init));
+    this.fetcher = options.fetcher ?? platformFetcher;
   }
 
   async verify(input: VerifyTurnstileInput): Promise<void> {

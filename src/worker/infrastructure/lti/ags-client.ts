@@ -7,12 +7,8 @@ import type {
 import { ScoreDeliveryError } from "../../application/grade-passback";
 import type { LtiGradeFailureReason, LtiPlatform } from "../../domain/lti";
 import { withUserAgent } from "../../user-agent";
+import { type Fetcher, platformFetcher } from "../fetch";
 import { type LtiToolKey, protectedHeaderFor } from "./tool-key";
-
-type Fetcher = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => Promise<Response>;
 
 /**
  * What `send` accepts: headers as a plain record rather than `HeadersInit`, so
@@ -57,9 +53,7 @@ export class AgsClient implements LtiScoreSender {
   private readonly tokens = new Map<string, CachedToken>();
 
   constructor(private readonly options: AgsClientOptions) {
-    // Wrapped rather than referenced: calling an unbound global `fetch`
-    // through a property throws "Illegal invocation" on Workers.
-    this.fetcher = options.fetcher ?? ((input, init) => fetch(input, init));
+    this.fetcher = options.fetcher ?? platformFetcher;
   }
 
   async postScore(

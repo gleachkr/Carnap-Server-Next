@@ -2,20 +2,17 @@ import type {
   LoginEmailSender,
   SendLoginEmailInput,
 } from "../../application/auth";
+import { escapeHtml } from "../../application/content/render-support";
 import { AppHttpError } from "../../application/errors";
 import type { Env } from "../../env";
 import { withUserAgent } from "../../user-agent";
+import { type Fetcher, platformFetcher } from "../fetch";
 
 interface ResendEmailResponse {
   readonly id?: unknown;
   readonly message?: unknown;
   readonly name?: unknown;
 }
-
-type Fetcher = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => Promise<Response>;
 
 /**
  * The subject and body of one kind of transactional email. Each part is a
@@ -42,9 +39,7 @@ export class ResendLoginEmailSender implements LoginEmailSender {
 
   constructor(private readonly options: ResendLoginEmailSenderOptions) {
     this.copy = options.copy ?? loginEmailCopy;
-    // Wrapped rather than referenced: calling an unbound global `fetch`
-    // through a property throws "Illegal invocation" on Workers.
-    this.fetcher = options.fetcher ?? ((input, init) => fetch(input, init));
+    this.fetcher = options.fetcher ?? platformFetcher;
   }
 
   async send(input: SendLoginEmailInput): Promise<void> {
@@ -201,13 +196,4 @@ function formatLifetime(expiresInSeconds: number, locale: string): string {
     unit: useHours ? "hour" : "minute",
     unitDisplay: "long",
   }).format(useHours ? minutes / 60 : minutes);
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
 }
