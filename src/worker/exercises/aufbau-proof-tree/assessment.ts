@@ -23,6 +23,7 @@ import type { AufbauProofTreeAnswerData } from "./types";
 import {
   AUFBAU_PROOF_TREE_ANSWER_KIND,
   AUFBAU_PROOF_TREE_SCHEMA_VERSION,
+  aufbauProofTreeName,
   isAufbauProofTreeAnswerData,
   isAufbauProofTreePublicData,
 } from "./types";
@@ -105,7 +106,7 @@ export const AUFBAU_PROOF_TREE_ASSESSMENT = {
         },
         context.i18n,
       ),
-      summary: context.i18n.t("Aufbau tree proof"),
+      summary: aufbauProofTreeName(context.i18n),
     };
   },
 } satisfies ExerciseAssessment;

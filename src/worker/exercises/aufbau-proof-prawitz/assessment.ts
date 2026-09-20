@@ -23,6 +23,7 @@ import type { AufbauProofPrawitzAnswerData } from "./types";
 import {
   AUFBAU_PROOF_PRAWITZ_ANSWER_KIND,
   AUFBAU_PROOF_PRAWITZ_SCHEMA_VERSION,
+  aufbauProofPrawitzName,
   DEFAULT_ASSUMPTION_RULE,
   isAufbauProofPrawitzAnswerData,
   isAufbauProofPrawitzPublicData,
@@ -114,7 +115,7 @@ export const AUFBAU_PROOF_PRAWITZ_ASSESSMENT = {
         },
         context.i18n,
       ),
-      summary: context.i18n.t("Aufbau Prawitz proof"),
+      summary: aufbauProofPrawitzName(context.i18n),
     };
   },
 } satisfies ExerciseAssessment;

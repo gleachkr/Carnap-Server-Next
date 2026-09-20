@@ -222,7 +222,7 @@ theorem k (a b: wff): $ a ⊢ b → a $
       declaration,
       REVIEW_CONTEXT,
     );
-    expect(review.summary).toBe("Aufbau Prawitz proof");
+    expect(review.summary).toBe("Prawitz proof");
     expect(review.details).toEqual([{ label: "Proof", value: "b" }]);
     expect(review.elementHtml).toContain("<carnap-aufbau-proof-prawitz ");
     expect(review.elementHtml).toContain("data-review");

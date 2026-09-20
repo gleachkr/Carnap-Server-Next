@@ -30,6 +30,7 @@ import type {
 import {
   AUFBAU_PROOF_FITCH_ANSWER_KIND,
   AUFBAU_PROOF_FITCH_SCHEMA_VERSION,
+  aufbauProofFitchName,
   DEFAULT_ASSUMPTION_RULE,
   isAufbauProofFitchAnswerData,
   isAufbauProofFitchPublicData,
@@ -142,7 +143,7 @@ export const AUFBAU_PROOF_FITCH_ASSESSMENT = {
         },
         context.i18n,
       ),
-      summary: context.i18n.t("Aufbau Fitch proof"),
+      summary: aufbauProofFitchName(context.i18n),
     };
   },
 } satisfies ExerciseAssessment;

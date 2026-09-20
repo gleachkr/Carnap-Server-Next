@@ -760,22 +760,6 @@ msgstr ""
 msgid "Audit events"
 msgstr ""
 
-#: src/worker/exercises/aufbau-proof-fitch/assessment.ts
-msgid "Aufbau Fitch proof"
-msgstr ""
-
-#: src/worker/exercises/aufbau-proof-prawitz/assessment.ts
-msgid "Aufbau Prawitz proof"
-msgstr ""
-
-#: src/worker/exercises/aufbau-proof/assessment.ts
-msgid "Aufbau proof"
-msgstr ""
-
-#: src/worker/exercises/aufbau-proof-tree/assessment.ts
-msgid "Aufbau tree proof"
-msgstr ""
-
 #: src/worker/application/errors.ts
 msgid "Authentication is required."
 msgstr ""

@@ -760,22 +760,6 @@ msgstr "Versuche können nur bei bewerteten Aufgaben begonnen werden."
 msgid "Audit events"
 msgstr "Prüfereignisse"
 
-#: src/worker/exercises/aufbau-proof-fitch/assessment.ts
-msgid "Aufbau Fitch proof"
-msgstr "Aufbau-Fitch-Beweis"
-
-#: src/worker/exercises/aufbau-proof-prawitz/assessment.ts
-msgid "Aufbau Prawitz proof"
-msgstr "Aufbau-Prawitz-Beweis"
-
-#: src/worker/exercises/aufbau-proof/assessment.ts
-msgid "Aufbau proof"
-msgstr "Aufbau-Beweis"
-
-#: src/worker/exercises/aufbau-proof-tree/assessment.ts
-msgid "Aufbau tree proof"
-msgstr "Aufbau-Baumbeweis"
-
 #: src/worker/application/errors.ts
 msgid "Authentication is required."
 msgstr "Eine Anmeldung ist erforderlich."

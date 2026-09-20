@@ -182,7 +182,7 @@ describe("aufbau-proof-fitch assessment", () => {
       declaration,
       REVIEW_CONTEXT,
     );
-    expect(review.summary).toBe("Aufbau Fitch proof");
+    expect(review.summary).toBe("Fitch proof");
     // The helper theory declares no `@syntax`, so its formulas are never read
     // as surface text — and the goal is still named by its statement, because
     // splitting a declaration is MM0 grammar and needs no lexicon.

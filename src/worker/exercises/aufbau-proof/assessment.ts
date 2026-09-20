@@ -21,6 +21,7 @@ import type { AufbauProofAnswerData } from "./types";
 import {
   AUFBAU_PROOF_ANSWER_KIND,
   AUFBAU_PROOF_SCHEMA_VERSION,
+  aufbauProofName,
   isAufbauProofAnswerData,
   isAufbauProofPublicData,
 } from "./types";
@@ -86,7 +87,7 @@ export const AUFBAU_PROOF_ASSESSMENT = {
         },
         context.i18n,
       ),
-      summary: context.i18n.t("Aufbau proof"),
+      summary: aufbauProofName(context.i18n),
     };
   },
 } satisfies ExerciseAssessment;
