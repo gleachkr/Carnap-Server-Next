@@ -645,7 +645,7 @@ function report(findings, routes) {
   if (stale.length > 0) {
     console.log(
       `\n${stale.length} baseline entr(y/ies) now pass — prune with ` +
-        "`node scripts/a11y-audit.mjs --update`.",
+        "`bun run a11y:audit:update`.",
     );
   }
   if (REPORT) {

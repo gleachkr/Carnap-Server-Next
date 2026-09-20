@@ -49,11 +49,11 @@ Use this mode to record exercise work without counting it toward a grade.
 - Opening an available activity creates or reuses an open, untimed attempt.
 - Students can retry without the graded attempt-limit workflow.
 - Submissions use the normal normalization and evaluation services.
-- Instructors can review work and add manual evaluations.
+- Course staff can review work and add manual evaluations.
 - Practice scores use the same calculation as graded scores: select the best
   result for each exercise and sum them.
-- Students see practice progress on the course page. Instructors can use the
-  activity's gradebook and CSV export.
+- Students see practice progress on the course page. Course staff can use
+  the activity's gradebook and CSV export.
 - Practice scores do not appear as course-gradebook columns, count toward
   the course total, or produce LTI passback.
 
@@ -149,6 +149,35 @@ aliases over the same model, not a complete replacement route hierarchy.
 A read request has mode-specific effects: it creates no assessment records
 for a reading, ensures an attempt for practice, and does not begin a graded
 attempt. Do not assume that every item GET is free of database writes.
+
+## Course staff
+
+A course has two staff roles, and `courseStaffTier` in `domain/courses.ts`
+is the one place that says what each may do:
+
+- **Instructor** manages the course: roster, enrollment links, assignments
+  and their settings, grade release, LTI plumbing. A course can have several;
+  its creator is marked by `createdById`, not by a distinct role.
+- **Teaching assistant** (`teacher_assistant`) grades and authors. The review
+  queue, manual grading, the assignment gradebooks and their CSV exports, and
+  the attempt list and reset are open to every staff member
+  (`requireCourseStaff`); TAs also get the content library, so they can write
+  lessons and share them for an instructor to adopt. Nothing that changes
+  what the course *is* — its roster, its assignments — is theirs.
+
+LTI launches map Instructor and Administrator to instructor and
+TeachingAssistant and ContentDeveloper to teaching assistant; a later launch
+never rewrites a role set inside Carnap, so an instructor can promote a
+member from the members table.
+
+The course URL renders a different page per role: the instructor console,
+the TA grading page (published assignments with their review and gradebook
+links, no roster or settings), or the student page. Every staff member has a
+**Staff | Student** switch under the navbar; `?view=student` renders exactly
+what a student sees, with nothing added, and the same switch pairs each
+staff-side assignment page with its student side. Staff can work through
+assignments themselves, but their submissions are excluded from gradebooks
+and from the review queue.
 
 ## Gradebooks and LTI
 

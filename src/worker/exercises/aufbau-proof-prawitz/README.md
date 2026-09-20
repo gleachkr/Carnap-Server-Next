@@ -71,6 +71,10 @@ finished proof.
 
 Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
 `options`, and `playground`. `system` names a theory block or a built-in system.
+Unlike the other three proof directives there is no `allow-sorry`: the
+engine's `sorry!` admits a leaf and takes no premises, and a leaf here has no
+dependency context, so an admitted leaf could only ever prove a goal with no
+premises — the attribute would promise what the widget cannot deliver.
 The theory must declare `assumption`, `turnstile`, and `context-join` roles.
 Missing roles produce authoring errors. Starter separators accept any
 turnstile spelling declared by the theory; emitted sequents use its canonical

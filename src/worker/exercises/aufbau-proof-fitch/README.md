@@ -92,7 +92,9 @@ aliases before assumption checks, citation analysis, and emission. Unknown
 rule names are passed to the engine for diagnosis.
 
 Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
-`options`, and `playground`. `system` must name a theory block or built-in system.
+`options`, `allow-sorry`, and `playground`. `system` must name a theory
+block or built-in system. `allow-sorry` lets a line stand on `sorry!` as a
+warning rather than an error, for practice; the proof still never scores.
 The selected theory must declare these roles:
 
 - `assumption`: the assumption axiom;

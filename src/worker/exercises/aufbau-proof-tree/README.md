@@ -62,9 +62,11 @@ subproofs would form a graph, not a tree, and produce
 `proof_is_not_a_tree`. Duplicate the derivation in each branch instead.
 
 Attributes are `system`, `id`, `title`, `points`, `exam`, `feedback`,
-`options`, and `playground`. `system` is required and names a preceding
-`aufbau-mm0` block or a built-in system. Common settings follow the
-[authoring reference][authoring].
+`options`, `allow-sorry`, and `playground`. `system` is required and names a
+preceding `aufbau-mm0` block or a built-in system. `allow-sorry` lets a leaf
+stand on `sorry!` as a warning rather than an error, for practice; the proof
+still never scores. Common settings follow the [authoring
+reference][authoring].
 
 `playground` (boolean) drops the goal: the body is the prompt, optionally
 followed by `----` and a starter, and the statement the proof proves is

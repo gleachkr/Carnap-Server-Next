@@ -282,6 +282,11 @@ messages identifying which formula failed. `terse` supplies a verdict
 without these explanations. Some exercise types check automatically rather
 than through a Check button.
 
+The model exercise is the one exception: its Check is a verdict and a
+sentence naming the formula that came out wrong, with no quieter form, so
+`terse` and `full` are the same setting there and only `none` hides the
+button.
+
 Releasing grades changes the default, not an explicit setting.
 `feedback="none"` remains in effect after release.
 
@@ -700,8 +705,10 @@ exercise's goal, rather than duplicated per exercise.
 
 The common attributes apply. `system` is required and names an
 `aufbau-mm0` block or a built-in system. `options` accepts `auto` and
-`complete`, both off by default. These flags are parsed, but the linear
-editor's proof-search and completion controls are not yet wired up.
+`complete`, both off by default; the same attribute is accepted by all four
+proof directives. The flags are parsed and stored, but no editor reads them
+yet: they are reserved for proof-search (`auto?`) and rule-completion
+assistance in the browser, which is not wired up.
 
 Linear proof lines are engine syntax, including axiom identifiers. Unlike the
 other proof interfaces, this editor does not translate surface-language rule
@@ -1431,8 +1438,7 @@ column. Errors prevent saving; warnings are displayed but allow it.
 
 Common groups include:
 
-- **Syntax and safety:** `unsafe_raw_html`, `invalid_directive`,
-  `unclosed_directive`, `unsupported_directive`,
+- **Syntax and safety:** `unsafe_raw_html`, `unsupported_directive`,
   `invalid_directive_attributes`, `unknown_attribute`.
 - **Exercise identity and settings:** `missing_id`, `invalid_exercise_id`,
   `duplicate_exercise_id`, `invalid_points`, `invalid_exam`,
@@ -1449,8 +1455,8 @@ Common groups include:
   `invalid_grid_token`, `given_conflicts_with_key`, `invalid_mark`,
   `unknown_truth_table_option`, `unsupported_truth_table_variant`,
   `invalid_truth_table_body`.
-- **Theories and proofs:** `missing_name`, `empty_theory`, `duplicate_theory`,
-  `unknown_theory_src`, `remote_theory_src`, `unknown_theory`,
+- **Systems and proofs:** `missing_name`, `empty_theory`, `duplicate_theory`,
+  `unknown_theory_src`, `remote_theory_src`, `unknown_system`,
   `missing_theorem_header`, `missing_proof_underline`, `unknown_proof_option`,
   `invalid_allow_sorry`, `invalid_goal_formula`, `playground_declares_goal`,
   `proof_is_not_a_tree`.

@@ -86,8 +86,12 @@ preview. Remote-origin URLs are rejected. See the authoring reference's
   Unknown names produce `unknown_system`.
 - `title`, `points`, `exam`, `feedback`: common exercise settings.
 - `options`: space-separated `auto` and `complete` flags, both off by
-  default. The linear editor's search and completion controls are not wired
-  up yet.
+  default. Parsed and stored, but the editor's proof-search and completion
+  assistance they are reserved for is not wired up yet.
+- `allow-sorry`: boolean. A line admitted with `sorry!` is shown as a
+  warning rather than an error, and the proof may be checked around it; it
+  still never scores. See the [authoring reference][authoring] for the
+  full rule.
 - `playground`: boolean. The body has no `theorem` line; the goal is the
   last proof line's `$ … $`, read once in the theory's language (engine
   mode) to find the `@vars` tokens to bind. The widget shows it as "Proves",
@@ -151,4 +155,5 @@ Relevant tests include `tests/aufbau-proof.test.ts` and
 - Proof exercises are independent; a later exercise cannot cite an earlier
   exercise's proof as a lemma.
 
+[authoring]: ../../../../docs/carnap-markdown-v1.md
 [languages]: ../../../../docs/carnap-markdown-v1.md#languages-and-theories

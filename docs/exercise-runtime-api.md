@@ -243,6 +243,36 @@ The runtime leaves the previous recorded state unchanged and tells the student
 to try again. A successful HTTP request is therefore not proof that work was
 saved.
 
+### Submit gate
+
+A widget can keep an answer from leaving: text its syntax gate refuses
+(translation with `checksyntax`), a proof that stands only on `sorry!`
+outside an exam, or a check that has not settled yet (a proof compile, a
+translation's equivalence search) whose result the answer needs. It does so
+by cancelling the form's `submit` event — `preventDefault()` — from a
+listener registered in the **capture** phase, and the runtime honours the
+cancel the way native submission would: it checks `event.defaultPrevented`
+before sending anything, and sends nothing when it is set.
+
+The capture phase is the contract, not a detail. The runtime's own `submit`
+listener is a bubbling one registered before any component upgrades (the
+component bundles load after the runtime script), so a bubbling listener in
+a widget would run after the request had gone. At the event's target the
+capturing listeners run first whatever the registration order, which is the
+only way a widget's refusal is seen in time. `CarnapExerciseElement`
+exposes this as `gateSubmit(listener)`; use it rather than registering on
+the form directly.
+
+A gate that is waiting on something rather than refusing outright uses
+`holdSubmit(event, settling)`: the event is cancelled, and when `settling`
+resolves the element calls `form.requestSubmit()` again, which runs the gate
+a second time over the settled state. A second click while held changes
+nothing; an edit that makes the held check stale should `dropHold()` so the
+resubmit does not send an answer the student has moved on from. Whichever
+way it ends, a refusal writes its reason to the widget's status line — an
+explanation of why the button did nothing, not a verdict, so it is shown
+under every `feedback` setting.
+
 ## Unsaved work
 
 The content document installs a `beforeunload` guard when answers have changed

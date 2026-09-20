@@ -70,9 +70,11 @@ grade evidence. See [Assessment modes](./course-items-and-assessment.md).
 
 ## Manual evaluations
 
-Instructors can manually evaluate recorded submissions in graded and practice
-activities. Optional exercise-specific rubrics and answer viewers improve the
-review interface; their absence does not prevent manual grading.
+Course staff — instructors and teaching assistants alike, see
+[Course staff](./course-items-and-assessment.md#course-staff) — can manually
+evaluate recorded submissions in graded and practice activities. Optional
+exercise-specific rubrics and answer viewers improve the review interface;
+their absence does not prevent manual grading.
 
 Manual evaluations are appended, not replacements for prior evidence. They
 can award partial or extra credit.
