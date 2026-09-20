@@ -8,13 +8,18 @@ import type {
 import type { CourseMembership } from "../domain/courses";
 import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
-import { assertJsonValue, type JsonValue } from "../domain/json";
-import { timestampNow } from "../domain/time";
 import type { User } from "../domain/users";
 import { deferred } from "../i18n/deferred";
+import { appendAdminAudit, auditMoment } from "./admin-audit";
 import type { AuthenticatedActor } from "./auth";
 import { requirePlatformCapability } from "./authorization";
-import { AppHttpError, badRequest, forbidden } from "./errors";
+import { assertCourseRole, assertMembershipStatus } from "./courses";
+import {
+  AppHttpError,
+  badRequest,
+  courseNotFound,
+  forbidden,
+} from "./errors";
 import type { AppStores } from "./stores";
 
 export interface AdminServiceOptions {
@@ -49,17 +54,6 @@ const CAPABILITIES: readonly PlatformCapability[] = [
   "site_admin",
   "support_operator",
 ];
-const COURSE_ROLES: readonly CourseMembership["role"][] = [
-  "student",
-  "teacher_assistant",
-  "instructor",
-];
-const MEMBERSHIP_STATUSES: readonly CourseMembership["status"][] = [
-  "active",
-  "invited",
-  "suspended",
-  "dropped",
-];
 
 function assertCapability(
   value: string,
@@ -68,28 +62,6 @@ function assertCapability(
     throw badRequest(
       "invalid_platform_capability",
       deferred.i18n.t("Platform capability is not supported."),
-    );
-  }
-}
-
-function assertCourseRole(
-  value: string,
-): asserts value is CourseMembership["role"] {
-  if (!COURSE_ROLES.includes(value as CourseMembership["role"])) {
-    throw badRequest(
-      "invalid_course_role",
-      deferred.i18n.t("Course role is not supported."),
-    );
-  }
-}
-
-function assertMembershipStatus(
-  value: string,
-): asserts value is CourseMembership["status"] {
-  if (!MEMBERSHIP_STATUSES.includes(value as CourseMembership["status"])) {
-    throw badRequest(
-      "invalid_membership_status",
-      deferred.i18n.t("Membership status is not supported."),
     );
   }
 }
@@ -218,7 +190,7 @@ export class AdminService {
     requirePlatformCapability(actor, ["site_admin"]);
     assertCapability(command.capability);
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const revoked = await this.options.stores.platformCapabilities.revoke({
       capability: command.capability,
       revokedAt: now.timestamp,
@@ -233,7 +205,7 @@ export class AdminService {
       );
     }
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.revoke_platform_capability",
       actorUserId: actor.user.id,
       metadata: { capability: command.capability },
@@ -257,7 +229,7 @@ export class AdminService {
       );
     }
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const user = await this.options.stores.users.disable(
       userId,
       now.timestamp,
@@ -267,7 +239,7 @@ export class AdminService {
       throw userNotFound();
     }
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.suspend_user",
       actorUserId: actor.user.id,
       metadata: {},
@@ -285,7 +257,7 @@ export class AdminService {
   ): Promise<User> {
     requirePlatformCapability(actor, ["site_admin"]);
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const user = await this.options.stores.users.enable(
       userId,
       now.timestamp,
@@ -295,7 +267,7 @@ export class AdminService {
       throw userNotFound();
     }
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.reactivate_user",
       actorUserId: actor.user.id,
       metadata: {},
@@ -321,18 +293,14 @@ export class AdminService {
     ]);
 
     if (course === null) {
-      throw new AppHttpError(
-        404,
-        "course_not_found",
-        deferred.i18n.t("The course was not found."),
-      );
+      throw courseNotFound();
     }
 
     if (user === null) {
       throw userNotFound();
     }
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const membership = await this.options.stores.courses.upsertMembership({
       courseId: command.courseId,
       createdAt: now.timestamp,
@@ -343,7 +311,7 @@ export class AdminService {
       userId: command.userId,
     });
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.change_course_membership",
       actorUserId: actor.user.id,
       metadata: {
@@ -371,7 +339,7 @@ export class AdminService {
       throw userNotFound();
     }
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const grant = await this.options.stores.platformCapabilities.grant({
       capability,
       grantedAt: now.timestamp,
@@ -380,7 +348,7 @@ export class AdminService {
       userId,
     });
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action,
       actorUserId: actor.user.id,
       metadata: { capability },
@@ -390,33 +358,5 @@ export class AdminService {
     });
 
     return grant;
-  }
-
-  private now() {
-    const date = this.options.now?.() ?? new Date();
-
-    return { date, timestamp: timestampNow(date) };
-  }
-
-  private async audit(input: {
-    readonly action: string;
-    readonly actorUserId: AppId;
-    readonly metadata: JsonValue;
-    readonly targetCourseId: AppId | null;
-    readonly targetUserId: AppId | null;
-    readonly timestamp: string;
-  }): Promise<void> {
-    assertJsonValue(input.metadata);
-
-    await this.options.stores.adminAudit.append({
-      action: input.action,
-      actorUserId: input.actorUserId,
-      createdAt: input.timestamp,
-      id: createAppId(new Date(input.timestamp).getTime()),
-      metadata: input.metadata,
-      requestId: this.options.requestId,
-      targetCourseId: input.targetCourseId,
-      targetUserId: input.targetUserId,
-    });
   }
 }

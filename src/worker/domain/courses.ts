@@ -1,8 +1,29 @@
 import type { AppId } from "./ids";
 import type { Timestamp } from "./time";
 
-export type CourseRole = "student" | "teacher_assistant" | "instructor";
-export type MembershipStatus = "active" | "invited" | "suspended" | "dropped";
+/** The roles a course membership can carry, least to most privileged. */
+export const COURSE_ROLES = [
+  "student",
+  "teacher_assistant",
+  "instructor",
+] as const;
+export type CourseRole = (typeof COURSE_ROLES)[number];
+
+export const MEMBERSHIP_STATUSES = [
+  "active",
+  "invited",
+  "suspended",
+  "dropped",
+] as const;
+export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
+
+export function isCourseRole(value: string): value is CourseRole {
+  return (COURSE_ROLES as readonly string[]).includes(value);
+}
+
+export function isMembershipStatus(value: string): value is MembershipStatus {
+  return (MEMBERSHIP_STATUSES as readonly string[]).includes(value);
+}
 
 /**
  * The two tiers of course staff, as the pages tell them apart. An instructor

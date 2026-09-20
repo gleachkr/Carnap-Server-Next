@@ -18,6 +18,7 @@ import type { Timestamp } from "../domain/time";
 import { isTimestamp, timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
 import type { TranslatableMessage } from "../i18n/translator";
+import { adjustmentsForUser, assignmentInCourse } from "./assignment-lookup";
 import type { AuthenticatedActor } from "./auth";
 import {
   requireCourseRole,
@@ -28,7 +29,12 @@ import {
   ContentArtifactError,
   contentArtifactFromRevision,
 } from "./content/artifact";
-import { AppHttpError, badRequest } from "./errors";
+import {
+  AppHttpError,
+  assignmentNotFound,
+  badRequest,
+  contentRevisionNotFound,
+} from "./errors";
 import { GradebookService } from "./gradebook";
 import {
   assignmentAsAppliedTo,
@@ -254,22 +260,6 @@ function assertTimestampOrder(
       deferred.i18n.t("Due time cannot be after available-until."),
     );
   }
-}
-
-function assignmentNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "assignment_not_found",
-    deferred.i18n.t("The assignment was not found."),
-  );
-}
-
-function contentRevisionNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "content_revision_not_found",
-    deferred.i18n.t("The content revision was not found."),
-  );
 }
 
 function contentItemNotFound(): AppHttpError {
@@ -626,7 +616,11 @@ export class AssignmentService {
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "draft") {
       throw badRequest(
@@ -718,7 +712,11 @@ export class AssignmentService {
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "draft") {
       throw badRequest(
@@ -755,7 +753,11 @@ export class AssignmentService {
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "published") {
       throw badRequest(
@@ -803,7 +805,11 @@ export class AssignmentService {
   ): Promise<void> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "draft") {
       throw badRequest(
@@ -829,7 +835,11 @@ export class AssignmentService {
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "published") {
       throw badRequest(
@@ -893,7 +903,11 @@ export class AssignmentService {
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "published") {
       throw badRequest(
@@ -974,7 +988,11 @@ export class AssignmentService {
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const existing = await this.getAssignmentInCourse(courseId, assignmentId);
+    const existing = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (existing.state !== "published") {
       throw badRequest(
@@ -1016,7 +1034,8 @@ export class AssignmentService {
   ): Promise<AssignmentExerciseExcuse> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const assignment = await this.getAssignmentInCourse(
+    const assignment = await assignmentInCourse(
+      this.options.stores,
       courseId,
       assignmentId,
     );
@@ -1106,7 +1125,7 @@ export class AssignmentService {
     await requireInstructor(this.options.stores, actor, courseId);
 
     return this.detailForAssignment(
-      await this.getAssignmentInCourse(courseId, assignmentId),
+      await assignmentInCourse(this.options.stores, courseId, assignmentId),
       onUnreadableArtifact,
     );
   }
@@ -1122,7 +1141,8 @@ export class AssignmentService {
   ): Promise<AssignmentCorrections> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const assignment = await this.getAssignmentInCourse(
+    const assignment = await assignmentInCourse(
+      this.options.stores,
       courseId,
       assignmentId,
     );
@@ -1235,27 +1255,24 @@ export class AssignmentService {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
     const now = timestampNow(this.options.now?.() ?? new Date());
-    const stored = await this.getAssignmentInCourse(courseId, assignmentId);
+    const stored = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     // The student's own assignment, not the course's: an override that moves
     // their window has to govern whether they may open the page, not merely be
     // recorded next to a decision made without it. Everything downstream — the
     // briefing's dates, attempt allowance, and time limit — reads it from here.
-    const [attempts, accommodation, override] = await Promise.all([
+    const [attempts, adjustments] = await Promise.all([
       this.options.stores.assessment.listAttemptsForAssignmentUser(
         stored.id,
         actor.user.id,
       ),
-      this.options.stores.courses.getAccommodation(courseId, actor.user.id),
-      this.options.stores.assignments.getOverrideForAssignmentUser(
-        stored.id,
-        actor.user.id,
-      ),
+      adjustmentsForUser(this.options.stores, stored, actor.user.id),
     ]);
-    const assignment = assignmentAsAppliedTo(stored, {
-      accommodation,
-      override,
-    });
+    const assignment = assignmentAsAppliedTo(stored, adjustments);
     const policy = effectiveAssignmentPolicy(assignment, attempts, now);
 
     if (!policy.canView) {
@@ -1283,7 +1300,8 @@ export class AssignmentService {
   ): Promise<AssignmentLatePolicy> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const assignment = await this.getAssignmentInCourse(
+    const assignment = await assignmentInCourse(
+      this.options.stores,
       courseId,
       assignmentId,
     );
@@ -1330,7 +1348,8 @@ export class AssignmentService {
   ): Promise<AssignmentOverride> {
     await requireInstructor(this.options.stores, actor, courseId);
 
-    const assignment = await this.getAssignmentInCourse(
+    const assignment = await assignmentInCourse(
+      this.options.stores,
       courseId,
       assignmentId,
     );
@@ -1431,20 +1450,6 @@ export class AssignmentService {
       now: this.options.now,
       stores: this.options.stores,
     });
-  }
-
-  private async getAssignmentInCourse(
-    courseId: AppId,
-    assignmentId: AppId,
-  ): Promise<Assignment> {
-    const assignment =
-      await this.options.stores.assignments.getById(assignmentId);
-
-    if (assignment === null || assignment.courseId !== courseId) {
-      throw assignmentNotFound();
-    }
-
-    return assignment;
   }
 
   /**

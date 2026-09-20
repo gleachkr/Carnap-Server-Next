@@ -4,14 +4,17 @@ import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import { timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
+import {
+  assignmentInCourse,
+  effectiveAssignmentForUser,
+} from "./assignment-lookup";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
-import { AppHttpError, forbidden } from "./errors";
+import { AppHttpError, attemptNotFound, forbidden } from "./errors";
 import { GradebookService } from "./gradebook";
 import {
   attemptActivity,
   effectiveAssignmentPolicy,
-  effectivePolicyAssignment,
   expiresAtForTimedAttempt,
 } from "./policies";
 import type { AppStores } from "./stores";
@@ -29,22 +32,6 @@ export interface AttemptBeginResult {
 export interface AttemptResetResult {
   readonly newAttempt: Attempt;
   readonly voidedAttempt: Attempt;
-}
-
-function assignmentNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "assignment_not_found",
-    deferred.i18n.t("The assignment was not found."),
-  );
-}
-
-function attemptNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "attempt_not_found",
-    deferred.i18n.t("The attempt was not found."),
-  );
 }
 
 function assignmentNotGraded(): AppHttpError {
@@ -73,7 +60,11 @@ export class AttemptService {
   ): Promise<AttemptBeginResult> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode !== "graded") {
       throw assignmentNotGraded();
@@ -93,7 +84,8 @@ export class AttemptService {
         assignment.id,
         actor.user.id,
       );
-    const effective = await this.effectiveAssignmentForUser(
+    const effective = await effectiveAssignmentForUser(
+      this.options.stores,
       assignment,
       actor.user.id,
     );
@@ -140,7 +132,11 @@ export class AttemptService {
   ): Promise<Attempt | null> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode !== "practice") {
       return null;
@@ -159,7 +155,8 @@ export class AttemptService {
       return activity.activeAttempt;
     }
 
-    const effective = await this.effectiveAssignmentForUser(
+    const effective = await effectiveAssignmentForUser(
+      this.options.stores,
       assignment,
       actor.user.id,
     );
@@ -187,7 +184,11 @@ export class AttemptService {
   ): Promise<Attempt[]> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode !== "graded") {
       return [];
@@ -214,7 +215,11 @@ export class AttemptService {
   ): Promise<Attempt[]> {
     await requireCourseStaff(this.options.stores, actor, courseId);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode !== "graded") {
       return [];
@@ -237,7 +242,11 @@ export class AttemptService {
   ): Promise<AttemptResetResult> {
     await requireCourseStaff(this.options.stores, actor, courseId);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode !== "graded") {
       throw assignmentNotGraded();
@@ -256,7 +265,8 @@ export class AttemptService {
 
     const nowDate = this.options.now?.() ?? new Date();
     const now = timestampNow(nowDate);
-    const effective = await this.effectiveAssignmentForUser(
+    const effective = await effectiveAssignmentForUser(
+      this.options.stores,
       assignment,
       oldAttempt.userId,
     );
@@ -283,41 +293,6 @@ export class AttemptService {
     }).refreshAfterInstructorChange(assignment, oldAttempt.userId);
 
     return reset;
-  }
-
-  private async effectiveAssignmentForUser(
-    assignment: Assignment,
-    userId: AppId,
-  ) {
-    const [accommodation, override] = await Promise.all([
-      this.options.stores.courses.getAccommodation(
-        assignment.courseId,
-        userId,
-      ),
-      this.options.stores.assignments.getOverrideForAssignmentUser(
-        assignment.id,
-        userId,
-      ),
-    ]);
-
-    return effectivePolicyAssignment(assignment, {
-      accommodation,
-      override,
-    });
-  }
-
-  private async assignmentInCourse(
-    courseId: AppId,
-    assignmentId: AppId,
-  ): Promise<Assignment> {
-    const assignment =
-      await this.options.stores.assignments.getById(assignmentId);
-
-    if (assignment === null || assignment.courseId !== courseId) {
-      throw assignmentNotFound();
-    }
-
-    return assignment;
   }
 
   private async expireAllOpenAttempts(

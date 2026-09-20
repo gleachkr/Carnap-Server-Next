@@ -1,8 +1,12 @@
-import type {
-  Course,
-  CourseAccommodation,
-  CourseEnrollmentLink,
-  CourseMembership,
+import {
+  type Course,
+  type CourseAccommodation,
+  type CourseEnrollmentLink,
+  type CourseMembership,
+  type CourseRole,
+  isCourseRole,
+  isMembershipStatus,
+  type MembershipStatus,
 } from "../domain/courses";
 import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
@@ -14,7 +18,12 @@ import {
   requireInstructor,
   requirePlatformCapability,
 } from "./authorization";
-import { AppHttpError, badRequest, forbidden } from "./errors";
+import {
+  AppHttpError,
+  badRequest,
+  courseNotFound,
+  forbidden,
+} from "./errors";
 import { GradebookService } from "./gradebook";
 import type { AppStores } from "./stores";
 import { createAuthToken, hashAuthToken } from "./tokens";
@@ -149,17 +158,6 @@ function assertExpiresAt(expiresAt: string): void {
   }
 }
 
-function assertStatus(
-  status: string,
-): asserts status is CourseMembership["status"] {
-  if (!["active", "invited", "suspended", "dropped"].includes(status)) {
-    throw badRequest(
-      "invalid_membership_status",
-      deferred.i18n.t("Membership status is not supported."),
-    );
-  }
-}
-
 function enrollmentLinkUnavailable(): AppHttpError {
   return new AppHttpError(
     404,
@@ -168,18 +166,14 @@ function enrollmentLinkUnavailable(): AppHttpError {
   );
 }
 
-function courseNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "course_not_found",
-    deferred.i18n.t("The course was not found."),
-  );
-}
+/*
+ * The role and status a request names, checked against the domain's lists.
+ * Exported because the admin service takes the same two fields from a support
+ * operator and has to refuse them with the same codes.
+ */
 
-function assertStaffRole(
-  role: string,
-): asserts role is AddCourseStaffCommand["role"] {
-  if (role !== "instructor" && role !== "teacher_assistant") {
+export function assertCourseRole(role: string): asserts role is CourseRole {
+  if (!isCourseRole(role)) {
     throw badRequest(
       "invalid_course_role",
       deferred.i18n.t("Course role is not supported."),
@@ -187,14 +181,21 @@ function assertStaffRole(
   }
 }
 
-function assertMembershipRole(
+export function assertMembershipStatus(
+  status: string,
+): asserts status is MembershipStatus {
+  if (!isMembershipStatus(status)) {
+    throw badRequest(
+      "invalid_membership_status",
+      deferred.i18n.t("Membership status is not supported."),
+    );
+  }
+}
+
+function assertStaffRole(
   role: string,
-): asserts role is CourseMembership["role"] {
-  if (
-    role !== "instructor" &&
-    role !== "student" &&
-    role !== "teacher_assistant"
-  ) {
+): asserts role is AddCourseStaffCommand["role"] {
+  if (role !== "instructor" && role !== "teacher_assistant") {
     throw badRequest(
       "invalid_course_role",
       deferred.i18n.t("Course role is not supported."),
@@ -490,7 +491,7 @@ export class CourseService {
     command: UpdateMembershipStatusCommand,
   ): Promise<CourseMembership> {
     await requireInstructor(this.options.stores, actor, courseId);
-    assertStatus(command.status);
+    assertMembershipStatus(command.status);
 
     const existing = await this.options.stores.courses.getMembershipById(
       courseId,
@@ -543,7 +544,7 @@ export class CourseService {
     command: UpdateMembershipRoleCommand,
   ): Promise<CourseMembership> {
     await requireInstructor(this.options.stores, actor, courseId);
-    assertMembershipRole(command.role);
+    assertCourseRole(command.role);
 
     const existing = await this.options.stores.courses.getMembershipById(
       courseId,

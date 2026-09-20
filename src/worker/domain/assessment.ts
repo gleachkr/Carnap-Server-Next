@@ -84,6 +84,59 @@ export type EvaluationForScoring = Pick<
   "createdAt" | "evaluatorKind" | "id" | "score" | "submissionId" | "voidedAt"
 >;
 
+/**
+ * The evaluation that counts for a submission: the latest manual grade if one
+ * stands — it carries the instructor's comment and overrides whatever the
+ * checker said — else the highest-scoring automatic one, the newest among
+ * equals. Voided evaluations are skipped. Null when nothing is left.
+ *
+ * One answer for the gradebook's totals, the student's results page, and the
+ * approve-the-autograde action, which is what makes the three agree: a score
+ * a student reads is the score that was recorded, and approving what they
+ * see records what they see.
+ */
+export function effectiveEvaluation<E extends EvaluationForScoring>(
+  evaluations: readonly E[],
+): E | null {
+  const live = evaluations.filter(
+    (evaluation) => evaluation.voidedAt === null,
+  );
+  const manual = live
+    .filter((evaluation) => evaluation.evaluatorKind === "manual")
+    .sort((left, right) =>
+      `${right.createdAt} ${right.id}`.localeCompare(
+        `${left.createdAt} ${left.id}`,
+      ),
+    )[0];
+
+  if (manual !== undefined) {
+    return manual;
+  }
+
+  return live.reduce<E | null>(betterScored, null);
+}
+
+/**
+ * Of two evaluations, the one that scores higher — the newer among equals,
+ * so a re-run that changes nothing still points at the run that stands.
+ */
+export function betterScored<
+  E extends Pick<EvaluationForScoring, "createdAt" | "score">,
+>(current: E | null, candidate: E): E {
+  if (current === null || candidate.score > current.score) {
+    return candidate;
+  }
+
+  if (
+    candidate.score === current.score &&
+    candidate.createdAt > current.createdAt
+  ) {
+    return candidate;
+  }
+
+  return current;
+}
+
 export type EvaluationVerdict = "correct" | "partial" | "incorrect";
 
 /**

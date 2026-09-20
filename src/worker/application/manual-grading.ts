@@ -1,10 +1,15 @@
-import type { Evaluation, Submission } from "../domain/assessment";
+import {
+  type Evaluation,
+  effectiveEvaluation,
+  type Submission,
+} from "../domain/assessment";
 import type { Assignment } from "../domain/assignments";
 import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import { assertJsonValue, type JsonValue } from "../domain/json";
 import { timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
+import { assignmentInCourse } from "./assignment-lookup";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseStaff } from "./authorization";
 import { contentArtifactFromRevision } from "./content/artifact";
@@ -33,14 +38,6 @@ export interface ManualEvaluationCommand {
 export interface ManualEvaluationResult {
   readonly evaluation: Evaluation;
   readonly submission: Submission;
-}
-
-function assignmentNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "assignment_not_found",
-    deferred.i18n.t("The assignment was not found."),
-  );
 }
 
 /**
@@ -146,28 +143,11 @@ export class ManualGradingService {
       await this.options.stores.assessment.listEvaluationsForSubmission(
         submission.id,
       );
-    const live = evaluations.filter(
-      (evaluation) => evaluation.voidedAt === null,
-    );
-    const existingManual = live.find(
-      (evaluation) => evaluation.evaluatorKind === "manual",
-    );
+    // The same choice the gradebook records, so approving what the page
+    // shows records what the page shows.
+    const effective = effectiveEvaluation(evaluations);
 
-    if (existingManual !== undefined) {
-      return { evaluation: existingManual, submission };
-    }
-
-    const automatic = live
-      .filter((evaluation) => evaluation.evaluatorKind === "automatic")
-      .reduce<(typeof live)[number] | undefined>((best, evaluation) => {
-        if (best === undefined || evaluation.score > best.score) {
-          return evaluation;
-        }
-
-        return best;
-      }, undefined);
-
-    if (automatic === undefined) {
+    if (effective === null) {
       throw badRequest(
         "no_automatic_score",
         deferred.i18n.t(
@@ -176,11 +156,16 @@ export class ManualGradingService {
       );
     }
 
+    // A manual grade already stands, and it is the one that counts.
+    if (effective.evaluatorKind === "manual") {
+      return { evaluation: effective, submission };
+    }
+
     return this.appendManualEvaluation(assignment, submission, {
       feedback: null,
       gradedById: actor.user.id,
-      maxScore: automatic.maxScore,
-      score: automatic.score,
+      maxScore: effective.maxScore,
+      score: effective.score,
     });
   }
 
@@ -227,7 +212,11 @@ export class ManualGradingService {
     readonly assignment: Assignment;
     readonly submission: Submission;
   }> {
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode === "none") {
       throw assignmentNotScored();
@@ -285,19 +274,5 @@ export class ManualGradingService {
     }).refreshStudentAssignmentScore(assignment, submission.userId);
 
     return { evaluation, submission };
-  }
-
-  private async assignmentInCourse(
-    courseId: AppId,
-    assignmentId: AppId,
-  ): Promise<Assignment> {
-    const assignment =
-      await this.options.stores.assignments.getById(assignmentId);
-
-    if (assignment === null || assignment.courseId !== courseId) {
-      throw assignmentNotFound();
-    }
-
-    return assignment;
   }
 }

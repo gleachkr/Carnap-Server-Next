@@ -6,7 +6,12 @@ import type {
   GradesVisibility,
   LatePolicyKind,
 } from "../domain/assignments";
-import type { CourseRole, MembershipStatus } from "../domain/courses";
+import {
+  COURSE_ROLES,
+  type CourseRole,
+  MEMBERSHIP_STATUSES,
+  type MembershipStatus,
+} from "../domain/courses";
 import type { ExternalIdentityProvider } from "../domain/users";
 import type { Translator } from "../i18n/translator";
 
@@ -268,18 +273,11 @@ export const GRADES_VISIBILITY_ORDER: readonly GradesVisibility[] = [
   "scheduled",
 ];
 
-export const COURSE_ROLE_ORDER: readonly CourseRole[] = [
-  "student",
-  "teacher_assistant",
-  "instructor",
-];
+/** The domain's order is the select's: least to most privileged. */
+export const COURSE_ROLE_ORDER: readonly CourseRole[] = COURSE_ROLES;
 
-export const MEMBERSHIP_STATUS_ORDER: readonly MembershipStatus[] = [
-  "active",
-  "invited",
-  "suspended",
-  "dropped",
-];
+export const MEMBERSHIP_STATUS_ORDER: readonly MembershipStatus[] =
+  MEMBERSHIP_STATUSES;
 
 /** No penalty first — the form's default — then the two shapes of one. */
 export const LATE_POLICY_KIND_ORDER: readonly LatePolicyKind[] = [

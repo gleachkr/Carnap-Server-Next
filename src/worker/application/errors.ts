@@ -72,3 +72,41 @@ export function forbidden(code = "forbidden"): AppHttpError {
     deferred.i18n.t("You are not allowed to do that."),
   );
 }
+
+/*
+ * The 404s more than one service raises. Each is one code and one sentence,
+ * kept here so that the services agree on both — a route's test pins the
+ * code, and a reader meets the sentence — rather than each spelling its own.
+ */
+
+export function assignmentNotFound(): AppHttpError {
+  return new AppHttpError(
+    404,
+    "assignment_not_found",
+    deferred.i18n.t("The assignment was not found."),
+  );
+}
+
+export function attemptNotFound(): AppHttpError {
+  return new AppHttpError(
+    404,
+    "attempt_not_found",
+    deferred.i18n.t("The attempt was not found."),
+  );
+}
+
+export function contentRevisionNotFound(): AppHttpError {
+  return new AppHttpError(
+    404,
+    "content_revision_not_found",
+    deferred.i18n.t("The content revision was not found."),
+  );
+}
+
+export function courseNotFound(): AppHttpError {
+  return new AppHttpError(
+    404,
+    "course_not_found",
+    deferred.i18n.t("The course was not found."),
+  );
+}

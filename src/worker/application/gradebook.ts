@@ -1,7 +1,9 @@
-import type {
-  Attempt,
-  EvaluationForScoring,
-  SubmissionForScoring,
+import {
+  type Attempt,
+  betterScored,
+  type EvaluationForScoring,
+  effectiveEvaluation,
+  type SubmissionForScoring,
 } from "../domain/assessment";
 import {
   type Assignment,
@@ -16,10 +18,11 @@ import type { LtiResourceLink } from "../domain/lti";
 import { timestampNow } from "../domain/time";
 import type { User } from "../domain/users";
 import { deferred } from "../i18n/deferred";
+import { assignmentInCourse } from "./assignment-lookup";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
 import { type ManifestPoints, parseManifestPoints } from "./content/artifact";
-import { AppHttpError } from "./errors";
+import { AppHttpError, contentRevisionNotFound } from "./errors";
 import { planGradeJobForSubject } from "./grade-passback";
 import { effectivePolicyAssignment } from "./policies";
 import type {
@@ -111,22 +114,6 @@ export interface CourseGradebook {
   readonly rows: readonly CourseGradebookRow[];
 }
 
-function assignmentNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "assignment_not_found",
-    deferred.i18n.t("The assignment was not found."),
-  );
-}
-
-function contentRevisionNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "content_revision_not_found",
-    deferred.i18n.t("The content revision was not found."),
-  );
-}
-
 function assignmentNotGraded(): AppHttpError {
   return new AppHttpError(
     403,
@@ -148,57 +135,6 @@ function gradeUnreleased(): AppHttpError {
     403,
     "grade_unreleased",
     deferred.i18n.t("This grade has not been released."),
-  );
-}
-
-function bestEvaluation(
-  current: EvaluationForScoring | undefined,
-  candidate: EvaluationForScoring,
-): EvaluationForScoring {
-  if (current === undefined) {
-    return candidate;
-  }
-
-  if (candidate.score > current.score) {
-    return candidate;
-  }
-
-  if (
-    candidate.score === current.score &&
-    candidate.createdAt > current.createdAt
-  ) {
-    return candidate;
-  }
-
-  return current;
-}
-
-function latestManualEvaluation(
-  evaluations: readonly EvaluationForScoring[],
-): EvaluationForScoring | null {
-  return (
-    evaluations
-      .filter((evaluation) => evaluation.evaluatorKind === "manual")
-      .sort((left, right) =>
-        `${right.createdAt} ${right.id}`.localeCompare(
-          `${left.createdAt} ${left.id}`,
-        ),
-      )[0] ?? null
-  );
-}
-
-function effectiveEvaluationForSubmission(
-  evaluations: readonly EvaluationForScoring[],
-): EvaluationForScoring | null {
-  const manual = latestManualEvaluation(evaluations);
-
-  if (manual !== null) {
-    return manual;
-  }
-
-  return evaluations.reduce<EvaluationForScoring | null>(
-    (current, evaluation) => bestEvaluation(current ?? undefined, evaluation),
-    null,
   );
 }
 
@@ -631,10 +567,9 @@ function collectEvaluations(
       continue;
     }
 
-    const evaluations = (inputs.evaluations.get(submission.id) ?? []).filter(
-      (evaluation) => evaluation.voidedAt === null,
+    const effective = effectiveEvaluation(
+      inputs.evaluations.get(submission.id) ?? [],
     );
-    const effective = effectiveEvaluationForSubmission(evaluations);
 
     if (effective === null) {
       continue;
@@ -650,7 +585,10 @@ function collectEvaluations(
 
     bestByExercise.set(
       submission.exerciseId,
-      bestEvaluation(bestByExercise.get(submission.exerciseId), adjusted),
+      betterScored(
+        bestByExercise.get(submission.exerciseId) ?? null,
+        adjusted,
+      ),
     );
   }
 }
@@ -1049,7 +987,11 @@ export class GradebookService {
   ): Promise<AssignmentGradebook> {
     await requireCourseStaff(this.options.stores, actor, courseId);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
     this.assertScored(assignment);
 
     const [students, inputs] = await Promise.all([
@@ -1146,7 +1088,11 @@ export class GradebookService {
   ): Promise<StudentAssignmentScore> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
     this.assertGraded(assignment);
 
     const now = timestampNow(this.options.now?.() ?? new Date());
@@ -1241,20 +1187,6 @@ export class GradebookService {
     if (assignment.assessmentMode === "none") {
       throw assignmentNotScored();
     }
-  }
-
-  private async assignmentInCourse(
-    courseId: AppId,
-    assignmentId: AppId,
-  ): Promise<Assignment> {
-    const assignment =
-      await this.options.stores.assignments.getById(assignmentId);
-
-    if (assignment === null || assignment.courseId !== courseId) {
-      throw assignmentNotFound();
-    }
-
-    return assignment;
   }
 
   private async activeStudents(courseId: AppId): Promise<User[]> {

@@ -1234,7 +1234,6 @@ msgstr "Course owner"
 msgid "Course record"
 msgstr "Course record"
 
-#: src/worker/application/admin.ts
 #: src/worker/application/courses.ts
 msgid "Course role is not supported."
 msgstr "Course role is not supported."
@@ -2277,7 +2276,6 @@ msgstr "Membership not changed"
 msgid "Membership not updated"
 msgstr "Membership not updated"
 
-#: src/worker/application/admin.ts
 #: src/worker/application/courses.ts
 msgid "Membership status is not supported."
 msgstr "Membership status is not supported."
@@ -3591,11 +3589,7 @@ msgstr "The answer is invalid."
 msgid "The assignment was not found in this course."
 msgstr "The assignment was not found in this course."
 
-#: src/worker/application/assignments.ts
-#: src/worker/application/attempts.ts
-#: src/worker/application/gradebook.ts
-#: src/worker/application/manual-grading.ts
-#: src/worker/application/submissions.ts
+#: src/worker/application/errors.ts
 msgid "The assignment was not found."
 msgstr "The assignment was not found."
 
@@ -3603,8 +3597,7 @@ msgstr "The assignment was not found."
 msgid "The assumptions discharged together here must share one formula."
 msgstr "The assumptions discharged together here must share one formula."
 
-#: src/worker/application/attempts.ts
-#: src/worker/application/submissions.ts
+#: src/worker/application/errors.ts
 msgid "The attempt was not found."
 msgstr "The attempt was not found."
 
@@ -3637,10 +3630,8 @@ msgstr "The cited subproof needs {lines} lines after its assumption."
 msgid "The content item was not found."
 msgstr "The content item was not found."
 
-#: src/worker/application/assignments.ts
 #: src/worker/application/content.ts
-#: src/worker/application/gradebook.ts
-#: src/worker/application/submissions.ts
+#: src/worker/application/errors.ts
 #: src/worker/routes/content.ts
 msgid "The content revision was not found."
 msgstr "The content revision was not found."
@@ -3657,8 +3648,7 @@ msgstr "The counterexample-to attribute must be validity, tautology, equivalence
 msgid "The course membership was not found."
 msgstr "The course membership was not found."
 
-#: src/worker/application/admin.ts
-#: src/worker/application/courses.ts
+#: src/worker/application/errors.ts
 msgid "The course was not found."
 msgstr "The course was not found."
 

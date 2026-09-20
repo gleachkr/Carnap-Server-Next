@@ -1,9 +1,8 @@
 import { createAppId } from "../domain/ids";
-import { assertJsonValue, type JsonValue } from "../domain/json";
 import type { LtiDeployment, LtiPlatform } from "../domain/lti";
-import { timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
 import type { TranslatableMessage } from "../i18n/translator";
+import { appendAdminAudit, auditMoment } from "./admin-audit";
 import type { AuthenticatedActor } from "./auth";
 import { requirePlatformCapability } from "./authorization";
 import { AppHttpError, badRequest } from "./errors";
@@ -173,7 +172,7 @@ export class LtiAdminService {
       );
     }
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const platform = await this.options.stores.lti.createPlatform({
       id: createAppId(now.date.getTime()),
       name,
@@ -185,7 +184,7 @@ export class LtiAdminService {
       createdAt: now.timestamp,
     });
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.lti_platform_registered",
       actorUserId: actor.user.id,
       metadata: { clientId, issuer, name, platformId: platform.id },
@@ -202,7 +201,7 @@ export class LtiAdminService {
   ): Promise<LtiPlatform> {
     requirePlatformCapability(actor, ["site_admin"]);
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const platform = await this.options.stores.lti.setPlatformDisabled(
       platformId,
       disabled ? now.timestamp : null,
@@ -213,7 +212,7 @@ export class LtiAdminService {
       throw platformNotFound();
     }
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: disabled
         ? "admin.lti_platform_disabled"
         : "admin.lti_platform_enabled",
@@ -262,7 +261,7 @@ export class LtiAdminService {
       );
     }
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
     const deployment = await this.options.stores.lti.createDeployment({
       id: createAppId(now.date.getTime()),
       platformId: platform.id,
@@ -271,7 +270,7 @@ export class LtiAdminService {
       createdAt: now.timestamp,
     });
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.lti_deployment_added",
       actorUserId: actor.user.id,
       metadata: {
@@ -312,9 +311,9 @@ export class LtiAdminService {
       );
     }
 
-    const now = this.now();
+    const now = auditMoment(this.options.now);
 
-    await this.audit({
+    await appendAdminAudit(this.options, {
       action: "admin.lti_deployment_removed",
       actorUserId: actor.user.id,
       metadata: {
@@ -323,32 +322,6 @@ export class LtiAdminService {
         platformId: platform.id,
       },
       timestamp: now.timestamp,
-    });
-  }
-
-  private now() {
-    const date = this.options.now?.() ?? new Date();
-
-    return { date, timestamp: timestampNow(date) };
-  }
-
-  private async audit(input: {
-    readonly action: string;
-    readonly actorUserId: string;
-    readonly metadata: JsonValue;
-    readonly timestamp: string;
-  }): Promise<void> {
-    assertJsonValue(input.metadata);
-
-    await this.options.stores.adminAudit.append({
-      action: input.action,
-      actorUserId: input.actorUserId,
-      createdAt: input.timestamp,
-      id: createAppId(new Date(input.timestamp).getTime()),
-      metadata: input.metadata,
-      requestId: this.options.requestId,
-      targetCourseId: null,
-      targetUserId: null,
     });
   }
 }

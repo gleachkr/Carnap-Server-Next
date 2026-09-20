@@ -1234,7 +1234,6 @@ msgstr "Kursinhaber"
 msgid "Course record"
 msgstr "Kursdatensatz"
 
-#: src/worker/application/admin.ts
 #: src/worker/application/courses.ts
 msgid "Course role is not supported."
 msgstr "Diese Kursrolle wird nicht unterstützt."
@@ -2277,7 +2276,6 @@ msgstr "Mitgliedschaft nicht geändert"
 msgid "Membership not updated"
 msgstr "Mitgliedschaft nicht aktualisiert"
 
-#: src/worker/application/admin.ts
 #: src/worker/application/courses.ts
 msgid "Membership status is not supported."
 msgstr "Dieser Mitgliedschaftsstatus wird nicht unterstützt."
@@ -3591,11 +3589,7 @@ msgstr "Die Antwort ist ungültig."
 msgid "The assignment was not found in this course."
 msgstr "Die Aufgabe wurde in diesem Kurs nicht gefunden."
 
-#: src/worker/application/assignments.ts
-#: src/worker/application/attempts.ts
-#: src/worker/application/gradebook.ts
-#: src/worker/application/manual-grading.ts
-#: src/worker/application/submissions.ts
+#: src/worker/application/errors.ts
 msgid "The assignment was not found."
 msgstr "Die Aufgabe wurde nicht gefunden."
 
@@ -3603,8 +3597,7 @@ msgstr "Die Aufgabe wurde nicht gefunden."
 msgid "The assumptions discharged together here must share one formula."
 msgstr "Die hier gemeinsam entlasteten Annahmen müssen dieselbe Formel haben."
 
-#: src/worker/application/attempts.ts
-#: src/worker/application/submissions.ts
+#: src/worker/application/errors.ts
 msgid "The attempt was not found."
 msgstr "Der Versuch wurde nicht gefunden."
 
@@ -3637,10 +3630,8 @@ msgstr "Der zitierte Teilbeweis braucht {lines} Zeilen nach seiner Annahme."
 msgid "The content item was not found."
 msgstr "Das Inhaltsobjekt wurde nicht gefunden."
 
-#: src/worker/application/assignments.ts
 #: src/worker/application/content.ts
-#: src/worker/application/gradebook.ts
-#: src/worker/application/submissions.ts
+#: src/worker/application/errors.ts
 #: src/worker/routes/content.ts
 msgid "The content revision was not found."
 msgstr "Die Inhaltsrevision wurde nicht gefunden."
@@ -3657,8 +3648,7 @@ msgstr "Das Attribut counterexample-to muss validity, tautology, equivalence, in
 msgid "The course membership was not found."
 msgstr "Die Kursmitgliedschaft wurde nicht gefunden."
 
-#: src/worker/application/admin.ts
-#: src/worker/application/courses.ts
+#: src/worker/application/errors.ts
 msgid "The course was not found."
 msgstr "Der Kurs wurde nicht gefunden."
 

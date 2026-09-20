@@ -1,8 +1,9 @@
-import type {
-  AttemptStatus,
-  Evaluation,
-  Submission,
-  ViewerEvaluation,
+import {
+  type AttemptStatus,
+  type Evaluation,
+  effectiveEvaluation,
+  type Submission,
+  type ViewerEvaluation,
 } from "../domain/assessment";
 import type { Assignment } from "../domain/assignments";
 import type {
@@ -28,6 +29,10 @@ import { assertJsonValue, type JsonValue } from "../domain/json";
 import { type Timestamp, timestampNow } from "../domain/time";
 import { deferred } from "../i18n/deferred";
 import type { Translator } from "../i18n/translator";
+import {
+  assignmentInCourse,
+  effectiveAssignmentForUser,
+} from "./assignment-lookup";
 import type { AuthenticatedActor } from "./auth";
 import { requireCourseRole, requireCourseStaff } from "./authorization";
 import {
@@ -38,12 +43,14 @@ import {
   createDefaultExerciseRegistry,
   type ExerciseRegistry,
 } from "./content/registry";
-import { AppHttpError, badRequest } from "./errors";
-import { GradebookService } from "./gradebook";
 import {
-  effectivePolicyAssignment,
-  effectiveSubmissionPolicy,
-} from "./policies";
+  AppHttpError,
+  attemptNotFound,
+  badRequest,
+  contentRevisionNotFound,
+} from "./errors";
+import { GradebookService } from "./gradebook";
+import { effectiveSubmissionPolicy } from "./policies";
 import type { AppStores } from "./stores";
 
 export interface SubmissionServiceOptions {
@@ -116,30 +123,6 @@ export interface StudentAssignmentResults {
   readonly released: boolean;
 }
 
-function assignmentNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "assignment_not_found",
-    deferred.i18n.t("The assignment was not found."),
-  );
-}
-
-function attemptNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "attempt_not_found",
-    deferred.i18n.t("The attempt was not found."),
-  );
-}
-
-function contentRevisionNotFound(): AppHttpError {
-  return new AppHttpError(
-    404,
-    "content_revision_not_found",
-    deferred.i18n.t("The content revision was not found."),
-  );
-}
-
 function exerciseNotFound(): AppHttpError {
   return new AppHttpError(
     404,
@@ -200,47 +183,6 @@ function automaticResult(value: unknown): JsonValue {
   return value;
 }
 
-/**
- * The evaluation a student should see for a submission: the latest manual grade
- * if one exists (it carries the instructor's comment and overrides), otherwise
- * the highest-scoring automatic evaluation. Voided evaluations are ignored. This
- * mirrors the gradebook's per-exercise selection so the results page agrees with
- * the recorded score.
- */
-function effectiveEvaluation(
-  evaluations: readonly Evaluation[],
-): Evaluation | null {
-  const live = evaluations.filter(
-    (evaluation) => evaluation.voidedAt === null,
-  );
-  const manual = live
-    .filter((evaluation) => evaluation.evaluatorKind === "manual")
-    .sort((left, right) =>
-      `${right.createdAt} ${right.id}`.localeCompare(
-        `${left.createdAt} ${left.id}`,
-      ),
-    )[0];
-
-  if (manual !== undefined) {
-    return manual;
-  }
-
-  return live.reduce<Evaluation | null>((best, evaluation) => {
-    if (best === null || evaluation.score > best.score) {
-      return evaluation;
-    }
-
-    if (
-      evaluation.score === best.score &&
-      evaluation.createdAt > best.createdAt
-    ) {
-      return evaluation;
-    }
-
-    return best;
-  }, null);
-}
-
 export class SubmissionService {
   private readonly exerciseRegistry: ExerciseRegistry;
 
@@ -258,7 +200,11 @@ export class SubmissionService {
   ): Promise<SubmitAnswerResult> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     if (assignment.assessmentMode === "none") {
       throw assignmentNotAssessed();
@@ -290,7 +236,11 @@ export class SubmissionService {
       idempotencyKey,
     );
     const policy = effectiveSubmissionPolicy(
-      await this.effectiveAssignmentForUser(assignment, actor.user.id),
+      await effectiveAssignmentForUser(
+        this.options.stores,
+        assignment,
+        actor.user.id,
+      ),
       attempt,
       now,
     );
@@ -490,7 +440,11 @@ export class SubmissionService {
   ): Promise<SubmissionHistoryEntry[]> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     const attempt =
       await this.options.stores.assessment.getAttempt(attemptId);
@@ -514,7 +468,11 @@ export class SubmissionService {
   ): Promise<StudentAssignmentResults> {
     await requireCourseRole(this.options.stores, actor, courseId, ["member"]);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
 
     const now = timestampNow(this.options.now?.() ?? new Date());
 
@@ -559,7 +517,11 @@ export class SubmissionService {
   ): Promise<SubmissionHistoryEntry[]> {
     await requireCourseStaff(this.options.stores, actor, courseId);
 
-    const assignment = await this.assignmentInCourse(courseId, assignmentId);
+    const assignment = await assignmentInCourse(
+      this.options.stores,
+      courseId,
+      assignmentId,
+    );
     // Every mode that collects work is listed, practice included. A reading
     // takes no submissions, so it needs no guard of its own: the attempt query
     // finds nothing and the page says so, which is true rather than merely
@@ -596,27 +558,6 @@ export class SubmissionService {
     return histories.flat();
   }
 
-  private async effectiveAssignmentForUser(
-    assignment: Assignment,
-    userId: AppId,
-  ) {
-    const [accommodation, override] = await Promise.all([
-      this.options.stores.courses.getAccommodation(
-        assignment.courseId,
-        userId,
-      ),
-      this.options.stores.assignments.getOverrideForAssignmentUser(
-        assignment.id,
-        userId,
-      ),
-    ]);
-
-    return effectivePolicyAssignment(assignment, {
-      accommodation,
-      override,
-    });
-  }
-
   /**
    * Re-derive the ledger row this submission may have changed. The artifact
    * is the one just parsed for `assignment.contentRevisionId`; handing its
@@ -641,20 +582,6 @@ export class SubmissionService {
             ]),
           },
     );
-  }
-
-  private async assignmentInCourse(
-    courseId: AppId,
-    assignmentId: AppId,
-  ): Promise<Assignment> {
-    const assignment =
-      await this.options.stores.assignments.getById(assignmentId);
-
-    if (assignment === null || assignment.courseId !== courseId) {
-      throw assignmentNotFound();
-    }
-
-    return assignment;
   }
 
   private async findIdempotentSubmission(
