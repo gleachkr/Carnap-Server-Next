@@ -454,6 +454,23 @@ describe("emission", () => {
     expect(sources.mm0).toContain("term c_b: obj;");
   });
 
+  test("a name with an underscore of its own goes in raw", () => {
+    // The mangling used to rewrite `_` to `s`, folding `F_2` onto `Fs2`.
+    // Nothing decodes a mangled name, and the prefix and arity sit at fixed
+    // ends, so the raw name is unambiguous — and distinct names stay distinct.
+    const atom = (name: string): Formula => ({
+      args: [{ name: "a", type: "constant" }],
+      name,
+      type: "predicate",
+    });
+    const sources = buildEquivalenceCheck(
+      { left: atom("F_2"), right: atom("Fs2"), type: "and" },
+      atom("Fs2"),
+    );
+    expect(sources.mm0).toContain("term p_F_2_1 (a0: obj): form;");
+    expect(sources.mm0).toContain("term p_Fs2_1 (a0: obj): form;");
+  });
+
   test("a purely propositional pair gets no first-order machinery", () => {
     const sources = buildEquivalenceCheck(parse("P/\\Q"), parse("Q/\\P"));
     expect(sources.mm0).not.toContain("sort obj;");

@@ -22,9 +22,10 @@
  *   - **Surface symbols are mangled with their arity** (`p_F_1` for `F` used
  *     one-place). Keying by arity keeps a formula pair that uses one letter at
  *     two arities from emitting a duplicate declaration — such a pair is simply
- *     inequivalent over distinct symbols, never invalid MM0. `_` is still
- *     encoded as `s`, which costs nothing and is what a spec declaring a
- *     subscripted letter of its own would need.
+ *     inequivalent over distinct symbols, never invalid MM0. The name goes
+ *     in raw: the prefix and arity sit at fixed ends, so `p_F_2_1` is `F_2`
+ *     one-place and nothing else — and nothing decodes these anyway, they are
+ *     opaque keys.
  *
  * The signature's own symbols are applied by bare prefix application
  * (`(p_F_1 c_a)`); the four connectives the theory always declares use its
@@ -53,14 +54,6 @@ export interface EquivalenceCheckSources {
   readonly placeholder: { readonly line: number; readonly character: number };
 }
 
-/** `F_2` → `Fs2`. The mangled forms below use `_` as their own separator, so
- * a name may not carry one. Names now come from the spec's constructors, and
- * an MM0 identifier may contain `_`, so a spec declaring both `F_2` and `Fs2`
- * would collide here; the shipped languages declare neither. */
-function encodeName(name: string): string {
-  return name.replace(/_/g, "s");
-}
-
 /** Mutable signature accumulated while emitting, handed to `buildTheory`. */
 interface Collector {
   readonly predicates: Map<string, number>;
@@ -76,13 +69,13 @@ function declarePredicate(
   name: string,
   arity: number,
 ): string {
-  const mangled = `p_${encodeName(name)}_${String(arity)}`;
+  const mangled = `p_${name}_${String(arity)}`;
   collector.predicates.set(mangled, arity);
   return mangled;
 }
 
 function declareConstant(collector: Collector, name: string): string {
-  const mangled = `c_${encodeName(name)}`;
+  const mangled = `c_${name}`;
   collector.constants.add(mangled);
   return mangled;
 }
@@ -92,7 +85,7 @@ function declareFunction(
   name: string,
   arity: number,
 ): string {
-  const mangled = `f_${encodeName(name)}_${String(arity)}`;
+  const mangled = `f_${name}_${String(arity)}`;
   collector.functions.set(mangled, arity);
   return mangled;
 }
