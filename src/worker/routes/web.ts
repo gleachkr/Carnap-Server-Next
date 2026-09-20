@@ -36,6 +36,7 @@ import { FAVICON_CACHE_CONTROL, FAVICON_SVG } from "../web/favicon";
 import { fieldValue, redirect, safeNext } from "../web/html";
 import { renderProfile } from "../web/profile";
 import { clearSessionCookies, setSessionCookies } from "./session-cookies";
+import { webActorOrLogin } from "./support";
 
 interface LoginDeliveryResult {
   readonly confirmationUrl: string;
@@ -234,16 +235,6 @@ webRoutes.get("/login/confirm", async (context) => {
     });
   }
 });
-
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
-}
 
 webRoutes.get("/profile", async (context) => {
   const loginRedirect = webActorOrLogin(context);

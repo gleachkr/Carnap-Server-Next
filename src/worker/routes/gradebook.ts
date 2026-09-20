@@ -1,7 +1,5 @@
 import { type Context, Hono } from "hono";
 
-import { courseStaffTierFor } from "../application/authorization";
-import { badRequest } from "../application/errors";
 import {
   type AssignmentGradebook,
   assignmentGradebookCsv,
@@ -11,7 +9,6 @@ import {
 } from "../application/gradebook";
 import { SubmissionService } from "../application/submissions";
 import type { Assignment } from "../domain/assignments";
-import type { CourseStaffTier } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
 import { type AppBindings, requireAuthenticated } from "../http";
 import { storesForContext } from "../stores";
@@ -22,6 +19,12 @@ import {
   renderStudentAssignmentResults,
 } from "../web/gradebook";
 import { redirect, wantsHtml } from "../web/html";
+import {
+  courseTitleFor,
+  requiredParam,
+  staffTierFor,
+  webActorOrLogin,
+} from "./support";
 
 function gradebookService(context: Context<AppBindings>): GradebookService {
   return new GradebookService({ stores: storesForContext(context) });
@@ -29,19 +32,6 @@ function gradebookService(context: Context<AppBindings>): GradebookService {
 
 function submissionService(context: Context<AppBindings>): SubmissionService {
   return new SubmissionService({ stores: storesForContext(context) });
-}
-
-function requiredParam(context: Context<AppBindings>, name: string): string {
-  const value = context.req.param(name);
-
-  if (value === undefined) {
-    throw badRequest(
-      "missing_route_parameter",
-      "A route parameter is missing.",
-    );
-  }
-
-  return value;
 }
 
 interface CourseNaming {
@@ -65,28 +55,11 @@ async function courseNamingFor(
   };
 }
 
-async function courseTitleFor(
-  context: Context<AppBindings>,
-  courseId: string,
-): Promise<string> {
-  return (await courseNamingFor(context, courseId)).title;
-}
-
 /**
  * The tier of a staff member the service has already admitted — so a null
  * here is unreachable, and treated as an instructor rather than as a state
  * the page could mean anything by.
  */
-async function staffTierFor(
-  context: Context<AppBindings>,
-  actor: Parameters<typeof courseStaffTierFor>[1],
-  courseId: string,
-): Promise<CourseStaffTier> {
-  return (
-    (await courseStaffTierFor(storesForContext(context), actor, courseId)) ??
-    "instructor"
-  );
-}
 
 function publicAssignment(assignment: Assignment) {
   return {
@@ -106,16 +79,6 @@ function publicScore(score: AssignmentScore) {
     status: score.status,
     userId: score.userId,
   };
-}
-
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
 }
 
 function assignmentGradebookJson(gradebook: AssignmentGradebook) {

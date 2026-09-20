@@ -54,6 +54,7 @@ import {
   wantsHtml,
 } from "../web/html";
 import { revisionDateText } from "../web/revisions";
+import { readJsonObject, requiredParam, webActorOrLogin } from "./support";
 
 /**
  * A day, then revalidate. Longer than the built-in theories' hour because a
@@ -90,39 +91,6 @@ function contentService(context: Context<AppBindings>): ContentService {
   return new ContentService({ stores: storesForContext(context) });
 }
 
-async function readJsonObject(
-  context: Context<AppBindings>,
-): Promise<Record<string, unknown>> {
-  try {
-    const body = await context.req.json();
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw badRequest("invalid_json", "A JSON object is required.");
-    }
-
-    return body as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      throw error;
-    }
-
-    throw badRequest("invalid_json", "A JSON object is required.");
-  }
-}
-
-function requiredParam(context: Context<AppBindings>, name: string): string {
-  const value = context.req.param(name);
-
-  if (value === undefined) {
-    throw badRequest(
-      "missing_route_parameter",
-      "A route parameter is missing.",
-    );
-  }
-
-  return value;
-}
-
 /**
  * The login redirect an anonymous request gets, or `null` for a signed-in one.
  *
@@ -134,15 +102,6 @@ function requiredParam(context: Context<AppBindings>, name: string): string {
  * would be the existence oracle every 404 in `ContentService` was written to
  * close, rebuilt out of status codes.
  */
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
-}
 
 /**
  * Who is asking, allowing for nobody. `requireAuthenticated` is still what the

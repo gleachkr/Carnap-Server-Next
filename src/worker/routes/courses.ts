@@ -22,6 +22,7 @@ import {
 import type { Translator } from "../i18n/translator";
 import { kickGradePassback } from "../passback";
 import { storesForContext } from "../stores";
+import { coursesCrumb } from "../web/breadcrumbs";
 import type { CourseView } from "../web/components";
 import {
   type CourseDetailPage,
@@ -38,6 +39,13 @@ import {
   wantsHtml,
 } from "../web/html";
 import { ltiServiceForContext } from "./lti";
+import {
+  type FormErrorChrome,
+  formErrorOrThrow,
+  readJsonObject,
+  requiredParam,
+  webActorOrLogin,
+} from "./support";
 
 interface CreateCourseBody {
   readonly title?: unknown;
@@ -82,28 +90,13 @@ function courseService(context: Context<AppBindings>): CourseService {
   return new CourseService({ stores: storesForContext(context) });
 }
 
+/** A failed course form answers under the course-list crumb. */
+const COURSES_CHROME: FormErrorChrome = {
+  breadcrumb: (i18n) => [coursesCrumb(i18n)],
+};
+
 function gradebookService(context: Context<AppBindings>): GradebookService {
   return new GradebookService({ stores: storesForContext(context) });
-}
-
-async function readJsonObject(
-  context: Context<AppBindings>,
-): Promise<Record<string, unknown>> {
-  try {
-    const body = await context.req.json();
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw badRequest("invalid_json", "A JSON object is required.");
-    }
-
-    return body as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      throw error;
-    }
-
-    throw badRequest("invalid_json", "A JSON object is required.");
-  }
 }
 
 function publicCourse(course: Course) {
@@ -157,29 +150,6 @@ function publicEnrollmentLink(
     expiresAt: enrollmentLink.expiresAt,
     revokedAt: enrollmentLink.revokedAt,
   };
-}
-
-function requiredParam(context: Context<AppBindings>, name: string): string {
-  const value = context.req.param(name);
-
-  if (value === undefined) {
-    throw badRequest(
-      "missing_route_parameter",
-      "A route parameter is missing.",
-    );
-  }
-
-  return value;
-}
-
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
 }
 
 function canCreateCourse(
@@ -300,17 +270,14 @@ async function updateCourseFromForm(
 
     return redirect(`/courses/${courseId}?courseUpdated=1`);
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Course not updated"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Course not updated"),
+    );
   }
 }
 
@@ -328,19 +295,16 @@ async function setCourseArchivedFromForm(
       `/courses/${courseId}?${archived ? "archived" : "unarchived"}=1`,
     );
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: archived
-          ? i18n.t("Course not archived")
-          : i18n.t("Course not unarchived"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      archived
+        ? i18n.t("Course not archived")
+        : i18n.t("Course not unarchived"),
+    );
   }
 }
 
@@ -473,17 +437,14 @@ async function createEnrollmentLinkFromForm(
       `/courses/${courseId}?enrollToken=${encodeURIComponent(created.token)}`,
     );
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Enrollment link not created"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Enrollment link not created"),
+    );
   }
 }
 
@@ -502,17 +463,14 @@ async function revokeEnrollmentLinkFromForm(
 
     return redirect(`/courses/${courseId}?revoked=1`);
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Enrollment link not revoked"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Enrollment link not revoked"),
+    );
   }
 }
 
@@ -819,17 +777,14 @@ async function addStaffFromForm(
 
     return redirect(`/courses/${courseId}?staffAdded=1`);
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Staff member not added"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Staff member not added"),
+    );
   }
 }
 
@@ -871,17 +826,14 @@ async function upsertAccommodationFromForm(
 
     return redirect(`/courses/${courseId}?accommodationSaved=1`);
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Accommodation not saved"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Accommodation not saved"),
+    );
   }
 }
 
@@ -924,17 +876,14 @@ async function cloneCourseFromForm(
 
     return redirect(`/courses/${cloned.course.id}?cloned=1`);
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Course not cloned"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Course not cloned"),
+    );
   }
 }
 
@@ -1008,17 +957,14 @@ courseRoutes.post("/:courseId/memberships/:membershipId", async (context) => {
 
     return redirect(`/courses/${courseId}?membershipUpdated=1`);
   } catch (error) {
-    if (error instanceof AppHttpError) {
-      const i18n = context.get("i18n");
+    const i18n = context.get("i18n");
 
-      return renderCourseError(context, {
-        message: error.localize(i18n),
-        status: error.status,
-        title: i18n.t("Membership not updated"),
-      });
-    }
-
-    throw error;
+    return formErrorOrThrow(
+      context,
+      error,
+      COURSES_CHROME,
+      i18n.t("Membership not updated"),
+    );
   }
 });
 

@@ -1170,8 +1170,8 @@ msgstr "Could not work out what the last line states."
 msgid "Counterexample row"
 msgstr "Counterexample row"
 
-#: src/worker/routes/assignments.ts
 #: src/worker/routes/gradebook.ts
+#: src/worker/routes/support.ts
 #: src/worker/web/admin.tsx
 #: src/worker/web/courses.tsx
 msgid "Course"

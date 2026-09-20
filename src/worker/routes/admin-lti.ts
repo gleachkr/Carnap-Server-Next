@@ -1,6 +1,6 @@
 import { type Context, Hono } from "hono";
 
-import { AppHttpError, badRequest } from "../application/errors";
+import { badRequest } from "../application/errors";
 import { LtiAdminService } from "../application/lti-admin";
 import type { LtiDeployment, LtiPlatform } from "../domain/lti";
 import {
@@ -12,13 +12,19 @@ import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
 import { renderAdminLtiPlatforms } from "../web/admin-lti";
 import { adminCrumb } from "../web/breadcrumbs";
-import { renderFormError } from "../web/errors";
 import {
   fieldValue,
   isFormSubmission,
   redirect,
   wantsHtml,
 } from "../web/html";
+import {
+  type FormErrorChrome,
+  formErrorOrThrow,
+  readJsonObject,
+  requiredParam,
+  webActorOrLogin,
+} from "./support";
 
 interface RegisterPlatformBody {
   readonly authorizationEndpoint?: unknown;
@@ -41,73 +47,13 @@ function ltiAdminService(context: Context<AppBindings>): LtiAdminService {
   });
 }
 
-async function readJsonObject(
-  context: Context<AppBindings>,
-): Promise<Record<string, unknown>> {
-  try {
-    const body = await context.req.json();
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw badRequest("invalid_json", "A JSON object is required.");
-    }
-
-    return body as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      throw error;
-    }
-
-    throw badRequest("invalid_json", "A JSON object is required.");
-  }
-}
-
-function requiredParam(context: Context<AppBindings>, name: string): string {
-  const value = context.req.param(name);
-
-  if (value === undefined) {
-    throw badRequest(
-      "missing_route_parameter",
-      "A route parameter is missing.",
-    );
-  }
-
-  return value;
-}
-
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
-}
-
-function formErrorOrThrow(
-  context: Context<AppBindings>,
-  error: unknown,
-  title: string,
-): Response {
-  if (error instanceof AppHttpError && isFormSubmission(context)) {
-    const i18n = context.get("i18n");
-
-    return renderFormError(context, {
-      breadcrumb: [
-        adminCrumb(i18n),
-        {
-          href: "/admin/lti",
-          label: i18n.t("LTI platforms"),
-        },
-      ],
-      message: error.localize(i18n),
-      status: error.status,
-      title,
-    });
-  }
-
-  throw error;
-}
+/** A failed LTI-admin form answers under the platform list's crumbs. */
+const LTI_CHROME: FormErrorChrome = {
+  breadcrumb: (i18n) => [
+    adminCrumb(i18n),
+    { href: "/admin/lti", label: i18n.t("LTI platforms") },
+  ],
+};
 
 function requiredString(value: unknown, code: string, label: string): string {
   if (typeof value !== "string") {
@@ -249,6 +195,7 @@ adminLtiRoutes.post("/platforms", async (context) => {
     return formErrorOrThrow(
       context,
       error,
+      LTI_CHROME,
       i18n.t("Platform not registered"),
     );
   }
@@ -272,7 +219,12 @@ adminLtiRoutes.post("/platforms/:platformId/disable", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Platform not disabled"));
+    return formErrorOrThrow(
+      context,
+      error,
+      LTI_CHROME,
+      i18n.t("Platform not disabled"),
+    );
   }
 });
 
@@ -294,7 +246,12 @@ adminLtiRoutes.post("/platforms/:platformId/enable", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Platform not enabled"));
+    return formErrorOrThrow(
+      context,
+      error,
+      LTI_CHROME,
+      i18n.t("Platform not enabled"),
+    );
   }
 });
 
@@ -335,7 +292,12 @@ adminLtiRoutes.post("/platforms/:platformId/deployments", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Deployment not added"));
+    return formErrorOrThrow(
+      context,
+      error,
+      LTI_CHROME,
+      i18n.t("Deployment not added"),
+    );
   }
 });
 
@@ -362,6 +324,7 @@ adminLtiRoutes.post(
       return formErrorOrThrow(
         context,
         error,
+        LTI_CHROME,
         i18n.t("Deployment not removed"),
       );
     }

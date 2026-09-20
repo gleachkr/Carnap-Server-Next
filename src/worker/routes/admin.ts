@@ -5,7 +5,7 @@ import {
   type PlatformCapabilityCommand,
   type SupportMembershipCommand,
 } from "../application/admin";
-import { AppHttpError, badRequest } from "../application/errors";
+import { badRequest } from "../application/errors";
 import { resolveUsers, type UserDirectory } from "../application/users";
 import type {
   AdminAuditEvent,
@@ -24,13 +24,19 @@ import {
   renderBootstrap,
 } from "../web/admin";
 import { adminCrumb } from "../web/breadcrumbs";
-import { renderFormError } from "../web/errors";
 import {
   fieldValue,
   isFormSubmission,
   redirect,
   wantsHtml,
 } from "../web/html";
+import {
+  type FormErrorChrome,
+  formErrorOrThrow,
+  readJsonObject,
+  requiredParam,
+  webActorOrLogin,
+} from "./support";
 
 interface BootstrapBody {
   readonly bootstrapToken?: unknown;
@@ -54,69 +60,10 @@ function adminService(context: Context<AppBindings>): AdminService {
   });
 }
 
-async function readJsonObject(
-  context: Context<AppBindings>,
-): Promise<Record<string, unknown>> {
-  try {
-    const body = await context.req.json();
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw badRequest("invalid_json", "A JSON object is required.");
-    }
-
-    return body as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      throw error;
-    }
-
-    throw badRequest("invalid_json", "A JSON object is required.");
-  }
-}
-
-function requiredParam(context: Context<AppBindings>, name: string): string {
-  const value = context.req.param(name);
-
-  if (value === undefined) {
-    throw badRequest(
-      "missing_route_parameter",
-      "A route parameter is missing.",
-    );
-  }
-
-  return value;
-}
-
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
-}
-
-/**
- * On a form submission, render a friendly HTML error page instead of leaking a
- * JSON envelope; JSON API callers re-throw to the global JSON error handler.
- */
-function formErrorOrThrow(
-  context: Context<AppBindings>,
-  error: unknown,
-  title: string,
-): Response {
-  if (error instanceof AppHttpError && isFormSubmission(context)) {
-    return renderFormError(context, {
-      breadcrumb: [adminCrumb(context.get("i18n"))],
-      message: error.localize(context.get("i18n")),
-      status: error.status,
-      title,
-    });
-  }
-
-  throw error;
-}
+/** A failed admin form answers under the admin crumb. */
+const ADMIN_CHROME: FormErrorChrome = {
+  breadcrumb: (i18n) => [adminCrumb(i18n)],
+};
 
 function publicUser(user: User) {
   return {
@@ -378,7 +325,12 @@ adminRoutes.post("/bootstrap", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Bootstrap failed"));
+    return formErrorOrThrow(
+      context,
+      error,
+      ADMIN_CHROME,
+      i18n.t("Bootstrap failed"),
+    );
   }
 });
 
@@ -445,7 +397,12 @@ adminRoutes.post("/users/:userId/capabilities", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Capability not granted"));
+    return formErrorOrThrow(
+      context,
+      error,
+      ADMIN_CHROME,
+      i18n.t("Capability not granted"),
+    );
   }
 });
 
@@ -470,7 +427,12 @@ adminRoutes.post("/users/:userId/capabilities/revoke", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Capability not revoked"));
+    return formErrorOrThrow(
+      context,
+      error,
+      ADMIN_CHROME,
+      i18n.t("Capability not revoked"),
+    );
   }
 });
 
@@ -491,7 +453,12 @@ adminRoutes.post("/users/:userId/suspend", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("User not suspended"));
+    return formErrorOrThrow(
+      context,
+      error,
+      ADMIN_CHROME,
+      i18n.t("User not suspended"),
+    );
   }
 });
 
@@ -512,7 +479,12 @@ adminRoutes.post("/users/:userId/reactivate", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("User not reactivated"));
+    return formErrorOrThrow(
+      context,
+      error,
+      ADMIN_CHROME,
+      i18n.t("User not reactivated"),
+    );
   }
 });
 
@@ -536,7 +508,12 @@ adminRoutes.post("/memberships", async (context) => {
   } catch (error) {
     const i18n = context.get("i18n");
 
-    return formErrorOrThrow(context, error, i18n.t("Membership not changed"));
+    return formErrorOrThrow(
+      context,
+      error,
+      ADMIN_CHROME,
+      i18n.t("Membership not changed"),
+    );
   }
 });
 

@@ -43,7 +43,6 @@ import type {
   ContentItem,
   ContentRevision,
 } from "../domain/content";
-import type { CourseStaffTier } from "../domain/courses";
 import {
   resolveExerciseExam,
   resolveExerciseFeedback,
@@ -82,6 +81,15 @@ import {
   redirect,
   wantsHtml,
 } from "../web/html";
+import {
+  courseTitleFor,
+  type FormErrorChrome,
+  readJsonObject,
+  requiredParam,
+  staffTierFor,
+  webActorOrLogin,
+  withFormErrorPage,
+} from "./support";
 
 interface CreateAssignmentBody {
   readonly availableFrom?: unknown;
@@ -169,77 +177,11 @@ function manualGradingService(
   return new ManualGradingService({ stores: storesForContext(context) });
 }
 
-async function readJsonObject(
-  context: Context<AppBindings>,
-): Promise<Record<string, unknown>> {
-  try {
-    const body = await context.req.json();
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw badRequest("invalid_json", "A JSON object is required.");
-    }
-
-    return body as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      throw error;
-    }
-
-    throw badRequest("invalid_json", "A JSON object is required.");
-  }
-}
-
-function requiredParam(context: Context<AppBindings>, name: string): string {
-  const value = context.req.param(name);
-
-  if (value === undefined) {
-    throw badRequest(
-      "missing_route_parameter",
-      "A route parameter is missing.",
-    );
-  }
-
-  return value;
-}
-
-function webActorOrLogin(context: Context<AppBindings>): Response | null {
-  if (context.get("actor") !== null) {
-    return null;
-  }
-
-  const next = new URL(context.req.url).pathname;
-
-  return redirect(`/login?next=${encodeURIComponent(next)}`, 302);
-}
-
-async function courseTitleFor(
-  context: Context<AppBindings>,
-  courseId: string,
-): Promise<string> {
-  const course = await storesForContext(context).courses.getById(courseId);
-  const i18n = context.get("i18n");
-
-  // The fallback is our own word, not the author's, so it is translated: it
-  // stands in a breadcrumb beside chrome the reader is already seeing in their
-  // language.
-  return course?.title ?? i18n.t("Course");
-}
-
 /**
  * The tier of a staff member a service has already admitted to a staff page —
  * so a null here is unreachable, and read as an instructor rather than as a
  * state the page could mean anything by.
  */
-async function staffTierFor(
-  context: Context<AppBindings>,
-  actor: AuthenticatedActor,
-  courseId: string,
-): Promise<CourseStaffTier> {
-  return (
-    (await courseStaffTierFor(storesForContext(context), actor, courseId)) ??
-    "instructor"
-  );
-}
 
 async function assignmentTitleFor(
   context: Context<AppBindings>,
@@ -2255,78 +2197,42 @@ assignmentRoutes.get(
   (context) => instructorContentDocument(context),
 );
 
-/**
- * Wrap a form-capable handler so a rejected browser submission renders an HTML
- * error page instead of leaking the JSON error envelope. JSON API callers
- * re-throw to the global JSON error handler.
- *
- * `title` is a function of the translator rather than a string because these
- * wrappers are applied when the routes are *registered* — once per isolate,
- * with no request and so no reader's language in sight. Resolving it inside the
- * handler is what keeps the heading in the same language as the error beneath
- * it.
- */
-function withFormErrorPage(
-  handler: (context: Context<AppBindings>) => Promise<Response>,
-  title: (i18n: Translator) => string,
-  options: { readonly chromeless?: boolean } = {},
-): (context: Context<AppBindings>) => Promise<Response> {
-  return async (context) => {
-    try {
-      return await handler(context);
-    } catch (error) {
-      if (error instanceof AppHttpError && isFormSubmission(context)) {
-        const i18n = context.get("i18n");
-
-        return renderFormError(context, {
-          // A chrome-free page's error page has to be chrome-free too, and a
-          // breadcrumb up to the course list is exactly the navigation it is
-          // chrome-free in order not to offer.
-          ...(options.chromeless === true
-            ? { chromeless: true }
-            : { breadcrumb: [coursesCrumb(i18n)] }),
-          message: error.localize(i18n),
-          status: error.status,
-          title: title(i18n),
-        });
-      }
-
-      throw error;
-    }
-  };
-}
+/** A failed course form answers under the course-list crumb. */
+const COURSES_CHROME: FormErrorChrome = {
+  breadcrumb: (i18n) => [coursesCrumb(i18n)],
+};
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/late-policy",
-  withFormErrorPage(upsertLatePolicy, (i18n) =>
+  withFormErrorPage(upsertLatePolicy, COURSES_CHROME, (i18n) =>
     i18n.t("Late policy not saved"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/overrides",
-  withFormErrorPage(upsertAssignmentOverride, (i18n) =>
+  withFormErrorPage(upsertAssignmentOverride, COURSES_CHROME, (i18n) =>
     i18n.t("Override not saved"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/grade-visibility",
-  withFormErrorPage(setGradeVisibility, (i18n) =>
+  withFormErrorPage(setGradeVisibility, COURSES_CHROME, (i18n) =>
     i18n.t("Grades not updated"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/submissions/:submissionId/evaluations",
-  withFormErrorPage(createManualEvaluation, (i18n) =>
+  withFormErrorPage(createManualEvaluation, COURSES_CHROME, (i18n) =>
     i18n.t("Evaluation not saved"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/submissions/:submissionId/approve",
-  withFormErrorPage(approveSubmission, (i18n) =>
+  withFormErrorPage(approveSubmission, COURSES_CHROME, (i18n) =>
     i18n.t("Submission not approved"),
   ),
 );
@@ -2338,7 +2244,9 @@ assignmentRoutes.get(
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/attempts/:attemptId/reset",
-  withFormErrorPage(resetAttempt, (i18n) => i18n.t("Attempt not reset")),
+  withFormErrorPage(resetAttempt, COURSES_CHROME, (i18n) =>
+    i18n.t("Attempt not reset"),
+  ),
 );
 
 assignmentRoutes.get(
@@ -2358,14 +2266,14 @@ assignmentRoutes.post(
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/content-revision",
-  withFormErrorPage(repointPublishedAssignment, (i18n) =>
+  withFormErrorPage(repointPublishedAssignment, COURSES_CHROME, (i18n) =>
     i18n.t("Assignment not updated"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/excuses",
-  withFormErrorPage(excuseAssignmentExercise, (i18n) =>
+  withFormErrorPage(excuseAssignmentExercise, COURSES_CHROME, (i18n) =>
     i18n.t("Excuse not saved"),
   ),
 );
@@ -2405,6 +2313,7 @@ assignmentRoutes.post(
 
       return context.json(assignmentDetailJson(detail, context.get("i18n")));
     },
+    COURSES_CHROME,
     (i18n) => i18n.t("Assignment not published"),
   ),
 );
@@ -2426,6 +2335,7 @@ assignmentRoutes.post(
 
       return context.json(assignmentDetailJson(detail, context.get("i18n")));
     },
+    COURSES_CHROME,
     (i18n) => i18n.t("Assignment not unpublished"),
   ),
 );
@@ -2447,6 +2357,7 @@ assignmentRoutes.post(
 
       return context.json({ deleted: true });
     },
+    COURSES_CHROME,
     (i18n) => i18n.t("Assignment not deleted"),
   ),
 );
@@ -2525,7 +2436,7 @@ assignmentRoutes.get(
 
 assignmentRoutes.post(
   "/:courseId/assignments/:assignmentId/attempts",
-  withFormErrorPage(beginAttempt, (i18n) =>
+  withFormErrorPage(beginAttempt, COURSES_CHROME, (i18n) =>
     i18n.t("Attempt could not start"),
   ),
 );
@@ -2537,7 +2448,7 @@ assignmentRoutes.get(
 
 assignmentRoutes.post(
   "/:courseId/assignments/:assignmentId/attempts/:attemptId/submissions",
-  withFormErrorPage(submitAnswer, (i18n) =>
+  withFormErrorPage(submitAnswer, COURSES_CHROME, (i18n) =>
     i18n.t("Answer could not be submitted"),
   ),
 );
@@ -2556,9 +2467,9 @@ assignmentRoutes.post(
   "/:courseId/assignments/:assignmentId/start",
   withFormErrorPage(
     beginAttemptFromGate,
-    (i18n) => i18n.t("Attempt could not start"),
     // The gate is framed by an LMS; so is anything it renders in its place.
     { chromeless: true },
+    (i18n) => i18n.t("Attempt could not start"),
   ),
 );
 

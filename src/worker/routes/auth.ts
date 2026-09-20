@@ -6,7 +6,7 @@ import {
   AuthService,
   SESSION_COOKIE_NAME,
 } from "../application/auth";
-import { AppHttpError, badRequest } from "../application/errors";
+import { badRequest } from "../application/errors";
 import {
   type AppBindings,
   clientIpAddress,
@@ -16,6 +16,7 @@ import { deferred } from "../i18n/deferred";
 import { turnstileForContext } from "../infrastructure/turnstile";
 import { storesForContext } from "../stores";
 import { clearSessionCookies, setSessionCookies } from "./session-cookies";
+import { readJsonObject } from "./support";
 
 interface StartLoginBody {
   readonly email?: unknown;
@@ -24,26 +25,6 @@ interface StartLoginBody {
 
 interface ConfirmLoginBody {
   readonly loginToken?: unknown;
-}
-
-async function readJsonObject(
-  context: Context<AppBindings>,
-): Promise<Record<string, unknown>> {
-  try {
-    const body = await context.req.json();
-
-    if (typeof body !== "object" || body === null || Array.isArray(body)) {
-      throw badRequest("invalid_json", "A JSON object is required.");
-    }
-
-    return body as Record<string, unknown>;
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      throw error;
-    }
-
-    throw badRequest("invalid_json", "A JSON object is required.");
-  }
 }
 
 function authService(context: Context<AppBindings>): AuthService {
