@@ -6,3 +6,5 @@ node_modules/
 public/
 AGENTS.md
 .dev.vars
+# Per-deployment Wrangler configs, copied from wrangler.jsonc (see its header)
+wrangler.*.jsonc

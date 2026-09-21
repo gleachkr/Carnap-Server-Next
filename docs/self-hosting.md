@@ -79,6 +79,25 @@ CARNAP_ENV=local bun run serve
 Unlike the loopback container example, the server does not configure a
 loopback-only bind address. Restrict access before using local mode.
 
+## Quick start: Cloudflare Workers
+
+`wrangler.jsonc` is the local-development configuration and the template for
+a deployment. Copy it to `wrangler.<name>.jsonc` (gitignored, so upgrades do
+not touch it), then in the copy set `name`, replace the D1 entry with the
+database `wrangler d1 create` reports, and set `CARNAP_ENV` to anything but
+`local`; the comments in the file walk through each field. Secrets go in with
+`wrangler secret put`. Every command then takes the copy:
+
+```sh
+bun run build:client
+npx wrangler deploy -c wrangler.<name>.jsonc
+bun run db:migrate:remote -- -c wrangler.<name>.jsonc
+```
+
+The environment variables below apply to the Worker as `vars` or secrets,
+except `PORT` and the database URL and token: the Worker's database is its D1
+binding.
+
 ## First run: becoming the site administrator
 
 A fresh database has no user who can create courses. To grant your account

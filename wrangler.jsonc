@@ -1,4 +1,23 @@
 {
+  // Local development, and the template for a deployment of your own.
+  //
+  // `bun run dev` reads this file as it stands: a local D1 under .wrangler/
+  // and CARNAP_ENV=local, which lets a login token come back in the response
+  // so you can sign in without an email sender.
+  //
+  // To deploy an instance, copy this file to wrangler.<yours>.jsonc (that
+  // pattern is gitignored, so upgrades never conflict with your settings)
+  // and, in the copy:
+  //   - set `name` — it becomes the worker's name and its workers.dev host;
+  //   - replace `d1_databases` with the database `wrangler d1 create` gives
+  //     you, keeping the `DB` binding and `migrations_dir`;
+  //   - set CARNAP_ENV to anything but "local", and AUTH_LOGIN_EMAIL_FROM to
+  //     the address login mail is sent from.
+  // Secrets (the email API key, LTI keys, ADMIN_BOOTSTRAP_TOKEN) are set with
+  // `wrangler secret put`, never written here. Then every command takes the
+  // copy: `wrangler deploy -c wrangler.<yours>.jsonc`, and
+  // `bun run db:migrate:remote -- -c wrangler.<yours>.jsonc` to apply
+  // migrations to its database. docs/self-hosting.md has the rest.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "carnap-server",
   "main": "src/worker/index.ts",
@@ -20,11 +39,11 @@
   // `wrangler tail` at that moment. With it they land in the dashboard
   // (Workers & Pages → the worker → Logs), queryable after the fact.
   //
-  // The pilot's log-review habit: after each teaching day, open that view,
-  // filter to error level, and search for the three event names above.
-  // Retention is Cloudflare's — three days on the free plan, seven on paid —
-  // so "after the fact" means days, not weeks; a report of last month's
-  // failure finds nothing.
+  // The log-review habit: after each teaching day, open that view, filter to
+  // error level, and search for the three event names above. Retention is
+  // Cloudflare's — three days on the free plan, seven on paid — so "after
+  // the fact" means days, not weeks; a report of last month's failure finds
+  // nothing.
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
@@ -39,43 +58,5 @@
   ],
   "vars": {
     "CARNAP_ENV": "local"
-  },
-  "env": {
-    "preview": {
-      "vars": {
-        "CARNAP_ENV": "preview"
-      }
-    },
-    "demo": {
-      // Named environments do NOT inherit top-level bindings, so the demo
-      // deploy repeats assets/d1/triggers/observability here. Deploy with
-      // `wrangler deploy --env demo`. The env name makes the worker
-      // carnap-server-demo.<subdomain>.workers.dev (honest "this is a demo"
-      // URL). CARNAP_ENV is any non-"local" value → production behaviour
-      // (login tokens only ever leave by email; cookies follow the request's
-      // protocol whatever the value).
-      "vars": {
-        "CARNAP_ENV": "demo",
-        "AUTH_LOGIN_EMAIL_FROM": "noreply@grahamlk.me"
-      },
-      "assets": {
-        "directory": "./public"
-      },
-      "triggers": {
-        "crons": ["*/5 * * * *"]
-      },
-      "observability": {
-        "enabled": true,
-        "head_sampling_rate": 1
-      },
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "carnap-server-demo",
-          "database_id": "bb6bb092-dbc4-453c-871b-475c7f93bb9f",
-          "migrations_dir": "src/worker/infrastructure/database/migrations"
-        }
-      ]
-    }
   }
 }
