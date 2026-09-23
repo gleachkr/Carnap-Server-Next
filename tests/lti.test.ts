@@ -342,6 +342,104 @@ describe("LTI 1.3 core launches", () => {
     });
   });
 
+  // An account made by an email-less launch holds an `.invalid` address, and
+  // login links are the only native credential, so without this it could
+  // never sign in natively or be reached by mail. The same platform vouching
+  // for the same subject is the trust the creation path already extends.
+  test("a later launch gives a placeholder account its asserted email", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { email: null });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      await instructorLaunch(app, env, { email: "ida@example.test" });
+
+      const user = await stores.users.getById(userId);
+
+      expect(user?.email).toBe("ida@example.test");
+      // Asserted, not proven, exactly as at creation.
+      expect(user?.emailVerifiedAt).toBeNull();
+    });
+  });
+
+  // The platform owns the address: a student who changes it in the LMS sees
+  // the change on their next launch, unverified until they use it.
+  test("a launch replaces the email with the one its platform now asserts", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { email: "ida@example.test" });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      // As if Ida had signed in natively with the old address.
+      await stores.users.createExternalIdentity({
+        id: "identity-native-ida",
+        userId,
+        provider: "native",
+        providerSubject: "ida@example.test",
+        createdAt: NOW,
+      });
+      await stores.users.markEmailVerified(userId, NOW);
+      await instructorLaunch(app, env, { email: "ida@new.example.test" });
+
+      const user = await stores.users.getById(userId);
+
+      expect(user?.email).toBe("ida@new.example.test");
+      expect(user?.emailVerifiedAt).toBeNull();
+      // The old mailbox no longer signs in to this account.
+      await expect(
+        stores.users.getExternalIdentity("native", "ida@example.test"),
+      ).resolves.toBeNull();
+
+      // A launch asserting nothing leaves the address where it is.
+      await instructorLaunch(app, env, { email: null });
+
+      expect((await stores.users.getById(userId))?.email).toBe(
+        "ida@new.example.test",
+      );
+    });
+  });
+
+  // Both accounts have history, so joining them would be a merge; the launch
+  // goes ahead on the placeholder account and leaves the address alone.
+  test("an asserted email another account holds is not adopted", async () => {
+    await withLtiApp(async (app, env, stores, fixture) => {
+      await instructorLaunch(app, env, { email: null });
+
+      const userId = await launchedUserId(
+        stores,
+        fixture,
+        "lms-instructor-1",
+      );
+
+      await stores.users.create({
+        id: "user-holder",
+        email: "ida@example.test",
+        name: "Ida Elsewhere",
+        createdAt: NOW,
+      });
+
+      const launch = await instructorLaunch(app, env, {
+        email: "ida@example.test",
+      });
+
+      expect(launch.response.status).toBe(303);
+      expect((await stores.users.getById(userId))?.email).toMatch(
+        /^lti-.+@lti\.invalid$/,
+      );
+      expect((await stores.users.getById("user-holder"))?.email).toBe(
+        "ida@example.test",
+      );
+    });
+  });
+
   test("a launch does not overwrite a name its owner chose", async () => {
     await withLtiApp(async (app, env, stores, fixture) => {
       await instructorLaunch(app, env, { email: null, name: null });

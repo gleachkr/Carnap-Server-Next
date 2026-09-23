@@ -606,6 +606,40 @@ class SqliteUserStore implements UserStore {
     );
   }
 
+  async adoptEmail(
+    id: AppId,
+    from: string,
+    to: string,
+    updatedAt: string,
+  ): Promise<User | null> {
+    const swap = this.db
+      .update(users)
+      .set({ email: to, emailVerifiedAt: null, updatedAt })
+      .where(
+        and(
+          eq(users.id, id),
+          eq(users.email, from),
+          sql`not exists (select 1 from users as other where other.email = ${to})`,
+        ),
+      )
+      .returning();
+    // Conditioned on the account now holding `to`, so the old address's
+    // sign-in goes only when the swap above took, never on its own.
+    const retire = this.db
+      .delete(externalIdentities)
+      .where(
+        and(
+          eq(externalIdentities.userId, id),
+          eq(externalIdentities.provider, "native"),
+          eq(externalIdentities.providerSubject, from),
+          sql`exists (select 1 from users as owner where owner.id = ${id} and owner.email = ${to})`,
+        ),
+      );
+    const [swapped] = await this.db.batch([swap, retire]);
+
+    return nullableSingle(swapped);
+  }
+
   async disable(id: AppId, disabledAt: string): Promise<User | null> {
     return nullableSingle(
       await this.db

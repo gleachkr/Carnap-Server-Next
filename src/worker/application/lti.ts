@@ -745,10 +745,11 @@ export class LtiService {
     // Only the name: a challenge records what it needs to identify the pending
     // link, and a student ID is not part of that. Nothing is lost, because the
     // identity now exists and the person's next launch — the one that follows
-    // this approval — adopts the ID through the ordinary path.
+    // this approval — adopts the ID through the ordinary path. No email
+    // either: the account was found by its address, so it already has one.
     await this.adoptAssertedProfile(
       user,
-      { name: challenge.name, studentId: null },
+      { email: null, name: challenge.name, studentId: null },
       nowDate,
     );
 
@@ -1374,7 +1375,8 @@ export class LtiService {
 
   /**
    * Fill in whatever this account is still missing that the platform asserts —
-   * its name, its student ID — leaving anything already recorded alone.
+   * its email, its name, its student ID — leaving anything already recorded
+   * alone.
    *
    * The assertions a launch carries used to reach the row only at creation,
    * which left two populations permanently incomplete: accounts made by a
@@ -1391,34 +1393,87 @@ export class LtiService {
    * but a name the account holder chose is still theirs, and a platform that
    * disagrees with it does not get to win.
    *
-   * One method for both fields rather than one per field, because the whole
+   * One method for every field rather than one per field, because the whole
    * bug being fixed here is a write that reaches some of the paths a launch can
    * take and not others: there are four, and they are easy to add a fifth to.
    * The argument is structural so that a {@link NormalizedLaunch} satisfies it
    * as-is and the link-approval path, which has only a name to offer, can say
    * so in a literal.
    *
-   * The two fields follow two rules, split by who owns the fact. A name is
+   * The fields follow different rules, split by who owns the fact. A name is
    * the account holder's: a launch fills a blank and never writes over a
    * value, because a platform that disagrees with a name its owner chose
    * does not get to win. A student ID is the institution's: the latest
    * launch wins, because the platform speaking for the institution is the
    * fresher source, and — with no form for the value anywhere — "correct it
-   * in the LMS and relaunch" is the only repair a wrong ID can have.
+   * in the LMS and relaunch" is the only repair a wrong ID can have. An email
+   * follows the student ID's rule, since the platform owns it as well; the
+   * difference is that it is a credential (see `adoptAssertedEmail`).
    */
   private async adoptAssertedProfile(
     user: User,
     asserted: {
+      readonly email: string | null;
       readonly name: string | null;
       readonly studentId: string | null;
     },
     nowDate: Date,
   ): Promise<User> {
+    const withEmail = await this.adoptAssertedEmail(
+      user,
+      asserted.email,
+      nowDate,
+    );
+
     return this.adoptAssertedStudentId(
-      await this.adoptAssertedName(user, asserted.name, nowDate),
+      await this.adoptAssertedName(withEmail, asserted.name, nowDate),
       asserted.studentId,
       nowDate,
     );
+  }
+
+  /**
+   * Record the address the platform asserts, over whatever the account holds.
+   *
+   * The platform owns the address, as it owns the student ID: a student who
+   * changes their email in the LMS should see the change reach Carnap on
+   * their next launch, and an account made by a launch that carried no email
+   * — which holds an `.invalid` placeholder, and so could never sign in
+   * natively or be reached by mail — gets a real one as soon as its platform
+   * starts sharing the claim.
+   *
+   * This is the creation path's trust extended to every launch: a registered
+   * platform vouching for its users' addresses. It is a real grant, because
+   * login links are the only native credential, so whoever the platform names
+   * can sign in. The address lands unverified for the creation path's reason
+   * too: asserted, not proven, until someone proves the mailbox by using it.
+   * And the old address stops signing in: the store retires the native
+   * identity keyed on it, so a change the platform makes to cut off a mailbox
+   * does cut it off.
+   *
+   * An address another account already holds is left alone, and the account
+   * keeps what it had. The link challenge is not the answer to that
+   * collision: it attaches a new identity to an existing account, whereas
+   * here both accounts have history of their own, and joining them would be
+   * a merge, which nothing in a launch should do as a side effect.
+   */
+  private async adoptAssertedEmail(
+    user: User,
+    asserted: string | null,
+    nowDate: Date,
+  ): Promise<User> {
+    if (asserted === null || user.email === asserted) {
+      return user;
+    }
+
+    const updated = await this.options.stores.users.adoptEmail(
+      user.id,
+      user.email,
+      asserted,
+      timestampNow(nowDate),
+    );
+
+    return updated ?? user;
   }
 
   private async adoptAssertedName(

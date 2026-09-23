@@ -138,6 +138,29 @@ export interface UserStore {
     updatedAt: Timestamp,
   ): Promise<User | null>;
   /**
+   * Swap the address an account holds for one a launch asserts — only while
+   * the account still holds `from`, and only if no other account holds `to`.
+   * The address lands unverified, and the native sign-in keyed on the old
+   * address is removed with it: native identities are keyed by address, so
+   * leaving that row would let the old mailbox keep signing in to the
+   * account after the address had moved. Returns null when the swap did not
+   * happen:
+   * the user is missing, their address has changed since the caller read it,
+   * or the new one is taken.
+   *
+   * Both conditions belong in the statement. The first is a compare-and-swap,
+   * so of two launches in flight at once, the one that read a stale address
+   * does not write over the other's. The second keeps a collision a quiet
+   * no-op rather than a unique-index failure in the middle of someone's
+   * launch.
+   */
+  adoptEmail(
+    id: AppId,
+    from: string,
+    to: string,
+    updatedAt: Timestamp,
+  ): Promise<User | null>;
+  /**
    * Rewrite the fields a user controls about themselves — name and language —
    * as one row update, because they are saved as one form.
    */

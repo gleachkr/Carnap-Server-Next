@@ -325,6 +325,85 @@ export function describeStorageContract(
           stores.users.adoptStudentId("missing-user", "20261234", NOW),
         ).resolves.toBeNull();
 
+        // The email swap is a compare-and-swap on the address the caller
+        // read, and a taken address makes it a no-op rather than a unique
+        // failure. What lands is unverified.
+        const placeholder = await stores.users.create({
+          id: "user-placeholder",
+          email: "lti-user-placeholder@lti.invalid",
+          name: null,
+          createdAt: NOW,
+        });
+
+        await expect(
+          stores.users.adoptEmail(
+            placeholder.id,
+            placeholder.email,
+            user.email,
+            NOW,
+          ),
+        ).resolves.toBeNull();
+        await expect(
+          stores.users.adoptEmail(
+            placeholder.id,
+            "stale@lti.invalid",
+            "fresh@example.test",
+            NOW,
+          ),
+        ).resolves.toBeNull();
+        await expect(
+          stores.users.adoptEmail(
+            placeholder.id,
+            placeholder.email,
+            "fresh@example.test",
+            "2026-01-07T00:00:00.000Z",
+          ),
+        ).resolves.toMatchObject({
+          email: "fresh@example.test",
+          emailVerifiedAt: null,
+          updatedAt: "2026-01-07T00:00:00.000Z",
+        });
+        await expect(
+          stores.users.adoptEmail(
+            "missing-user",
+            placeholder.email,
+            "other@example.test",
+            NOW,
+          ),
+        ).resolves.toBeNull();
+
+        // Native sign-in is keyed by address, so the swap retires the old
+        // address's native identity with it — and only when the swap takes.
+        await stores.users.createExternalIdentity({
+          id: "identity-fresh",
+          userId: placeholder.id,
+          provider: "native",
+          providerSubject: "fresh@example.test",
+          createdAt: NOW,
+        });
+        await expect(
+          stores.users.adoptEmail(
+            placeholder.id,
+            "fresh@example.test",
+            user.email,
+            NOW,
+          ),
+        ).resolves.toBeNull();
+        await expect(
+          stores.users.getExternalIdentity("native", "fresh@example.test"),
+        ).resolves.toMatchObject({ userId: placeholder.id });
+        await expect(
+          stores.users.adoptEmail(
+            placeholder.id,
+            "fresh@example.test",
+            "newer@example.test",
+            NOW,
+          ),
+        ).resolves.toMatchObject({ email: "newer@example.test" });
+        await expect(
+          stores.users.getExternalIdentity("native", "fresh@example.test"),
+        ).resolves.toBeNull();
+
         await expect(
           stores.users.deleteExternalIdentity(identity.id),
         ).resolves.toBe(true);
