@@ -274,6 +274,12 @@ infixr iff: $↔$ prec 20;
 -- unwritable in a goal statement. They stay student spellings through the
 -- elaboration layer instead, which is stripped before the engine sees the
 -- file, and are marked input-only so `∀` remains what a formula displays as.
+-- `Ax.` and `Ex.` are Magnus's dotted spelling, offered here too so it works in
+-- both editions; the dot is a separator, not a scope marker. Each rule is one
+-- pass in declaration order, so the dotted pair must come first: run after
+-- the undotted one, it would find `∀ x .` and the dot would be left unread.
+--| @syntax elab $ A ?x:var . $ => $ ∀ ?x $ input-only
+--| @syntax elab $ E ?x:var . $ => $ ∃ ?x $ input-only
 --| @syntax elab $ A ?x:var $ => $ ∀ ?x $ input-only
 --| @syntax elab $ E ?x:var $ => $ ∃ ?x $ input-only
 

@@ -58,15 +58,16 @@
 -- that wants function symbols declares them in an `aufbau-mm0` block extending
 -- this file, or sets its proofs in Calgary.
 --
--- **No `A`/`E` spelling for the quantifiers, unlike Carnap.** Carnap reads
--- `AxFx` as `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, resolving
--- the collision by parser try-order with backtracking. This file cannot: an
--- MM0 math token has one meaning, so — as in Calgary — `A` stays a predicate
--- letter and the quantifier gets ASCII spellings of its own, `@` and `3`. The
--- input-only elaboration Calgary uses to give `A`/`E` back is not available
--- here either, because it is a token rewrite with no backtracking and
--- juxtaposition makes `AxAxx` genuinely ambiguous with it. Type `@x` or `∀x`.
--- This is the one place a student's habits from Carnap will not transfer.
+-- **`A`/`E` quantify only with a dot, unlike Carnap.** Carnap reads `AxFx` as
+-- `∀x Fx` and `Axy` as the predicate `A` of `x` and `y`, resolving the
+-- collision by parser try-order with backtracking. This file cannot: an MM0
+-- math token has one meaning, so — as in Calgary — `A` stays a predicate
+-- letter and the quantifier gets ASCII spellings of its own, `@` and `3`.
+-- Calgary's undotted elaboration of `A x` is not available here, because it
+-- is a token rewrite with no backtracking and juxtaposition makes `AxAxx`
+-- genuinely ambiguous with it. `Ax.` is: no predicate is followed by a dot, so
+-- `Ax.Axx` can only be `∀x Axx`. Type `Ax.`, `@x` or `∀x`. The undotted `AxFx`
+-- is the one place a student's habits from Carnap will not transfer.
 --
 -- **`v` is not a disjunction spelling**, because `v` is one of the names.
 --
@@ -258,8 +259,11 @@ infixr iff: $≡$ prec 20;
 infixr iff: $↔$ prec 20;
 
 -- `@` and `3` are the ASCII quantifier spellings, as in Calgary. `A` and `E`
--- are *not* offered: see the header — they are predicate letters, and under
--- juxtaposition no rewrite can tell `AxAxx` apart from a nest of quantifiers.
+-- are offered only as `Ax.`/`Ex.`: see the header — they are predicate letters,
+-- and under juxtaposition only the dot tells `Ax.Axx` apart from a predicate.
+-- The dot is a separator, not a scope marker: `Ax.Fx & Ga` is `(∀xFx) & Ga`.
+--| @syntax elab $ A ?x:var . $ => $ ∀ ?x $ input-only
+--| @syntax elab $ E ?x:var . $ => $ ∃ ?x $ input-only
 --| @syntax role forall
 term all {x: var} (ph: wff x): wff;
 prefix all: $@$ prec 40;

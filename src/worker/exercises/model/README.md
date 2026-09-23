@@ -139,6 +139,7 @@ and supported roles. The main Calgary rules are:
   A function letter without arguments is a constant. Names do not take
   arguments, and variables cannot also be function letters.
 - Quantifiers accept `A`, `E`, `∀`, `∃`, `@`, and `3`, followed by a variable.
+  `Ax.` and `Ex.`, with a dot after the variable, also work.
 - Core connectives accept `~`, `/\`, `\/`, `->`, and `<->`, with aliases
   `-`/`¬`, `∧`/`^`/`&`, `∨`/`|`, `=>`/`>`/`→`/`⊃`, and
   `<=>`/`<>`/`↔`/`≡` respectively.

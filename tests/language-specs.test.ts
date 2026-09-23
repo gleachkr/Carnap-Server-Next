@@ -249,6 +249,14 @@ describe("language specs", () => {
       expect(display(id, "!?")).toBe("⊥");
     });
 
+    test("the dotted `Ax.` quantifies too, as it does in Magnus", () => {
+      expect(display(id, "Ax.F(x)")).toBe("∀xF(x)");
+      expect(display(id, "Ax.Ey.R(x,y)")).toBe("∀x∃yR(x,y)");
+      expect(display(id, "Ax.A(x)")).toBe("∀xA(x)");
+      // A separator, not a scope marker.
+      expect(display(id, "Ax.F(x) -> G(a)")).toBe("∀xF(x) → G(a)");
+    });
+
     test("predicates take parentheses; juxtaposition is the other edition", () => {
       expect(refusal(id, "Fab")).toContain("unexpected_token");
     });
@@ -343,11 +351,23 @@ describe("language specs", () => {
     test("`A` stays a predicate letter and `v` stays a name", () => {
       // Carnap reads `AxFx` as `∀x Fx`, resolving the collision by parser
       // try-order. An MM0 math token has one meaning, so this file spells the
-      // quantifiers `@`/`3` instead and `A` never means ∀. `v` is one of the
-      // names a–w, so it cannot be a disjunction either.
+      // quantifiers `@`/`3` instead and an undotted `A` never means ∀. `v` is
+      // one of the names a–w, so it cannot be a disjunction either.
       expect(refusal(id, "AxFx")).toContain("unexpected_token");
+      expect(refusal(id, "AxAxx")).toContain("unexpected_token");
+      expect(refusal(id, "Axx")).toContain("free_variable");
       expect(refusal(id, "P v Q")).toContain("unexpected_token");
       expect(display(id, "@xFx")).toBe("∀xFx");
+    });
+
+    test("a dot after the variable makes `A` and `E` quantifiers", () => {
+      // No predicate is followed by a dot, so `Ax.` cannot be read as one.
+      expect(display(id, "Ax.Fx")).toBe("∀xFx");
+      expect(display(id, "Ax.Axx")).toBe("∀xAxx");
+      expect(display(id, "Ax.Ey.(Axy -> Eyx)")).toBe("∀x∃y(Axy → Eyx)");
+      expect(display(id, "~Ex.Fx")).toBe("¬∃xFx");
+      // A separator, not a scope marker.
+      expect(display(id, "Ax.Fx & Ga")).toBe("∀xFx & Ga");
     });
 
     test("every sentence is closed", () => {

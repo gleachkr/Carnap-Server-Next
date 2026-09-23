@@ -941,7 +941,8 @@ used by the course's textbook.
   a sentence letter.
 - Names are `a`–`e`, variables `s`–`z`, and function letters `f`–`r`.
   A bare function letter is a constant; `f(x)` is an application.
-- Quantifiers accept `A`/`E`, `@`/`3`, and `∀`/`∃` before a variable.
+- Quantifiers accept `A`/`E`, `@`/`3`, and `∀`/`∃` before a variable, and
+  `Ax.`/`Ex.` with a dot after it.
 - Connectives accept `~`, `/\`, `\/`, `->`, `<->`, and symbol aliases.
   Output uses logical symbols, with `∧` for conjunction.
 - Identity accepts `=` and inequality accepts `!=` or `≠`.
@@ -960,8 +961,9 @@ used by the course's textbook.
 
 - Predicates use juxtaposition: `Fa`, `Rab`.
 - Names are `a`–`w`, variables `x`–`z`; there are no function letters.
-- Quantifiers use `@`/`3` or `∀`/`∃`, not `A`/`E`. Those remain predicate
-  letters in this language.
+- Quantifiers use `@`/`3`, `∀`/`∃`, or `A`/`E` with a dot after the
+  variable: `Ax.Fx`. Without the dot, `A` and `E` are predicate letters, so
+  `AxFx` is refused and `Axx` is the predicate `A`.
 - Canonical conjunction is `&`.
 - Conjunction/disjunction bind more tightly than conditional/biconditional.
   Parentheses around an atom, such as `(P)`, are allowed.
