@@ -108,6 +108,28 @@ describe("content document", () => {
     );
   });
 
+  test("the prose and figure measures are tokens an author can reset", () => {
+    // Not the spelling the default stylesheet's comment quotes, so the
+    // search below finds the author's rule and not that one.
+    const override =
+      ":root { --prose-measure: 90%; --figure-measure: 100%; }";
+    const html = contentDocumentHtml({
+      ...DOCUMENT_LOCALE,
+      body: raw("<p>Prose.</p>"),
+      css: override,
+      title: "Prose",
+    });
+
+    // The column and its blocks read the measures through the tokens, never
+    // as fixed widths, and the author's stylesheet follows the defaults, so
+    // the same specificity on :root takes the width back.
+    expect(html).toContain("max-width: var(--figure-measure)");
+    expect(html).toContain("max-width: var(--prose-measure)");
+    expect(html.indexOf(override)).toBeGreaterThan(
+      html.indexOf("--prose-measure: 38rem"),
+    );
+  });
+
   test("cssReset drops the default styles and font links", () => {
     const html = contentDocumentHtml({
       ...DOCUMENT_LOCALE,

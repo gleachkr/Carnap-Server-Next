@@ -165,9 +165,13 @@
   --shell-gutter: clamp(1.25rem, 4vw, 3.75rem);
   /* How wide a page's content actually gets: the shell's cap less its two
      gutters. Anything that has to line up with an ordinary page's measure
-     reaches for this — the breadcrumb above the split columns, and the
-     standalone content document, which has no shell to sit inside. */
+     reaches for this, as the breadcrumb above the split columns does. */
   --page-measure: calc(85rem - 2 * var(--shell-gutter));
+  /* The content document's two line lengths: prose, and the wider column
+     its figures fill (content-document.css). Author-facing, like the
+     exercise tokens: a document's own :root takes either back. */
+  --prose-measure: 38rem;
+  --figure-measure: 54rem;
   color-scheme: light dark;
 }
 

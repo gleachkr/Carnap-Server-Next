@@ -17,14 +17,30 @@ body {
   padding: 1.25rem clamp(1rem, 2vw, 1.5rem);
 }
 
-/* Inside the iframe this never binds — the host card is always narrower than
-   a page's measure — so it does its work only in the fullscreen view, where
-   the document owns the whole monitor and would otherwise set lines the full
-   width of it. Author CSS is appended after this, so a document that wants
-   the width back only has to say so. */
+/* Two measures, so a truth table is not held to a sentence's line length.
+   Prose runs to --prose-measure; the column itself runs to --figure-measure,
+   and the blocks that are figures — code, tables, display math, exercises,
+   theory panels — fill it. Everything shares the column's left edge, and
+   only the figures run on to the right.
+
+   Both are tokens, defined with the palette, so they stay the author's:
+   author CSS is appended after the defaults, and
+   `:root { --prose-measure: 100%; --figure-measure: 100% }` in a document's
+   own stylesheet restores the full width. */
 .content-column {
   margin-inline: auto;
-  max-width: var(--page-measure);
+  max-width: var(--figure-measure);
+}
+
+.content-column > * {
+  max-width: var(--prose-measure);
+}
+
+/* 100% rather than none: a table's scroll box depends on being capped at the
+   column, or a wide one would push past the sheet instead of scrolling. */
+.content-column
+> :is(pre, table, math, figure, form, .exercise, .aufbau-theory) {
+  max-width: 100%;
 }
 
 /* Prose tables. The shared table rules are written for the app's ledgers —

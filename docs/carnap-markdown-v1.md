@@ -1353,6 +1353,25 @@ A stylesheet that provides both schemes writes `color-scheme: light dark`
 and gives each colour as a `light-dark(light, dark)` pair, as the default
 stylesheet does.
 
+### Line length
+
+The default stylesheet sets two measures. Paragraphs, headings, lists, and
+the other prose blocks run to `--prose-measure` (38rem, about 80 characters),
+so a line of text stays readable however wide the frame is. Figures — code
+samples, tables, display math, exercises, and theory panels — run to the
+wider `--figure-measure` (54rem), so a truth table or a proof editor is not
+held to a sentence's line length. Both share one left edge; only the figures
+run on to the right.
+
+Both are tokens, so either can be changed or undone on `:root`. This puts
+everything back to the full width of the frame:
+
+```md
+:::style
+:root { --prose-measure: 100%; --figure-measure: 100%; }
+:::
+```
+
 ### Linking external stylesheets
 
 `src` links a stylesheet and can be combined with an inline body:
