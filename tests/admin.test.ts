@@ -214,6 +214,27 @@ describe("platform administration", () => {
       expect(meResponse.status).toBe(403);
       expect(startResponse.status).toBe(202);
       expect(confirmResponse.status).toBe(403);
+
+      // The user list has no status column: an active account goes unsaid,
+      // and a suspended one is badged beside its email.
+      const listResponse = await appRequest(
+        createTestApp(),
+        "/admin/users?query=example.test",
+        { headers: { ...authHeaders(admin), Accept: "text/html" } },
+        env,
+      );
+      const list = await listResponse.text();
+
+      expect(listResponse.status).toBe(200);
+      expect(list).not.toContain("<th>Status</th>");
+      expect(list).toContain(
+        `<a href="/admin/users/${target.actorId}">blocked@example.test</a> ` +
+          '<span class="status-badge status-badge-danger">Suspended</span>',
+      );
+      expect(list).toContain(
+        `<a href="/admin/users/${admin.actorId}">admin@example.test</a></td>`,
+      );
+      expect(list.match(/<span class="status-badge/g)?.length).toBe(1);
     });
   });
 

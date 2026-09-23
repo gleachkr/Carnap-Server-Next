@@ -47,13 +47,18 @@ const SelectOptions: FC<{
   </>
 );
 
+/**
+ * A suspended account, flagged beside its email. Every other account is
+ * active, and a column saying so on each row buried the one it was there for.
+ */
 const UserStatusBadge: FC<{ readonly user: User }> = ({ user }) => {
   const i18n = useI18n();
 
-  return user.disabledAt === null ? (
-    <StatusBadge label={i18n.t("Active")} tone="ok" />
-  ) : (
-    <StatusBadge label={i18n.t("Suspended")} tone="danger" />
+  return user.disabledAt === null ? null : (
+    <>
+      {" "}
+      <StatusBadge label={i18n.t("Suspended")} tone="danger" />
+    </>
   );
 };
 
@@ -109,7 +114,6 @@ const UsersTable: FC<{ readonly users: readonly User[] }> = ({ users }) => {
         <tr>
           <th>{i18n.t("Email")}</th>
           <th>{i18n.t("Name")}</th>
-          <th>{i18n.t("Status")}</th>
         </tr>
       </thead>
       <tbody>
@@ -117,11 +121,9 @@ const UsersTable: FC<{ readonly users: readonly User[] }> = ({ users }) => {
           <tr>
             <td>
               <a href={`/admin/users/${user.id}`}>{user.email}</a>
-            </td>
-            <td>{user.name ?? ""}</td>
-            <td>
               <UserStatusBadge user={user} />
             </td>
+            <td>{user.name ?? ""}</td>
           </tr>
         ))}
       </tbody>
