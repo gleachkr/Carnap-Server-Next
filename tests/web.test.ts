@@ -205,6 +205,21 @@ describe("native web workflow", () => {
         jsonRequest({}, instructor),
         env,
       );
+      // A second row that is exceptional twice over: an unpublished draft,
+      // and one kept off the students' list.
+      const draftResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/assignments`,
+        jsonRequest(
+          {
+            contentRevisionId: revision.revision.id,
+            listed: false,
+            title: "Draft homework",
+          },
+          instructor,
+        ),
+        env,
+      );
       const instructorCoursePage = await appRequest(
         createTestApp(),
         coursePath,
@@ -233,6 +248,7 @@ describe("native web workflow", () => {
       expect(revisionResponse.status).toBe(201);
       expect(assignmentResponse.status).toBe(201);
       expect(publishResponse.status).toBe(200);
+      expect(draftResponse.status).toBe(201);
       expect(instructorCoursePage.status).toBe(200);
       expect(linkResponse.status).toBe(303);
       expect(enrollToken).toStartWith("aenr_");
@@ -276,6 +292,22 @@ describe("native web workflow", () => {
           `${assignment.assignment.id}/gradebook">Grades</a>`,
       );
       expect(instructorCourseHtml).not.toContain("Manage assignments");
+      // The column is the assignment's type, which every row has, as plain
+      // text; a badge appears only on a row that is out of the ordinary.
+      expect(instructorCourseHtml).toContain(
+        '<th data-sort="" scope="col">Type</th>',
+      );
+      expect(instructorCourseHtml).not.toContain(
+        '<th data-sort="" scope="col">Status</th>',
+      );
+      expect(instructorCourseHtml).toContain(
+        '<td data-sort-value="0">Graded</td>',
+      );
+      expect(instructorCourseHtml).toContain(
+        '<td data-sort-value="11">Graded <span class="status-badge ' +
+          'status-badge-warn">Draft</span> <span class="status-badge ' +
+          'status-badge-warn">Hidden</span></td>',
+      );
       // The enrollment bar has no room for a visible label, so the expiry
       // field carries its name on itself — and the same shape as the labelled
       // fields elsewhere: no `step`, and a hidden sibling holding the instant.
@@ -386,13 +418,15 @@ describe("native web workflow", () => {
       );
       expect(archivedHtml).toContain("<dt>Your status</dt><dd>Active</dd>");
 
-      // The list says whose status its column holds, for the same reason, and
-      // the archived drawer only exists once something is in it — with the
-      // count on the summary, so a closed drawer still says where the course
-      // went.
+      // The list has no status column to be misread that way: an active
+      // membership goes unsaid, and only an exception is badged beside the
+      // role. The archived drawer only exists once something is in it — with
+      // the count on the summary, so a closed drawer still says where the
+      // course went.
       expect(beforeListHtml).toContain(
-        '<th data-sort="" scope="col">Your status</th>',
+        '<th data-sort="" scope="col">Role</th></tr>',
       );
+      expect(beforeListHtml).not.toContain('<span class="status-badge');
       // The element, not the class: the page's inlined stylesheet names the
       // class whether or not anything wears it.
       expect(beforeListHtml).not.toContain(
@@ -409,7 +443,7 @@ describe("native web workflow", () => {
   });
 
   test("the members roster ships what its columns sort by", async () => {
-    await withStorage(async (_storage, env) => {
+    await withStorage(async (storage, env) => {
       const instructor = await webLogin(env, "instructor@example.test");
       // Two students and a promotion, so every column below has more than one
       // value in it.
@@ -473,6 +507,27 @@ describe("native web workflow", () => {
 
       expect(promoted.status).toBe(303);
 
+      // And one exception, so the roster has a status worth saying.
+      const courseId = coursePath.split("/").at(-1) ?? "";
+      const aaronMembership = (
+        await storage.stores.courses.listMembershipsForCourse(courseId)
+      ).find((membership) => membership.userId === aaron.actorId);
+      const suspended = await appRequest(
+        createTestApp(),
+        `${coursePath}/memberships/${aaronMembership?.id}`,
+        formRequest(
+          {
+            csrfToken: instructor.csrfToken,
+            role: "student",
+            status: "suspended",
+          },
+          instructor.cookieHeader,
+        ),
+        env,
+      );
+
+      expect(suspended.status).toBe(303);
+
       const page = await appRequest(
         createTestApp(),
         coursePath,
@@ -490,10 +545,10 @@ describe("native web workflow", () => {
 
       expect(start).toBeGreaterThan(-1);
 
-      // Three of the four headings are sortable; the actions column has
+      // Two of the three headings are sortable; the actions column has
       // nothing in it to sort by. The browser turns these into buttons — a
       // reader with no script sees no control, because there is none.
-      expect(roster.match(/<th data-sort="" scope="col">/g)?.length).toBe(3);
+      expect(roster.match(/<th data-sort="" scope="col">/g)?.length).toBe(2);
       expect(roster).toContain('<th scope="col">Actions</th>');
       expect(roster).not.toContain("aria-sort");
 
@@ -501,18 +556,22 @@ describe("native web workflow", () => {
       // carries the one name a reader looks a member up under, since the cell
       // itself holds two lines and a crown.
       expect(roster).toContain('<td data-sort-value="zoe@example.test">');
-      // Roles and statuses carry their rank, not their words: sorting the
-      // labels would order the roster differently in every language.
-      expect(roster).toContain('<td data-sort-value="2">Instructor</td>');
+      // Roles carry their rank, not their words: sorting the labels would
+      // order the roster differently in every language. The status's rank
+      // rides underneath, and active is first among them, so an active member
+      // sorts at the head of their role and carries no badge.
+      expect(roster).toContain('<td data-sort-value="20">Instructor</td>');
       expect(roster).toContain(
-        '<td data-sort-value="1">Teaching assistant</td>',
+        '<td data-sort-value="10">Teaching assistant</td>',
       );
-      expect(roster).toContain('<td data-sort-value="0">Student</td>');
-      // Active is first among the membership states.
-      expect(
-        roster.match(/<td data-sort-value="0"><span class="status-badge/g)
-          ?.length,
-      ).toBe(3);
+      // There is no status column. The one member who is not active says so
+      // beside their role, and sorts after the active members of that role.
+      expect(roster).not.toContain('scope="col">Status</th>');
+      expect(roster).toContain(
+        '<td data-sort-value="2">Student <span class="status-badge ' +
+          'status-badge-danger">Suspended</span></td>',
+      );
+      expect(roster.match(/<span class="status-badge/g)?.length).toBe(1);
     });
   });
 

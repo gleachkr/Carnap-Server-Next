@@ -389,7 +389,6 @@ msgstr "Action"
 msgid "Actions"
 msgstr "Actions"
 
-#: src/worker/web/admin.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/labels.ts
 msgid "Active"
@@ -2137,10 +2136,6 @@ msgstr "Linked"
 msgid "Linked LMS access"
 msgstr "Linked LMS access"
 
-#: src/worker/web/assignments.tsx
-msgid "Listed"
-msgstr "Listed"
-
 #: src/worker/web/profile.tsx
 msgid "LMS"
 msgstr "LMS"
@@ -3395,7 +3390,6 @@ msgstr "State"
 
 #: src/worker/web/admin.tsx
 #: src/worker/web/assignment-detail.tsx
-#: src/worker/web/assignments.tsx
 #: src/worker/web/courses.tsx
 #: src/worker/web/lti.tsx
 msgid "Status"

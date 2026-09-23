@@ -20,34 +20,34 @@ import {
 import { useI18n } from "./layout";
 import { SortHeader, sortNumber, sortRank } from "./table-sort";
 
-const AssignmentStatus: FC<{
-  readonly assignment: Assignment;
-  readonly instructor: boolean;
-}> = ({ assignment, instructor }) => {
+/**
+ * The instructor's Type cell: the mode, which every row has, as plain text,
+ * and a badge only for what makes a row an exception — a draft students cannot
+ * see yet, or a published assignment left off their list.
+ */
+const AssignmentType: FC<{ readonly assignment: Assignment }> = ({
+  assignment,
+}) => {
   const i18n = useI18n();
-  const state = (
-    <StatusBadge
-      label={assignmentStateLabel(i18n, assignment.state)}
-      tone={assignment.state === "published" ? "ok" : "warn"}
-    />
-  );
-
-  if (!instructor) {
-    return state;
-  }
 
   return (
     <>
-      {state}{" "}
-      {assignment.listed ? (
-        <StatusBadge label={i18n.t("Listed")} tone="neutral" />
-      ) : (
-        <StatusBadge label={i18n.t("Hidden")} tone="warn" />
-      )}{" "}
-      <StatusBadge
-        label={assessmentModeLabel(i18n, assignment.assessmentMode)}
-        tone="neutral"
-      />
+      {assessmentModeLabel(i18n, assignment.assessmentMode)}
+      {assignment.state === "draft" ? (
+        <>
+          {" "}
+          <StatusBadge
+            label={assignmentStateLabel(i18n, assignment.state)}
+            tone="warn"
+          />
+        </>
+      ) : null}
+      {assignment.listed ? null : (
+        <>
+          {" "}
+          <StatusBadge label={i18n.t("Hidden")} tone="warn" />
+        </>
+      )}
     </>
   );
 };
@@ -189,11 +189,10 @@ const AssignmentRow: FC<{
         {linked ? <a href={href}>{assignment.title}</a> : assignment.title}
       </td>
       {instructor ? (
-        // Three badges in the cell, so its sort value settles all three: live
-        // work before drafts, listed before hidden, then by mode. Ordering on
-        // the first alone would leave the column looking half-sorted.
-        <td data-sort-value={statusSortValue(assignment)}>
-          <AssignmentStatus assignment={assignment} instructor={instructor} />
+        // The mode first, since that is what the column is named for; within
+        // a mode, the ordinary rows before the flagged ones.
+        <td data-sort-value={typeSortValue(assignment)}>
+          <AssignmentType assignment={assignment} />
         </td>
       ) : (
         <td
@@ -289,14 +288,14 @@ const StudentTotalFooter: FC<{
 };
 
 /**
- * The instructor's status cell as one number: state first, then whether it is
- * listed, then the mode — the same order the three badges read in.
+ * The instructor's Type cell as one number: the mode, then published before
+ * draft, then listed before hidden — the same order the cell reads in.
  */
-function statusSortValue(assignment: Assignment): string {
-  const state = ASSIGNMENT_STATE_ORDER.indexOf(assignment.state);
+function typeSortValue(assignment: Assignment): string {
   const mode = ASSESSMENT_MODE_ORDER.indexOf(assignment.assessmentMode);
+  const state = ASSIGNMENT_STATE_ORDER.indexOf(assignment.state);
 
-  return String(state * 100 + (assignment.listed ? 0 : 10) + mode);
+  return String(mode * 100 + state * 10 + (assignment.listed ? 0 : 1));
 }
 
 /** Open work first, then what is yet to open, then what is over. */
@@ -350,11 +349,7 @@ export const AssignmentsTable: FC<{
       <thead>
         <tr>
           <SortHeader label={i18n.t("Title")} />
-          {instructor ? (
-            <SortHeader label={i18n.t("Status")} />
-          ) : (
-            <SortHeader label={i18n.t("Type")} />
-          )}
+          <SortHeader label={i18n.t("Type")} />
           <SortHeader label={i18n.t("Due")} />
           {instructor ? null : <SortHeader label={i18n.t("Availability")} />}
           {/* The column holds a link per row, and what it leads to is a table

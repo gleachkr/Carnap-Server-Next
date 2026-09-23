@@ -100,27 +100,45 @@ function supportedTimezones(): readonly string[] {
 }
 
 const MEMBERSHIP_STATUS_TONES: Record<
-  CourseMembership["status"],
-  "danger" | "neutral" | "ok" | "warn"
+  Exclude<CourseMembership["status"], "active">,
+  "danger" | "neutral" | "warn"
 > = {
-  active: "ok",
   dropped: "neutral",
   invited: "warn",
   suspended: "danger",
 };
 
+/**
+ * A membership's status, shown beside its role only when it is not the usual
+ * one. Nearly every row is active, and a column saying so on each of them
+ * buried the invited or suspended member it was there to point out.
+ */
 const MembershipStatusBadge: FC<{
   readonly status: CourseMembership["status"];
 }> = ({ status }) => {
   const i18n = useI18n();
 
-  return (
-    <StatusBadge
-      label={membershipStatusLabel(i18n, status)}
-      tone={MEMBERSHIP_STATUS_TONES[status]}
-    />
+  return status === "active" ? null : (
+    <>
+      {" "}
+      <StatusBadge
+        label={membershipStatusLabel(i18n, status)}
+        tone={MEMBERSHIP_STATUS_TONES[status]}
+      />
+    </>
   );
 };
+
+/**
+ * The role cell's sort value: the role's rank, then the status's, so sorting
+ * the column gathers each role together with its exceptions after it.
+ */
+function membershipSortValue(membership: CourseMembership): string {
+  const role = COURSE_ROLE_ORDER.indexOf(membership.role);
+  const status = MEMBERSHIP_STATUS_ORDER.indexOf(membership.status);
+
+  return String(role * 10 + status);
+}
 
 const TimezoneSelect: FC<{
   readonly form?: string;
@@ -187,17 +205,8 @@ const CourseRow: FC<{
         <a href={`/courses/${entry.course.id}`}>{entry.course.title}</a>
       </td>
       <td>{entry.course.timezone}</td>
-      <td
-        data-sort-value={sortRank(COURSE_ROLE_ORDER, entry.membership.role)}
-      >
+      <td data-sort-value={membershipSortValue(entry.membership)}>
         {courseRoleLabel(i18n, entry.membership.role)}
-      </td>
-      <td
-        data-sort-value={sortRank(
-          MEMBERSHIP_STATUS_ORDER,
-          entry.membership.status,
-        )}
-      >
         <MembershipStatusBadge status={entry.membership.status} />
       </td>
     </tr>
@@ -271,11 +280,6 @@ const CoursesTable: FC<{
           <SortHeader label={i18n.t("Course")} />
           <SortHeader label={i18n.t("Timezone")} />
           <SortHeader label={i18n.t("Role")} />
-          {/* Whose status: the reader's membership, not the course's. Under a
-              bare "Status" an instructor who had just archived a course read
-              the neighbouring rows' "Active" as the courses' own state and
-              concluded that archiving had done nothing. */}
-          <SortHeader label={i18n.t("Your status")} />
         </tr>
       </thead>
       <tbody>
@@ -425,7 +429,7 @@ const AccommodationDialogControl: FC<{
 
 /**
  * A badge flagging that a member has custom accommodations, shown beside their
- * membership status. Members on the default accommodation carry no badge.
+ * role. Members on the default accommodation carry no badge.
  */
 const AccommodationBadge: FC<{
   readonly accommodation: CourseAccommodation | null;
@@ -433,7 +437,10 @@ const AccommodationBadge: FC<{
   const i18n = useI18n();
 
   return accommodation === null ? null : (
-    <StatusBadge label={i18n.t("Accommodations")} tone="ok" />
+    <>
+      {" "}
+      <StatusBadge label={i18n.t("Accommodations")} tone="ok" />
+    </>
   );
 };
 
@@ -583,13 +590,12 @@ const MembersTable: FC<{
     <TableScroll>
       <thead>
         <tr>
-          {/* Roles and statuses carry their rank as the sort value, not the
-              word: "Instructor" outranking "Student" is a fact about the
-              course, and sorting the labels would order the roster differently
-              in every language. */}
+          {/* Roles carry their rank as the sort value, not the word:
+              "Instructor" outranking "Student" is a fact about the course,
+              and sorting the labels would order the roster differently in
+              every language. */}
           <SortHeader label={i18n.t("User")} />
           <SortHeader label={i18n.t("Role")} />
-          <SortHeader label={i18n.t("Status")} />
           <th scope="col">{i18n.t("Actions")}</th>
         </tr>
       </thead>
@@ -604,18 +610,9 @@ const MembersTable: FC<{
                 <OwnerCrown />
               ) : null}
             </td>
-            <td
-              data-sort-value={sortRank(COURSE_ROLE_ORDER, membership.role)}
-            >
+            <td data-sort-value={membershipSortValue(membership)}>
               {courseRoleLabel(i18n, membership.role)}
-            </td>
-            <td
-              data-sort-value={sortRank(
-                MEMBERSHIP_STATUS_ORDER,
-                membership.status,
-              )}
-            >
-              <MembershipStatusBadge status={membership.status} />{" "}
+              <MembershipStatusBadge status={membership.status} />
               <AccommodationBadge
                 accommodation={
                   accommodationsByUserId.get(membership.userId) ?? null
