@@ -607,6 +607,14 @@ tr.assignment-closed td {
   color: var(--ink-muted);
 }
 
+/* A column of figures: set right, on digits of one width, so the scores in
+   it line up by place and a reader can compare down the column. */
+th.numeric,
+td.numeric {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
 /* A practice/reading score: recorded for the student's own signal, muted to
    set it apart from graded scores that count toward the course total. */
 a.score-uncounted {

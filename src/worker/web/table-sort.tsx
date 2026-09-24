@@ -26,8 +26,12 @@ import type { FC } from "hono/jsx";
  * would destroy, and a table the server paginates or filters would sort only
  * the page in hand, which is a lie about the rest.
  */
-export const SortHeader: FC<{ readonly label: string }> = ({ label }) => (
-  <th data-sort="" scope="col">
+export const SortHeader: FC<{
+  readonly label: string;
+  /** A column of figures, set right to line up with its cells. */
+  readonly numeric?: boolean;
+}> = ({ label, numeric = false }) => (
+  <th class={numeric ? "numeric" : undefined} data-sort="" scope="col">
     {label}
   </th>
 );

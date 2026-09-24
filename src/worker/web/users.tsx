@@ -51,9 +51,21 @@ export const UserLabel: FC<{
   readonly directory: UserDirectory;
   readonly identified?: boolean;
   readonly userId: string;
-}> = ({ directory, identified = false, userId }) => {
+}> = ({ directory, identified = false, userId }) => (
+  <UserRecordLabel
+    identified={identified}
+    user={directory.get(userId) ?? null}
+    userId={userId}
+  />
+);
+
+/** {@link UserLabel} for a user record already in hand. */
+export const UserRecordLabel: FC<{
+  readonly identified?: boolean;
+  readonly user: User | null;
+  readonly userId: string;
+}> = ({ identified = false, user, userId }) => {
   const i18n = useI18n();
-  const user = directory.get(userId) ?? null;
   const name = userDisplayName(i18n, user, userId);
   const detail =
     identified || hasName(user) ? userDisplayMeta(i18n, user, userId) : null;

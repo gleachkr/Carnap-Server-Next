@@ -15,6 +15,7 @@ import {
 } from "../domain/assessment";
 import type { CourseStaffTier } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
+import type { User } from "../domain/users";
 import type { AppBindings } from "../http";
 import {
   courseCrumb,
@@ -32,6 +33,7 @@ import {
 } from "./components";
 import { renderShell, useI18n } from "./layout";
 import { SortHeader, sortNumber } from "./table-sort";
+import { UserRecordLabel, userDisplayName } from "./users";
 
 const ScoreCell: FC<{ readonly score: AssignmentScore | null }> = ({
   score,
@@ -122,6 +124,21 @@ function totalFraction(
   return possible === 0 ? null : earned / possible;
 }
 
+/**
+ * Who a row is about: the name, with the email quietly under it, or the email
+ * alone for a student who has not given a name — so no row starts blank. It
+ * sorts by the line a reader looks for it under.
+ */
+const StudentCell: FC<{ readonly user: User }> = ({ user }) => {
+  const i18n = useI18n();
+
+  return (
+    <td data-sort-value={userDisplayName(i18n, user, user.id)}>
+      <UserRecordLabel user={user} userId={user.id} />
+    </td>
+  );
+};
+
 const CourseGradebookTable: FC<{ readonly gradebook: CourseGradebook }> = ({
   gradebook,
 }) => {
@@ -130,28 +147,32 @@ const CourseGradebookTable: FC<{ readonly gradebook: CourseGradebook }> = ({
     <TableScroll>
       <thead>
         <tr>
-          <SortHeader label={i18n.t("Name")} />
-          <SortHeader label={i18n.t("Email")} />
+          <SortHeader label={i18n.t("Student")} />
           {/* Every assignment is a column a reader can order by — "who has not
               done problem set 3" is the question this table exists to
               answer. */}
           {gradebook.assignments.map((assignment) => (
-            <SortHeader label={assignment.title} />
+            <SortHeader label={assignment.title} numeric />
           ))}
-          <SortHeader label={i18n.t("Total")} />
+          <SortHeader label={i18n.t("Total")} numeric />
         </tr>
       </thead>
       <tbody>
         {gradebook.rows.map((row) => (
           <tr>
-            <td>{row.user.name ?? ""}</td>
-            <td>{row.user.email}</td>
+            <StudentCell user={row.user} />
             {row.scores.map((score) => (
-              <td data-sort-value={sortNumber(scoreFraction(score))}>
+              <td
+                class="numeric"
+                data-sort-value={sortNumber(scoreFraction(score))}
+              >
                 <ScoreCell score={score} />
               </td>
             ))}
-            <td data-sort-value={sortNumber(totalFraction(row.scores))}>
+            <td
+              class="numeric"
+              data-sort-value={sortNumber(totalFraction(row.scores))}
+            >
               <strong>
                 <TotalCell scores={row.scores} />
               </strong>
@@ -171,17 +192,18 @@ const AssignmentGradebookTable: FC<{
     <TableScroll>
       <thead>
         <tr>
-          <SortHeader label={i18n.t("Name")} />
-          <SortHeader label={i18n.t("Email")} />
-          <SortHeader label={i18n.t("Score")} />
+          <SortHeader label={i18n.t("Student")} />
+          <SortHeader label={i18n.t("Score")} numeric />
         </tr>
       </thead>
       <tbody>
         {gradebook.rows.map((row) => (
           <tr>
-            <td>{row.user.name ?? ""}</td>
-            <td>{row.user.email}</td>
-            <td data-sort-value={sortNumber(scoreFraction(row.score))}>
+            <StudentCell user={row.user} />
+            <td
+              class="numeric"
+              data-sort-value={sortNumber(scoreFraction(row.score))}
+            >
               <ScoreCell score={row.score} />
             </td>
           </tr>

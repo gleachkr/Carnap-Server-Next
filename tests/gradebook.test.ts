@@ -1606,7 +1606,7 @@ Choose yes.
   });
 
   test("the course gradebook hands its columns what they sort by", async () => {
-    await withStorage(async (_storage, env) => {
+    await withStorage(async (storage, env) => {
       const instructor = await login(env, "sort-teacher@example.test");
       const first = await login(env, "a-scored@example.test");
       const second = await login(env, "b-zero@example.test");
@@ -1617,6 +1617,11 @@ Choose yes.
       await enrollStudent(env, instructor, first, courseId);
       await enrollStudent(env, instructor, second, courseId);
       await enrollStudent(env, instructor, third, courseId);
+      await storage.stores.users.updateProfile(
+        first.actorId,
+        { locale: null, name: "Ada Scored" },
+        timestampNow(),
+      );
 
       const assignmentId = await createPublishedAssignment(
         env,
@@ -1668,14 +1673,37 @@ Choose yes.
 
       // Every assignment is a column a reader can order by — "who has not done
       // problem set 3" is the question this table exists to answer.
-      expect(html.match(/<th data-sort="" scope="col">/g)?.length).toBe(4);
-      expect(html).toContain('<th data-sort="" scope="col">Homework</th>');
+      expect(html.match(/<th[^>]* data-sort="" scope="col">/g)?.length).toBe(
+        3,
+      );
+      expect(html).toContain('<th data-sort="" scope="col">Student</th>');
+      // Figures are set right, heading and cells alike, so they line up.
+      expect(html).toContain(
+        '<th class="numeric" data-sort="" scope="col">Homework</th>',
+      );
+      expect(html).toContain(
+        '<th class="numeric" data-sort="" scope="col">Total</th>',
+      );
+      // A named student is sorted by name, with the email quietly under it.
+      expect(html).toContain(
+        '<td data-sort-value="Ada Scored">Ada Scored<br/><span class="small">a-scored@example.test</span></td>',
+      );
+      // A student with no name is listed, and sorted, by email: no blank cell.
+      expect(html).toContain(
+        '<td data-sort-value="c-untouched@example.test">c-untouched@example.test</td>',
+      );
       // Scores sort on the fraction earned, not the printed "2/2".
-      expect(html).toContain('<td data-sort-value="1">2/2</td>');
-      expect(html).toContain('<td data-sort-value="0">0/2</td>');
+      expect(html).toContain(
+        '<td class="numeric" data-sort-value="1">2/2</td>',
+      );
+      expect(html).toContain(
+        '<td class="numeric" data-sort-value="0">0/2</td>',
+      );
       // Work nobody started is not a zero: it carries no sort value at all,
       // which is what puts it after every real score and, reversed, on top.
-      expect(html).toContain('<td data-sort-value="">—/2</td>');
+      expect(html).toContain(
+        '<td class="numeric" data-sort-value="">—/2</td>',
+      );
     });
   });
 });

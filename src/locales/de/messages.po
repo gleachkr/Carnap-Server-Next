@@ -1587,7 +1587,6 @@ msgstr ""
 
 #: src/worker/web/admin.tsx
 #: src/worker/web/auth.tsx
-#: src/worker/web/gradebook.tsx
 #: src/worker/web/labels.ts
 #: src/worker/web/profile.tsx
 msgid "Email"
@@ -2344,7 +2343,6 @@ msgstr "Übungen mit Mehrfachauswahl müssen mindestens eine richtige Option hab
 #: src/worker/application/lti-admin.ts
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/admin.tsx
-#: src/worker/web/gradebook.tsx
 #: src/worker/web/profile.tsx
 msgid "Name"
 msgstr "Name"
@@ -3432,6 +3430,7 @@ msgstr "Status"
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/courses.tsx
+#: src/worker/web/gradebook.tsx
 #: src/worker/web/labels.ts
 msgid "Student"
 msgstr "Studierende Person"
