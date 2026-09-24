@@ -43,7 +43,9 @@ export const CORRECTNESS_MARK_CLASS = "exercise-mark";
 export type CorrectnessMarkState = "idle" | "working" | "ok" | "error";
 
 /**
- * The glyph for each state that has one; `working` gets a spinner instead.
+ * The glyph for each state. `idle` is empty — the stylesheet draws it as a
+ * dashed ring, the place a verdict will fill — and `working` gets a spinner
+ * round that ring instead.
  *
  * The check is U+2713, drawn in the page's own UI font rather than in whatever
  * the surrounding widget happens to use — the two CodeMirror proof widgets used
@@ -55,7 +57,7 @@ export const CORRECTNESS_MARK_GLYPHS: Readonly<
   Record<Exclude<CorrectnessMarkState, "working">, string>
 > = {
   error: "!",
-  idle: "-",
+  idle: "",
   ok: "✓",
 };
 

@@ -426,7 +426,7 @@ Fill it in.
       // for all four. Only the widget's own check status may follow it, and that
       // is not on the row: it takes the whole line under it.
       expect(html).toMatch(
-        /class="exercise-mark"[^>]*>-<\/span><p aria-live="polite" class="exercise-status exercise-check-status" data-exercise-check-status><\/p><\/div>/,
+        /class="exercise-mark"[^>]*><\/span><p aria-live="polite" class="exercise-status exercise-check-status" data-exercise-check-status><\/p><\/div>/,
       );
     });
   });

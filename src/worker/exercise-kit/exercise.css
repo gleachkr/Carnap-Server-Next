@@ -134,7 +134,10 @@
    appearing when there is something to say — a reader who has never seen a
    correct exercise should still know where the verdict will show up, and an
    indicator that materializes out of nothing also reflows the row it is in.
-   So the idle state is a grey dash rather than an empty box.
+   So the idle state is an empty dashed ring: the place, drawn as not yet
+   filled in. Every state is that one circle — the spinner runs around its
+   rim, and a verdict fills it — so nothing about the mark moves or resizes
+   as it changes, only what is drawn in it.
 
    It lives in the light-DOM action bar, not in each widget's shadow root,
    which is what makes "the same place" true across nine types that otherwise
@@ -147,9 +150,14 @@
    right now correct? The live answer wins whenever there is one, because it
    is the one about the work the reader is looking at. */
 .exercise-mark {
+  --_mark-rim: 1.5px;
   align-items: center;
-  border: 1px solid var(--exercise-border);
-  border-radius: 999px;
+  /* The idle rim is drawn in the muted text colour, not the border token: it
+     is the whole of what the mark shows before a verdict, so it has to reach
+     the 3:1 a meaningful graphic needs, which a decorative rule does not. */
+  border: var(--_mark-rim) dashed var(--exercise-text-muted);
+  border-radius: 50%;
+  box-sizing: border-box;
   color: var(--exercise-text-muted);
   display: inline-flex;
   flex: none;
@@ -159,18 +167,20 @@
   font-family: system-ui, sans-serif;
   font-size: 0.85rem;
   font-weight: 700;
+  height: 1.5rem;
   justify-content: center;
   line-height: 1;
   /* Hard right of the button row, so it is in the same place whether the row
      holds one button or three. */
   margin-left: auto;
-  min-height: 1.5rem;
-  min-width: 1.9rem;
+  position: relative;
+  width: 1.5rem;
 }
 
 .exercise-mark[data-state="ok"] {
   background: var(--exercise-correct-bg);
   border-color: color-mix(in srgb, var(--exercise-correct) 45%, transparent);
+  border-style: solid;
   color: var(--exercise-correct);
 }
 
@@ -181,24 +191,25 @@
     var(--exercise-incorrect) 40%,
     transparent
   );
+  border-style: solid;
   color: var(--exercise-incorrect);
   /* The specific problem is the title; the cursor is what says to hover. */
   cursor: help;
 }
 
 /* "Checking": the proof types compile in the background, and the wait is long
-   enough to need saying. Drawn here rather than built as an SVG in the client,
-   so setting the mark stays a matter of writing attributes. */
+   enough to need saying. A solid arc runs round the idle ring, laid exactly
+   over its rim, so the mark reads as the same empty circle, busy. Drawn here
+   rather than built as an SVG in the client, so setting the mark stays a
+   matter of writing attributes. */
 .exercise-mark[data-state="working"]::after {
-  animation: exercise-spin 0.7s linear infinite;
-  border: 2px solid currentColor;
+  animation: exercise-spin 0.9s linear infinite;
+  border: var(--_mark-rim) solid transparent;
   border-radius: 50%;
-  border-top-color: transparent;
+  border-top-color: currentColor;
   content: "";
-  display: block;
-  height: 0.8rem;
-  opacity: 0.7;
-  width: 0.8rem;
+  inset: calc(-1 * var(--_mark-rim));
+  position: absolute;
 }
 
 @keyframes exercise-spin {

@@ -74,8 +74,8 @@ nothing is saved.
 
 | State | Display | Accessible name |
 | --- | --- | --- |
-| `idle` | `-` | Not correct yet |
-| `working` | Spinner | Checking |
+| `idle` | Empty dashed ring | Not correct yet |
+| `working` | An arc spinning round the ring | Checking |
 | `ok` | `✓` | Correct |
 | `error` | `!` | Could not check |
 

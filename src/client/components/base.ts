@@ -670,7 +670,7 @@ export abstract class CarnapExerciseElement<
    * `error` still passes: a proof engine that will not load is a malfunction,
    * not a verdict, and a student staring at a dead widget should be told.
    * `working` is clamped rather than shown because a spinner that always
-   * resolves to a dash is a promise the mark cannot keep.
+   * resolves to an empty ring is a promise the mark cannot keep.
    */
   protected setMark(state: CorrectnessMarkState, title?: string): void {
     if (this.feedback === "none" && state !== "error") {
