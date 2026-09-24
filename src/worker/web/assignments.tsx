@@ -94,12 +94,12 @@ const ScoreCell: FC<{
 };
 
 /**
- * A student's availability cell: "Opens <date>" for upcoming work, "Closed
- * <date>" for work past its cutoff (which lingers, greyed, for reference),
- * "Closes <date>" for an open assignment with a cutoff still ahead (set apart
- * from the softer due date), or "Open" when it stays available indefinitely.
+ * What a student's title carries besides the title: nothing while the
+ * assignment is open, which is the ordinary case, and a badge only for the
+ * exception — "Closed" for work past its cutoff (the row lingers, greyed, for
+ * reference) and "Opens <date>" for work not yet available.
  */
-const AvailabilityCell: FC<{
+const AvailabilityBadge: FC<{
   readonly assignment: Assignment;
   readonly state: AssignmentAvailability;
 }> = ({ assignment, state }) => {
@@ -112,55 +112,53 @@ const AvailabilityCell: FC<{
 
     return (
       <>
-        {before}
-        <Time value={assignment.availableFrom} />
-        {after}
+        {" "}
+        <StatusBadge
+          label={
+            <>
+              {before}
+              <Time value={assignment.availableFrom} />
+              {after}
+            </>
+          }
+          tone="warn"
+        />
       </>
     );
   }
 
   if (state === "closed") {
-    const [before, after] = splitAtValue(
-      i18n.t("Closed {when}", { when: VALUE }),
-    );
-
     return (
       <>
-        {before}
-        <Time value={assignment.availableUntil} />
-        {after}
+        {" "}
+        <StatusBadge
+          label={i18n.t(
+            "Closed (assignment availability)",
+            {},
+            {
+              comment:
+                "Disambiguating id; only the word Closed is shown. A badge beside an assignment past its closing date.",
+              message: "Closed",
+            },
+          )}
+        />
       </>
     );
   }
 
-  if (assignment.availableUntil !== null) {
-    const [before, after] = splitAtValue(
-      i18n.t("Closes {when}", { when: VALUE }),
-    );
-
-    return (
-      <>
-        {before}
-        <Time value={assignment.availableUntil} />
-        {after}
-      </>
-    );
-  }
-
-  return (
-    <>
-      {i18n.t(
-        "Open (assignment availability)",
-        {},
-        {
-          comment:
-            "Disambiguating id; only the word Open is shown. An assignment available now, with no closing date.",
-          message: "Open",
-        },
-      )}
-    </>
-  );
+  return null;
 };
+
+/**
+ * A due date, or a faint dash where there is none, so that the rows with a
+ * date stand out from the ones without instead of every cell reading "None".
+ */
+const DueDate: FC<{ readonly value: Timestamp | null }> = ({ value }) =>
+  value === null ? (
+    <span class="table-empty">—</span>
+  ) : (
+    <Time value={value} />
+  );
 
 const AssignmentRow: FC<{
   readonly assignment: Assignment;
@@ -187,6 +185,9 @@ const AssignmentRow: FC<{
     <tr class={closed ? "assignment-closed" : undefined}>
       <td>
         {linked ? <a href={href}>{assignment.title}</a> : assignment.title}
+        {instructor ? null : (
+          <AvailabilityBadge assignment={assignment} state={state} />
+        )}
       </td>
       {instructor ? (
         // The mode first, since that is what the column is named for; within
@@ -207,13 +208,8 @@ const AssignmentRow: FC<{
       {/* The instant, not the date the reader sees: the cell is localized on
           load, and "Jul 6" does not sort. */}
       <td data-sort-value={assignment.dueAt ?? ""}>
-        <Time fallback={i18n.t("None")} value={assignment.dueAt} />
+        <DueDate value={assignment.dueAt} />
       </td>
-      {instructor ? null : (
-        <td data-sort-value={sortRank(AVAILABILITY_ORDER, state)}>
-          <AvailabilityCell assignment={assignment} state={state} />
-        </td>
-      )}
       {instructor ? (
         <td>
           {/* A practice set has a table of its own too, and the word changes
@@ -274,7 +270,7 @@ const StudentTotalFooter: FC<{
   return (
     <tfoot>
       <tr>
-        <td colspan={4}>
+        <td colspan={3}>
           <strong>{i18n.t("Course total")}</strong>
         </td>
         <td>
@@ -297,13 +293,6 @@ function typeSortValue(assignment: Assignment): string {
 
   return String(mode * 100 + state * 10 + (assignment.listed ? 0 : 1));
 }
-
-/** Open work first, then what is yet to open, then what is over. */
-const AVAILABILITY_ORDER: readonly AssignmentAvailability[] = [
-  "open",
-  "upcoming",
-  "closed",
-];
 
 /**
  * What a student's score sorts on: the fraction they earned. A score they
@@ -351,7 +340,6 @@ export const AssignmentsTable: FC<{
           <SortHeader label={i18n.t("Title")} />
           <SortHeader label={i18n.t("Type")} />
           <SortHeader label={i18n.t("Due")} />
-          {instructor ? null : <SortHeader label={i18n.t("Availability")} />}
           {/* The column holds a link per row, and what it leads to is a table
               of grades for one assignment and of practice scores for another,
               so the heading takes the word that covers both. There is nothing
@@ -427,7 +415,7 @@ export const GradingTable: FC<{
                 {assessmentModeLabel(i18n, assignment.assessmentMode)}
               </td>
               <td data-sort-value={assignment.dueAt ?? ""}>
-                <Time fallback={i18n.t("None")} value={assignment.dueAt} />
+                <DueDate value={assignment.dueAt} />
               </td>
               <td>
                 {collects ? (

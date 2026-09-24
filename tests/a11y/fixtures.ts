@@ -504,6 +504,29 @@ export async function collectFixtures(
     env,
   );
 
+  // One published assignment not yet open and one already closed: the
+  // student's course list badges only these exceptions, beside the title.
+  for (const window of [
+    { availableFrom: "2999-01-01T00:00:00.000Z", title: "Homework upcoming" },
+    { availableUntil: "2000-01-01T00:00:00.000Z", title: "Homework closed" },
+  ]) {
+    const response = await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments`,
+      jsonRequest({ contentRevisionId: revisionId, ...window }, instructor),
+      env,
+    );
+    const { assignment } = (await response.json()) as {
+      assignment: { id: string };
+    };
+    await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments/${assignment.id}/publish`,
+      { headers: authHeaders(instructor), method: "POST" },
+      env,
+    );
+  }
+
   // Student opens an attempt so the assignment page is in its answering state.
   const attemptResponse = await appRequest(
     createTestApp(),

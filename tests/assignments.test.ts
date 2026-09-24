@@ -810,13 +810,17 @@ describe("assignment publication", () => {
       const closedHref = `/courses/${courseId}/assignments/${closed.assignment.id}`;
 
       expect(page.status).toBe(200);
+      // No Availability column: an open assignment, closing date or not,
+      // carries nothing, and only the exceptions get a badge by the title.
+      expect(html).not.toContain("Availability");
+      expect(html).not.toContain("Closes ");
       expect(html).toContain(
-        '<th data-sort="" scope="col">Availability</th>',
+        'Upcoming <span class="status-badge status-badge-warn">Opens <time datetime="2999-01-01T00:00:00.000Z">',
       );
-      expect(html).toContain(">Open<");
-      expect(html).toContain("Closes ");
-      expect(html).toContain("Opens ");
-      expect(html).toContain("Closed ");
+      expect(html).toContain(
+        'Already closed <span class="status-badge status-badge-neutral">Closed</span>',
+      );
+      expect(html.match(/class="status-badge /g)).toHaveLength(2);
       // A closed assignment lingers in a greyed row.
       expect(html).toContain('class="assignment-closed"');
       // The open assignment links to its detail page; the upcoming and closed
@@ -868,17 +872,15 @@ describe("assignment publication", () => {
 
       const html = await page.text();
 
-      // Availability sorts by what the reader can do about it: open work
-      // first, then what has yet to open, then what is over.
-      expect(html).toContain('<td data-sort-value="0">Open</td>');
-      expect(html).toContain('<td data-sort-value="1">Opens ');
-      expect(html).toContain('<td data-sort-value="2">Closed ');
       // The instant, not the localized date the cell ends up showing.
       expect(html).toContain(
         '<td data-sort-value="2030-05-31T20:00:00.000Z">',
       );
-      // No due date is absent rather than early or late.
-      expect(html).toContain('<td data-sort-value="">None</td>');
+      // No due date is absent rather than early or late, and reads as a
+      // faint dash rather than a word.
+      expect(html).toContain(
+        '<td data-sort-value=""><span class="table-empty">—</span></td>',
+      );
     });
   });
 

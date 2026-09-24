@@ -793,10 +793,6 @@ msgstr ""
 msgid "automatic"
 msgstr ""
 
-#: src/worker/web/assignments.tsx
-msgid "Availability"
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Available from"
 msgstr ""
@@ -979,8 +975,9 @@ msgstr ""
 msgid "Close help"
 msgstr ""
 
+#. Disambiguating id; only the word Closed is shown. A badge beside an assignment past its closing date.
 #: src/worker/web/assignments.tsx
-msgid "Closed {when}"
+msgid "Closed (assignment availability)"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -988,7 +985,6 @@ msgid "Closes"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
-#: src/worker/web/assignments.tsx
 msgid "Closes {when}"
 msgstr ""
 
@@ -2524,7 +2520,6 @@ msgid "No users matched."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
-#: src/worker/web/assignments.tsx
 msgid "None"
 msgstr ""
 
@@ -2684,11 +2679,6 @@ msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Only you may view this revision"
-msgstr ""
-
-#. Disambiguating id; only the word Open is shown. An assignment available now, with no closing date.
-#: src/worker/web/assignments.tsx
-msgid "Open (assignment availability)"
 msgstr ""
 
 #: src/worker/web/components.tsx

@@ -36,7 +36,8 @@ export const Time: FC<{
   );
 
 export const StatusBadge: FC<{
-  readonly label: string;
+  /** Usually a word; markup where the badge carries a date, as `<Time>`. */
+  readonly label: Child;
   readonly tone?: StatusTone;
 }> = ({ label, tone = "neutral" }) => (
   <span class={`status-badge status-badge-${tone}`}>{label}</span>

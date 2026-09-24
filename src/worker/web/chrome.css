@@ -601,6 +601,12 @@ tr.assignment-closed td {
   color: var(--ink-muted);
 }
 
+/* A cell with nothing in it: a dash that is there to be looked past, so the
+   rows that do have a value (a due date) are the ones that catch the eye. */
+.table-empty {
+  color: var(--ink-muted);
+}
+
 /* A practice/reading score: recorded for the student's own signal, muted to
    set it apart from graded scores that count toward the course total. */
 a.score-uncounted {
