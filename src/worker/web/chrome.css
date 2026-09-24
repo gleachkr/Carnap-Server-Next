@@ -673,6 +673,14 @@ th > .column-sort:hover {
   padding-top: 0;
 }
 
+/* The action's code, under the words for it: small and quiet, because it is
+   there to be searched for rather than read. */
+.audit-action-code {
+  color: var(--ink-muted);
+  display: block;
+  font-size: 0.75rem;
+}
+
 /* Indented by exactly the drawn marker below, so the id starts in the same
    place whether or not the event recorded metadata to disclose. */
 .audit-request {

@@ -346,6 +346,8 @@ export interface AddCourseAccommodationInput {
 export interface CourseStore {
   create(input: CreateCourseInput): Promise<Course>;
   getById(id: AppId): Promise<Course | null>;
+  /** The courses among `ids` that exist, once each, in no particular order. */
+  listByIds(ids: readonly AppId[]): Promise<Course[]>;
   updateInfo(input: UpdateCourseInfoInput): Promise<Course | null>;
   setArchived(input: SetCourseArchivedInput): Promise<Course | null>;
   addMembership(input: AddCourseMembershipInput): Promise<CourseMembership>;

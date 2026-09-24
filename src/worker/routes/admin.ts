@@ -6,7 +6,7 @@ import {
   type SupportMembershipCommand,
 } from "../application/admin";
 import { badRequest } from "../application/errors";
-import { resolveUsers, type UserDirectory } from "../application/users";
+import { resolveUsers } from "../application/users";
 import type {
   AdminAuditEvent,
   AdminUserProfile,
@@ -17,6 +17,7 @@ import type { User } from "../domain/users";
 import { type AppBindings, requireAuthenticated } from "../http";
 import { storesForContext } from "../stores";
 import {
+  type AuditDirectory,
   renderAdminAudit,
   renderAdminDashboard,
   renderAdminUserProfile,
@@ -193,17 +194,28 @@ function membershipCommandFromForm(form: FormData): SupportMembershipCommand {
   });
 }
 
-function auditUserDirectory(
+async function auditDirectory(
   context: Context<AppBindings>,
   events: readonly AdminAuditEvent[],
-): Promise<UserDirectory> {
-  const ids = events.flatMap((event) =>
+): Promise<AuditDirectory> {
+  const stores = storesForContext(context);
+  const userIds = events.flatMap((event) =>
     event.targetUserId === null
       ? [event.actorUserId]
       : [event.actorUserId, event.targetUserId],
   );
+  const courseIds = events.flatMap((event) =>
+    event.targetCourseId === null ? [] : [event.targetCourseId],
+  );
+  const [users, courses] = await Promise.all([
+    resolveUsers(stores, userIds),
+    stores.courses.listByIds(courseIds),
+  ]);
 
-  return resolveUsers(storesForContext(context), ids);
+  return {
+    courseTitles: new Map(courses.map((course) => [course.id, course.title])),
+    users,
+  };
 }
 
 async function dashboardPage(
@@ -221,7 +233,7 @@ async function dashboardPage(
 
   return renderAdminDashboard(context, {
     auditEvents: dashboard.auditEvents,
-    directory: await auditUserDirectory(context, dashboard.auditEvents),
+    directory: await auditDirectory(context, dashboard.auditEvents),
     saved: url.searchParams.has("saved"),
     stats: dashboard.stats,
   });
@@ -279,7 +291,7 @@ async function auditPage(context: Context<AppBindings>): Promise<Response> {
   return renderAdminAudit(
     context,
     events,
-    await auditUserDirectory(context, events),
+    await auditDirectory(context, events),
   );
 }
 

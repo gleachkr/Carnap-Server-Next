@@ -288,6 +288,25 @@ describe("platform administration", () => {
       expect(audit.events.map((event) => event.action)).toContain(
         "admin.change_course_membership",
       );
+
+      // The page says what happened in words, keeps the code under them, and
+      // names the course by its title rather than its id.
+      const pageResponse = await appRequest(
+        createTestApp(),
+        "/admin/audit",
+        { headers: { ...authHeaders(admin), Accept: "text/html" } },
+        env,
+      );
+      const page = await pageResponse.text();
+
+      expect(pageResponse.status).toBe(200);
+      expect(page).toContain(
+        'Course membership changed<code class="audit-action-code">' +
+          "admin.change_course_membership</code>",
+      );
+      expect(page).toContain(
+        `student@example.test</a> · <a href="/courses/${courseBody.course.id}">Logic</a>`,
+      );
     });
   });
 });

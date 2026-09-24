@@ -1004,6 +1004,12 @@ class SqliteCourseStore implements CourseStore {
     );
   }
 
+  async listByIds(ids: readonly AppId[]): Promise<Course[]> {
+    return overSlices([...new Set(ids)], (slice) =>
+      this.db.select().from(courses).where(inArray(courses.id, slice)),
+    );
+  }
+
   async updateInfo(input: UpdateCourseInfoInput): Promise<Course | null> {
     return nullableSingle(
       await this.db

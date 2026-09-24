@@ -620,6 +620,10 @@ export function describeStorageContract(
         await expect(stores.courses.getById(course.id)).resolves.toEqual(
           course,
         );
+        await expect(
+          stores.courses.listByIds([course.id, "course-missing", course.id]),
+        ).resolves.toEqual([course]);
+        await expect(stores.courses.listByIds([])).resolves.toEqual([]);
         expect(instructorMembership?.role).toBe("instructor");
         expect(studentMembership?.role).toBe("student");
         expect(memberships.map((membership) => membership.userId)).toEqual([

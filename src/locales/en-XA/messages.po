@@ -375,6 +375,14 @@ msgstr ""
 msgid "Account access"
 msgstr ""
 
+#: src/worker/web/labels.ts
+msgid "Account reactivated"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Account suspended"
+msgstr ""
+
 #: src/worker/web/lti.tsx
 msgid "Accounts linked"
 msgstr ""
@@ -759,6 +767,10 @@ msgstr ""
 msgid "Audit events"
 msgstr ""
 
+#: src/worker/web/admin.tsx
+msgid "Audit log"
+msgstr ""
+
 #: src/worker/application/errors.ts
 msgid "Authentication is required."
 msgstr ""
@@ -863,12 +875,20 @@ msgstr ""
 msgid "Capability"
 msgstr ""
 
+#: src/worker/web/labels.ts
+msgid "Capability granted"
+msgstr ""
+
 #: src/worker/routes/admin.ts
 msgid "Capability not granted"
 msgstr ""
 
 #: src/worker/routes/admin.ts
 msgid "Capability not revoked"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Capability revoked"
 msgstr ""
 
 #: src/worker/routes/lti.ts
@@ -1187,6 +1207,10 @@ msgstr ""
 #: src/worker/web/courses.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Course gradebook"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "Course membership changed"
 msgstr ""
 
 #: src/worker/web/admin.tsx
@@ -1629,6 +1653,10 @@ msgstr ""
 msgid "Evaluation not saved"
 msgstr ""
 
+#: src/worker/web/admin.tsx
+msgid "Every administrative action, with request IDs"
+msgstr ""
+
 #: src/worker/web/courses.tsx
 msgid "Every course you are enrolled in has been archived."
 msgstr ""
@@ -1810,6 +1838,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "First seen"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "First site administrator created"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-fitch/types.ts
@@ -2165,10 +2197,6 @@ msgstr ""
 msgid "LMS grade sync problems"
 msgstr ""
 
-#: src/worker/web/admin.tsx
-msgid "LMS integration"
-msgstr ""
-
 #: src/worker/web/auth.tsx
 msgid "Log in"
 msgstr ""
@@ -2181,8 +2209,29 @@ msgstr ""
 msgid "Login email delivery is not configured for this environment."
 msgstr ""
 
+#: src/worker/web/labels.ts
+msgid "LTI deployment added"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "LTI deployment removed"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "LTI platform disabled"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "LTI platform enabled"
+msgstr ""
+
+#: src/worker/web/labels.ts
+msgid "LTI platform registered"
+msgstr ""
+
 #: src/worker/routes/admin-lti.ts
 #: src/worker/web/admin-lti.tsx
+#: src/worker/web/admin.tsx
 msgid "LTI platforms"
 msgstr ""
 
@@ -2192,10 +2241,6 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Manage accommodations for {name}"
-msgstr ""
-
-#: src/worker/web/admin.tsx
-msgid "Manage LTI platforms"
 msgstr ""
 
 #: src/worker/web/courses.tsx
@@ -3009,7 +3054,7 @@ msgid "Register platform"
 msgstr ""
 
 #: src/worker/web/admin.tsx
-msgid "Register the LMS platforms and deployments allowed to launch into Carnap."
+msgid "Register the LMS platforms and deployments that launch into Carnap"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx

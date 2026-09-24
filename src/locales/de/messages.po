@@ -375,6 +375,14 @@ msgstr "Konto"
 msgid "Account access"
 msgstr "Kontozugang"
 
+#: src/worker/web/labels.ts
+msgid "Account reactivated"
+msgstr "Konto reaktiviert"
+
+#: src/worker/web/labels.ts
+msgid "Account suspended"
+msgstr "Konto gesperrt"
+
 #: src/worker/web/lti.tsx
 msgid "Accounts linked"
 msgstr "Konten verknüpft"
@@ -759,6 +767,10 @@ msgstr "Versuche können nur bei bewerteten Aufgaben begonnen werden."
 msgid "Audit events"
 msgstr "Prüfereignisse"
 
+#: src/worker/web/admin.tsx
+msgid "Audit log"
+msgstr "Prüfprotokoll"
+
 #: src/worker/application/errors.ts
 msgid "Authentication is required."
 msgstr "Eine Anmeldung ist erforderlich."
@@ -863,6 +875,10 @@ msgstr "Gegenbeispiel abbrechen"
 msgid "Capability"
 msgstr "Berechtigung"
 
+#: src/worker/web/labels.ts
+msgid "Capability granted"
+msgstr "Berechtigung erteilt"
+
 #: src/worker/routes/admin.ts
 msgid "Capability not granted"
 msgstr "Berechtigung nicht erteilt"
@@ -870,6 +886,10 @@ msgstr "Berechtigung nicht erteilt"
 #: src/worker/routes/admin.ts
 msgid "Capability not revoked"
 msgstr "Berechtigung nicht widerrufen"
+
+#: src/worker/web/labels.ts
+msgid "Capability revoked"
+msgstr "Berechtigung widerrufen"
 
 #: src/worker/routes/lti.ts
 msgid "Carnap cannot send the account-link confirmation email in this environment. Contact your Carnap administrator."
@@ -1188,6 +1208,10 @@ msgstr "Kursvorgabe"
 #: src/worker/web/gradebook.tsx
 msgid "Course gradebook"
 msgstr "Notenbuch des Kurses"
+
+#: src/worker/web/labels.ts
+msgid "Course membership changed"
+msgstr "Kursmitgliedschaft geändert"
 
 #: src/worker/web/admin.tsx
 msgid "Course memberships"
@@ -1629,6 +1653,10 @@ msgstr "Fehlercode {code} · Anfrage {requestId}"
 msgid "Evaluation not saved"
 msgstr "Bewertung nicht gespeichert"
 
+#: src/worker/web/admin.tsx
+msgid "Every administrative action, with request IDs"
+msgstr "Jede administrative Aktion, mit Anfrage-IDs"
+
 #: src/worker/web/courses.tsx
 msgid "Every course you are enrolled in has been archived."
 msgstr "Alle Kurse, in denen Sie eingeschrieben sind, wurden archiviert."
@@ -1811,6 +1839,10 @@ msgstr "Suchen Sie Personen über E-Mail-Adresse oder Namen, bevor Sie den Platt
 #: src/worker/web/courses.tsx
 msgid "First seen"
 msgstr "Zuerst gesehen"
+
+#: src/worker/web/labels.ts
+msgid "First site administrator created"
+msgstr "Erster Site-Administrator angelegt"
 
 #: src/worker/exercises/aufbau-proof-fitch/types.ts
 msgid "Fitch proof"
@@ -2165,10 +2197,6 @@ msgstr "LMS-Aktivitätsverknüpfungen"
 msgid "LMS grade sync problems"
 msgstr "Probleme beim Notenabgleich mit dem LMS"
 
-#: src/worker/web/admin.tsx
-msgid "LMS integration"
-msgstr "LMS-Anbindung"
-
 #: src/worker/web/auth.tsx
 msgid "Log in"
 msgstr "Anmelden"
@@ -2181,8 +2209,29 @@ msgstr "Abmelden"
 msgid "Login email delivery is not configured for this environment."
 msgstr "Der Versand von Anmelde-E-Mails ist für diese Umgebung nicht konfiguriert."
 
+#: src/worker/web/labels.ts
+msgid "LTI deployment added"
+msgstr "LTI-Deployment hinzugefügt"
+
+#: src/worker/web/labels.ts
+msgid "LTI deployment removed"
+msgstr "LTI-Deployment entfernt"
+
+#: src/worker/web/labels.ts
+msgid "LTI platform disabled"
+msgstr "LTI-Plattform deaktiviert"
+
+#: src/worker/web/labels.ts
+msgid "LTI platform enabled"
+msgstr "LTI-Plattform aktiviert"
+
+#: src/worker/web/labels.ts
+msgid "LTI platform registered"
+msgstr "LTI-Plattform registriert"
+
 #: src/worker/routes/admin-lti.ts
 #: src/worker/web/admin-lti.tsx
+#: src/worker/web/admin.tsx
 msgid "LTI platforms"
 msgstr "LTI-Plattformen"
 
@@ -2193,10 +2242,6 @@ msgstr "Hauptnavigation"
 #: src/worker/web/courses.tsx
 msgid "Manage accommodations for {name}"
 msgstr "Anpassungen für {name} verwalten"
-
-#: src/worker/web/admin.tsx
-msgid "Manage LTI platforms"
-msgstr "LTI-Plattformen verwalten"
 
 #: src/worker/web/courses.tsx
 msgid "Manage membership for {name}"
@@ -3009,8 +3054,8 @@ msgid "Register platform"
 msgstr "Plattform registrieren"
 
 #: src/worker/web/admin.tsx
-msgid "Register the LMS platforms and deployments allowed to launch into Carnap."
-msgstr "Registrieren Sie die LMS-Plattformen und Deployments, die in Carnap starten dürfen."
+msgid "Register the LMS platforms and deployments that launch into Carnap"
+msgstr "Die LMS-Plattformen und Deployments registrieren, die in Carnap starten"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Release grades"

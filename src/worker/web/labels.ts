@@ -220,6 +220,44 @@ export function capabilityLabel(
 }
 
 /**
+ * An admin audit action in words. The codes are written by the admin and LTI
+ * admin services; `action` is a plain string in storage, so a code this build
+ * does not know (one written by a later build, say) answers null and the page
+ * shows the code alone.
+ */
+export function auditActionLabel(
+  i18n: Translator,
+  action: string,
+): string | null {
+  switch (action) {
+    case "admin.bootstrap_site_admin":
+      return i18n.t("First site administrator created");
+    case "admin.change_course_membership":
+      return i18n.t("Course membership changed");
+    case "admin.grant_platform_capability":
+      return i18n.t("Capability granted");
+    case "admin.revoke_platform_capability":
+      return i18n.t("Capability revoked");
+    case "admin.suspend_user":
+      return i18n.t("Account suspended");
+    case "admin.reactivate_user":
+      return i18n.t("Account reactivated");
+    case "admin.lti_platform_registered":
+      return i18n.t("LTI platform registered");
+    case "admin.lti_platform_enabled":
+      return i18n.t("LTI platform enabled");
+    case "admin.lti_platform_disabled":
+      return i18n.t("LTI platform disabled");
+    case "admin.lti_deployment_added":
+      return i18n.t("LTI deployment added");
+    case "admin.lti_deployment_removed":
+      return i18n.t("LTI deployment removed");
+    default:
+      return null;
+  }
+}
+
+/**
  * The late-policy kinds as the instructor's form offers them: what happens to
  * work that arrives after the due date.
  */

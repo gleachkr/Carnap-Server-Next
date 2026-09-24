@@ -16,6 +16,7 @@ import { adminCrumb } from "./breadcrumbs";
 import {
   CreateBar,
   CsrfInput,
+  LinkStrip,
   Notice,
   Sheet,
   StatusBadge,
@@ -24,6 +25,7 @@ import {
   Time,
 } from "./components";
 import {
+  auditActionLabel,
   capabilityLabel,
   capabilityOptions,
   courseRoleOptions,
@@ -374,11 +376,25 @@ const MembershipCreateBar: FC<{
   );
 };
 
+/**
+ * The names an audit table reads its ids by: the actors and target users, and
+ * the target courses' titles. A course that has since gone (or never resolved)
+ * is simply absent, and the row falls back to its id.
+ */
+export interface AuditDirectory {
+  readonly courseTitles: ReadonlyMap<string, string>;
+  readonly users: UserDirectory;
+}
+
 const AuditTargets: FC<{
-  readonly directory: UserDirectory;
+  readonly directory: AuditDirectory;
   readonly event: AdminAuditEvent;
 }> = ({ directory, event }) => {
   const i18n = useI18n();
+  const courseTitle =
+    event.targetCourseId === null
+      ? undefined
+      : directory.courseTitles.get(event.targetCourseId);
 
   return (
     <>
@@ -386,17 +402,18 @@ const AuditTargets: FC<{
         <a href={`/admin/users/${event.targetUserId}`}>
           {userDisplayName(
             i18n,
-            directory.get(event.targetUserId) ?? null,
+            directory.users.get(event.targetUserId) ?? null,
             event.targetUserId,
           )}
         </a>
       ) : null}
       {event.targetUserId !== null && event.targetCourseId !== null
-        ? " "
+        ? " · "
         : null}
       {event.targetCourseId !== null ? (
         <a href={`/courses/${event.targetCourseId}`}>
-          {i18n.t("course {courseId}", { courseId: event.targetCourseId })}
+          {courseTitle ??
+            i18n.t("course {courseId}", { courseId: event.targetCourseId })}
         </a>
       ) : null}
     </>
@@ -450,8 +467,29 @@ const AuditDetail: FC<{ readonly event: AdminAuditEvent }> = ({ event }) => {
   );
 };
 
+/**
+ * An action in words, with its code underneath: the words are what an admin
+ * scans the log by, and the code is what they search the logs and the source
+ * for. A code with no words is shown alone, as it is.
+ */
+const AuditAction: FC<{ readonly action: string }> = ({ action }) => {
+  const i18n = useI18n();
+  const label = auditActionLabel(i18n, action);
+
+  if (label === null) {
+    return <code>{action}</code>;
+  }
+
+  return (
+    <>
+      {label}
+      <code class="audit-action-code">{action}</code>
+    </>
+  );
+};
+
 const AuditTable: FC<{
-  readonly directory: UserDirectory;
+  readonly directory: AuditDirectory;
   readonly events: readonly AdminAuditEvent[];
 }> = ({ directory, events }) => {
   const i18n = useI18n();
@@ -477,12 +515,14 @@ const AuditTable: FC<{
               <td>
                 <Time value={event.createdAt} />
               </td>
-              <td>{event.action}</td>
+              <td>
+                <AuditAction action={event.action} />
+              </td>
               <td>
                 <a href={`/admin/users/${event.actorUserId}`}>
                   {userDisplayName(
                     i18n,
-                    directory.get(event.actorUserId) ?? null,
+                    directory.users.get(event.actorUserId) ?? null,
                     event.actorUserId,
                   )}
                 </a>
@@ -509,7 +549,7 @@ export function renderAdminDashboard(
   context: Context<AppBindings>,
   model: {
     readonly auditEvents: readonly AdminAuditEvent[];
-    readonly directory: UserDirectory;
+    readonly directory: AuditDirectory;
     readonly saved: boolean;
     readonly stats: AdminGlobalStats;
   },
@@ -525,7 +565,26 @@ export function renderAdminDashboard(
         description={i18n.t("Operational counts for the local installation.")}
         summary={<StatsSummary stats={model.stats} />}
         title={i18n.t("Platform summary")}
-      />
+      >
+        {/* The admin's other destinations hang off the counts they explain,
+            rather than each taking a sheet whose whole body is one link. */}
+        <LinkStrip
+          links={[
+            {
+              hint: i18n.t(
+                "Register the LMS platforms and deployments that launch into Carnap",
+              ),
+              href: "/admin/lti",
+              label: i18n.t("LTI platforms"),
+            },
+            {
+              hint: i18n.t("Every administrative action, with request IDs"),
+              href: "/admin/audit",
+              label: i18n.t("Audit log"),
+            },
+          ]}
+        />
+      </Sheet>
       <Sheet
         description={i18n.t(
           "Find users by email or name before changing platform state.",
@@ -533,16 +592,6 @@ export function renderAdminDashboard(
         title={i18n.t("User search")}
       >
         <SearchForm />
-      </Sheet>
-      <Sheet
-        description={i18n.t(
-          "Register the LMS platforms and deployments allowed to launch into Carnap.",
-        )}
-        title={i18n.t("LMS integration")}
-      >
-        <p>
-          <a href="/admin/lti">{i18n.t("Manage LTI platforms")}</a>
-        </p>
       </Sheet>
       <Sheet
         description={i18n.t(
@@ -663,7 +712,7 @@ export function renderAdminUserProfile(
 export function renderAdminAudit(
   context: Context<AppBindings>,
   events: readonly AdminAuditEvent[],
-  directory: UserDirectory,
+  directory: AuditDirectory,
 ): Response {
   const i18n = context.get("i18n");
 
