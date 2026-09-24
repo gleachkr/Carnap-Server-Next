@@ -41,10 +41,10 @@
     "validate": "bun run build:client && bun test && bun run check && bun run lint:check"
   },
   "dependencies": {
-    "@aufbau/compiler": "0.0.11",
-    "@aufbau/lsp": "0.0.11",
+    "@aufbau/compiler": "0.0.12",
+    "@aufbau/lsp": "0.0.12",
     "@aufbau/syntax": "0.0.5-canary.20260908T015426Z.16.gf0358d0874b8",
-    "@aufbau/verifier": "0.0.11",
+    "@aufbau/verifier": "0.0.12",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.12.4",
     "@codemirror/lint": "^6.9.7",
