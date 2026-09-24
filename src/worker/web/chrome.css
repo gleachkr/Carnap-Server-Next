@@ -1122,6 +1122,7 @@ th > .column-sort:hover {
   position: relative;
   right: 0.5rem;
   bottom: 0.3rem;
+  filter: grayscale();
 }
 
 /* An icon button is the bare glyph, whichever element carries it: the content
