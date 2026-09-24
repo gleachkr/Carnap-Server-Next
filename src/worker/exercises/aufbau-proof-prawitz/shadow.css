@@ -24,6 +24,7 @@
 proof-proposition {
   font-family: var(--_mono-font);
   font-size: 1.02rem;
+  position: relative;
 }
 
 proof-inference {
@@ -38,10 +39,8 @@ proof-inference sup {
 
 /* The assumption label hangs off the proposition's top-right corner instead
    of taking inline width — otherwise it widens the box and shoves the
-   centered formula leftward under its inference line. */
-proof-proposition {
-  position: relative;
-}
+   centered formula leftward under its inference line. The proposition is
+   positioned, in its first rule, for this. */
 proof-proposition > sup {
   left: 100%;
   position: absolute;

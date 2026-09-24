@@ -927,7 +927,6 @@ th > .column-sort:hover {
 
 .create-bar button {
   flex: 0 0 auto;
-  margin: 0;
 }
 
 /* A choice's note takes a row of its own under the fields and the submit
@@ -1983,6 +1982,7 @@ th > .column-sort:hover {
 
 .charity p {
   grid-column: 1 / -1;
+  margin: 0.35rem 0 0;
 }
 
 /* Shown at the icon's own size, never enlarged past it. Site icons are often
@@ -2018,10 +2018,6 @@ th > .column-sort:hover {
 .charity-name {
   font-size: 1.05rem;
   font-weight: 600;
-}
-
-.charity p {
-  margin: 0.35rem 0 0;
 }
 
 @media (max-width: 820px) {
