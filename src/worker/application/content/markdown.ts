@@ -61,6 +61,15 @@ export const CONTENT_SANITIZE_SCHEMA: SanitizeSchema = {
     // that fails the check is dropped silently, which would print "Footnotes"
     // above every set of notes.
     h2: [["className", "sr-only", "visually-hidden"]],
+    // The sidenote copy of a footnote ships hidden (see `rehypeSidenotes`).
+    // Nothing an author writes can produce a `<span>`, so this admits the
+    // attribute on that copy and nowhere else.
+    span: ["hidden"],
+    // And the note it copies is marked, so that a stylesheet setting notes in
+    // the margin can hide exactly the ones it has shown there. The default
+    // entry allows `task-list-item` alone, which this keeps though the dialect
+    // has no task lists.
+    li: [["className", "task-list-item", "has-sidenote"]],
     "*": [...(defaultSchema.attributes?.["*"] ?? []), "className"],
   },
   // Footnote ids arrive already namespaced: `mdast-util-to-hast` prefixes the
@@ -344,6 +353,198 @@ function rehypeContinuedFootnotes(offset: number, labelId: string) {
   };
 }
 
+/** A footnote marker: `<sup><a data-footnote-ref href="#…">N</a></sup>`. */
+function footnoteMarkerLink(node: HastNodeLike): HastNodeLike | undefined {
+  if (node.tagName !== "sup") {
+    return undefined;
+  }
+
+  const link = node.children?.find((child) => child.type === "element");
+
+  return link?.properties?.dataFootnoteRef === undefined ? undefined : link;
+}
+
+function isBlankText(node: HastNodeLike): boolean {
+  return node.type === "text" && (node.value ?? "").trim() === "";
+}
+
+/**
+ * A copy of a note's text fit to sit inline: the children of its one
+ * paragraph, less the back-links, and with every id dropped so that the copy
+ * mints none the document already has. A note of more than one paragraph (or
+ * of a list, or a table) has no copy, because block content cannot sit inside
+ * the paragraph that cites it.
+ */
+function inlineNoteContent(item: HastNodeLike): HastNodeLike[] | undefined {
+  const blocks = (item.children ?? []).filter((child) => !isBlankText(child));
+  const [paragraph] = blocks;
+
+  if (blocks.length !== 1 || paragraph?.tagName !== "p") {
+    return undefined;
+  }
+
+  const withoutIds = (node: HastNodeLike): HastNodeLike => {
+    const { id: _id, ...properties } = node.properties ?? {};
+
+    return {
+      ...node,
+      ...(node.properties === undefined ? {} : { properties }),
+      ...(node.children === undefined
+        ? {}
+        : { children: node.children.map(withoutIds) }),
+    };
+  };
+  const content = (paragraph.children ?? [])
+    .filter((child) => child.properties?.dataFootnoteBackref === undefined)
+    .map(withoutIds);
+
+  // Each back-link was preceded by a space, which is left dangling.
+  while (content.at(-1)?.type === "text") {
+    const last = content.at(-1) as HastNodeLike;
+    last.value = (last.value ?? "").trimEnd();
+
+    if (last.value !== "") {
+      break;
+    }
+
+    content.pop();
+  }
+
+  return content;
+}
+
+/**
+ * Put a hidden copy of each note beside its first marker, for a stylesheet
+ * that wants sidenotes rather than notes at the foot:
+ *
+ * ```html
+ * <sup><a data-footnote-ref …>1</a></sup><span class="sidenote" hidden>
+ *   <span class="sidenote-number">1</span> The note's text.</span>
+ * ```
+ *
+ * A stylesheet cannot do this itself: moving the note from the list at the
+ * foot to its marker is a change of tree, not of layout. So the tree carries
+ * both. The note at the foot is marked `has-sidenote` and otherwise left
+ * alone, so a note too long to copy still has a place. The copy is `hidden`
+ * rather than hidden by a rule so that a document without the default
+ * stylesheet — a `:::style{reset}` lesson, a review page — still shows each
+ * note once; the user agent's `display: none` for `hidden` is the weakest rule
+ * there is, so any `.sidenote { display: … }` an author writes reveals it.
+ * Hidden, it is out of the accessibility tree as well, so either way a screen
+ * reader meets each note once.
+ *
+ * Runs after `rehypeContinuedFootnotes`, whose document-wide number it copies.
+ */
+function rehypeSidenotes() {
+  return (tree: unknown): void => {
+    const root = tree as HastNodeLike;
+    const notes = new Map<string, HastNodeLike>();
+    const collectNotes = (node: HastNodeLike): void => {
+      if (node.tagName === "li" && typeof node.properties?.id === "string") {
+        notes.set(node.properties.id, node);
+      }
+
+      for (const child of node.children ?? []) {
+        collectNotes(child);
+      }
+    };
+    const copied = new Set<string>();
+    const annotate = (node: HastNodeLike): void => {
+      const children = node.children;
+
+      if (children === undefined) {
+        return;
+      }
+
+      node.children = children.flatMap((child) => {
+        // A marker inside a note is left alone: annotating it would put a copy
+        // of one note inside another, in the section at the foot.
+        if (child.properties?.dataFootnotes === undefined) {
+          annotate(child);
+        }
+
+        const link = footnoteMarkerLink(child);
+        const href = link?.properties?.href;
+
+        if (typeof href !== "string" || !href.startsWith("#")) {
+          return [child];
+        }
+
+        const target = href.slice(1);
+        const note = notes.get(target);
+        const content =
+          note === undefined || copied.has(target)
+            ? undefined
+            : inlineNoteContent(note);
+
+        if (note === undefined || content === undefined) {
+          return [child];
+        }
+
+        copied.add(target);
+        note.properties = { ...note.properties, className: ["has-sidenote"] };
+        const [number] = link?.children ?? [];
+
+        return [
+          child,
+          {
+            children: [
+              {
+                children: number === undefined ? [] : [{ ...number }],
+                properties: { className: ["sidenote-number"] },
+                tagName: "span",
+                type: "element",
+              },
+              { type: "text", value: " " },
+              ...content,
+            ],
+            properties: { className: ["sidenote"], hidden: true },
+            tagName: "span",
+            type: "element",
+          },
+        ];
+      });
+    };
+
+    // A note left at the foot states its own number. A stylesheet that hides
+    // the copied notes takes them out of the list's count too, and the note
+    // after them would otherwise take the first one's number.
+    const numberRemaining = (node: HastNodeLike): void => {
+      if (node.properties?.dataFootnotes === undefined) {
+        for (const child of node.children ?? []) {
+          numberRemaining(child);
+        }
+
+        return;
+      }
+
+      for (const list of node.children ?? []) {
+        if (list.tagName !== "ol") {
+          continue;
+        }
+
+        const start = Number(list.properties?.start ?? 1);
+        const items = (list.children ?? []).filter(
+          (child) => child.tagName === "li",
+        );
+
+        items.forEach((item, index) => {
+          if (item.properties?.className === undefined) {
+            item.properties = { ...item.properties, value: start + index };
+          }
+        });
+      }
+    };
+
+    collectNotes(root);
+    annotate(root);
+
+    if (copied.size > 0) {
+      numberRemaining(root);
+    }
+  };
+}
+
 /**
  * The markdown → sanitized-HTML pipeline for one block: a run of prose between
  * two exercises, or one exercise's prompt.
@@ -417,6 +618,7 @@ function htmlRendererFor(
         },
       })
       .use(rehypeContinuedFootnotes, offset, labelId)
+      .use(rehypeSidenotes)
       .use(rehypeSanitize, CONTENT_SANITIZE_SCHEMA)
       .use(rehypeStringify)
   );

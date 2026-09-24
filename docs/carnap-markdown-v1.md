@@ -95,6 +95,45 @@ An undefined marker remains literal text. A later reference to a note
 already used elsewhere in the document also remains literal. Unreferenced
 definitions are omitted.
 
+Each note whose definition is a single paragraph is also copied, hidden,
+beside its first reference, for a stylesheet that sets notes in the margin
+rather than at the foot:
+
+```html
+<sup><a data-footnote-ref …>1</a></sup><span class="sidenote" hidden>
+<span class="sidenote-number">1</span> The note's text.</span>
+```
+
+Style the number through `.sidenote-number`. The note at the foot is then
+marked `<li class="has-sidenote">`. The default
+stylesheet never shows the copy. To use sidenotes instead, give `.sidenote`
+a `display` value and hide the notes that have one. Hide the section too once
+nothing in it is left to show. With the default measures, prose leaves room
+to its right for a margin column on wide screens:
+
+```css
+@media (min-width: 60rem) {
+  .footnotes li.has-sidenote,
+  .footnotes:not(:has(li:not(.has-sidenote))) { display: none; }
+  .sidenote {
+    clear: right;
+    display: block;
+    float: right;
+    font-size: 0.85rem;
+    margin-right: -32%;
+    width: 28%;
+  }
+}
+```
+
+The `hidden` attribute is the weakest rule there is, so any `display` rule
+overrides it. A document that does not set one, including a
+`:::style{reset}` document, shows each note once, at the foot. A note with
+more than one paragraph, a list, or a table has no copy, since block content
+cannot sit inside the paragraph that cites it; it stays at the foot, and
+states its own number, so hiding the notes before it does not renumber it.
+A note cited again carries its copy only at the first reference.
+
 The stored footnote section uses English accessible labels for its hidden
 heading and return links. These are generated at compilation time, before a
 viewer locale is known. The note text itself is authored content.
@@ -1283,8 +1322,9 @@ wins when specificity is equal.
 - A fenced `css` code block is only a displayed code sample.
 
 Target elements or existing structural classes such as `.exercise`,
-`.exercise-prompt`, `.exercise-status`, `.exercise-actions`, and
-`.exercise-check-status`. There is no general author syntax for assigning
+`.exercise-prompt`, `.exercise-status`, `.exercise-actions`,
+`.exercise-check-status`, `.footnotes`, `.sidenote`, `.sidenote-number`,
+and `.has-sidenote` (see [Footnotes](#footnotes)). There is no general author syntax for assigning
 classes. `.exercise` is on each exercise's outer box.
 
 Shadow-root controls are isolated from author CSS selectors. Slotted

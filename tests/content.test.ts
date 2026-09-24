@@ -315,7 +315,7 @@ Pick one.
     // sanitizer's own id-namespacing used to break: it rewrote the ids and
     // left the hrefs alone.
     expect(prose.html).toContain('href="#user-content-n1-fn-sinn"');
-    expect(prose.html).toContain('<li id="user-content-n1-fn-sinn">');
+    expect(prose.html).toContain('<li id="user-content-n1-fn-sinn"');
     expect(prose.html).toContain('id="user-content-n1-fnref-sinn"');
     expect(prose.html).toContain('href="#user-content-n1-fnref-sinn"');
     expect(prose.html).toContain(
@@ -460,8 +460,8 @@ Name it again.[^1]
     // Ids are built from the label the author wrote, so two prompts that both
     // use `[^1]` would mint the same one; the count each block starts from is
     // what keeps them apart.
-    expect(prompts[0]).toContain('<li id="user-content-n1-fn-1">');
-    expect(prompts[1]).toContain('<li id="user-content-n2-fn-1">');
+    expect(prompts[0]).toContain('<li id="user-content-n1-fn-1"');
+    expect(prompts[1]).toContain('<li id="user-content-n2-fn-1"');
   });
 
   test("an undefined footnote marker stays literal text", async () => {
@@ -480,6 +480,50 @@ Name it again.[^1]
     }
 
     expect(prose.html).toBe("<p>See here.[^nope] Done.</p>");
+  });
+
+  test("each note gets a hidden sidenote copy beside its first marker", async () => {
+    const compiled =
+      await compileCarnapMarkdown(`Frege said so.[^sinn] Russell
+disagreed[^long] and said so again.[^sinn]
+
+[^sinn]: *Über Sinn und Bedeutung*, page 25.[^long]
+[^long]: A note of two paragraphs.
+
+    The second one.
+`);
+
+    expect(compiled.diagnostics).toEqual([]);
+
+    if (!compiled.ok) {
+      throw new Error("Expected successful compilation.");
+    }
+
+    const prose = compiled.artifact.document.nodes[0];
+
+    if (prose?.kind !== "markdown") {
+      throw new Error("Expected a Markdown node.");
+    }
+
+    // The copy follows the marker, carries its number, and drops the
+    // back-links and every id: the note at the foot keeps those.
+    expect(prose.html).toContain(
+      'id="user-content-n1-fnref-sinn" data-footnote-ref aria-describedby="user-content-n1-footnote-label">1</a></sup><span class="sidenote" hidden><span class="sidenote-number">1</span> <em>Über Sinn und Bedeutung</em>, page 25.<sup><a href="#user-content-n1-fn-long" data-footnote-ref aria-describedby="user-content-n1-footnote-label">2</a></sup></span> Russell',
+    );
+    // One copy per note, however often it is cited, and none for a note that
+    // is more than one paragraph: a block cannot sit inside the paragraph that
+    // cites it.
+    expect(prose.html.match(/class="sidenote"/g)).toHaveLength(1);
+    // At the foot, the note that was copied is marked and the other is not.
+    expect(prose.html).toContain(
+      '<li id="user-content-n1-fn-sinn" class="has-sidenote">',
+    );
+    // It also states its number. A stylesheet that hides the note before it
+    // takes that note out of the list's count too.
+    expect(prose.html).toContain(
+      '<li id="user-content-n1-fn-long" value="2">',
+    );
+    expect(prose.html).toContain("<p>The second one.");
   });
 
   test("compiles free-response and short-answer directives", async () => {
