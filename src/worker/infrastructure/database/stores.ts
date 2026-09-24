@@ -1368,11 +1368,13 @@ class SqliteContentStore implements ContentStore {
   }
 
   async listItemsForOwner(ownerUserId: AppId): Promise<ContentItem[]> {
+    // Newest first: an author opens the library to get back to what they
+    // were just working on.
     return this.db
       .select()
       .from(contentItems)
       .where(eq(contentItems.ownerUserId, ownerUserId))
-      .orderBy(asc(contentItems.updatedAt), asc(contentItems.id));
+      .orderBy(desc(contentItems.updatedAt), desc(contentItems.id));
   }
 
   async setItemArchived(

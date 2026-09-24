@@ -122,6 +122,26 @@ function findExercise(
   return item;
 }
 
+async function listedIds(
+  env: Env,
+  loginResult: LoginResult,
+): Promise<readonly string[]> {
+  const response = await appRequest(
+    createTestApp(),
+    "/content",
+    { headers: { Cookie: loginResult.cookieHeader } },
+    env,
+  );
+
+  expect(response.status).toBe(200);
+
+  const body = (await response.json()) as {
+    readonly items: readonly ContentItemResponse["item"][];
+  };
+
+  return body.items.map((item) => item.id);
+}
+
 /** Signed in and allowed to write content, which nobody is by default. */
 async function login(env: Env, email: string): Promise<LoginResult> {
   const result = await signIn(env, email);
@@ -1479,6 +1499,37 @@ describe("content routes", () => {
       expect(firstBody.revision.contentHash).not.toBe(
         secondBody.revision.contentHash,
       );
+    });
+  });
+
+  test("the library lists the most recently changed item first", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "library-order@example.test");
+      const older = await createContent(env, author);
+
+      // Timestamps are milliseconds; keep each step on its own tick.
+      await Bun.sleep(5);
+      const newer = await createContent(env, author);
+
+      expect(await listedIds(env, author)).toEqual([
+        newer.item.id,
+        older.item.id,
+      ]);
+
+      await Bun.sleep(5);
+      const saved = await appRequest(
+        createTestApp(),
+        `/content/${older.item.id}/revisions`,
+        jsonRequest({ sourceText: sampleSource() }, author),
+        env,
+      );
+
+      expect(saved.status).toBe(201);
+      // Saving is what counts as a change, so the edited item comes back up.
+      expect(await listedIds(env, author)).toEqual([
+        older.item.id,
+        newer.item.id,
+      ]);
     });
   });
 
