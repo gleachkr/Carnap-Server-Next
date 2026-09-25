@@ -33,11 +33,12 @@ export interface FiniteModel {
 /**
  * The value of a term under an assignment to the variables.
  *
- * An unbound variable throws: every shipping spec requires closed sentences,
- * so reaching this means a formula got past the parser that should not have.
- * Carnap answers the same way — "it doesn't make sense to ask for the semantic
- * value of an unbound variable" — and both are internal-error paths, not
- * anything a student can provoke.
+ * An unbound variable throws. A variable free in an exercise's formulas is a
+ * field of its own, read into the assignment evaluation starts from, so
+ * reaching this means a caller evaluated without it. Carnap answers the same
+ * way — "it doesn't make sense to ask for the semantic value of an unbound
+ * variable" — and both are internal-error paths, not anything a student can
+ * provoke.
  *
  * A constant or function value the model does not carry falls back to the first
  * domain element. A complete model has all of them, and every caller validates

@@ -112,6 +112,10 @@ export function buildModelStrings(i18n: Translator) {
       "{field}: which element it names",
       placeholders("field"),
     ),
+    "{field}: which element it is assigned": i18n.t(
+      "{field}: which element it is assigned",
+      placeholders("field"),
+    ),
     "{field}: its truth value": i18n.t(
       "{field}: its truth value",
       placeholders("field"),

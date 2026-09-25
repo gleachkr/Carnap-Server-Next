@@ -26,6 +26,7 @@ import {
 } from "../src/worker/exercises/model/types";
 import { i18nFor } from "../src/worker/i18n";
 import { passthroughTranslator } from "../src/worker/i18n/translator";
+import { FIXED_ARITY_SPEC_SOURCE } from "./helpers/fixed-arity-language";
 
 const REVIEW_CONTEXT = {
   audience: "student",
@@ -828,5 +829,84 @@ describe("reviewing a submitted model", () => {
     );
 
     expect(review.summary).toBe("The domain cannot be empty.");
+  });
+});
+
+describe("free variables", () => {
+  /** A document-local language that lets a formula have free variables. */
+  const OPEN_BLOCK = `:::aufbau-mm0{name="open"}
+${FIXED_ARITY_SPEC_SOURCE.replace("--| @syntax lint closed-sentences\n", "")}:::`;
+
+  function openDirective(attrs: string, body: string): string {
+    return `${OPEN_BLOCK}\n\n${directive(`${attrs} system="open"`, body)}`;
+  }
+
+  test("a variable is given the way a constant is", async () => {
+    const data = publicDataOf(
+      await declaration(
+        openDirective("#fv1", "- Red(x) ∧ R(x, y)\n| Domain : 0,1\n| x : 1"),
+      ),
+    );
+
+    expect(data.givens).toEqual({ Domain: "0,1", x: "1" });
+  });
+
+  test("only a free variable can be given", async () => {
+    expect(
+      await compileCodes(openDirective("#fv2", "- ∀x Red(x)\n| x : 1")),
+    ).toEqual(["unknown_model_given_field"]);
+    expect(
+      await compileCodes(openDirective("#fv3", "- Red(x)\n| x : one")),
+    ).toEqual(["invalid_model_given_value"]);
+  });
+
+  test("grading evaluates at the submitted assignment", async () => {
+    const source = openDirective("#fv4", "- Red(x)");
+
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "Red(_)": "1", x: "1" },
+      }),
+    ).toEqual({ score: 1, status: "correct" });
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "Red(_)": "1", x: "0" },
+      }),
+    ).toEqual({ score: 0, status: "incorrect" });
+  });
+
+  test("a strict given fixes the assignment", async () => {
+    const source = openDirective(
+      '#fv5 options="strictGivens"',
+      "- Red(x)\n| x : 0",
+    );
+
+    // Pointing x at the red element does not help: the given puts it back.
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "Red(_)": "1", x: "1" },
+      }),
+    ).toEqual({ score: 0, status: "incorrect" });
+    expect(
+      await score(source, {
+        domain: "0,1",
+        fields: { "Red(_)": "0", x: "0" },
+      }),
+    ).toEqual({ score: 1, status: "correct" });
+  });
+
+  test("the form offers the domain for a variable, named as an assignment", async () => {
+    const html = renderCompiledContent(
+      await compileArtifact(
+        openDirective("#fv6", "- Red(x)\n| Domain : 0,1"),
+      ),
+      i18nFor("en"),
+    );
+
+    expect(html).toContain('data-field="x" data-kind="variable"');
+    expect(html).toContain("x: which element it is assigned");
   });
 });

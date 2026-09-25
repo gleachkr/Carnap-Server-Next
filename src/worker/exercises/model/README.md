@@ -147,7 +147,9 @@ and supported roles. The main Calgary rules are:
   `⊥`/`_|_`/`!?` and `⊤`.
 - The vocabulary is finite. Undeclared subscripts and arity annotations are
   not accepted automatically. Extend the language to add symbols.
-- Every model sentence must be closed; free variables are rejected.
+- Every sentence must be closed; free variables are rejected. That is
+  Calgary's `closed-sentences` lint, not a rule of the model type: see
+  [Free variables](#free-variables).
 
 Custom fixed-arity symbols also work. `@syntax role individual` identifies
 the domain sort, and `argument-list` identifies variadic argument lists.
@@ -190,7 +192,8 @@ exercise.
 
 The formulas determine the field list. `AxR(x,f(x))` requires a domain,
 `R(_,_)`, and `f(_)`. Fields appear in this order: domain, relations,
-sentence letters, constants, functions; each symbol group is sorted by label.
+sentence letters, constants, free variables, functions; each symbol group is
+sorted by label.
 
 - **Domain:** one or more natural numbers, such as `0,1,2`, with at most
   `MAX_DOMAIN_SIZE` (16) distinct elements. Duplicates are collapsed.
@@ -199,11 +202,28 @@ sentence letters, constants, functions; each symbol group is sorted by label.
   extension.
 - **Sentence letter:** True/False control.
 - **Constant:** menu containing domain elements.
+- **Free variable:** the same menu; see below.
 - **Function:** a value menu for every argument tuple over the domain.
 
 Every referenced element must belong to the domain. Function tables supply
 all argument tuples in the widget; malformed API submissions can still be
 partial and are checked by the server.
+
+### Free variables
+
+A language without the `closed-sentences` lint lets a formula such as
+`Red(x) → Blue(x)` have free variables. Each variable occurring free in the
+exercise's formulas is then a field, and the formulas are evaluated at the
+assignment the fields describe — satisfaction relative to an assignment,
+not universal closure. The field is handled exactly as a constant is: a
+domain-value menu labelled `x`, a given `| x : 1`, locked by
+`strictGivens`, and `x` as its key in the answer. A variable that occurs only
+bound gets no field, and a quantifier rebinds a variable the assignment
+gave a value.
+
+No built-in language admits open formulas today: both forallx files declare
+the lint and `carnap-prop` has no variables. A course reaches this through a
+language of its own.
 
 ### Function tables
 
@@ -239,9 +259,7 @@ Relevant tests include `tests/model.test.ts`,
 ## Possible extensions
 
 Relation grids, `forallxStyle` labels, and non-numeric domain elements are
-not implemented. A language allowing open formulas would also need an
-explicit evaluation policy, such as universal closure; it is not supported
-merely by adding notation.
+not implemented.
 
 [feedback]: ../../../../docs/carnap-markdown-v1.md#recording-and-feedback
 [languages]: ../../../../docs/carnap-markdown-v1.md#languages-and-theories

@@ -10,6 +10,11 @@
  * A symbol's identity includes its **arity**, matching Carnap, which keys
  * relations by `(index, arity)`: `F(a)` and `F(a,b)` are two different
  * predicates and get two separate fields.
+ *
+ * A variable that occurs **free** asks for a value too — the assignment the
+ * formula is evaluated at — and gets a field of its own, filled in or given
+ * exactly as a constant is. Only a language without `closed-sentences` lets
+ * one through the parser, so for every closed exercise nothing changes.
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
@@ -21,10 +26,11 @@ export type ModelFieldKind =
   | "relation"
   | "proposition"
   | "constant"
+  | "variable"
   | "function";
 
 export interface ModelField {
-  /** 0 for the domain, a proposition, or a constant. */
+  /** 0 for the domain, a proposition, a constant, or a variable. */
   readonly arity: number;
   readonly kind: ModelFieldKind;
   /**
@@ -84,12 +90,31 @@ export function symbolKey(symbol: string, arity: number): string {
   return `${symbol}/${arity}`;
 }
 
+/**
+ * A free variable's key. Kept apart from {@link symbolKey}'s space so that no
+ * spelling could make a variable and a constant share a field, though a token
+ * is only ever one or the other.
+ */
+function variableKey(name: string): string {
+  return `var ${name}`;
+}
+
 function collectFromTerm(
   term: Term,
   into: Map<string, ModelField>,
   lang: SurfaceLanguage,
+  bound: ReadonlySet<string>,
 ): void {
   if (term.type === "variable") {
+    if (!bound.has(term.name)) {
+      into.set(variableKey(term.name), {
+        arity: 0,
+        kind: "variable",
+        label: termToString(term, lang),
+        symbol: term.name,
+      });
+    }
+
     return;
   }
 
@@ -113,7 +138,7 @@ function collectFromTerm(
   });
 
   for (const argument of term.args) {
-    collectFromTerm(argument, into, lang);
+    collectFromTerm(argument, into, lang, bound);
   }
 }
 
@@ -121,6 +146,7 @@ function collectFromFormula(
   formula: Formula,
   into: Map<string, ModelField>,
   lang: SurfaceLanguage,
+  bound: ReadonlySet<string>,
 ): void {
   switch (formula.type) {
     case "predicate": {
@@ -133,28 +159,33 @@ function collectFromFormula(
       });
 
       for (const argument of formula.args) {
-        collectFromTerm(argument, into, lang);
+        collectFromTerm(argument, into, lang, bound);
       }
 
       return;
     }
     case "identity":
-      collectFromTerm(formula.left, into, lang);
-      collectFromTerm(formula.right, into, lang);
+      collectFromTerm(formula.left, into, lang, bound);
+      collectFromTerm(formula.right, into, lang, bound);
       return;
     case "falsum":
     case "verum":
       return;
     case "not":
-      collectFromFormula(formula.operand, into, lang);
+      collectFromFormula(formula.operand, into, lang, bound);
       return;
     case "forall":
     case "exists":
-      collectFromFormula(formula.body, into, lang);
+      collectFromFormula(
+        formula.body,
+        into,
+        lang,
+        new Set([...bound, formula.variable]),
+      );
       return;
     default:
-      collectFromFormula(formula.left, into, lang);
-      collectFromFormula(formula.right, into, lang);
+      collectFromFormula(formula.left, into, lang, bound);
+      collectFromFormula(formula.right, into, lang, bound);
   }
 }
 
@@ -164,6 +195,7 @@ const KIND_ORDER: readonly ModelFieldKind[] = [
   "relation",
   "proposition",
   "constant",
+  "variable",
   "function",
 ];
 
@@ -171,7 +203,8 @@ const KIND_ORDER: readonly ModelFieldKind[] = [
  * Every field the formulas need, domain first and then grouped by kind, each
  * group in label order — the sequence `prepareModelUI` builds by appending
  * relations, then propositions, then constants, then functions, sorting each
- * group by its label as it goes.
+ * group by its label as it goes. Free variables, which Carnap never has, sit
+ * after the constants they are filled in like.
  */
 export function modelSignature(
   formulas: readonly Formula[],
@@ -180,7 +213,7 @@ export function modelSignature(
   const collected = new Map<string, ModelField>();
 
   for (const formula of formulas) {
-    collectFromFormula(formula, collected, lang);
+    collectFromFormula(formula, collected, lang, new Set());
   }
 
   const fields = [...collected.values()].sort((left, right) => {

@@ -79,7 +79,12 @@ export type ModelProblem =
   | { readonly kind: "function-too-large"; readonly field: string };
 
 export type ModelRead =
-  | { readonly ok: true; readonly model: FiniteModel }
+  | {
+      readonly ok: true;
+      /** Each free variable's value, which is not part of the model. */
+      readonly assignment: ReadonlyMap<string, number>;
+      readonly model: FiniteModel;
+    }
   | { readonly ok: false; readonly problem: ModelProblem };
 
 /**
@@ -217,6 +222,7 @@ export function readModel(
   }
 
   const elements = new Set(domain);
+  const assignment = new Map<string, number>();
   const constants = new Map<string, number>();
   const functions = new Map<string, ReadonlyMap<string, number>>();
   const propositions = new Map<string, boolean>();
@@ -247,7 +253,9 @@ export function readModel(
       continue;
     }
 
-    if (field.kind === "constant") {
+    // A free variable reads exactly as a constant does; only where its value
+    // goes differs.
+    if (field.kind === "constant" || field.kind === "variable") {
       const parsed = parseNatural(text);
 
       if (!parsed.ok) {
@@ -268,7 +276,10 @@ export function readModel(
         };
       }
 
-      constants.set(field.symbol, parsed.value);
+      (field.kind === "constant" ? constants : assignment).set(
+        field.symbol,
+        parsed.value,
+      );
       continue;
     }
 
@@ -340,6 +351,7 @@ export function readModel(
   }
 
   return {
+    assignment,
     model: { constants, domain, functions, propositions, relations },
     ok: true,
   };
@@ -378,16 +390,20 @@ function offenders(
   return [];
 }
 
-/** Evaluate a task against a model that has already been read. */
+/**
+ * Evaluate a task against a model that has already been read, at the
+ * assignment read with it. The assignment is empty for closed formulas.
+ */
 export function judgeModel(
   task: ModelTask,
   model: FiniteModel,
+  assignment: ReadonlyMap<string, number> = new Map(),
 ): ModelVerdict {
   const requiredValues = task.required.map((formula) =>
-    satisfies(formula, model),
+    satisfies(formula, model, assignment),
   );
   const targetedValues = task.targeted.map((formula) =>
-    satisfies(formula, model),
+    satisfies(formula, model, assignment),
   );
   const requiredFalse = requiredValues.flatMap((value, index) =>
     value ? [] : [index],
@@ -421,5 +437,5 @@ export function checkModel(
     };
   }
 
-  return judgeModel(task, read.model);
+  return judgeModel(task, read.model, read.assignment);
 }

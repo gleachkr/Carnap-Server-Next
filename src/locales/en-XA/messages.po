@@ -110,6 +110,10 @@ msgid "{field}: the tuples in its extension"
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts
+msgid "{field}: which element it is assigned"
+msgstr ""
+
+#: src/worker/exercises/model/strings.ts
 msgid "{field}: which element it names"
 msgstr ""
 

@@ -147,7 +147,7 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
     );
   }
 
-  if (field.kind === "constant") {
+  if (field.kind === "constant" || field.kind === "variable") {
     const parsed = Number.parseInt(given, 10);
     const selected = Number.isNaN(parsed) ? (context.domain[0] ?? 0) : parsed;
 
@@ -157,7 +157,15 @@ function renderField(field: ModelField, context: FieldRenderContext): string {
         context.domain,
         selected,
         disabled,
-      )}<span class="visually-hidden" id="${id}-hint">${escapeHtml(context.strings("{field}: which element it names", { field: field.label }))}</span>`,
+      )}<span class="visually-hidden" id="${id}-hint">${escapeHtml(
+        field.kind === "constant"
+          ? context.strings("{field}: which element it names", {
+              field: field.label,
+            })
+          : context.strings("{field}: which element it is assigned", {
+              field: field.label,
+            }),
+      )}</span>`,
     );
   }
 

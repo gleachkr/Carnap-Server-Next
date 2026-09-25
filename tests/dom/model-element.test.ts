@@ -11,6 +11,7 @@ import type {
 } from "../../src/worker/exercises/model/types";
 import { i18nFor } from "../../src/worker/i18n";
 import { adoptShadowRoots, dom, domDocument } from "../helpers/dom";
+import { FIXED_ARITY_SPEC_SOURCE } from "../helpers/fixed-arity-language";
 import {
   checkStatus,
   compileExercise,
@@ -588,5 +589,53 @@ describe("restoring a prior answer", () => {
     });
 
     expect(answerOf(mounted).fields.a).toBe("2");
+  });
+});
+
+describe("a free variable", () => {
+  /** A document-local language whose formulas may have free variables. */
+  function openExercise(body: string) {
+    const language = FIXED_ARITY_SPEC_SOURCE.replace(
+      "--| @syntax lint closed-sentences\n",
+      "",
+    );
+
+    return compileExercise(
+      `:::aufbau-mm0{name="open"}\n${language}:::\n\n::::model{#fv system="open"}\n${body}\n::::`,
+    );
+  }
+
+  test("its options follow the domain, as a constant's do", async () => {
+    const mounted = mountExercise(await openExercise("- Red(x)"));
+    const variable = valueControl(
+      mounted.root,
+      "x",
+    ) as unknown as HTMLSelectElement;
+
+    type(valueControl(mounted.root, "Domain"), "0,1,2");
+    choose(variable, "2");
+
+    expect(Array.from(variable.options).map((o) => o.value)).toEqual([
+      "0",
+      "1",
+      "2",
+    ]);
+    expect(answerOf(mounted).fields.x).toBe("2");
+  });
+
+  test("the local Check evaluates at the chosen value", async () => {
+    const mounted = mountExercise(await openExercise("- Red(x)"));
+
+    type(valueControl(mounted.root, "Domain"), "0,1");
+    type(valueControl(mounted.root, "Red(_)"), "1");
+    choose(valueControl(mounted.root, "x") as HTMLSelectElement, "0");
+    clickCheck(mounted);
+
+    expect(checkStatus(mounted)?.dataset.state).not.toBe("correct");
+
+    choose(valueControl(mounted.root, "x") as HTMLSelectElement, "1");
+    clickCheck(mounted);
+
+    expect(checkStatus(mounted)?.dataset.state).toBe("correct");
   });
 });

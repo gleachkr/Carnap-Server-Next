@@ -28,7 +28,10 @@ import {
   tuplesOver,
 } from "../src/worker/exercises/model/logic";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
-import { fixedArityLanguage } from "./helpers/fixed-arity-language";
+import {
+  FIXED_ARITY_SPEC_SOURCE,
+  fixedArityLanguage,
+} from "./helpers/fixed-arity-language";
 
 /** The forallx spec, resolved once — a language is tables, not data. */
 function calgary(): SurfaceLanguage {
@@ -772,5 +775,124 @@ describe("symbols of fixed arity", () => {
     }
     // 1 + 1 = 0 ≠ succ(0).
     expect(satisfies(parseFixed("b + b = succ(c)"), read.model)).toBe(false);
+  });
+});
+
+describe("free variables", () => {
+  /**
+   * A language without `closed-sentences` reads `Red(x)` with `x` free, and
+   * the formula is evaluated at an assignment: each free variable is a field,
+   * filled in like a constant, whose value is where evaluation starts.
+   */
+  const OPEN = fixedArityLanguage(
+    FIXED_ARITY_SPEC_SOURCE.replace(
+      "--| @syntax lint closed-sentences\n",
+      "",
+    ),
+  );
+
+  function parseOpen(source: string): Formula {
+    const result = parseFormula(source, OPEN);
+
+    if (!result.ok) {
+      throw new Error(
+        `Expected '${source}' to parse: ${result.errors[0]?.message}`,
+      );
+    }
+
+    return result.formula;
+  }
+
+  function openTask(targeted: readonly string[]): ModelTask {
+    return {
+      required: [],
+      target: "all-true",
+      targeted: targeted.map(parseOpen),
+    };
+  }
+
+  test("a free variable is a field after the constants", () => {
+    const signature = modelSignature(
+      ["Red(a) ∧ R(y, x)", "succ(z) = b"].map(parseOpen),
+      OPEN,
+    );
+
+    expect(
+      signature.map((field) => [field.label, field.kind] as const),
+    ).toEqual([
+      [DOMAIN_FIELD_LABEL, "domain"],
+      ["R(_,_)", "relation"],
+      ["Red(_)", "relation"],
+      ["a", "constant"],
+      ["b", "constant"],
+      ["x", "variable"],
+      ["y", "variable"],
+      ["z", "variable"],
+      ["succ(_)", "function"],
+    ]);
+  });
+
+  test("only a free occurrence asks for a value", () => {
+    const labels = (source: string): string[] =>
+      modelSignature([parseOpen(source)], OPEN).map((field) => field.label);
+
+    expect(labels("∀x Red(x)")).toEqual([DOMAIN_FIELD_LABEL, "Red(_)"]);
+    // The same variable both bound and free: the free occurrence is a field.
+    expect(labels("Red(x) ∧ ∃x Blue(x)")).toEqual([
+      DOMAIN_FIELD_LABEL,
+      "Blue(_)",
+      "Red(_)",
+      "x",
+    ]);
+  });
+
+  test("the formula is evaluated at the assignment", () => {
+    const signature = modelSignature([parseOpen("Red(x)")], OPEN);
+    const at = (x: string) =>
+      checkModel(signature, openTask(["Red(x)"]), {
+        domain: "0,1",
+        fields: { "Red(_)": "1", x },
+      }).ok;
+
+    expect(at("1")).toBe(true);
+    expect(at("0")).toBe(false);
+  });
+
+  test("a quantifier rebinds what the assignment gave", () => {
+    const source = "Red(x) ∧ ∀x Blue(x)";
+    const signature = modelSignature([parseOpen(source)], OPEN);
+    const holdsWith = (blue: string) =>
+      checkModel(signature, openTask([source]), {
+        domain: "0,1",
+        fields: { "Blue(_)": blue, "Red(_)": "0", x: "0" },
+      }).ok;
+
+    expect(holdsWith("0,1")).toBe(true);
+    // Blue(0) alone would do if the bound x kept the assignment's value.
+    expect(holdsWith("0")).toBe(false);
+  });
+
+  test("a variable's value is read and bounded like a constant's", () => {
+    const signature = modelSignature([parseOpen("Red(x)")], OPEN);
+    const problem = (x: string) =>
+      readModel(signature, { domain: "0,1", fields: { "Red(_)": "", x } });
+
+    expect(problem("2")).toEqual({
+      ok: false,
+      problem: { field: "x", kind: "field-outside-domain" },
+    });
+    expect(problem("one")).toMatchObject({
+      ok: false,
+      problem: { field: "x", kind: "field-unreadable" },
+    });
+
+    const read = problem("1");
+
+    if (!read.ok) {
+      throw new Error(`Expected the model to read: ${read.problem.kind}`);
+    }
+
+    expect(read.assignment).toEqual(new Map([["x", 1]]));
+    expect(read.model.constants.size).toBe(0);
   });
 });

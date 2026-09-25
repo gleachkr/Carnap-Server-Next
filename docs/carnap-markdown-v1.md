@@ -605,6 +605,14 @@ Constants use domain-value menus. Functions have a generated value table
 with a menu for every argument tuple, with the last argument across columns.
 Recorded field data is retained for review.
 
+In a language that admits open formulas — one without the
+`closed-sentences` lint, which both forallx languages declare — each
+variable that occurs free in the exercise's formulas is a field too. It is
+the variable assignment the formulas are evaluated at, and works as a
+constant does: a domain-value menu labelled with the variable, which a given
+such as `| x : 1` seeds or, under `strictGivens`, fixes. A variable that
+occurs only bound asks for nothing.
+
 ### Attributes and options
 
 In addition to the common attributes:
@@ -1010,8 +1018,8 @@ used by the course's textbook.
   Disjunction elimination uses disjunction plus a negated disjunct rather
   than Calgary's two-case rule.
 
-Model and translation sentences must be closed: unbound variables are
-rejected. The declared vocabularies are finite. Undeclared subscripted names
+Both forallx languages declare the `closed-sentences` lint, so their model
+and translation sentences must be closed: unbound variables are rejected. The declared vocabularies are finite. Undeclared subscripted names
 such as `F_12` or `P0`, old arity annotations, and unsupported word operators
 are not supplied automatically. Extend the language if the course needs them.
 

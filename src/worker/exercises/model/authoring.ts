@@ -650,6 +650,7 @@ function givenValueReads(field: ModelField, value: string): boolean {
       return lowered === "true" || lowered === "false";
     }
     case "constant":
+    case "variable":
       return parseNatural(value).ok;
     case "relation":
       return parseTupleList(value, field.arity).ok;

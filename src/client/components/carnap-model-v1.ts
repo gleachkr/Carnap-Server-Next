@@ -174,7 +174,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
   /**
    * Rebuild the controls whose shape follows from the domain.
    *
-   * A constant's `<select>` offers the domain's elements; a function's table has
+   * A constant's or free variable's `<select>` offers the domain's elements; a function's table has
    * a cell per argument tuple over it. Both keep whatever value is still in
    * range, so widening a domain does not discard the work already done.
    */
@@ -190,7 +190,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
     const domain = parsed.value;
 
     for (const { field, row } of this.rows) {
-      if (field.kind === "constant") {
+      if (field.kind === "constant" || field.kind === "variable") {
         const select = row.querySelector<HTMLSelectElement>("select");
 
         if (select !== null && select.dataset.locked === undefined) {
@@ -330,7 +330,7 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       return parseTupleList(value, field.arity).ok;
     }
 
-    if (field.kind === "constant") {
+    if (field.kind === "constant" || field.kind === "variable") {
       return parseNatural(value).ok;
     }
 
