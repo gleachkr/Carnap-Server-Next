@@ -98,6 +98,39 @@ The environment variables below apply to the Worker as `vars` or secrets,
 except `PORT` and the database URL and token: the Worker's database is its D1
 binding.
 
+### Choosing a Cloudflare plan
+
+Deploy on Workers Paid. The free plan cannot run a course of useful size:
+
+- A request gets 10 ms of CPU. Building a course gradebook exceeds that at
+  almost any class size.
+- A request may make 50 D1 queries. The course gradebook costs about 16
+  queries, plus 3 for each assignment and 1 for every 50 students, so it
+  passes the limit at about a dozen assignments.
+- An account may read 5 million D1 rows a day and write 100,000. Each view of
+  the course gradebook reads every attempt, submission, and evaluation in the
+  course. A few dozen views of a large course's gradebook can use up a day's
+  reads.
+
+Workers Paid raises the per-request limits to 30 seconds of CPU by default and
+1,000 D1 queries.
+
+As of September 2026, Workers Paid costs $5 a month. That includes 10 million
+requests and 30 million CPU milliseconds. Beyond those allowances, requests
+cost $0.30 per million and CPU time $0.02 per million milliseconds. D1 has no
+base fee. The plan includes 25 billion rows read, 50 million rows written, and
+5 GB of storage. Beyond those, reads cost $0.001 per million rows, writes $1 per
+million rows, and storage $0.75 per GB-month. Check
+[Cloudflare's pricing pages](https://developers.cloudflare.com/workers/platform/pricing/)
+for current figures.
+
+Storage is the limit to watch. On Workers Paid, a D1 database cannot grow
+beyond 10 GB; on the free plan, the cap is 500 MB. Content revisions and
+submissions account for most of the growth, and nothing expires them. Check the database size with
+`npx wrangler d1 info <database> -c wrangler.<name>.jsonc`. If one instance
+will approach the cap, divide institutions or terms among separate instances,
+as described under [Capacity planning](#capacity-planning).
+
 ## First run: becoming the site administrator
 
 A fresh database has no user who can create courses. To grant your account
