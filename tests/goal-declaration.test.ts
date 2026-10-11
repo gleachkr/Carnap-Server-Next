@@ -146,4 +146,30 @@ theorem raw : $ P ⊢ P $
       diagnostics.map((one) => String(one.message).split("\n")[0]),
     ).toEqual(["proof block is empty"]);
   });
+
+  test("old Carnap's `:|-:` is a turnstile in both forallx systems, and `|-` is not", async () => {
+    const goal = async (system: string, statement: string) =>
+      (
+        await frozen(`:::aufbau-proof-fitch{system="${system}" id="g" points="1"}
+Prove it.
+
+theorem g {x y: var} : $ ${statement} $
+----
+:::
+`)
+      ).goalEngineDecl;
+
+    for (const system of ["forallx-calgary-2019", "forallx-magnus"]) {
+      const turnstile = await goal(system, "∀x F(x) ⊢ ∀y F(y)");
+
+      expect(turnstile).toContain("⊢");
+      expect(await goal(system, "∀x F(x) :|-: ∀y F(y)")).toBe(turnstile);
+      expect(await goal(system, "∀xF(x):|-:∀yF(y)")).toBe(turnstile);
+    }
+    // `|` and `-` are disjunction and negation, and stay so: a goal typed
+    // with `|-` asks for a sentence, which is why `:|-:` is the spelling.
+    expect(
+      await goal("forallx-calgary-2019", "∀x F(x) |- ∀y F(y)"),
+    ).not.toContain("⊢");
+  });
 });

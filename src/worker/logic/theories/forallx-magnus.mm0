@@ -122,6 +122,7 @@
 --| @syntax delimiter $ - ~ ¬ /\ ^ & ∧ \/ | ∨ $
 --| @syntax delimiter $ -> => ⊃ > → <-> <=> <> ≡ ↔ $
 --| @syntax delimiter $ @ 3 ∀ ∃ = $
+--| @syntax delimiter $ :|-: ⊢ $
 --| @syntax brackets ( ) [ ]
 --| @syntax lint closed-sentences
 --| @syntax display drop-outer-parens
@@ -305,8 +306,13 @@ term join (ga de: ctx): ctx;
 infixl join: $;$ prec 5;
 term hyp (ph: wff): ctx;
 coercion hyp: wff > ctx;
+-- `:|-:` is old Carnap's ASCII turnstile, so a goal typed the way Carnap
+-- taught it reads. Not `|-`: `|` and `-` are already disjunction and
+-- negation, and `P |- Q` has to go on meaning P ∨ ¬Q. `⊢` stays last, the
+-- spelling goals and display text are printed in.
 --| @syntax role turnstile
 term nd (ga: ctx) (ph: wff): judgement;
+infixl nd: $:|-:$ prec 0;
 infixl nd: $⊢$ prec 0;
 
 term weq (ph ps: wff): judgement;

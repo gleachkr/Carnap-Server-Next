@@ -102,13 +102,14 @@ describe("language specs", () => {
    */
   test("a spec's only warnings name its engine-only notations", () => {
     // The proof-theory notations both forallx systems declare and neither
-    // surfaces: the substitution layer and the judgement symbols.
+    // surfaces: the substitution layer and the judgement symbols. The
+    // turnstile is not among them: a goal is typed with it, as `⊢` or `:|-:`,
+    // so both spellings are delimiters.
     const PROOF_THEORY_NOTATIONS: readonly string[] = [
       "tsub",
       "/", // the substitution slash: an engine notation, and no delimiter
       "subst",
       "_",
-      "⊢",
       "⟺",
       "≐",
       "≗",

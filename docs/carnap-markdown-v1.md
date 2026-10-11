@@ -1289,6 +1289,10 @@ The Calgary and Magnus editions have different rules as well as notation.
 Select the one used by the course's textbook. UBC's edition is Magnus's
 language with a stricter grammar, and ships as a language only.
 
+In both, a goal's turnstile is `⊢` or old Carnap's ASCII `:|-:`. `|-` is not a
+turnstile: `|` and `-` are disjunction and negation, so `P |- Q` is the
+sentence P ∨ ¬Q.
+
 **Calgary (`forallx-calgary-2019`)**
 
 - Predicates use parentheses: `F(x)`, `R(a,b)`. A bare uppercase letter is
