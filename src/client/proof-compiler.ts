@@ -89,6 +89,11 @@ export interface CompileDiagnostic {
   /** UTF-8 byte offsets into the proof text the engine was handed. */
   readonly spanEnd?: number;
   readonly spanStart?: number;
+  /** The token a math string held that nothing declares, where the engine
+   *  says which (`UnknownMathToken`): an undeclared name, or a variable its
+   *  theorem forgot to bind. Carried apart from `message`, which keeps only
+   *  the headline and so loses it. */
+  readonly token?: string;
 }
 
 /**
@@ -191,6 +196,21 @@ function headline(message: string): string {
   return end === -1 ? message : message.slice(0, end);
 }
 
+/** The undeclared token an `unknown_math_token` detail names, as a field to
+ *  spread, or nothing. */
+function unknownToken(detail: unknown): { readonly token?: string } {
+  if (typeof detail !== "object" || detail === null) {
+    return {};
+  }
+  const { kind, token } = detail as {
+    readonly kind?: unknown;
+    readonly token?: unknown;
+  };
+  return kind === "unknown_math_token" && typeof token === "string"
+    ? { token }
+    : {};
+}
+
 export function readCompileResult(
   result: CompileResult,
   options: CompileReadOptions = {},
@@ -209,6 +229,7 @@ export function readCompileResult(
         readonly severity?: unknown;
         readonly spanEnd?: unknown;
         readonly spanStart?: unknown;
+        readonly detail?: unknown;
       };
       const isAdmission = record.error === ADMITTED_LINE;
 
@@ -235,6 +256,7 @@ export function readCompileResult(
         ...(typeof record.spanStart === "number"
           ? { spanStart: record.spanStart }
           : {}),
+        ...unknownToken(record.detail),
       });
     }
   }

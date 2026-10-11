@@ -170,4 +170,33 @@ describe("readCompileResult", () => {
     expect(verdict.certificate).toBe(CERTIFICATE);
     expect(verdict.problems).toEqual([]);
   });
+
+  test("names the token an unknown-token error is about", () => {
+    // The engine's own record, as it reports a goal that forgot a binder:
+    // the headline is the same for every token, and the token is in `detail`.
+    const verdict = readCompileResult({
+      diagnostics: [
+        {
+          detail: { kind: "unknown_math_token", token: "tv" },
+          error: "UnknownMathToken",
+          message: "unknown token in math string\nname: t\ntoken: tv",
+          severity: "error",
+          spanEnd: 33056,
+          spanStart: 33054,
+        },
+      ],
+      ok: false,
+    } as CompileResult);
+
+    expect(verdict.problems).toEqual([
+      {
+        error: "UnknownMathToken",
+        message: "unknown token in math string",
+        severity: "error",
+        spanEnd: 33056,
+        spanStart: 33054,
+        token: "tv",
+      },
+    ]);
+  });
 });

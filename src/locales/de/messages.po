@@ -97,6 +97,10 @@ msgstr "„{token}“ bindet hier zu schwach; setzen Sie es in Klammern."
 msgid "“{token}” is not a line number or a subproof range like “a-b”."
 msgstr "„{token}“ ist weder eine Zeilennummer noch ein Teilbeweisbereich der Form „a-b“."
 
+#: src/worker/web/ui-strings.ts
+msgid "“{token}” is not declared — if it is a variable or a name, bind it in the theorem"
+msgstr "„{token}“ ist nicht deklariert – falls es eine Variable oder ein Name ist, binden Sie es im Theorem"
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "“{value}” is not something “{field}” can contain."
 msgstr "„{value}“ ist kein möglicher Wert für „{field}“."

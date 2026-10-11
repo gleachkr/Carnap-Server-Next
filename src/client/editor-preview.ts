@@ -81,9 +81,21 @@ const EMPTY_PROOF_MESSAGE = "proof block is empty";
  * The first problem a compile reports, read the way the widgets read it — so
  * the engine's warnings, which a clean compile now carries too, cannot stand
  * in for the error an author needs to see.
+ *
+ * An undeclared token is named. The engine's headline, "unknown token in math
+ * string", is the same whichever token it was, and the usual one is a
+ * variable the theorem forgot to bind: `tv` in `∀ tv` wants `{tv: var}`, and
+ * nothing short of the engine can know `tv` was meant as a variable at all.
  */
-function firstProblem(result: CompileResult): string | null {
+function firstProblem(
+  result: CompileResult,
+  strings: ProofCheckStrings,
+): string | null {
   const [first] = readCompileResult(result).problems;
+
+  if (first?.token !== undefined) {
+    return formatMessage(strings.unknownToken, { token: first.token });
+  }
 
   return first?.message ?? null;
 }
@@ -110,6 +122,9 @@ function proofCheckStrings(): ProofCheckStrings {
     unreadableTheory:
       fromPage?.unreadableTheory ||
       "the proof engine could not read this theory or goal",
+    unknownToken:
+      fromPage?.unknownToken ||
+      "“{token}” is not declared — if it is a variable or a name, bind it in the theorem",
   };
 }
 
@@ -160,7 +175,7 @@ async function proofChecksFor(
       const verified = readCompileResult(result).certificate !== null;
       return {
         id: proof.id,
-        message: verified ? null : firstProblem(result),
+        message: verified ? null : firstProblem(result, strings),
         ok: verified,
         okLabel: strings.starterVerifies,
       };
@@ -220,7 +235,7 @@ async function goalChecksFor(
     const { mm0 } = proofTheoryText(goal.publicData);
     try {
       const result = compiler.compile(mm0, proofTextOf(goalName, ""));
-      const message = firstProblem(result);
+      const message = firstProblem(result, strings);
       const declaresCleanly =
         result.ok === true ||
         message === null ||

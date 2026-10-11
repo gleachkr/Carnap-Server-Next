@@ -97,6 +97,10 @@ msgstr "“{token}” binds too loosely here; parenthesize it."
 msgid "“{token}” is not a line number or a subproof range like “a-b”."
 msgstr "“{token}” is not a line number or a subproof range like “a-b”."
 
+#: src/worker/web/ui-strings.ts
+msgid "“{token}” is not declared — if it is a variable or a name, bind it in the theorem"
+msgstr "“{token}” is not declared — if it is a variable or a name, bind it in the theorem"
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "“{value}” is not something “{field}” can contain."
 msgstr "“{value}” is not something “{field}” can contain."

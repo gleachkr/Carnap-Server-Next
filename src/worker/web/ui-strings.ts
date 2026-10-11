@@ -221,6 +221,8 @@ export interface EditorUiStrings {
     readonly starterVerifies: string;
     readonly unreadableStarter: string;
     readonly unreadableTheory: string;
+    /** The engine met a token nothing declares, as `{token}`. */
+    readonly unknownToken: string;
   };
 }
 
@@ -299,6 +301,10 @@ export function editorUiStrings(
       ),
       unreadableTheory: i18n.t(
         "the proof engine could not read this theory or goal",
+      ),
+      unknownToken: i18n.t(
+        "“{token}” is not declared — if it is a variable or a name, bind it in the theorem",
+        placeholders("token"),
       ),
     },
   };
