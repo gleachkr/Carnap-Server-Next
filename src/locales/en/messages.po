@@ -405,6 +405,10 @@ msgstr "A counterexample exercise needs one argument with the ':|-:' turnstile, 
 msgid "A course must keep at least one active instructor."
 msgstr "A course must keep at least one active instructor."
 
+#: src/worker/web/ui-strings.ts
+msgid "A different try by {student} now counts."
+msgstr "A different try by {student} now counts."
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A distinguish exercise lists no sentences: the student writes one."
 msgstr "A distinguish exercise lists no sentences: the student writes one."
@@ -2032,6 +2036,10 @@ msgstr "Document"
 msgid "Dodec"
 msgstr "Dodec"
 
+#: src/worker/web/labels.ts
+msgid "Does not count"
+msgstr "Does not count"
+
 #: src/worker/exercises/model/strings.ts
 msgid "Domain"
 msgstr "Domain"
@@ -2288,18 +2296,14 @@ msgstr "Every proof line needs a justification: '<formula> :<rule> <refs>'."
 msgid "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove."
 msgstr "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove."
 
-#: src/worker/web/assignment-detail.tsx
-#: src/worker/web/ui-strings.ts
-msgid "Every recorded submission has been reviewed."
-msgstr "Every recorded submission has been reviewed."
-
-#: src/worker/web/assignment-detail.tsx
-msgid "Every recorded submission is from a reset attempt. They are listed under All."
-msgstr "Every recorded submission is from a reset attempt. They are listed under All."
-
 #: src/worker/exercises/world/strings.ts
 msgid "Every sentence is marked correctly."
 msgstr "Every sentence is marked correctly."
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Every submission that counts has been reviewed."
+msgstr "Every submission that counts has been reviewed."
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Excuse exercise"
@@ -3385,6 +3389,11 @@ msgstr "No users matched."
 msgid "None"
 msgstr "None"
 
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "None of the recorded submissions counts toward a grade. They are listed under All."
+msgstr "None of the recorded submissions counts toward a grade. They are listed under All."
+
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Not a valid counterexample yet."
 msgstr "Not a valid counterexample yet."
@@ -4038,6 +4047,10 @@ msgstr "Release grades"
 #: src/worker/web/assignment-detail.tsx
 msgid "Release now"
 msgstr "Release now"
+
+#: src/worker/web/ui-strings.ts
+msgid "Reload to show it"
+msgstr "Reload to show it"
 
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/profile.tsx

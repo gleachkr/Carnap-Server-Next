@@ -675,18 +675,8 @@ export async function collectFixtures(
   }
 
   const instructorBase = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
-  /** Opens an attempt as the student and answers one exercise in it. */
-  const attemptAndAnswer = async (): Promise<string> => {
-    const attemptResponse = await appRequest(
-      createTestApp(),
-      `/courses/${courseId}/assignments/${assignmentId}/attempts`,
-      { headers: authHeaders(student), method: "POST" },
-      env,
-    );
-    const attemptId = (
-      (await attemptResponse.json()) as { attempt: { id: string } }
-    ).attempt.id;
-
+  /** Answers the exercise, as the student, in an attempt they have open. */
+  const answerIn = async (attemptId: string): Promise<void> => {
     await appRequest(
       createTestApp(),
       `/courses/${courseId}/assignments/${assignmentId}` +
@@ -704,6 +694,20 @@ export async function collectFixtures(
       ),
       env,
     );
+  };
+  /** Opens an attempt as the student and answers one exercise in it. */
+  const attemptAndAnswer = async (): Promise<string> => {
+    const attemptResponse = await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments/${assignmentId}/attempts`,
+      { headers: authHeaders(student), method: "POST" },
+      env,
+    );
+    const attemptId = (
+      (await attemptResponse.json()) as { attempt: { id: string } }
+    ).attempt.id;
+
+    await answerIn(attemptId);
 
     return attemptId;
   };
@@ -712,7 +716,9 @@ export async function collectFixtures(
   // attempt ledger has a reset row (with who reset it) and the results page
   // its note. The second attempt leaves the assignment page in its answering
   // state, and gives the review templates (instructor queue, student
-  // results) a submission to render rather than an empty state.
+  // results) a submission to render rather than an empty state. It is
+  // answered twice, so the queue has a try that does not count beside the
+  // one that does.
   const resetAttemptId = await attemptAndAnswer();
   await formPost(
     env,
@@ -720,7 +726,7 @@ export async function collectFixtures(
     {},
     instructor,
   );
-  await attemptAndAnswer();
+  await answerIn(await attemptAndAnswer());
 
   // Grading policy the instructor page renders as a filled-in form, and a
   // per-student override so the roster table has a row with values in it.

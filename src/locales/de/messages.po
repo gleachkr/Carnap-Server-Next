@@ -405,6 +405,10 @@ msgstr "Eine Gegenbeispiel-Aufgabe braucht ein Argument mit dem Ableitungszeiche
 msgid "A course must keep at least one active instructor."
 msgstr "Ein Kurs muss mindestens eine aktive Lehrperson behalten."
 
+#: src/worker/web/ui-strings.ts
+msgid "A different try by {student} now counts."
+msgstr "Ein anderer Versuch von {student} zählt jetzt."
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A distinguish exercise lists no sentences: the student writes one."
 msgstr "Eine Unterscheidungs-Aufgabe führt keine Sätze auf: Die Studierenden schreiben einen."
@@ -2032,6 +2036,10 @@ msgstr "Dokument"
 msgid "Dodec"
 msgstr "Dodekaeder"
 
+#: src/worker/web/labels.ts
+msgid "Does not count"
+msgstr "Zählt nicht"
+
 #: src/worker/exercises/model/strings.ts
 msgid "Domain"
 msgstr "Individuenbereich"
@@ -2288,18 +2296,14 @@ msgstr "Jede Beweiszeile braucht eine Begründung: '<formula> :<rule> <refs>'."
 msgid "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove."
 msgstr "Jeder Beweis beginnt mit Annahmen. „Neue Annahme“ setzt eine in die Arbeitsfläche; das Ziel ist ein einziger Baum, dessen unterste Zeile das ist, was Sie zeigen sollen."
 
-#: src/worker/web/assignment-detail.tsx
-#: src/worker/web/ui-strings.ts
-msgid "Every recorded submission has been reviewed."
-msgstr "Alle erfassten Abgaben wurden geprüft."
-
-#: src/worker/web/assignment-detail.tsx
-msgid "Every recorded submission is from a reset attempt. They are listed under All."
-msgstr "Alle erfassten Abgaben stammen aus zurückgesetzten Versuchen. Sie sind unter „Alle“ aufgeführt."
-
 #: src/worker/exercises/world/strings.ts
 msgid "Every sentence is marked correctly."
 msgstr "Jeder Satz ist richtig bewertet."
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Every submission that counts has been reviewed."
+msgstr "Alle Abgaben, die zählen, wurden geprüft."
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Excuse exercise"
@@ -3385,6 +3389,11 @@ msgstr "Keine Treffer."
 msgid "None"
 msgstr "Keine"
 
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "None of the recorded submissions counts toward a grade. They are listed under All."
+msgstr "Keine der erfassten Abgaben zählt für eine Note. Sie sind unter „Alle“ aufgeführt."
+
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Not a valid counterexample yet."
 msgstr "Noch kein gültiges Gegenbeispiel."
@@ -4038,6 +4047,10 @@ msgstr "Noten freigeben"
 #: src/worker/web/assignment-detail.tsx
 msgid "Release now"
 msgstr "Jetzt freigeben"
+
+#: src/worker/web/ui-strings.ts
+msgid "Reload to show it"
+msgstr "Zum Anzeigen neu laden"
 
 #: src/worker/web/admin-lti.tsx
 #: src/worker/web/profile.tsx

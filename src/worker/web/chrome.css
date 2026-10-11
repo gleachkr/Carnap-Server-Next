@@ -1314,6 +1314,17 @@ th > .column-sort:hover {
   gap: 1rem;
 }
 
+/* Where the review script says a grade made a try count that this tab is not
+   showing. It is drawn empty with the page, so the live region exists before
+   it speaks, and takes no room until it does. */
+.review-other-try {
+  margin: 0 0 1rem;
+}
+
+.review-other-try:empty {
+  margin: 0;
+}
+
 /* The manual-evaluation disclosure keeps its full-width layout; the compact
    approve control sits on the summary's line, flush right, styled to match
    the summary rather than as a full button. */

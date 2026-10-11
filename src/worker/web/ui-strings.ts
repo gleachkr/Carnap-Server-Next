@@ -325,7 +325,15 @@ export interface ReviewUiStrings {
    * the raw enum value, which stayed English (and untranslated) in every locale.
    */
   readonly evaluators: Readonly<Record<EvaluatorKind, string>>;
+  /** Active's empty state, for when the last card that counted is graded off it. */
+  readonly noneCount: string;
   readonly notGraded: string;
+  /**
+   * A grade moved which of a student's tries counts onto one this tab is not
+   * showing: said, with a reload offered rather than forced.
+   */
+  readonly otherTryCounts: string;
+  readonly reloadToShow: string;
   /** The scored status line, whole, filled in by the script. */
   readonly scored: string;
   /** Keyed by machine review state, so the script never compares prose. */
@@ -335,14 +343,22 @@ export interface ReviewUiStrings {
 export function reviewUiStrings(i18n: Translator): ReviewUiStrings {
   return {
     actionFailed: i18n.t("The action was not accepted."),
-    allReviewed: i18n.t("Every recorded submission has been reviewed."),
+    allReviewed: i18n.t("Every submission that counts has been reviewed."),
     driftChanged: i18n.t("now worth {points}", placeholders("points")),
     driftRemoved: i18n.t("no longer in the assignment"),
     evaluators: {
       automatic: evaluatorKindLabel(i18n, "automatic"),
       manual: evaluatorKindLabel(i18n, "manual"),
     },
+    noneCount: i18n.t(
+      "None of the recorded submissions counts toward a grade. They are listed under All.",
+    ),
     notGraded: i18n.t("Not graded"),
+    otherTryCounts: i18n.t(
+      "A different try by {student} now counts.",
+      placeholders("student"),
+    ),
+    reloadToShow: i18n.t("Reload to show it"),
     scored: i18n.t(
       "{score}/{maxScore} · {evaluator}",
       placeholders("evaluator", "maxScore", "score"),
@@ -350,6 +366,7 @@ export function reviewUiStrings(i18n: Translator): ReviewUiStrings {
     states: {
       "auto-graded": reviewStateLabel(i18n, "auto-graded"),
       "needs-review": reviewStateLabel(i18n, "needs-review"),
+      "not-counted": reviewStateLabel(i18n, "not-counted"),
       reset: reviewStateLabel(i18n, "reset"),
       reviewed: reviewStateLabel(i18n, "reviewed"),
     },

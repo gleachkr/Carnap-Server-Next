@@ -21,7 +21,6 @@ import {
   type EvaluationVerdict,
   type Submission,
   storedPointsDrift,
-  submissionNeedsReview,
   type ViewerEvaluation,
 } from "../domain/assessment";
 import {
@@ -94,8 +93,8 @@ import {
   evaluatorKindLabel,
   gradesVisibilityOptions,
   latePolicyKindOptions,
-  type ReviewState,
   reviewStateLabel,
+  reviewStateOf,
   type SelectOption,
   workVisibilityLabel,
   workVisibilityOptions,
@@ -267,6 +266,8 @@ export interface InstructorSubmissionReviewEntry {
   readonly attemptOrdinal: number;
   /** The attempt was reset: the work is a record, with nothing to grade. */
   readonly attemptVoided: boolean;
+  /** The score takes this exercise's points from this try, or may yet. */
+  readonly counts: boolean;
   readonly evaluation: ViewerEvaluation | null;
   /** The question the answer is to, as the lesson asked it; null for none. */
   readonly exercisePromptHtml: string | null;
@@ -1946,30 +1947,6 @@ function evaluationText(
   });
 }
 
-/**
- * Which review state a submission is in. Deliberately a value and not a word:
- * the review queue's enhancement script keys off this, so the count and the
- * needs-review filter keep working in every language. `reviewStateLabel` in
- * `labels.ts` turns it into prose, once, for both halves.
- */
-function reviewState(entry: InstructorSubmissionReviewEntry): ReviewState {
-  const evaluation = entry.evaluation;
-
-  if (entry.attemptVoided) {
-    return "reset";
-  }
-
-  if (submissionNeedsReview(evaluation)) {
-    return "needs-review";
-  }
-
-  if (evaluation !== null && evaluation.evaluatorKind === "manual") {
-    return "reviewed";
-  }
-
-  return "auto-graded";
-}
-
 const ApproveScoreForm: FC<{
   readonly assignmentId: string;
   readonly context: Context<AppBindings>;
@@ -2001,17 +1978,23 @@ const SubmissionReviewCard: FC<{
   readonly context: Context<AppBindings>;
   readonly courseId: string;
   readonly entry: InstructorSubmissionReviewEntry;
-}> = ({ assignmentId, context, courseId, entry }) => {
+  /**
+   * How the student's live tries at this exercise stand, as rendered. Absent
+   * on a reset attempt's card, which is not one of them and offers no grade.
+   */
+  readonly tries?: TriesAtExercise | undefined;
+}> = ({ assignmentId, context, courseId, entry, tries }) => {
   const i18n = useI18n();
   const submission = entry.submission;
+  const state = reviewStateOf(entry);
   // A one-click approval only makes sense when there is an autograded score to
   // stand behind; a free-response awaiting its first grade has nothing to
-  // approve, so it falls through to the manual form.
+  // approve, so it falls through to the manual form. Nor does it for a try
+  // that does not count: approving it would record a grade for nothing. A
+  // hand grade still can, since one above the counting try's makes it count.
   const canApprove =
-    !entry.attemptVoided &&
-    submissionNeedsReview(entry.evaluation) &&
-    entry.evaluation !== null &&
-    entry.evaluation.evaluatorKind === "automatic";
+    state === "needs-review" &&
+    entry.evaluation?.evaluatorKind === "automatic";
   // Three independent facts on one meta line, not one sentence: each keeps its
   // own word order around the element that carries its value.
   const [exerciseIdBefore, exerciseIdAfter] = splitAtValue(
@@ -2020,11 +2003,10 @@ const SubmissionReviewCard: FC<{
   const [submittedBefore, submittedAfter] = splitAtValue(
     i18n.t("Submitted {when}", { when: VALUE }),
   );
-  // Drift is a warning about grades that count, and a reset attempt's do not.
-  const drift = entry.attemptVoided
-    ? null
-    : storedPointsDrift(entry.evaluation, entry.nominalPoints);
-  const state = reviewState(entry);
+  // Drift is a warning about grades that count.
+  const drift = entry.counts
+    ? storedPointsDrift(entry.evaluation, entry.nominalPoints)
+    : null;
 
   return (
     <Sheet className="submission-review-card">
@@ -2063,7 +2045,11 @@ const SubmissionReviewCard: FC<{
         {/* Beside the state, so a reset card reads "Attempt 1 · Reset". */}
         {i18n.t("Attempt {ordinal}", { ordinal: entry.attemptOrdinal })}
         {" · "}
-        <span class="review-state-label" data-review-state={state}>
+        <span
+          class="review-state-label"
+          data-review-state={state}
+          data-submission-id={submission.id}
+        >
           {reviewStateLabel(i18n, state)}
         </span>
       </p>
@@ -2085,9 +2071,19 @@ const SubmissionReviewCard: FC<{
         <AnswerReview review={entry.answerReview} />
       )}
       {/* A reset attempt's work counts toward nothing, and the server refuses
-          a grade for it, so its card offers none. */}
-      {entry.attemptVoided ? null : (
-        <div class="submission-review-footer">
+          a grade for it, so its card has no tries to stand among and offers
+          no grade. */}
+      {tries === undefined ? null : (
+        // A grade from here can move which of the student's tries counts.
+        // The reply names each try's new state; these say how the tries stood
+        // before, so the script can keep the tab counts right — some of the
+        // tries may be on other tabs.
+        <div
+          class="submission-review-footer"
+          data-group-counting={tries.counting}
+          data-group-needs={tries.needsReview}
+          data-try-group={tries.key}
+        >
           <details class="manual-evaluation">
             <summary>{i18n.t("Add a manual evaluation")}</summary>
             <ManualEvaluationForm
@@ -2126,10 +2122,14 @@ const ReviewFilterBar: FC<{
   readonly total: number;
 }> = ({ activeCount, base, filter, needsReviewCount, total }) => {
   const i18n = useI18n();
-  // The count is a live element the review script rewrites, so the label is
-  // split around it rather than assembled from "Needs review" plus punctuation.
+  // The counts are live elements the review script rewrites, so each label is
+  // split around its count rather than assembled from the word plus
+  // punctuation.
   const [countBefore, countAfter] = splitAtValue(
     i18n.t("Needs review ({count})", { count: VALUE }),
+  );
+  const [activeBefore, activeAfter] = splitAtValue(
+    i18n.t("Active ({count})", { count: VALUE }),
   );
 
   return (
@@ -2152,7 +2152,9 @@ const ReviewFilterBar: FC<{
         href={`${base}?review=active`}
         {...(filter === "active" ? { "aria-current": "page" as const } : {})}
       >
-        {i18n.t("Active ({count})", { count: activeCount })}
+        {activeBefore}
+        <span class="review-count-active">{activeCount}</span>
+        {activeAfter}
       </a>
       <a
         href={`${base}?review=all`}
@@ -2163,6 +2165,22 @@ const ReviewFilterBar: FC<{
     </nav>
   );
 };
+
+/**
+ * One student's live tries at one exercise, as the page was drawn: how many
+ * count, and how many of those wait for review. Grading any of them can move
+ * both numbers.
+ */
+interface TriesAtExercise {
+  readonly counting: number;
+  /** The student and the exercise; the same on every card of the group. */
+  readonly key: string;
+  readonly needsReview: number;
+}
+
+function triesKey(entry: InstructorSubmissionReviewEntry): string {
+  return `${entry.submission.userId} ${entry.submission.exerciseId ?? ""}`;
+}
 
 const SubmissionsReview: FC<{
   readonly assignmentId: string;
@@ -2181,12 +2199,32 @@ const SubmissionsReview: FC<{
     );
   }
 
-  // Reset attempts' work is on file, but no grade is drawn from it: it waits for
-  // no review, and the All tab is the only one that shows it.
-  const active = entries.filter((entry) => !entry.attemptVoided);
-  const needsReview = active.filter((entry) =>
-    submissionNeedsReview(entry.evaluation),
+  // Active is the work a grade is drawn from: for each student and exercise,
+  // the try the score takes, and the latest while it waits for a grade. The
+  // other tries, and a reset attempt's work, are on file under All. Needs
+  // review is the part of Active still waiting for a grader.
+  const active = entries.filter((entry) => entry.counts);
+  const needsReview = active.filter(
+    (entry) => reviewStateOf(entry) === "needs-review",
   );
+  const waiting = new Set(needsReview);
+  const tries = new Map<string, TriesAtExercise>();
+
+  for (const entry of entries) {
+    if (entry.attemptVoided) {
+      continue;
+    }
+
+    const key = triesKey(entry);
+    const group = tries.get(key) ?? { counting: 0, key, needsReview: 0 };
+
+    tries.set(key, {
+      counting: group.counting + (entry.counts ? 1 : 0),
+      key,
+      needsReview: group.needsReview + (waiting.has(entry) ? 1 : 0),
+    });
+  }
+
   const visible =
     filter === "needs-review"
       ? needsReview
@@ -2218,13 +2256,14 @@ const SubmissionsReview: FC<{
         needsReviewCount={needsReview.length}
         total={entries.length}
       />
+      <p class="small review-other-try" role="status" />
       {visible.length === 0 ? (
         <Sheet>
           <p>
             {filter === "needs-review"
-              ? i18n.t("Every recorded submission has been reviewed.")
+              ? i18n.t("Every submission that counts has been reviewed.")
               : i18n.t(
-                  "Every recorded submission is from a reset attempt. They are listed under All.",
+                  "None of the recorded submissions counts toward a grade. They are listed under All.",
                 )}
           </p>
         </Sheet>
@@ -2236,6 +2275,10 @@ const SubmissionsReview: FC<{
               context={context}
               courseId={courseId}
               entry={entry}
+              // A reset attempt's work is not among the student's tries.
+              tries={
+                entry.attemptVoided ? undefined : tries.get(triesKey(entry))
+              }
             />
           ))}
         </div>

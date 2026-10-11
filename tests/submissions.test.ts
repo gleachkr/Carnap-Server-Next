@@ -1,4 +1,5 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
+import { JSDOM } from "jsdom";
 
 import { submissionNeedsReview } from "../src/worker/domain/assessment";
 import type { Env } from "../src/worker/env";
@@ -1998,17 +1999,19 @@ Choose yes.
       expect(REVIEW_SCRIPT).toContain("form.approve-score-form");
       expect(REVIEW_SCRIPT).toContain("form.manual-evaluation-form");
       // The review state travels as a value, not as the displayed word: the
-      // script counts and filters on this attribute, so translating the label
-      // must not change what it sees. A page that carried only the prose would
-      // silently report zero submissions needing review in every language but
+      // server's reply to a grade names each try's state as a value, the script
+      // filters and counts on it and writes it back to this attribute, so
+      // translating the label must not change what it sees. A page that
+      // carried only the prose would silently miscount in every language but
       // English.
       expect(defaultView).toContain(
         'class="review-state-label" data-review-state="needs-review"',
       );
       expect(defaultView).toContain("data-carnap-review-strings");
       expect(REVIEW_SCRIPT).toContain(
-        "label.dataset.reviewState === NEEDS_REVIEW",
+        "label.dataset.reviewState = entry.state",
       );
+      expect(REVIEW_SCRIPT).toContain("entry.state === NEEDS_REVIEW");
       expect(REVIEW_SCRIPT).not.toContain('=== "Needs review"');
       // The score line names who graded in words, and the script fills the
       // server's own message rather than pasting the raw enum value in.
@@ -2630,7 +2633,9 @@ Explain the rule.
       expect(queue).toContain("Second try.");
       expect(queue).not.toContain("First try.");
       expect(queue).toContain('<span class="review-count-needs">1</span>');
-      expect(queue).toContain("Active (1)");
+      expect(queue).toContain(
+        'Active (<span class="review-count-active">1</span>)',
+      );
       expect(queue).toContain("All (2)");
 
       const active = await page("?review=active");
@@ -2645,7 +2650,7 @@ Explain the rule.
 
       expect(all).toContain("First try.");
       expect(all).toContain(
-        'Attempt 1 · <span class="review-state-label" data-review-state="reset">Reset</span>',
+        'Attempt 1 · <span class="review-state-label" data-review-state="reset"',
       );
       expect(countOccurrences(all, 'data-review-state="reset"')).toBe(1);
       expect(countOccurrences(all, 'class="manual-evaluation-form"')).toBe(1);
@@ -2690,6 +2695,486 @@ Explain the rule.
           ((await refused.json()) as { error: { code: string } }).error.code,
         ).toBe("attempt_voided");
       }
+    });
+  });
+});
+
+describe("which submission counts, in the review queue", () => {
+  interface CountsResponse {
+    readonly submissions: readonly {
+      readonly counts: boolean;
+      readonly needsReview: boolean;
+      readonly submission: { readonly answer: unknown; readonly id: string };
+    }[];
+  }
+
+  test("asks for no review of an exam's wrong tries once a right one decides", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "counts-exam-teacher@example.test");
+      const student = await login(env, "counts-exam-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Quiz
+
+::::multiple-choice{#q1 points="2" exam="true"}
+Choose yes.
+
+- [x] yes | Yes
+- [ ] no | No
+::::`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const base = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignment.id,
+      );
+
+      // An exam records every try, wrong ones included: wrong, right, then
+      // wrong again. The score takes the right one.
+      for (const [index, choice] of (
+        ["no", "yes", "no"] as const
+      ).entries()) {
+        const submitted = await submitAnswer(
+          env,
+          student,
+          courseId,
+          assignment.id,
+          attemptId,
+          answer([choice]),
+          `exam-try-${index}`,
+        );
+
+        expect(submitted.status).toBe(201);
+      }
+
+      const list = (await (
+        await appRequest(
+          createTestApp(),
+          `${base}/submissions`,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).json()) as CountsResponse;
+      const counting = list.submissions.filter((entry) => entry.counts);
+
+      expect(list.submissions).toHaveLength(3);
+      expect(counting).toHaveLength(1);
+      expect(JSON.stringify(counting[0]?.submission.answer)).toContain("yes");
+      expect(list.submissions.some((entry) => entry.needsReview)).toBe(false);
+
+      const page = async (query: string) =>
+        (
+          await appRequest(
+            createTestApp(),
+            `${base}/submissions${query}`,
+            {
+              headers: {
+                Accept: "text/html",
+                Cookie: instructor.cookieHeader,
+              },
+            },
+            env,
+          )
+        ).text();
+      const queue = await page("");
+
+      expect(queue).toContain('<span class="review-count-needs">0</span>');
+      expect(queue).toContain(
+        "Every submission that counts has been reviewed.",
+      );
+
+      // Active lists the right try alone.
+      const active = await page("?review=active");
+
+      expect(active).toContain(
+        'Active (<span class="review-count-active">1</span>)',
+      );
+      expect(countOccurrences(active, 'class="review-state-label"')).toBe(1);
+      expect(
+        countOccurrences(active, 'data-review-state="auto-graded"'),
+      ).toBe(1);
+
+      // The wrong tries are on file under All, said not to count, with no
+      // one-click approval of a score that decides nothing.
+      const all = await page("?review=all");
+
+      expect(countOccurrences(all, 'data-review-state="not-counted"')).toBe(
+        2,
+      );
+      expect(all).toContain(">Does not count</span>");
+      expect(all).not.toContain('class="approve-score-form"');
+    });
+  });
+
+  test("counts the latest ungraded try, and lets a grade move which try counts", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(
+        env,
+        "counts-essay-teacher@example.test",
+      );
+      const student = await login(env, "counts-essay-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Essay
+
+::::free-response{#essay_1 points="5"}
+Explain the rule.
+::::`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const base = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignment.id,
+      );
+
+      for (const text of ["First try.", "Second try.", "Third try."]) {
+        const submitted = await submitAnswer(
+          env,
+          student,
+          courseId,
+          assignment.id,
+          attemptId,
+          freeResponseAnswer(text),
+          text,
+        );
+
+        expect(submitted.status).toBe(201);
+      }
+
+      const read = async () => {
+        const list = (await (
+          await appRequest(
+            createTestApp(),
+            `${base}/submissions`,
+            { headers: { Cookie: instructor.cookieHeader } },
+            env,
+          )
+        ).json()) as CountsResponse;
+        const byText = (text: string) => {
+          const entry = list.submissions.find((candidate) =>
+            JSON.stringify(candidate.submission.answer).includes(text),
+          );
+
+          if (entry === undefined) {
+            throw new Error(`No submission reads "${text}".`);
+          }
+
+          return entry;
+        };
+
+        return {
+          first: byText("First try."),
+          second: byText("Second try."),
+          third: byText("Third try."),
+        };
+      };
+      // The reply to a grade names the new state of each of the student's
+      // tries, which is what the queue's script redraws the cards from.
+      const grade = async (submissionId: string, score: number) => {
+        const response = await appRequest(
+          createTestApp(),
+          `${base}/submissions/${submissionId}/evaluations`,
+          jsonRequest({ score }, instructor),
+          env,
+        );
+
+        expect(response.status).toBe(201);
+
+        const body = (await response.json()) as {
+          readonly tries: readonly {
+            readonly state: string;
+            readonly submissionId: string;
+          }[];
+        };
+
+        return new Map(
+          body.tries.map((entry) => [entry.submissionId, entry.state]),
+        );
+      };
+
+      // Nothing graded: the latest try is the student's answer.
+      let tries = await read();
+
+      expect([
+        tries.first.counts,
+        tries.second.counts,
+        tries.third.counts,
+      ]).toEqual([false, false, true]);
+      expect(tries.third.needsReview).toBe(true);
+
+      const queue = await (
+        await appRequest(
+          createTestApp(),
+          `${base}/submissions`,
+          {
+            headers: { Accept: "text/html", Cookie: instructor.cookieHeader },
+          },
+          env,
+        )
+      ).text();
+
+      expect(queue).toContain("Third try.");
+      expect(queue).not.toContain("First try.");
+      expect(queue).toContain('<span class="review-count-needs">1</span>');
+      // The card says how the student's tries stood when it was drawn, so the
+      // script can move the tab counts by what a grade changes.
+      expect(queue).toContain('data-group-counting="1" data-group-needs="1"');
+      expect(queue).toContain(
+        `data-submission-id="${tries.third.submission.id}"`,
+      );
+
+      // Grading an earlier try makes it count; the latest, still ungraded,
+      // counts too, since its grade could yet beat it.
+      const afterFirst = await grade(tries.first.submission.id, 4);
+
+      expect(afterFirst).toEqual(
+        new Map([
+          [tries.first.submission.id, "reviewed"],
+          [tries.second.submission.id, "not-counted"],
+          [tries.third.submission.id, "needs-review"],
+        ]),
+      );
+      tries = await read();
+
+      expect([
+        tries.first.counts,
+        tries.second.counts,
+        tries.third.counts,
+      ]).toEqual([true, false, true]);
+      expect(tries.first.needsReview).toBe(false);
+      expect(tries.third.needsReview).toBe(true);
+
+      // Graded lower, the latest no longer counts, and nothing is left to do.
+      const afterThird = await grade(tries.third.submission.id, 2);
+
+      expect(afterThird.get(tries.third.submission.id)).toBe("not-counted");
+      expect(afterThird.get(tries.first.submission.id)).toBe("reviewed");
+      tries = await read();
+
+      expect([
+        tries.first.counts,
+        tries.second.counts,
+        tries.third.counts,
+      ]).toEqual([true, false, false]);
+      expect(
+        [tries.first, tries.second, tries.third].some(
+          (entry) => entry.needsReview,
+        ),
+      ).toBe(false);
+    });
+  });
+});
+
+describe("grading in place on the review queue", () => {
+  /**
+   * The review page as a browser has it: the server's own render, with the
+   * review script run over it in jsdom and its requests answered by the app.
+   * What the script does with a reply can only be seen here — the server
+   * render says how the page starts, and the reply what changed.
+   */
+  async function reviewPage(
+    env: Env,
+    instructor: LoginResult,
+    path: string,
+  ): Promise<{
+    readonly grade: (text: string, score: number) => Promise<void>;
+    readonly window: Window & typeof globalThis;
+  }> {
+    const html = await (
+      await appRequest(
+        createTestApp(),
+        path,
+        { headers: { Accept: "text/html", Cookie: instructor.cookieHeader } },
+        env,
+      )
+    ).text();
+    const dom = new JSDOM(html, {
+      runScripts: "outside-only",
+      url: `http://localhost${path}`,
+    });
+    const window = dom.window as unknown as Window & typeof globalThis;
+    let inFlight: Promise<unknown> = Promise.resolve();
+
+    (window as unknown as { fetch: unknown }).fetch = (
+      url: string,
+      init: RequestInit,
+    ) => {
+      inFlight = appRequest(
+        createTestApp(),
+        new URL(url).pathname,
+        {
+          ...init,
+          headers: {
+            ...(init.headers as Record<string, string>),
+            Cookie: instructor.cookieHeader,
+          },
+        },
+        env,
+      );
+
+      return inFlight;
+    };
+    (window as unknown as { eval(code: string): void }).eval(REVIEW_SCRIPT);
+
+    return {
+      grade: async (text, score) => {
+        const card = [
+          ...window.document.querySelectorAll(".submission-review-card"),
+        ].find((candidate) => candidate.textContent?.includes(text));
+        const form = card?.querySelector(
+          "form.manual-evaluation-form",
+        ) as HTMLFormElement | null;
+
+        if (form === null || form === undefined) {
+          throw new Error(`No grading form on a card reading "${text}".`);
+        }
+
+        (form.querySelector("[name=score]") as HTMLInputElement).value =
+          String(score);
+        form.dispatchEvent(
+          new window.Event("submit", { bubbles: true, cancelable: true }),
+        );
+        await inFlight;
+        // The reply's body is read, then the cards are redrawn.
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      },
+      window,
+    };
+  }
+
+  test("redraws every try a grade moved, and offers a reload for one off the page", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "inplace-teacher@example.test");
+      const student = await login(env, "inplace-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Essay
+
+::::free-response{#essay_1 points="5"}
+Explain the rule.
+::::`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const base = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignment.id,
+      );
+      const submissionIds: string[] = [];
+
+      for (const text of ["First try.", "Second try.", "Third try."]) {
+        const submitted = await submitAnswer(
+          env,
+          student,
+          courseId,
+          assignment.id,
+          attemptId,
+          freeResponseAnswer(text),
+          text,
+        );
+
+        submissionIds.push(
+          ((await submitted.json()) as { submission: { id: string } })
+            .submission.id,
+        );
+      }
+
+      // The first try graded 4: it counts, and so does the latest while it
+      // waits for a grade.
+      await appRequest(
+        createTestApp(),
+        `${base}/submissions/${submissionIds[0]}/evaluations`,
+        jsonRequest({ score: 4 }, instructor),
+        env,
+      );
+
+      const page = await reviewPage(
+        env,
+        instructor,
+        `${base}/submissions?review=active`,
+      );
+      const document = page.window.document;
+      const read = () => ({
+        active: document.querySelector(".review-count-active")?.textContent,
+        cards: [...document.querySelectorAll(".submission-review-card")].map(
+          (card) =>
+            `${card.querySelector(".answer-review")?.textContent?.replace("Response", "")}: ${card.querySelector(".review-state-label")?.textContent}`,
+        ),
+        needs: document.querySelector(".review-count-needs")?.textContent,
+        note: document.querySelector(".review-other-try")?.textContent,
+      });
+
+      expect(read()).toEqual({
+        active: "2",
+        cards: ["First try.: Reviewed", "Third try.: Needs review"],
+        needs: "1",
+        note: "",
+      });
+
+      // Graded below the first, the latest stops counting and leaves Active.
+      await page.grade("Third try.", 2);
+
+      expect(read()).toEqual({
+        active: "1",
+        cards: ["First try.: Reviewed"],
+        needs: "0",
+        note: "",
+      });
+
+      // Regraded below it, the first stops counting and the latest, off the
+      // page, takes its place: said, with a reload offered, not forced.
+      await page.grade("First try.", 1);
+
+      expect(read()).toEqual({
+        active: "1",
+        cards: [],
+        needs: "0",
+        note: "A different try by inplace-student@example.test now counts. Reload to show it",
+      });
+      expect(
+        document.querySelector(".review-other-try a")?.getAttribute("href"),
+      ).toBe(`http://localhost${base}/submissions?review=active`);
+      expect(document.body.textContent).toContain(
+        "None of the recorded submissions counts toward a grade.",
+      );
     });
   });
 });

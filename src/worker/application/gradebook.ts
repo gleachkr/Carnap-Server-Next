@@ -368,6 +368,11 @@ export function courseGradebookCsv(gradebook: CourseGradebook): string {
 
 /** A student's score, and the per-exercise points it was summed from. */
 interface CalculatedAssignmentScore {
+  /**
+   * Keyed by exercise id: the submission each exercise's points were taken
+   * from. Absent where `exerciseScores` is.
+   */
+  readonly decidingSubmissions: ReadonlyMap<string, AppId>;
   readonly exercises: readonly GradebookExercise[];
   /** Keyed by exercise id; an exercise with no evaluated work is absent. */
   readonly exerciseScores: ReadonlyMap<string, number>;
@@ -589,6 +594,116 @@ function collectEvaluations(
   }
 }
 
+/** A student's attempts at an assignment that a score is drawn from. */
+function liveAttempts(
+  assignment: Assignment,
+  userId: AppId,
+  inputs: ScoringInputs,
+): readonly Attempt[] {
+  return (inputs.attempts.get(pairKey(assignment.id, userId)) ?? []).filter(
+    (attempt) => attempt.status !== "voided",
+  );
+}
+
+/**
+ * The submissions that bear on one student's score: for each exercise the
+ * score counts, the one its points were taken from — and the student's latest
+ * try at it while that try has no grade yet, since until it is graded nothing
+ * can say it will not be the one. A try with no grade that the student has
+ * since followed with another is superseded, like one that scored lower.
+ *
+ * Everything else the student submitted does not count: a reset attempt's
+ * work, an excused exercise's, one no longer in the content. The selection is
+ * the score's own, so a page that marks what counts cannot disagree with the
+ * total it is summed into.
+ */
+function countingSubmissionIds(
+  assignment: Assignment,
+  userId: AppId,
+  inputs: ScoringInputs,
+  calculatedAt: string,
+): AppId[] {
+  const counted = new Set(
+    exercisesFor(inputs, assignment).map((exercise) => exercise.id),
+  );
+  const latest = new Map<string, SubmissionForScoring>();
+
+  for (const attempt of liveAttempts(assignment, userId, inputs)) {
+    for (const submission of inputs.submissions.get(attempt.id) ?? []) {
+      if (
+        submission.exerciseId === null ||
+        !counted.has(submission.exerciseId)
+      ) {
+        continue;
+      }
+
+      const current = latest.get(submission.exerciseId);
+
+      if (
+        current === undefined ||
+        (compareText(submission.submittedAt, current.submittedAt) ||
+          compareText(submission.id, current.id)) > 0
+      ) {
+        latest.set(submission.exerciseId, submission);
+      }
+    }
+  }
+
+  const pending = [...latest.values()]
+    .filter(
+      (submission) =>
+        effectiveEvaluation(inputs.evaluations.get(submission.id) ?? []) ===
+        null,
+    )
+    .map((submission) => submission.id);
+
+  return [
+    ...calculateAssignmentScore(
+      assignment,
+      userId,
+      inputs,
+      calculatedAt,
+    ).decidingSubmissions.values(),
+    ...pending,
+  ];
+}
+
+/** One of a student's tries at an exercise, as the score sees it. */
+export interface ScoredTry {
+  /** The score takes the exercise's points from it, or may yet. */
+  readonly counts: boolean;
+  /** Its effective evaluation, in scoring columns; null while it has none. */
+  readonly effective: EvaluationForScoring | null;
+  readonly submissionId: AppId;
+}
+
+/**
+ * One student's tries at one exercise outside a reset attempt, in the order
+ * they were made, each with whether it counts ({@link countingSubmissionIds}).
+ */
+function scoredTriesFrom(
+  assignment: Assignment,
+  userId: AppId,
+  exerciseId: string | null,
+  inputs: ScoringInputs,
+  calculatedAt: string,
+): ScoredTry[] {
+  const counting = new Set(
+    countingSubmissionIds(assignment, userId, inputs, calculatedAt),
+  );
+
+  return liveAttempts(assignment, userId, inputs)
+    .flatMap((attempt) => inputs.submissions.get(attempt.id) ?? [])
+    .filter((submission) => submission.exerciseId === exerciseId)
+    .map((submission) => ({
+      counts: counting.has(submission.id),
+      effective: effectiveEvaluation(
+        inputs.evaluations.get(submission.id) ?? [],
+      ),
+      submissionId: submission.id,
+    }));
+}
+
 /**
  * One student's score on one assignment, from rows already in hand. Pure:
  * everything it reads is in `inputs`, so the same inputs give the same score
@@ -609,9 +724,7 @@ function calculateAssignmentScore(
     (sum, exercise) => sum + exercise.points,
     0,
   );
-  const attempts = (
-    inputs.attempts.get(pairKey(assignment.id, userId)) ?? []
-  ).filter((attempt) => attempt.status !== "voided");
+  const attempts = liveAttempts(assignment, userId, inputs);
   const bestByExercise = new Map<string, EvaluationForScoring>();
 
   for (const attempt of attempts) {
@@ -631,6 +744,12 @@ function calculateAssignmentScore(
   );
 
   return {
+    decidingSubmissions: new Map(
+      [...bestByExercise].map(([exerciseId, evaluation]) => [
+        exerciseId,
+        evaluation.submissionId,
+      ]),
+    ),
     exercises,
     exerciseScores: new Map(
       [...bestByExercise].map(([exerciseId, evaluation]) => [
@@ -692,7 +811,61 @@ export class GradebookService {
     userId: AppId,
     known: KnownScoringReads = {},
   ): Promise<AssignmentScore> {
-    const inputs = await this.scoringInputs([assignment], userId, known);
+    return this.refreshFromInputs(
+      assignment,
+      userId,
+      await this.scoringInputs([assignment], userId, known),
+    );
+  }
+
+  /**
+   * {@link refreshStudentAssignmentScore} after a grade on one of the
+   * student's tries at an exercise, handing back how each of their tries at it
+   * now stands. A grade can move which one counts, and the reply to it says
+   * so; the answer comes from the rows the refresh reads anyway, so saying it
+   * costs no second read.
+   */
+  async refreshAfterGrade(
+    assignment: Assignment,
+    userId: AppId,
+    exerciseId: string | null,
+  ): Promise<readonly ScoredTry[]> {
+    const inputs = await this.scoringInputs([assignment], userId);
+
+    await this.refreshFromInputs(assignment, userId, inputs);
+
+    return scoredTriesFrom(
+      assignment,
+      userId,
+      exerciseId,
+      inputs,
+      timestampNow(this.options.now?.() ?? new Date()),
+    );
+  }
+
+  /**
+   * How each of a student's tries at an exercise stands, without a refresh:
+   * for a grade that changed nothing.
+   */
+  async scoredTries(
+    assignment: Assignment,
+    userId: AppId,
+    exerciseId: string | null,
+  ): Promise<readonly ScoredTry[]> {
+    return scoredTriesFrom(
+      assignment,
+      userId,
+      exerciseId,
+      await this.scoringInputs([assignment], userId),
+      timestampNow(this.options.now?.() ?? new Date()),
+    );
+  }
+
+  private async refreshFromInputs(
+    assignment: Assignment,
+    userId: AppId,
+    inputs: ScoringInputs,
+  ): Promise<AssignmentScore> {
     const [entry] = await this.ledgerWrites([assignment], [userId], inputs);
 
     if (entry === undefined) {
@@ -977,6 +1150,33 @@ export class GradebookService {
     this.contextPlatformMemo.set(contextRowId, platformId);
 
     return platformId;
+  }
+
+  /**
+   * Which of these students' submissions to an assignment count toward their
+   * scores ({@link countingSubmissionIds}). For the review queue, which asks
+   * so that it and the gradebook cannot disagree about which try is the
+   * grade. The caller has already checked the actor may see the work.
+   */
+  async countingSubmissions(
+    assignment: Assignment,
+    userIds: readonly AppId[],
+  ): Promise<ReadonlySet<AppId>> {
+    if (userIds.length === 0) {
+      return new Set();
+    }
+
+    const inputs = await this.scoringInputs(
+      [assignment],
+      userIds.length === 1 ? userIds[0] : undefined,
+    );
+    const now = timestampNow(this.options.now?.() ?? new Date());
+
+    return new Set(
+      userIds.flatMap((userId) =>
+        countingSubmissionIds(assignment, userId, inputs, now),
+      ),
+    );
   }
 
   async getAssignmentGradebook(

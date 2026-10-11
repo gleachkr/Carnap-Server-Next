@@ -415,13 +415,18 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
  * over once it can, and mirrors the server's render of the new state — the
  * status line, the review-state word, whether the one-click approve still
  * applies, the "needs review" count, and (in the needs-review filter) dropping
- * the card out of the queue it no longer belongs in.
+ * the card out of the queue it no longer belongs in. A grade can move which of
+ * a student's tries counts, so the reply carries every such try's new state
+ * and the script redraws each card it moved; one that now belongs on this tab
+ * but is not on the page is mentioned, with a reload offered, never forced.
  */
 const REVIEW_ACTIONS_SCRIPT = `
 (() => {
 ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
 
   const NEEDS_REVIEW = "needs-review";
+  // The states of a try that counts toward a grade: what Active lists.
+  const COUNTING = ["auto-graded", "needs-review", "reviewed"];
   const STATES = S.states || {};
   const EVALUATORS = S.evaluators || {};
 
@@ -482,49 +487,52 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     return fill(S.driftChanged || "now worth {points}", { points: nominal });
   }
 
-  // Mirrors submissionNeedsReview + reviewState on the server, and returns the
-  // same machine values — never the displayed words, which differ by language.
-  function reviewStateOf(evaluation) {
-    if (!evaluation) {
-      return NEEDS_REVIEW;
-    }
-
-    if (evaluation.evaluatorKind === "manual") {
-      return "reviewed";
-    }
-
-    return evaluation.score < evaluation.maxScore ? NEEDS_REVIEW : "auto-graded";
-  }
-
   const list = document.querySelector(".submission-review-list");
   const filterNav = document.querySelector(".review-filter");
   const filter = filterNav === null ? "all" : filterNav.dataset.filter || "all";
-  const countElement = document.querySelector(".review-count-needs");
+  const needsCount = document.querySelector(".review-count-needs");
+  const activeCount = document.querySelector(".review-count-active");
+  // How each student's tries at an exercise stand since the last grade given
+  // on this page. Before one, the footer's attributes say how they were drawn.
+  const groups = new Map();
 
-  function refreshCount() {
-    if (countElement === null) {
-      return;
+  function counts(state) {
+    return COUNTING.indexOf(state) !== -1;
+  }
+
+  // Whether this tab lists a try in this state: the server's filter, over the
+  // same machine values.
+  function shows(state) {
+    if (filter === "needs-review") {
+      return state === NEEDS_REVIEW;
     }
 
-    let count = 0;
+    return filter === "active" ? counts(state) : true;
+  }
 
-    for (const label of document.querySelectorAll(
-      ".submission-review-card .review-state-label",
-    )) {
-      if (label.dataset.reviewState === NEEDS_REVIEW) {
-        count += 1;
-      }
+  function adjust(element, delta) {
+    if (element !== null && delta !== 0) {
+      element.textContent = String(Number(element.textContent) + delta);
     }
-
-    countElement.textContent = String(count);
   }
 
   function showEmptyStateIfCleared() {
-    if (filter !== "needs-review" || list === null) {
+    if (
+      list === null ||
+      list.querySelector(".submission-review-card") !== null
+    ) {
       return;
     }
 
-    if (list.querySelector(".submission-review-card") !== null) {
+    const message =
+      filter === "needs-review"
+        ? S.allReviewed || "Every submission that counts has been reviewed."
+        : filter === "active"
+          ? S.noneCount ||
+            "None of the recorded submissions counts toward a grade. They are listed under All."
+          : null;
+
+    if (message === null) {
       return;
     }
 
@@ -533,11 +541,31 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     const section = document.createElement("div");
     section.className = "sheet-section";
     const paragraph = document.createElement("p");
-    paragraph.textContent =
-      S.allReviewed || "Every recorded submission has been reviewed.";
+    paragraph.textContent = message;
     section.appendChild(paragraph);
     sheet.appendChild(section);
     list.replaceWith(sheet);
+  }
+
+  // A grade made a try count that this tab is not showing. It is said in the
+  // status line the page draws empty under the tabs, with a reload to follow
+  // if the grader wants it, rather than reloading under them.
+  function noteOtherTry(student) {
+    const region = document.querySelector(".review-other-try");
+
+    if (region === null) {
+      return;
+    }
+
+    region.textContent =
+      fill(S.otherTryCounts || "A different try by {student} now counts.", {
+        student,
+      }) + " ";
+
+    const link = document.createElement("a");
+    link.href = window.location.href;
+    link.textContent = S.reloadToShow || "Reload to show it";
+    region.appendChild(link);
   }
 
   function showError(card, message) {
@@ -562,17 +590,36 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     }
   }
 
-  function applyResult(card, evaluation) {
+  // The reply names the new state of every live try the student has made at
+  // this exercise, since a grade on one can move which counts. Each of their
+  // cards on the page is relabelled, or dropped from a tab that no longer
+  // lists it, and the tab counts move by what changed in the group.
+  function applyResult(card, body) {
     clearError(card);
-    const state = reviewStateOf(evaluation);
 
-    // A card that no longer needs review has no place in the needs-review
-    // queue — drop it the way a reload would, and offer the empty state.
-    if (filter === "needs-review" && state !== NEEDS_REVIEW) {
-      card.remove();
-      refreshCount();
-      showEmptyStateIfCleared();
-      return;
+    const evaluation = body.evaluation;
+    const tries = Array.isArray(body.tries) ? body.tries : [];
+    const heading = card.querySelector("h2");
+    const student = heading === null ? "" : heading.textContent;
+    const ownLabel = card.querySelector(".review-state-label");
+    const ownId = ownLabel === null ? null : ownLabel.dataset.submissionId;
+    const own = tries.find((entry) => entry.submissionId === ownId);
+    const footer = card.querySelector(".submission-review-footer");
+
+    if (footer !== null) {
+      const key = footer.dataset.tryGroup;
+      const before = groups.get(key) || {
+        counting: Number(footer.dataset.groupCounting) || 0,
+        needs: Number(footer.dataset.groupNeeds) || 0,
+      };
+      const after = {
+        counting: tries.filter((entry) => counts(entry.state)).length,
+        needs: tries.filter((entry) => entry.state === NEEDS_REVIEW).length,
+      };
+
+      adjust(activeCount, after.counting - before.counting);
+      adjust(needsCount, after.needs - before.needs);
+      groups.set(key, after);
     }
 
     const status = card.querySelector(".submission-review-status");
@@ -581,10 +628,14 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
       // Wipes any server-rendered drift note along with the old line; the
       // drift is then re-derived from the fresh evaluation, since a manual
       // grade is stamped with the current points (drift gone) while an
-      // approval copies the automatic's old figure (drift stays).
+      // approval copies the automatic's old figure (drift stays). It warns
+      // about grades that count, so a try that does not gets none.
       status.textContent = evaluationText(evaluation);
 
-      const note = driftNoteText(evaluation, status);
+      const note =
+        own !== undefined && counts(own.state)
+          ? driftNoteText(evaluation, status)
+          : null;
 
       status.classList.toggle("points-drift", note !== null);
 
@@ -597,27 +648,51 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
       }
     }
 
-    const label = card.querySelector(".review-state-label");
-
-    if (label !== null) {
-      // Both halves, so the next refreshCount() sees the new state.
-      label.dataset.reviewState = state;
-      label.textContent = stateLabelText(state);
-    }
-
-    const approve = card.querySelector(".approve-score-form");
-
-    if (approve !== null && state !== NEEDS_REVIEW) {
-      approve.remove();
-    }
-
     const details = card.querySelector("details.manual-evaluation");
 
     if (details !== null) {
       details.open = false;
     }
 
-    refreshCount();
+    const labels = new Map();
+
+    for (const label of document.querySelectorAll(".review-state-label")) {
+      labels.set(label.dataset.submissionId, label);
+    }
+
+    let unseen = false;
+
+    for (const entry of tries) {
+      const label = labels.get(entry.submissionId);
+
+      if (label === undefined) {
+        unseen = unseen || shows(entry.state);
+        continue;
+      }
+
+      const other = label.closest(".submission-review-card");
+
+      if (!shows(entry.state)) {
+        other.remove();
+        continue;
+      }
+
+      // Both halves: the value for the script, the word for the reader.
+      label.dataset.reviewState = entry.state;
+      label.textContent = stateLabelText(entry.state);
+
+      const approve = other.querySelector(".approve-score-form");
+
+      if (approve !== null && entry.state !== NEEDS_REVIEW) {
+        approve.remove();
+      }
+    }
+
+    if (unseen) {
+      noteOtherTry(student);
+    }
+
+    showEmptyStateIfCleared();
   }
 
   async function errorMessage(response) {
@@ -659,7 +734,7 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
       const body = await response.json();
 
       if (card !== null) {
-        applyResult(card, body.evaluation);
+        applyResult(card, body);
       }
     } catch (error) {
       if (card !== null) {

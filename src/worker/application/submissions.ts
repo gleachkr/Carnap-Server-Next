@@ -133,6 +133,12 @@ export interface InstructorSubmissionEntry extends SubmissionHistoryEntry {
    * so there is nothing to review and nothing to grade.
    */
   readonly attemptVoided: boolean;
+  /**
+   * The submission bears on the student's score: it is the try the score
+   * takes this exercise's points from, or the latest try, still waiting for a
+   * grade. False for every other try, and for a reset attempt's work.
+   */
+  readonly counts: boolean;
 }
 
 export interface StudentAttemptResult {
@@ -645,10 +651,15 @@ export class SubmissionService {
     // approved or overridden score reads correctly rather than the raw
     // autograde it replaced. Reset attempts are listed too, marked as such:
     // a reset keeps the work on file, and the queue is where it is read.
-    const histories = await Promise.all(
-      attempts
-        .filter((attempt) => students.has(attempt.userId))
-        .map(async (attempt) =>
+    //
+    // Which try counts is the gradebook's answer, not a second copy of its
+    // rule: the queue lists what the total is summed from.
+    const studentAttempts = attempts.filter((attempt) =>
+      students.has(attempt.userId),
+    );
+    const [histories, counting] = await Promise.all([
+      Promise.all(
+        studentAttempts.map(async (attempt) =>
           (
             await this.historyForAttempt(attempt.id, "instructor", i18n, true)
           ).map((entry) => ({
@@ -657,9 +668,19 @@ export class SubmissionService {
             attemptVoided: attempt.status === "voided",
           })),
         ),
-    );
+      ),
+      new GradebookService({
+        now: this.options.now,
+        stores: this.options.stores,
+      }).countingSubmissions(assignment, [
+        ...new Set(studentAttempts.map((attempt) => attempt.userId)),
+      ]),
+    ]);
 
-    return histories.flat();
+    return histories.flat().map((entry) => ({
+      ...entry,
+      counts: counting.has(entry.submission.id),
+    }));
   }
 
   /**

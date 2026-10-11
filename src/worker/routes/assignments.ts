@@ -14,7 +14,10 @@ import {
 } from "../application/content/renderer";
 import { CourseService } from "../application/courses";
 import { AppHttpError, badRequest } from "../application/errors";
-import { ManualGradingService } from "../application/manual-grading";
+import {
+  type ManualEvaluationResult,
+  ManualGradingService,
+} from "../application/manual-grading";
 import {
   type AttemptActivity,
   attemptActivity,
@@ -86,6 +89,7 @@ import {
   redirect,
   wantsHtml,
 } from "../web/html";
+import { reviewStateOf } from "../web/labels";
 import type { Crumb } from "../web/layout";
 import {
   courseTitleFor,
@@ -985,6 +989,26 @@ function overrideCommandFromJson(body: AssignmentOverrideBody) {
   };
 }
 
+/**
+ * The reply to a grade: the new evaluation, and the review state of each of
+ * the student's tries at the exercise — a grade can move which one counts, and
+ * the review queue's script redraws every card it moved from these.
+ */
+function gradedSubmissionJson(result: ManualEvaluationResult) {
+  return {
+    evaluation: publicEvaluation(viewerEvaluation(result.evaluation)),
+    submission: publicSubmission(result.submission),
+    tries: result.tries.map((graded) => ({
+      state: reviewStateOf({
+        attemptVoided: false,
+        counts: graded.counts,
+        evaluation: graded.evaluation,
+      }),
+      submissionId: graded.submissionId,
+    })),
+  };
+}
+
 async function createManualEvaluation(
   context: Context<AppBindings>,
 ): Promise<Response> {
@@ -1014,13 +1038,7 @@ async function createManualEvaluation(
     );
   }
 
-  return context.json(
-    {
-      evaluation: publicEvaluation(viewerEvaluation(result.evaluation)),
-      submission: publicSubmission(result.submission),
-    },
-    201,
-  );
+  return context.json(gradedSubmissionJson(result), 201);
 }
 
 async function approveSubmission(
@@ -1045,13 +1063,7 @@ async function approveSubmission(
     );
   }
 
-  return context.json(
-    {
-      evaluation: publicEvaluation(viewerEvaluation(result.evaluation)),
-      submission: publicSubmission(result.submission),
-    },
-    201,
-  );
+  return context.json(gradedSubmissionJson(result), 201);
 }
 
 async function upsertLatePolicy(
@@ -1794,11 +1806,11 @@ async function listInstructorSubmissions(
       attemptId: entry.attemptId,
       attemptOrdinal: entry.attemptOrdinal,
       attemptVoided: entry.attemptVoided,
+      counts: entry.counts,
       evaluation:
         entry.evaluation === null ? null : publicEvaluation(entry.evaluation),
-      // A reset attempt's work is on record, not awaiting a grade.
-      needsReview:
-        !entry.attemptVoided && submissionNeedsReview(entry.evaluation),
+      // Only a try that counts awaits a grade; a reset attempt's never does.
+      needsReview: entry.counts && submissionNeedsReview(entry.evaluation),
       submission: publicSubmission(entry.submission),
     })),
   });

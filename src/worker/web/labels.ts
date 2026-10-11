@@ -1,5 +1,10 @@
 import type { PlatformCapability } from "../domain/admin";
-import type { AttemptStatus, EvaluatorKind } from "../domain/assessment";
+import {
+  type AttemptStatus,
+  type EvaluatorKind,
+  submissionNeedsReview,
+  type ViewerEvaluation,
+} from "../domain/assessment";
 import type {
   AssessmentMode,
   AssignmentState,
@@ -208,13 +213,51 @@ export function evaluatorKindLabel(
  * the prose up from it here.
  *
  * `reset` outranks the grading states: once an attempt is reset its work is a
- * record, and whether it was reviewed no longer matters to anyone.
+ * record, and whether it was reviewed no longer matters to anyone. So does
+ * `not-counted`, for a try the score does not take its points from: what it
+ * was graded is beside the point while another try is the grade.
  */
 export type ReviewState =
   | "auto-graded"
   | "needs-review"
+  | "not-counted"
   | "reset"
   | "reviewed";
+
+/**
+ * Which review state a submission is in. One function for the queue's render
+ * and for the reply to a grade, which tells the queue's script the new state of
+ * every try the grade may have moved — so the script never re-derives a state
+ * the server would word differently.
+ */
+export function reviewStateOf(entry: {
+  readonly attemptVoided: boolean;
+  readonly counts: boolean;
+  readonly evaluation: Pick<
+    ViewerEvaluation,
+    "evaluatorKind" | "maxScore" | "score"
+  > | null;
+}): ReviewState {
+  const evaluation = entry.evaluation;
+
+  if (entry.attemptVoided) {
+    return "reset";
+  }
+
+  if (!entry.counts) {
+    return "not-counted";
+  }
+
+  if (submissionNeedsReview(evaluation)) {
+    return "needs-review";
+  }
+
+  if (evaluation !== null && evaluation.evaluatorKind === "manual") {
+    return "reviewed";
+  }
+
+  return "auto-graded";
+}
 
 export function reviewStateLabel(
   i18n: Translator,
@@ -225,6 +268,8 @@ export function reviewStateLabel(
       return i18n.t("Auto-graded");
     case "needs-review":
       return i18n.t("Needs review");
+    case "not-counted":
+      return i18n.t("Does not count");
     case "reset":
       return i18n.t(
         "Reset (review state)",

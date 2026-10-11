@@ -14,7 +14,7 @@ import type { AuthenticatedActor } from "./auth";
 import { requireCourseStaff } from "./authorization";
 import { contentArtifactFromRevision } from "./content/artifact";
 import { AppHttpError, badRequest } from "./errors";
-import { GradebookService } from "./gradebook";
+import { GradebookService, type ScoredTry } from "./gradebook";
 import type { AppStores } from "./stores";
 
 export interface ManualGradingServiceOptions {
@@ -35,9 +35,28 @@ export interface ManualEvaluationCommand {
   readonly score: number;
 }
 
+/** One of a student's tries at an exercise, as it stands after a grade. */
+export interface GradedExerciseTry {
+  /** The score takes the exercise's points from it, or may yet. */
+  readonly counts: boolean;
+  /**
+   * Its effective evaluation where it counts, since that is what its review
+   * state then turns on. Null for a try that does not count, whose state
+   * does not depend on it, and for one not yet graded.
+   */
+  readonly evaluation: Evaluation | null;
+  readonly submissionId: AppId;
+}
+
 export interface ManualEvaluationResult {
   readonly evaluation: Evaluation;
   readonly submission: Submission;
+  /**
+   * Every try the student has made at this exercise outside a reset attempt,
+   * this one included. A grade on one can move which counts, so a page
+   * showing them needs all of them back, not just the one graded.
+   */
+  readonly tries: readonly GradedExerciseTry[];
 }
 
 /**
@@ -158,7 +177,19 @@ export class ManualGradingService {
 
     // A manual grade already stands, and it is the one that counts.
     if (effective.evaluatorKind === "manual") {
-      return { evaluation: effective, submission };
+      return {
+        evaluation: effective,
+        submission,
+        tries: await this.gradedTries(
+          submission,
+          effective,
+          await this.gradebook().scoredTries(
+            assignment,
+            submission.userId,
+            submission.exerciseId,
+          ),
+        ),
+      };
     }
 
     return this.appendManualEvaluation(assignment, submission, {
@@ -279,11 +310,53 @@ export class ManualGradingService {
       submissionId: submission.id,
     });
 
-    await new GradebookService({
+    const scored = await this.gradebook().refreshAfterGrade(
+      assignment,
+      submission.userId,
+      submission.exerciseId,
+    );
+
+    return {
+      evaluation,
+      submission,
+      tries: await this.gradedTries(submission, evaluation, scored),
+    };
+  }
+
+  /**
+   * The student's tries at the graded exercise, as the gradebook found them
+   * while refreshing the score. Its rows carry the scoring columns only, and
+   * a counting try's review state also turns on what its autograde was out of,
+   * so that one row is read in full — the try just graded is in hand, and a
+   * try that does not count needs none.
+   */
+  private async gradedTries(
+    graded: Submission,
+    evaluation: Evaluation,
+    scored: readonly ScoredTry[],
+  ): Promise<GradedExerciseTry[]> {
+    return Promise.all(
+      scored.map(async ({ counts, effective, submissionId }) => ({
+        counts,
+        evaluation:
+          !counts || effective === null
+            ? null
+            : submissionId === graded.id
+              ? evaluation
+              : ((
+                  await this.options.stores.assessment.listEvaluationsForSubmission(
+                    submissionId,
+                  )
+                ).find((row) => row.id === effective.id) ?? null),
+        submissionId,
+      })),
+    );
+  }
+
+  private gradebook(): GradebookService {
+    return new GradebookService({
       now: this.options.now,
       stores: this.options.stores,
-    }).refreshStudentAssignmentScore(assignment, submission.userId);
-
-    return { evaluation, submission };
+    });
   }
 }

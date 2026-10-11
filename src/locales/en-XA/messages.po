@@ -405,6 +405,10 @@ msgstr ""
 msgid "A course must keep at least one active instructor."
 msgstr ""
 
+#: src/worker/web/ui-strings.ts
+msgid "A different try by {student} now counts."
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A distinguish exercise lists no sentences: the student writes one."
 msgstr ""
@@ -2032,6 +2036,10 @@ msgstr ""
 msgid "Dodec"
 msgstr ""
 
+#: src/worker/web/labels.ts
+msgid "Does not count"
+msgstr ""
+
 #: src/worker/exercises/model/strings.ts
 msgid "Domain"
 msgstr ""
@@ -2288,17 +2296,13 @@ msgstr ""
 msgid "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove."
 msgstr ""
 
-#: src/worker/web/assignment-detail.tsx
-#: src/worker/web/ui-strings.ts
-msgid "Every recorded submission has been reviewed."
-msgstr ""
-
-#: src/worker/web/assignment-detail.tsx
-msgid "Every recorded submission is from a reset attempt. They are listed under All."
-msgstr ""
-
 #: src/worker/exercises/world/strings.ts
 msgid "Every sentence is marked correctly."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Every submission that counts has been reviewed."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -3385,6 +3389,11 @@ msgstr ""
 msgid "None"
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "None of the recorded submissions counts toward a grade. They are listed under All."
+msgstr ""
+
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Not a valid counterexample yet."
 msgstr ""
@@ -4037,6 +4046,10 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Release now"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "Reload to show it"
 msgstr ""
 
 #: src/worker/web/admin-lti.tsx
