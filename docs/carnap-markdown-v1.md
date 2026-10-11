@@ -1489,9 +1489,10 @@ by accident never turns an exercise into a playground.
 The statement a playground proves is taken from the proof itself: the last
 line of a Fitch proof with the assumptions still open at it, the root of a
 tree, the root of a Prawitz derivation with its undischarged assumptions, or
-the last line of a linear proof. The widget shows it live as **Proves**, and
-it is the goal the certificate is verified against and the goal the review
-page names. Variables in the statement (the `@vars` tokens of the system —
+the last line of a linear proof. The widget shows it live as **Proves** (and
+asks the student to **Enter a proof** until there is one to read), and it is
+the goal the certificate is verified against and the goal the review page
+names. Variables in the statement (the `@vars` tokens of the system —
 `x`, `a` and their pools in the forallx systems) are bound automatically;
 nothing else can be, so a playground statement is always a concrete sentence
 or sequent in the system's own vocabulary, never a schema over metavariables.

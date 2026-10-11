@@ -18,6 +18,7 @@ import {
 } from "@codemirror/view";
 import type { ProofEditorStringId } from "../../worker/exercise-kit/proof/editor-strings";
 import type { ProofEngineStringId } from "../../worker/exercise-kit/proof/engine-strings";
+import type { ProofGoalRow } from "../../worker/exercise-kit/proof/goal-row";
 import {
   createHelpDialog,
   HELP_DIALOG_STYLES,
@@ -51,8 +52,8 @@ export interface ProofEditorChrome {
   readonly container: HTMLElement;
   /** Where the CodeMirror view goes. */
   readonly host: HTMLElement;
-  /** The goal row's statement, which a playground rewrites per compile. */
-  readonly statement: HTMLElement;
+  /** Rewrite the goal row — a playground's, which follows the proof. */
+  readonly showGoal: (row: ProofGoalRow) => void;
   /** Under the editor: where F8 leaves the problem it went to. Empty, and
    *  hidden, until {@link problemKeys} puts one there. */
   readonly problems: ProblemLine;
@@ -70,7 +71,7 @@ export interface ProofEditorChrome {
 export function mountProofEditor(
   root: ShadowRoot,
   styles: string,
-  goal: { readonly label: string; readonly statement: string },
+  goal: ProofGoalRow,
 ): ProofEditorChrome | null {
   const container = root.querySelector<HTMLElement>(".proof");
   if (container === null) {
@@ -90,10 +91,13 @@ export function mountProofEditor(
   row.className = "proof-goal";
   const label = document.createElement("span");
   label.className = "proof-goal-label";
-  label.textContent = goal.label;
   const statement = document.createElement("span");
   statement.className = "proof-goal-statement";
-  statement.textContent = goal.statement;
+  const showGoal = (next: ProofGoalRow) => {
+    label.textContent = next.label;
+    statement.textContent = next.statement;
+  };
+  showGoal(goal);
   // The space is for text readers; the row's gap draws the visible one.
   row.append(label, " ", statement);
   container.insertBefore(row, actionsSlot);
@@ -103,7 +107,7 @@ export function mountProofEditor(
   container.insertBefore(host, actionsSlot);
   const problems = mountProblemLine(root, container, actionsSlot);
 
-  return { container, host, problems, statement };
+  return { container, host, problems, showGoal };
 }
 
 /**

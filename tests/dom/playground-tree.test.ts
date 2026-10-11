@@ -33,6 +33,9 @@ describe("a playground tree", () => {
     // Nothing to prove yet: no compile, no goal in the answer.
     expect(compile).toHaveBeenCalledTimes(0);
     expect(JSON.parse(mounted.answerData.value)).not.toHaveProperty("goal");
+    expect(mounted.root.querySelector(".proof-goal")?.textContent).toBe(
+      "Enter a proof ",
+    );
 
     typeInto(field, "Fa ⊢ Fa");
 

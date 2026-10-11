@@ -63,7 +63,6 @@ import { goalText } from "../../worker/exercise-kit/proof/goal-row";
 import type { PlaygroundGoal } from "../../worker/exercise-kit/proof/playground";
 import {
   playgroundGoal,
-  playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
 import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
@@ -93,6 +92,7 @@ import {
   mountProofEditor,
   mountProofEditorHelp,
   type ProofDiagnostic,
+  type ProofEditorChrome,
   problemKeys,
   showCompileFailure,
   showDiagnostics,
@@ -313,8 +313,8 @@ class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
   private playground = false;
   /** The goal the last translation derived (playground only). */
   private goal: PlaygroundGoal | null = null;
-  /** The goal row's statement, live in a playground. */
-  private statementView: HTMLElement | null = null;
+  /** Rewrites the goal row, which in a playground follows the proof. */
+  private showGoal: ProofEditorChrome["showGoal"] | null = null;
   /** Reads a typed line in the theory's language; passes text through where
    *  the exercise was frozen without one. See `exercise-kit/proof/formulas.ts`. */
   private readFormula: ProofFormulaReader = ENGINE_TEXT;
@@ -379,14 +379,20 @@ class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
     }
 
     // A playground's row says what the proof *proves*, and follows the proof.
-    const chrome = mountProofEditor(root, SHADOW_STYLES, {
-      label: this.t(this.playground ? "Proves" : "Prove"),
-      statement: this.playground ? "" : goalText(theory, this.goalName),
-    });
+    const chrome = mountProofEditor(
+      root,
+      SHADOW_STYLES,
+      this.playground
+        ? this.playgroundGoalRow(this.theory.source, null)
+        : {
+            label: this.t("Prove"),
+            statement: goalText(theory, this.goalName),
+          },
+    );
     if (chrome === null) {
       return;
     }
-    this.statementView = chrome.statement;
+    this.showGoal = chrome.showGoal;
 
     const prior = this.priorAnswer as { fitchText?: unknown } | null;
     const initialText =
@@ -559,10 +565,7 @@ class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
         : playgroundGoal(this.theory.source, translation.statement);
     this.goal = goal;
 
-    if (this.statementView !== null) {
-      this.statementView.textContent =
-        goal === null ? "" : playgroundGoalText(this.theory.source, goal);
-    }
+    this.showGoal?.(this.playgroundGoalRow(this.theory.source, goal));
 
     if (goal === null) {
       if (translation.statement !== null) {

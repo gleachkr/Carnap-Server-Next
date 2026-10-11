@@ -1,9 +1,9 @@
 /*
  * The goal row every proof widget shows above its editor: "Prove" and the
  * fixed statement, or, in a playground, "Proves" and the statement the proof
- * currently makes. One look across the linear, Fitch, tree and Prawitz
- * widgets — the same exercise page can show any two side by side. Appended
- * to each widget's shadow styles.
+ * currently makes ("Enter a proof" until it makes one). One look across the
+ * linear, Fitch, tree and Prawitz widgets — the same exercise page can show
+ * any two side by side. Appended to each widget's shadow styles.
  */
 
 .proof-goal {

@@ -38,7 +38,6 @@ import type { PlaygroundGoal } from "../../worker/exercise-kit/proof/playground"
 import {
   lastProofStatement,
   playgroundGoal,
-  playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
 import {
@@ -55,6 +54,7 @@ import {
   mountProofEditor,
   mountProofEditorHelp,
   type ProofDiagnostic,
+  type ProofEditorChrome,
   problemKeys,
   showCompileFailure,
   showDiagnostics,
@@ -93,8 +93,8 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
   private playground = false;
   /** The goal the last compile derived (playground only). */
   private goal: PlaygroundGoal | null = null;
-  /** The goal row's statement, live in a playground. */
-  private statementView: HTMLElement | null = null;
+  /** Rewrites the goal row, which in a playground follows the proof. */
+  private showGoal: ProofEditorChrome["showGoal"] | null = null;
   private goalName = "";
   private editor: EditorView | null = null;
   private proofText = "";
@@ -116,14 +116,17 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
     this.goalName = data.goalName;
 
     // A playground's row says what the proof *proves*, and follows the proof.
-    const chrome = mountProofEditor(root, SHADOW_STYLES, {
-      label: this.t(this.playground ? "Proves" : "Prove"),
-      statement: this.playground ? "" : goalDeclaration(data.mm0),
-    });
+    const chrome = mountProofEditor(
+      root,
+      SHADOW_STYLES,
+      this.playground
+        ? this.playgroundGoalRow(this.theory.source, null)
+        : { label: this.t("Prove"), statement: goalDeclaration(data.mm0) },
+    );
     if (chrome === null) {
       return;
     }
-    this.statementView = chrome.statement;
+    this.showGoal = chrome.showGoal;
 
     const prior = this.priorAnswer as { proofText?: unknown } | null;
     const initialBody =
@@ -217,10 +220,7 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
           });
     this.goal = goal;
 
-    if (this.statementView !== null) {
-      this.statementView.textContent =
-        goal === null ? "" : playgroundGoalText(this.theory.source, goal);
-    }
+    this.showGoal?.(this.playgroundGoalRow(this.theory.source, goal));
 
     if (goal === null) {
       this.setMark(

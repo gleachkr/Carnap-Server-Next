@@ -215,7 +215,8 @@ describe("a playground", () => {
       await compileExercise(linear(" playground", "Build anything.")),
     );
 
-    expect(goalRow(mounted)).toBe("Proves ");
+    // Until the proof states something, the row asks for one.
+    expect(goalRow(mounted)).toBe("Enter a proof ");
     expect(bodyOf(mounted)).toBe("");
     const calls = compile.mock.calls.length;
 

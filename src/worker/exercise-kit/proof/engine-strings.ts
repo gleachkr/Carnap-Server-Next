@@ -63,6 +63,11 @@ export function buildProofEngineStrings(i18n: Translator) {
      * and listed in the CodeMirror editors' problem panel when it is empty.
      */
     "No errors.": i18n.t("No errors."),
+    /**
+     * A playground's goal row while the proof states nothing — empty, or not
+     * yet one derivation whose conclusion can be read.
+     */
+    "Enter a proof": i18n.t("Enter a proof"),
     /** Label on a playground's goal row, before the sequent the proof derives. */
     Proves: i18n.t("Proves"),
     "The proof engine couldn't read this proof — check for unexpected characters.":

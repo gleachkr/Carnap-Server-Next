@@ -2213,6 +2213,10 @@ msgstr "Enrollment link revoked."
 msgid "Enrollment links"
 msgstr "Enrollment links"
 
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "Enter a proof"
+msgstr "Enter a proof"
+
 #: src/worker/web/auth.tsx
 msgid "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one."
 msgstr "Enter your email address and we will send you a one-time login link. If you do not have an account yet, following the link creates one."

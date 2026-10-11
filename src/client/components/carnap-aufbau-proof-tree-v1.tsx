@@ -56,10 +56,10 @@ import {
 import goalStyles from "../../worker/exercise-kit/proof/goal.css" with {
   type: "text",
 };
+import type { ProofGoalRow } from "../../worker/exercise-kit/proof/goal-row";
 import type { PlaygroundGoal } from "../../worker/exercise-kit/proof/playground";
 import {
   playgroundGoal,
-  playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
 import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
@@ -809,14 +809,14 @@ function Editor(props: {
   /** An edit run from the toolbar: applies it and focuses the node it made. */
   readonly onToolbarEdit: (action: Action) => void;
   readonly onUndo: () => void;
-  /** In a playground, the statement the tree currently proves; `null` for an
+  /** A playground's goal row, which follows the tree; `null` for an
    *  ordinary exercise, whose goal is the fixed root. */
-  readonly proves: string | null;
+  readonly goalRow: ProofGoalRow | null;
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
   readonly status: Status;
   readonly t: Translate;
 }): preact.JSX.Element {
-  const { canRedo, canUndo, dispatch, doc, hypotheses, proves, t } = props;
+  const { canRedo, canUndo, dispatch, doc, goalRow, hypotheses, t } = props;
   const { onNodeKeyDown, onRedo, onSelect, onUndo } = props;
   const { onToolbarEdit, registerNode, status } = props;
   const selected = locate(doc.model, doc.selectedId);
@@ -829,10 +829,10 @@ function Editor(props: {
 
   return (
     <>
-      {proves === null ? null : (
+      {goalRow === null ? null : (
         <div class="proof-goal">
-          <span class="proof-goal-label">{t("Proves")}</span>{" "}
-          <span class="proof-goal-statement">{proves}</span>
+          <span class="proof-goal-label">{goalRow.label}</span>{" "}
+          <span class="proof-goal-statement">{goalRow.statement}</span>
         </div>
       )}
       {/* Icon-only: the name is the aria-label, the tooltip adds the key,
@@ -890,7 +890,7 @@ function Editor(props: {
       <div aria-label={t("Proof tree")} class="proof-tree-canvas" role="tree">
         <NodeView
           dispatch={dispatch}
-          fixedRoot={proves === null}
+          fixedRoot={goalRow === null}
           hypotheses={hypotheses}
           isRoot={true}
           node={doc.model}
@@ -1438,11 +1438,9 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
         onSelect={this.selectNode}
         onToolbarEdit={this.toolbarEdit}
         onUndo={this.undo}
-        proves={
+        goalRow={
           this.playground
-            ? this.goal === null
-              ? ""
-              : playgroundGoalText(this.theory.source, this.goal)
+            ? this.playgroundGoalRow(this.theory.source, this.goal)
             : null
         }
         registerNode={this.registerNode}

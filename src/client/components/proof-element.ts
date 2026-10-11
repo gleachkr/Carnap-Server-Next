@@ -1,5 +1,10 @@
 import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import type { ProofEngineStringId } from "../../worker/exercise-kit/proof/engine-strings";
+import type { ProofGoalRow } from "../../worker/exercise-kit/proof/goal-row";
+import {
+  type PlaygroundGoal,
+  playgroundGoalText,
+} from "../../worker/exercise-kit/proof/playground";
 import {
   NO_RULE_SHAPES,
   type RuleShapeReader,
@@ -184,6 +189,23 @@ export abstract class ProofExerciseElement<
         ? "Every other line checks; lines admitted with sorry! do not score."
         : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
     );
+  }
+
+  /**
+   * A playground's goal row: "Proves" and the statement the proof makes, or,
+   * while it makes none — empty, or not yet one derivation whose conclusion
+   * can be read — a prompt to write one (gh #39).
+   */
+  protected playgroundGoalRow(
+    source: string | null,
+    goal: PlaygroundGoal | null,
+  ): ProofGoalRow {
+    return goal === null
+      ? { label: this.t("Enter a proof"), statement: "" }
+      : {
+          label: this.t("Proves"),
+          statement: playgroundGoalText(source, goal),
+        };
   }
 
   /**

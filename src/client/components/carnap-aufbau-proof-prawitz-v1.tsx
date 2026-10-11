@@ -59,10 +59,10 @@ import {
 import goalStyles from "../../worker/exercise-kit/proof/goal.css" with {
   type: "text",
 };
+import type { ProofGoalRow } from "../../worker/exercise-kit/proof/goal-row";
 import type { PlaygroundGoal } from "../../worker/exercise-kit/proof/playground";
 import {
   playgroundGoal,
-  playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
 import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
@@ -849,10 +849,9 @@ function Editor(props: {
   readonly doc: Doc;
   /** Last focused node, or null before any focus; may no longer exist. */
   readonly focusedId: string | null;
-  readonly goalFormula: string;
-  /** In a playground, the statement the derivation currently proves; `null`
-   *  for an ordinary exercise, whose goal is `goalFormula`. */
-  readonly proves: string | null;
+  /** "Prove" and the fixed goal, or a playground's row, which follows the
+   *  derivation. */
+  readonly goalRow: ProofGoalRow;
   readonly onFocusItem: (id: string) => void;
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onRedo: () => void;
@@ -864,9 +863,7 @@ function Editor(props: {
   readonly status: Status;
   readonly t: Translate;
 }): preact.JSX.Element {
-  const { canRedo, canUndo, dispatch, doc, focusedId, goalFormula, t } =
-    props;
-  const { proves } = props;
+  const { canRedo, canUndo, dispatch, doc, focusedId, goalRow, t } = props;
   const { onFocusItem, onNodeKeyDown, onRedo, onSelect, onUndo } = props;
   const { onToolbarEdit, registerNode, status } = props;
   const single =
@@ -887,10 +884,8 @@ function Editor(props: {
   return (
     <>
       <div class="proof-goal">
-        <span class="proof-goal-label">
-          {proves === null ? t("Prove") : t("Proves")}
-        </span>{" "}
-        <span class="proof-goal-statement">{proves ?? goalFormula}</span>
+        <span class="proof-goal-label">{goalRow.label}</span>{" "}
+        <span class="proof-goal-statement">{goalRow.statement}</span>
       </div>
       {/* Icon-only: the name is the aria-label, the tooltip adds the key,
           and the help dialog's legend is where the glyphs are explained. See
@@ -1628,14 +1623,11 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
         dispatch={this.dispatch}
         doc={this.doc}
         focusedId={this.focusedId}
-        goalFormula={this.goalFormula}
         onFocusItem={this.focusItem}
-        proves={
+        goalRow={
           this.playground
-            ? this.goal === null
-              ? ""
-              : playgroundGoalText(this.theory.source, this.goal)
-            : null
+            ? this.playgroundGoalRow(this.theory.source, this.goal)
+            : { label: this.t("Prove"), statement: this.goalFormula }
         }
         onNodeKeyDown={(event, id) => this.onTreeKeyDown(event, id)}
         onRedo={this.redo}
