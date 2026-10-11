@@ -25,6 +25,12 @@ import {
   openHelpDialog,
 } from "./help-dialog";
 import { mountProblemLine, type ProblemLine } from "./problem-line";
+import {
+  type ProblemText,
+  plainProblem,
+  problemNodes,
+  problemsNodes,
+} from "./proof-problem";
 
 /**
  * What the two CodeMirror proof editors — linear `.auf` and Fitch — share
@@ -100,10 +106,25 @@ export function mountProofEditor(
   return { container, host, problems, statement };
 }
 
+/**
+ * A diagnostic, and the problem it draws: `message` is the problem as text
+ * (`problemText`), for F8 to say; `problem`, where there is one, is what the
+ * tooltip, the error list and the problem line draw — a rule's shape as
+ * boxes rather than text. A diagnostic without one draws its message.
+ */
+export interface ProofDiagnostic extends Diagnostic {
+  readonly problem?: ProblemText;
+}
+
+/** The problem a diagnostic draws. */
+function problemOf(diagnostic: ProofDiagnostic): ProblemText {
+  return diagnostic.problem ?? plainProblem(diagnostic.message);
+}
+
 /** Hand the lint layer what to underline; empty clears it. */
 export function showDiagnostics(
   editor: EditorView,
-  diagnostics: readonly Diagnostic[],
+  diagnostics: readonly ProofDiagnostic[],
 ): void {
   editor.dispatch(setDiagnostics(editor.state, diagnostics.map(numbered)));
 }
@@ -119,8 +140,8 @@ export function showDiagnostics(
  * Worded through the state's phrases, where {@link problemKeys} puts the
  * reader's language; `message` is left as it was, for F8 and the problem line.
  */
-function numbered(diagnostic: Diagnostic): Diagnostic {
-  const drawn: Diagnostic = {
+function numbered(diagnostic: ProofDiagnostic): ProofDiagnostic {
+  const drawn: ProofDiagnostic = {
     ...diagnostic,
     renderMessage(view) {
       let from = diagnostic.from;
@@ -136,7 +157,7 @@ function numbered(diagnostic: Diagnostic): Diagnostic {
         view.state.doc.lineAt(Math.min(from, view.state.doc.length)).number,
       );
       const text = document.createElement("span");
-      text.append(line, " ", diagnostic.message);
+      text.append(line, " ", ...problemNodes(problemOf(diagnostic)));
       return text;
     },
   };
@@ -346,14 +367,14 @@ function pinnedProblem(t: ProofEditorText, line: ProblemLine): Extension {
           from: first.from,
           to: Math.max(...here.map((range) => range.to)),
         };
-        const said: Diagnostic[] = [];
+        const said: ProofDiagnostic[] = [];
         forEachDiagnostic(state, (diagnostic, from, to) => {
           if (here.some((range) => range.from === from && range.to === to)) {
             said.push(diagnostic);
           }
         });
         line.show({
-          message: said.map((diagnostic) => diagnostic.message).join("\n"),
+          content: problemsNodes(said.map(problemOf)),
           position: t("{index} of {count}", {
             count: ranges.length,
             index: ranges.indexOf(first) + 1,

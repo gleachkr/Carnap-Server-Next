@@ -1,12 +1,18 @@
 import type { CompileResult, LoadedCompiler } from "@aufbau/compiler";
 import type { ProofEngineStringId } from "../../worker/exercise-kit/proof/engine-strings";
 import {
+  NO_RULE_SHAPES,
+  type RuleShapeReader,
+} from "../../worker/exercise-kit/proof/rule-shape";
+import {
   bytesToBase64,
+  type CompileDiagnostic,
   type CompileVerdict,
   loadProofCompiler,
   readCompileResult,
 } from "../proof-compiler";
 import { CarnapExerciseElement, withoutCertificate } from "./base";
+import type { ProblemText } from "./proof-problem";
 
 /**
  * How long after the last edit a compile starts. Long enough that a student
@@ -64,6 +70,12 @@ export abstract class ProofExerciseElement<
   protected allowSorry = false;
   /** Whether the last compile stood only by admitting lines. */
   protected admitted = false;
+  /**
+   * The shape of a rule a line did not fit, in this widget's idiom — set
+   * from the theory once it is known (`ruleShapeReader`), and read by
+   * {@link problemOf}.
+   */
+  protected ruleShapes: RuleShapeReader = NO_RULE_SHAPES;
 
   /** Bumped by whatever makes a run in flight stale; a run compares its own. */
   private compileToken = 0;
@@ -167,6 +179,22 @@ export abstract class ProofExerciseElement<
         ? "Every other line checks; lines admitted with sorry! do not score."
         : "Every other line checks; a proof with lines admitted with sorry! cannot be submitted.",
     );
+  }
+
+  /**
+   * What a compiler problem says: the engine's headline, or `fallback` where
+   * it has none, and — where the line did not fit the rule it cited — that
+   * rule's shape, so the reader can see what the rule wanted (gh #36).
+   */
+  protected problemOf(
+    problem: CompileDiagnostic,
+    fallback: string,
+  ): ProblemText {
+    return {
+      message: problem.message ?? fallback,
+      shape:
+        problem.rule === undefined ? null : this.ruleShapes(problem.rule),
+    };
   }
 
   /**

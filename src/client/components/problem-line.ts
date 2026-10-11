@@ -1,4 +1,5 @@
 import styles from "./problem-line.css" with { type: "text" };
+import { RULE_SHAPE_STYLES } from "./proof-problem";
 
 /**
  * The line under a proof where F8 leaves the problem it went to.
@@ -25,8 +26,9 @@ export interface ShownProblem {
   /** Where the problem is, in words — `Line 4` — or `null` where the tint is
    *  all there is to point with: a tree's lines are not numbered. */
   readonly where: string | null;
-  /** The problem itself; several on one place are joined by newlines. */
-  readonly message: string;
+  /** The problem itself, drawn (`./proof-problem.ts`); several on one
+   *  place are a line apart. */
+  readonly content: readonly (Node | string)[];
   /** Which of the problems it is: `2 of 3`. */
   readonly position: string;
   readonly severity: "error" | "warning";
@@ -39,7 +41,10 @@ export interface ProblemLine {
 
 /**
  * Insert an empty, hidden problem line into `parent` before `before`, and its
- * stylesheet into `root`, the widget's shadow root.
+ * stylesheet into `root`, the widget's shadow root — with the rule shape's,
+ * which every place a problem is drawn in that root reads: this line, the
+ * hover popup, CodeMirror's tooltip and error list. Every proof widget mounts
+ * a problem line, so every root that can draw a shape has the rules for it.
  */
 export function mountProblemLine(
   root: ShadowRoot,
@@ -47,7 +52,7 @@ export function mountProblemLine(
   before: Node | null,
 ): ProblemLine {
   const style = document.createElement("style");
-  style.textContent = styles;
+  style.textContent = `${styles}\n${RULE_SHAPE_STYLES}`;
   root.appendChild(style);
 
   const line = document.createElement("p");
@@ -55,10 +60,13 @@ export function mountProblemLine(
   line.hidden = true;
   parent.insertBefore(line, before);
 
-  const part = (className: string, text: string): HTMLSpanElement => {
+  const part = (
+    className: string,
+    ...content: readonly (Node | string)[]
+  ): HTMLSpanElement => {
     const span = document.createElement("span");
     span.className = className;
-    span.textContent = text;
+    span.append(...content);
     return span;
   };
 
@@ -73,7 +81,7 @@ export function mountProblemLine(
         ...(problem.where === null
           ? []
           : [part("problem-line-where", problem.where)]),
-        part("problem-line-message", problem.message),
+        part("problem-line-message", ...problem.content),
         part("problem-line-position", problem.position),
       );
       line.dataset.severity = problem.severity;

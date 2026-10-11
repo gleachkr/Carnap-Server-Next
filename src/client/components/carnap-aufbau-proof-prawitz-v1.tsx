@@ -65,6 +65,7 @@ import {
   playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
+import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
 import type { AufbauProofPrawitzStringId } from "../../worker/exercises/aufbau-proof-prawitz/strings";
 import type { PrawitzDiagnostic } from "../../worker/exercises/aufbau-proof-prawitz/translate";
 import { prawitzToAuf } from "../../worker/exercises/aufbau-proof-prawitz/translate";
@@ -94,8 +95,15 @@ import {
   stepToProblem,
 } from "./problem-keys";
 import { mountProblemLine } from "./problem-line";
+import { ProblemNote, problemPartId } from "./problem-note";
 import { mountProblemPopup } from "./problem-popup";
 import { ProofExerciseElement } from "./proof-element";
+import {
+  type NodeProblems,
+  type ProblemText,
+  plainProblem,
+  problemsText,
+} from "./proof-problem";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import "../vendor/proofml.mjs";
@@ -175,7 +183,7 @@ interface Doc {
 interface Status {
   readonly mark: CorrectnessMarkState;
   readonly markTitle: string;
-  readonly nodeErrors: Readonly<Record<string, string>>;
+  readonly nodeErrors: NodeProblems;
 }
 
 type Action =
@@ -596,6 +604,9 @@ function EditableField(props: {
   readonly error?: string | undefined;
   readonly onInput: (text: string) => void;
   readonly onSelect: () => void;
+  /** The part of the note drawing `error` (`problemPartId`), which the hover
+   *  popup shows — a rule's shape as boxes — rather than its text. */
+  readonly problemNote?: string | undefined;
   readonly selected: boolean;
   readonly value: string;
 }): preact.JSX.Element {
@@ -655,6 +666,7 @@ function EditableField(props: {
       // For the mouse: the problem popup floats it on hover. A screen reader
       // hears the same text through the line's note.
       data-problem={props.error}
+      data-problem-note={props.problemNote}
     />
   );
 }
@@ -664,7 +676,7 @@ function NodeView(props: {
   /** The node holding the roving tabindex — follows focus, not selection. */
   readonly focusId: string | undefined;
   readonly node: PNode;
-  readonly nodeErrors: Readonly<Record<string, string>>;
+  readonly nodeErrors: NodeProblems;
   readonly onFocusItem: (id: string) => void;
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onSelect: (id: string, additive: boolean) => void;
@@ -679,8 +691,9 @@ function NodeView(props: {
   const select = (): void => onSelect(node.id, false);
   // The line's problem, in the note its treeitem is described by: the
   // treeitem is where the focus stands, not the field the squiggle is on.
-  const error = nodeErrors[node.id];
-  const noteId = error === undefined ? undefined : problemNoteId(node.id);
+  const errors = nodeErrors[node.id];
+  const noteId = errors === undefined ? undefined : problemNoteId(node.id);
+  const error = errors === undefined ? undefined : problemsText(errors);
   const bracketed = node.isAssumption && node.label.trim().length > 0;
 
   const treeClasses = [
@@ -769,6 +782,11 @@ function NodeView(props: {
               dispatch({ id: node.id, text, type: "setFormula" })
             }
             onSelect={() => select()}
+            problemNote={
+              noteId === undefined
+                ? undefined
+                : problemPartId(noteId, "error")
+            }
             selected={isSelected}
             value={node.formula}
           />
@@ -790,10 +808,8 @@ function NodeView(props: {
         </span>
         {/* Beside the treeitem rather than in it, where it would be read
             again as part of the line's name. */}
-        {noteId === undefined ? null : (
-          <span hidden id={noteId}>
-            {error}
-          </span>
+        {noteId === undefined || errors === undefined ? null : (
+          <ProblemNote errors={errors} id={noteId} />
         )}
       </proof-proposition>
       {node.isAssumption ? null : (
@@ -1109,6 +1125,7 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
       data.goalName,
     );
     this.readRule = proofRuleReader(theory.source);
+    this.ruleShapes = ruleShapeReader(theory.source, "prawitz");
     this.goalName = data.goalName;
     this.goalFormula = data.goalFormula;
     this.assumptionRule = data.assumptionRule;
@@ -1813,22 +1830,18 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
    * stated reason — added beneath whatever the translator already said
    * about that line, and withheld on the same terms as any other reason.
    */
-  private compileFailureErrors(
-    errors: Record<string, string>,
-  ): Record<string, string> {
+  private compileFailureErrors(errors: NodeProblems): NodeProblems {
     const rootId = this.doc.trees[0]?.id;
     if (!this.showsDetail || rootId === undefined) {
       return errors;
     }
 
-    const message = this.t(
-      "The proof engine couldn't read this proof — check for unexpected characters.",
+    const message = plainProblem(
+      this.t(
+        "The proof engine couldn't read this proof — check for unexpected characters.",
+      ),
     );
-    const above = errors[rootId];
-    return {
-      ...errors,
-      [rootId]: above === undefined ? message : `${above}\n${message}`,
-    };
+    return { ...errors, [rootId]: [...(errors[rootId] ?? []), message] };
   }
 
   /**
@@ -1839,17 +1852,14 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
    * terms as {@link collectNodeErrors}: a refusal is a reason, and the two
    * must not disagree about that.
    */
-  private structuralErrors(): Record<string, string> {
+  private structuralErrors(): NodeProblems {
     if (!this.showsDetail) {
       return {};
     }
 
-    const errors: Record<string, string> = {};
+    const errors: Record<string, ProblemText[]> = {};
     const add = (nodeId: string, message: string): void => {
-      errors[nodeId] =
-        errors[nodeId] === undefined
-          ? message
-          : `${errors[nodeId]}\n${message}`;
+      errors[nodeId] = [...(errors[nodeId] ?? []), plainProblem(message)];
     };
 
     for (const item of this.structural) {
@@ -1870,7 +1880,7 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
   private collectNodeErrors(
     problems: readonly CompileDiagnostic[],
     proof: string,
-  ): Record<string, string> {
+  ): NodeProblems {
     // Every node error is a reason, and `terse` and `none` withhold reasons.
     // Caught here rather than at the call site so another cannot miss it;
     // the compile itself still runs, because the certificate depends on it.
@@ -1879,9 +1889,9 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
     }
 
     const fallbackId = this.doc.trees[0]?.id ?? "";
-    const messages = new Map<string, string[]>();
+    const messages = new Map<string, ProblemText[]>();
     for (const problem of problems) {
-      const message = problem.message ?? this.t("Error here.");
+      const message = this.problemOf(problem, this.t("Error here."));
       const charIndex =
         problem.spanStart !== undefined
           ? byteToCharIndex(proof, problem.spanStart)
@@ -1898,11 +1908,7 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
       messages.set(nodeId, list);
     }
 
-    const errors: Record<string, string> = {};
-    for (const [nodeId, list] of messages) {
-      errors[nodeId] = list.join("\n");
-    }
-    return errors;
+    return Object.fromEntries(messages);
   }
 }
 

@@ -85,6 +85,12 @@ export interface CompileDiagnostic {
   readonly error?: string;
   /** The engine's headline for it, and only that: see {@link headline}. */
   readonly message?: string;
+  /** The rule a line cited and does not fit — its statement or its citations
+   *  will not match the rule's (`UnifyMismatch`), or it cites the wrong
+   *  number of lines (`RefCountMismatch`) — so the widget can show the rule's
+   *  shape (`exercise-kit/proof/rule-shape.ts`). The engine's own name for it,
+   *  the axiom, not the alias the student wrote. */
+  readonly rule?: string;
   readonly severity: "error" | "info" | "warning";
   /** UTF-8 byte offsets into the proof text the engine was handed. */
   readonly spanEnd?: number;
@@ -196,6 +202,12 @@ function headline(message: string): string {
   return end === -1 ? message : message.slice(0, end);
 }
 
+/** The engine's codes for a line its cited rule does not fit. */
+const RULE_MISFITS: ReadonlySet<unknown> = new Set([
+  "RefCountMismatch",
+  "UnifyMismatch",
+]);
+
 /** The undeclared token an `unknown_math_token` detail names, as a field to
  *  spread, or nothing. */
 function unknownToken(detail: unknown): { readonly token?: string } {
@@ -226,6 +238,7 @@ export function readCompileResult(
       const record = item as {
         readonly error?: unknown;
         readonly message?: unknown;
+        readonly rule?: unknown;
         readonly severity?: unknown;
         readonly spanEnd?: unknown;
         readonly spanStart?: unknown;
@@ -248,6 +261,9 @@ export function readCompileResult(
         ...(typeof record.error === "string" ? { error: record.error } : {}),
         ...(typeof record.message === "string"
           ? { message: headline(record.message) }
+          : {}),
+        ...(RULE_MISFITS.has(record.error) && typeof record.rule === "string"
+          ? { rule: record.rule }
           : {}),
         severity,
         ...(typeof record.spanEnd === "number"

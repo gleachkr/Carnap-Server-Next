@@ -14,13 +14,11 @@
  * arity Carnap hand-declared for the systems shipped here, without a rule ever
  * saying anything beyond its sequents.
  *
- * The reading is a parse, not a tokenization: each premise is read by the
- * theory's own `SurfaceLanguage` in engine mode (rule statements are engine
- * text), under a scope built from the rule's binders — the same trick that
- * lets a goal theorem's lines parse. The turnstile and context-join
- * constructors come from their `@syntax role`s, so nothing here names any
- * particular theory. Assumption identity is the engine-mode print of the
- * formula, one canonical spelling per term.
+ * The signature itself is read once, for every proof widget, in
+ * `exercise-kit/proof/rule-signatures.ts`: each premise's context split at the
+ * theory's own context-join role, and its *fresh* assumptions — the ones the
+ * rule's conclusion does not also carry — set apart. This module only groups
+ * premises by them.
  *
  * Everything is conservative. A theory whose text will not read, or that
  * declares no turnstile or context-join role, gets an empty table; a rule
@@ -31,22 +29,9 @@
  * the status quo, never to a wrong proof.
  */
 
-import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
-import { printTerm } from "@aufbau/syntax";
-import { theoryLanguage } from "../../exercise-kit/proof/formulas";
-import { roleIndex } from "../../logic/specs/roles";
+import type { RuleSignature } from "../../exercise-kit/proof/rule-signatures";
+import { ruleSignatures } from "../../exercise-kit/proof/rule-signatures";
 import type { CitationSlot, RuleCitationShape } from "./translate";
-
-/** What one theory's classification needs to know, resolved once. */
-interface RuleReading {
-  readonly contextSort: string;
-  /** Coercions *into* the context sort — the assumption wrappers. */
-  readonly hypCoercions: ReadonlySet<string>;
-  readonly join: string;
-  readonly judgementSort: string;
-  readonly language: SurfaceLanguage;
-  readonly turnstile: string;
-}
 
 const EMPTY: ReadonlyMap<string, RuleCitationShape> = new Map();
 
@@ -80,107 +65,38 @@ export function ruleCitationShapes(
 function deriveShapes(
   source: string,
 ): ReadonlyMap<string, RuleCitationShape> {
-  const language = theoryLanguage(source);
+  const signatures = ruleSignatures(source);
 
-  if (language === null) {
+  if (signatures === null) {
     return EMPTY;
   }
-
-  const roles = roleIndex(language);
-  const turnstile = roles.termFor("turnstile");
-  const join = roles.termFor("context-join");
-
-  if (turnstile === null || join === null) {
-    return EMPTY;
-  }
-
-  const { spec } = language;
-  const judgementSort = spec.terms.get(turnstile)?.returnSort;
-  const contextSort = spec.terms.get(join)?.returnSort;
-
-  if (judgementSort === undefined || contextSort === undefined) {
-    return EMPTY;
-  }
-
-  const reading: RuleReading = {
-    contextSort,
-    hypCoercions: new Set(
-      spec.coercions
-        .filter((coercion) => coercion.to === contextSort)
-        .map((coercion) => coercion.name),
-    ),
-    join,
-    judgementSort,
-    language,
-    turnstile,
-  };
 
   const table = new Map<string, RuleCitationShape>();
 
-  for (const statement of spec.statements) {
-    if (statement.kind !== "axiom" || statement.hypotheses.length === 0) {
+  for (const signature of signatures.rules.values()) {
+    if (signature.premises.length === 0) {
       continue;
     }
 
-    const shape = classifyRule(statement, reading);
+    const shape = classifyRule(signature);
 
     if (shape !== null) {
-      table.set(statement.name, shape);
+      table.set(signature.name, shape);
     }
   }
 
   return table;
 }
 
-function classifyRule(
-  statement: AssertStatement,
-  reading: RuleReading,
-): RuleCitationShape | null {
-  const scope = new Map<string, string>();
-
-  for (const binder of statement.binders) {
-    if ("sort" in binder.type) {
-      scope.set(binder.name, binder.type.sort);
-    }
-  }
-
-  const conclusion = contextAssumptions(
-    statement.conclusion.text,
-    scope,
-    reading,
-  );
-
-  if (conclusion === null) {
-    return null;
-  }
-
-  // An assumption the conclusion *also* carries is ambient, not something the
-  // premise's subproof opens — a rule usable inside a box cites lines there.
-  // No shipped rule concludes into a hypothetical context, but the subtraction
-  // is what the classification means, so it is stated.
-  const ambient = new Set(conclusion);
+function classifyRule(signature: RuleSignature): RuleCitationShape | null {
   const premises: (string | null)[] = [];
 
-  for (const hypothesis of statement.hypotheses) {
-    if ("sort" in hypothesis) {
-      return null; // a type hypothesis is not a citable premise
-    }
-
-    const assumptions = contextAssumptions(hypothesis.text, scope, reading);
-
-    if (assumptions === null) {
-      return null;
-    }
-
-    const fresh = [
-      ...new Set(assumptions.filter((key) => !ambient.has(key))),
-    ];
-
+  for (const { fresh } of signature.premises) {
     if (fresh.length > 1) {
       return null; // a several-assumption subproof: no Fitch box has that shape
     }
 
-    premises.push(fresh[0] ?? null);
+    premises.push(fresh[0]?.key ?? null);
   }
 
   const groups = new Map<string, number[]>();
@@ -210,106 +126,4 @@ function classifyRule(
   }
 
   return { premiseCount: premises.length, slots };
-}
-
-/**
- * The assumption formulas in one sequent's context, as canonical engine
- * spellings — or `null` where the text does not parse as a sequent or its
- * context holds something this walk does not recognize.
- */
-function contextAssumptions(
-  text: string,
-  scope: ReadonlyMap<string, string>,
-  reading: RuleReading,
-): readonly string[] | null {
-  let result: ReturnType<SurfaceLanguage["parse"]>;
-
-  try {
-    result = reading.language.parse(text.trim(), {
-      mode: "engine",
-      scope,
-      sort: reading.judgementSort,
-    });
-  } catch {
-    return null;
-  }
-
-  if (!result.ok) {
-    return null;
-  }
-
-  const sequent = result.term;
-
-  if (sequent.kind !== "app" || sequent.term !== reading.turnstile) {
-    return null;
-  }
-
-  const contexts = sequent.args.filter(
-    (argument) => argument.sort === reading.contextSort,
-  );
-  const context = contexts[0];
-
-  if (contexts.length !== 1 || context === undefined) {
-    return null;
-  }
-
-  const assumptions: string[] = [];
-
-  return collectAssumptions(context, reading, assumptions)
-    ? assumptions
-    : null;
-}
-
-/**
- * Flatten a context term over the join, sorting each leaf: a context
- * metavariable contributes nothing, an assumption (a formula under a `hyp`
- * coercion, or a bare schematic variable of another sort) contributes its
- * engine spelling, an elided empty context is ignored, and anything else
- * fails the rule into the safe no-entry default.
- */
-function collectAssumptions(
-  term: Term,
-  reading: RuleReading,
-  out: string[],
-): boolean {
-  if (term.kind === "app" && term.term === reading.join) {
-    return term.args.every((argument) =>
-      collectAssumptions(argument, reading, out),
-    );
-  }
-
-  if (term.kind === "variable") {
-    if (term.sort !== reading.contextSort) {
-      out.push(printTerm(reading.language, term, "engine"));
-    }
-
-    return true;
-  }
-
-  if (reading.hypCoercions.has(term.term)) {
-    const inner = term.args[0];
-
-    if (inner === undefined) {
-      return false;
-    }
-
-    out.push(printTerm(reading.language, inner, "engine"));
-
-    return true;
-  }
-
-  // The elided empty context (`_`), should a rule ever spell one.
-  if (term.sort === reading.contextSort && term.args.length === 0) {
-    return true;
-  }
-
-  // A compound of another sort is a formula the parser did not wrap — the
-  // same assumption as the coerced case, printed the same way.
-  if (term.sort !== reading.contextSort) {
-    out.push(printTerm(reading.language, term, "engine"));
-
-    return true;
-  }
-
-  return false;
 }

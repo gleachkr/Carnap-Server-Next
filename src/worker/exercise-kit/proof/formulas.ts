@@ -424,7 +424,10 @@ export function statementDisplayText(
 }
 
 /** A statement's tree in display text, split at its turnstile and join. */
-function displayStatement(language: SurfaceLanguage, term: Term): string {
+export function displayStatement(
+  language: SurfaceLanguage,
+  term: Term,
+): string {
   const index = roleIndex(language);
   const turnstile = index.termFor("turnstile");
   const join = index.termFor("context-join");

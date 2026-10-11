@@ -1,4 +1,5 @@
 import styles from "./problem-popup.css" with { type: "text" };
+import { copyOfDrawing } from "./proof-problem";
 
 /**
  * The bubble a field's problem floats in when the pointer rests on it, in the
@@ -12,7 +13,12 @@ import styles from "./problem-popup.css" with { type: "text" };
  *
  * A field opts in by carrying its message in {@link PROBLEM_ATTRIBUTE}, and a
  * warning says so in {@link PROBLEM_SEVERITY_ATTRIBUTE}; the popup reads them
- * when the pointer arrives, so the islands just render the attributes. It is
+ * when the pointer arrives, so the islands just render the attributes. A
+ * field whose problem is drawn — a rule's shape as boxes
+ * (`./proof-problem.ts`) — also names, in {@link PROBLEM_NOTE_ATTRIBUTE},
+ * the element drawing exactly that text (`./problem-note.tsx`), and the popup
+ * shows a copy of the drawing instead; the text is still what tells it the
+ * problem changed. It is
  * `aria-hidden`: a screen reader hears the same text through the field's
  * hidden note, and a touch, which floats no title either, floats nothing.
  *
@@ -22,6 +28,10 @@ import styles from "./problem-popup.css" with { type: "text" };
 
 /** The attribute a field carries its problem's message in. */
 export const PROBLEM_ATTRIBUTE = "data-problem";
+
+/** The id, in the same shadow root, of the element drawing the field's
+ *  problem: its {@link PROBLEM_ATTRIBUTE} text, as boxes where it has any. */
+export const PROBLEM_NOTE_ATTRIBUTE = "data-problem-note";
 
 /** Set to `warning` on a field whose problem is one; absent, it is an error. */
 export const PROBLEM_SEVERITY_ATTRIBUTE = "data-problem-severity";
@@ -106,7 +116,13 @@ export function mountProblemPopup(
       return;
     }
     shown = text;
-    message.textContent = text;
+    const noteId = field.getAttribute(PROBLEM_NOTE_ATTRIBUTE);
+    const note = noteId === null ? null : root.getElementById(noteId);
+    if (note === null) {
+      message.textContent = text;
+    } else {
+      message.replaceChildren(...copyOfDrawing(note));
+    }
     popup.dataset.severity =
       field.getAttribute(PROBLEM_SEVERITY_ATTRIBUTE) === "warning"
         ? "warning"

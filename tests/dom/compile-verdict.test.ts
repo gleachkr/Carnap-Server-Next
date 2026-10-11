@@ -149,6 +149,8 @@ describe("readCompileResult", () => {
       {
         error: "RefCountMismatch",
         message: "wrong number of references for rule application",
+        // Not from the text: the engine's own field, for the rule's shape.
+        rule: "and_intro",
         severity: "error",
       },
     ]);
@@ -197,6 +199,42 @@ describe("readCompileResult", () => {
         spanStart: 33054,
         token: "tv",
       },
+    ]);
+  });
+
+  test("names the rule a line did not fit, and only for a misfit", () => {
+    // The engine's own records for gh #36's ∨E and for a citation count it
+    // refused; the rule is a field on every rule-application record, but it
+    // is only the subject of these two.
+    const verdict = readCompileResult({
+      diagnostics: [
+        {
+          error: "UnifyMismatch",
+          message:
+            "the statement and cited premises could not be matched against this rule\ntheorem: IV11\nline: l6\nrule: or_elim",
+          rule: "or_elim",
+          severity: "error",
+        },
+        {
+          error: "RefCountMismatch",
+          message: "wrong number of references for rule application",
+          rule: "and_intro",
+          severity: "error",
+        },
+        {
+          error: "SorryLine",
+          message: "proof line is admitted with sorry!",
+          rule: "and_intro",
+          severity: "warning",
+        },
+      ],
+      ok: false,
+    } as CompileResult);
+
+    expect(verdict.problems.map((problem) => problem.rule)).toEqual([
+      "or_elim",
+      "and_intro",
+      undefined,
     ]);
   });
 });

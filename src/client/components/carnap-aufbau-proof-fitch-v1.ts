@@ -66,6 +66,7 @@ import {
   playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
+import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
 import { ruleCitationShapes } from "../../worker/exercises/aufbau-proof-fitch/citations";
 import {
   type AufbauProofFitchStringId,
@@ -91,12 +92,14 @@ import {
   clamp,
   mountProofEditor,
   mountProofEditorHelp,
+  type ProofDiagnostic,
   problemKeys,
   showCompileFailure,
   showDiagnostics,
 } from "./proof-editor";
 import editorStyles from "./proof-editor.css" with { type: "text" };
 import { ProofExerciseElement } from "./proof-element";
+import { problemText } from "./proof-problem";
 
 /** Left gutter (CSS px) before the outermost scope-line; the bars themselves
  * sit at the student's own indentation columns, not at a fixed per-depth step. */
@@ -365,6 +368,7 @@ class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
     );
     this.citationShapes = ruleCitationShapes(theory.source);
     this.readRule = proofRuleReader(theory.source);
+    this.ruleShapes = ruleShapeReader(theory.source, "fitch");
     this.goalName = data.goalName;
     this.assumptionRule = data.assumptionRule;
     if (typeof data.sequentSymbol === "string" && data.sequentSymbol !== "") {
@@ -762,10 +766,10 @@ class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
       return;
     }
 
-    const diagnostics: Diagnostic[] = [];
+    const diagnostics: ProofDiagnostic[] = [];
 
     for (const problem of problems) {
-      const message = problem.message ?? this.t("Error in the proof.");
+      const said = this.problemOf(problem, this.t("Error in the proof."));
 
       let sourceLine = 0;
       if (problem.spanStart !== undefined) {
@@ -783,7 +787,8 @@ class AufbauProofFitch extends ProofExerciseElement<AufbauProofFitchStringId> {
       const range = this.lineRange(sourceLine);
       diagnostics.push({
         from: range.from,
-        message,
+        message: problemText(said),
+        problem: said,
         severity: problem.severity,
         to: Math.max(range.to, range.from + 1),
       });

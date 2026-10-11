@@ -1,0 +1,52 @@
+/*
+ * A rule's shape under a proof problem (`./proof-problem.ts`): the rule's
+ * name, then each premise in its own box, `∴`, and the conclusion. Drawn in
+ * the problem line, the hover popup and CodeMirror's tooltip and error list,
+ * which all live in the widget's shadow root; `mountProblemLine` serves this
+ * into it, as every proof widget mounts one.
+ *
+ * The boxes are what separate the premises, so a row wraps between them
+ * rather than running past a narrow popup, and nothing between two premises
+ * has to be a character a context could contain. The commas a reader of the
+ * text meets are there, visually hidden.
+ */
+
+.rule-shape {
+  display: block;
+  margin-top: 0.3rem;
+  white-space: normal;
+}
+.rule-shape-line {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.4rem;
+}
+.rule-shape-line + .rule-shape-line {
+  margin-top: 0.3rem;
+}
+.rule-shape-label {
+  font-weight: 600;
+  min-width: 1.6rem;
+}
+/* Tinted from the text's own colour, not the palette's fills: the shape is
+   drawn wherever a message is, and one of those is the selected entry in
+   CodeMirror's error list, white on the accent — where a palette fill left
+   white text on a near-white box. */
+.rule-shape-premise,
+.rule-shape-conclusion {
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 0.2rem;
+  font-family: var(--_mono-font);
+  font-size: 0.95em;
+  overflow-wrap: anywhere;
+  padding: 0.05rem 0.4rem;
+}
+/* A Fitch subproof's box gets the editor's scope line down its left. */
+.rule-shape-premise.is-subproof {
+  border-left: 2.5px solid currentColor;
+}
+.rule-shape-therefore {
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}

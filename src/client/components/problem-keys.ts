@@ -18,6 +18,7 @@
  */
 
 import type { ProblemLine } from "./problem-line";
+import { copyOfDrawing } from "./proof-problem";
 
 /** The id of the hidden note holding a line's problems, in its shadow root. */
 export function problemNoteId(lineId: string): string {
@@ -161,8 +162,10 @@ export class PinnedProblem {
     }
 
     pinned.classList.add("is-pinned");
+    // The note is the problem drawn (`./problem-note.tsx`): a copy of it is
+    // what the line shows, a rule's shape and all.
     this.line.show({
-      message: note.textContent ?? "",
+      content: copyOfDrawing(note),
       position: this.position(index + 1, lines.length),
       // A line can hold an error and a sorry! warning at once; the error is
       // the one that matters. Only an error squiggles the formula.

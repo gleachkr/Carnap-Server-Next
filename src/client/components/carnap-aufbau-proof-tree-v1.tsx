@@ -37,7 +37,7 @@
  */
 
 import { render } from "preact";
-import { useLayoutEffect, useRef } from "preact/hooks";
+import { useLayoutEffect, useMemo, useRef } from "preact/hooks";
 import type { CorrectnessMarkState } from "../../worker/exercise-kit/correctness-mark";
 import type {
   NodeFormulaProblem,
@@ -62,6 +62,7 @@ import {
   playgroundGoalText,
   playgroundTheoryText,
 } from "../../worker/exercise-kit/proof/playground";
+import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
 import {
   flattenProofTree,
   proofTreeStarter,
@@ -91,8 +92,15 @@ import {
   stepToProblem,
 } from "./problem-keys";
 import { mountProblemLine } from "./problem-line";
+import { ProblemNote, problemPartId } from "./problem-note";
 import { mountProblemPopup } from "./problem-popup";
 import { ProofExerciseElement } from "./proof-element";
+import {
+  type NodeProblems,
+  type ProblemText,
+  plainProblem,
+  problemsText,
+} from "./proof-problem";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import "../vendor/proofml.mjs";
@@ -168,10 +176,10 @@ interface Doc {
 interface Status {
   readonly mark: CorrectnessMarkState;
   readonly markTitle: string;
-  readonly nodeErrors: Readonly<Record<string, string>>;
+  readonly nodeErrors: NodeProblems;
   /** Rules admitted with `sorry!`, where the exercise allows it: drawn on the
    *  rule field, since that is where the admission is. */
-  readonly nodeWarnings: Readonly<Record<string, string>>;
+  readonly nodeWarnings: NodeProblems;
 }
 
 type Action =
@@ -489,6 +497,10 @@ function EditableField(props: {
    *  fixed one is just the line's text. */
   readonly label: string;
   readonly warning?: string | undefined;
+  /** The part of the note drawing this field's problem (`problemPartId`),
+   *  which the hover popup shows — a rule's shape as boxes — rather than
+   *  its text. */
+  readonly problemNote?: string | undefined;
   readonly onInput?: (text: string) => void;
   readonly onSelect: () => void;
   readonly selected: boolean;
@@ -553,6 +565,7 @@ function EditableField(props: {
       // For the mouse: the problem popup floats it on hover. A screen reader
       // hears the same text through the line's note.
       data-problem={props.error ?? props.warning}
+      data-problem-note={props.problemNote}
       data-problem-severity={
         props.error === undefined && props.warning !== undefined
           ? "warning"
@@ -625,8 +638,8 @@ function NodeView(props: {
   readonly hypotheses: readonly string[];
   readonly isRoot: boolean;
   readonly node: TreeNode;
-  readonly nodeErrors: Readonly<Record<string, string>>;
-  readonly nodeWarnings: Readonly<Record<string, string>>;
+  readonly nodeErrors: NodeProblems;
+  readonly nodeWarnings: NodeProblems;
   readonly onNodeKeyDown: (event: KeyboardEvent, id: string) => void;
   readonly onSelect: (id: string) => void;
   readonly registerNode: (id: string, el: HTMLElement | null) => void;
@@ -662,10 +675,19 @@ function NodeView(props: {
   // `sorry!` — in the one note its treeitem is described by, since the
   // treeitem is where the focus stands and the rule field is not even inside
   // it.
-  const error = nodeErrors[node.id] ?? hypError;
-  const warning = nodeWarnings[node.id];
-  const problems = [error, warning].filter((text) => text !== undefined);
-  const noteId = problems.length > 0 ? problemNoteId(node.id) : undefined;
+  // Memoised so the note redraws only when what it says changes.
+  const hypErrors = useMemo(
+    () => (hypError === undefined ? undefined : [plainProblem(hypError)]),
+    [hypError],
+  );
+  const errors = nodeErrors[node.id] ?? hypErrors;
+  const warnings = nodeWarnings[node.id];
+  const noteId =
+    errors === undefined && warnings === undefined
+      ? undefined
+      : problemNoteId(node.id);
+  const error = errors === undefined ? undefined : problemsText(errors);
+  const warning = warnings === undefined ? undefined : problemsText(warnings);
 
   return (
     <proof-tree>
@@ -719,6 +741,11 @@ function NodeView(props: {
             editable={!fixed}
             error={error}
             label={t("Formula")}
+            problemNote={
+              error === undefined || noteId === undefined
+                ? undefined
+                : problemPartId(noteId, "error")
+            }
             onInput={(text) =>
               dispatch({ id: node.id, text, type: "setFormula" })
             }
@@ -730,9 +757,7 @@ function NodeView(props: {
         {/* Beside the treeitem rather than in it, where it would be read
             again as part of the line's name. */}
         {noteId === undefined ? null : (
-          <span hidden id={noteId}>
-            {problems.join("\n")}
-          </span>
+          <ProblemNote errors={errors} id={noteId} warnings={warnings} />
         )}
       </proof-proposition>
       <proof-inference>
@@ -755,6 +780,11 @@ function NodeView(props: {
               dispatch({ id: node.id, text, type: "setRule" })
             }
             onSelect={select}
+            problemNote={
+              warning === undefined || noteId === undefined
+                ? undefined
+                : problemPartId(noteId, "warning")
+            }
             selected={false}
             value={node.rule}
             warning={warning}
@@ -962,6 +992,7 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
       data.goalName,
     );
     this.readRule = proofRuleReader(theory.source);
+    this.ruleShapes = ruleShapeReader(theory.source, "sequent");
     this.goalName = data.goalName;
     // A playground appends its goal per compile and it has no hypotheses. An
     // artifact frozen before `source` existed has only the stripped text,
@@ -1517,17 +1548,17 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
    */
   private formulaNodeErrors(
     problems: readonly NodeFormulaProblem[],
-  ): Record<string, string> {
+  ): NodeProblems {
     if (!this.showsDetail) {
       return {};
     }
 
-    const errors: Record<string, string> = {};
+    const errors: Record<string, ProblemText[]> = {};
     for (const problem of problems) {
-      const said = this.t(problem.error.message, problem.error.params);
-      const already = errors[problem.nodeId];
-      errors[problem.nodeId] =
-        already === undefined ? said : `${already}\n${said}`;
+      const said = plainProblem(
+        this.t(problem.error.message, problem.error.params),
+      );
+      errors[problem.nodeId] = [...(errors[problem.nodeId] ?? []), said];
     }
     return errors;
   }
@@ -1581,15 +1612,19 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
    * rather than a blank tree and a spinner that stopped for no stated reason
    * — withheld on the same terms as any other reason.
    */
-  private compileFailureErrors(): Record<string, string> {
+  private compileFailureErrors(): NodeProblems {
     if (!this.showsDetail) {
       return {};
     }
 
     return {
-      [this.doc.model.id]: this.t(
-        "The proof engine couldn't read this proof — check for unexpected characters.",
-      ),
+      [this.doc.model.id]: [
+        plainProblem(
+          this.t(
+            "The proof engine couldn't read this proof — check for unexpected characters.",
+          ),
+        ),
+      ],
     };
   }
 
@@ -1612,11 +1647,11 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
     }
 
     const messages = {
-      error: new Map<string, string[]>(),
-      warning: new Map<string, string[]>(),
+      error: new Map<string, ProblemText[]>(),
+      warning: new Map<string, ProblemText[]>(),
     };
     for (const problem of problems) {
-      const message = problem.message ?? this.t("Error here.");
+      const message = this.problemOf(problem, this.t("Error here."));
       const charIndex =
         problem.spanStart !== undefined
           ? byteToCharIndex(proof, problem.spanStart)
@@ -1635,18 +1670,9 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
       bucket.set(nodeId, list);
     }
 
-    const joined = (
-      bucket: Map<string, string[]>,
-    ): Record<string, string> => {
-      const out: Record<string, string> = {};
-      for (const [nodeId, list] of bucket) {
-        out[nodeId] = list.join("\n");
-      }
-      return out;
-    };
     return {
-      nodeErrors: joined(messages.error),
-      nodeWarnings: joined(messages.warning),
+      nodeErrors: Object.fromEntries(messages.error),
+      nodeWarnings: Object.fromEntries(messages.warning),
     };
   }
 }

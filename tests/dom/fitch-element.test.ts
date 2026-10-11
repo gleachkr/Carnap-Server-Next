@@ -214,6 +214,58 @@ describe("the compiler's verdict", () => {
     expect(answerOf(mounted).mmb).toBe("");
   });
 
+  test("a line that does not fit its rule shows the rule's shape (gh #36)", async () => {
+    compile.mockImplementationOnce((mm0: string, proof: string) => {
+      const failed = failsOnLastLine(mm0, proof) as {
+        readonly diagnostics: readonly object[];
+      };
+      return {
+        diagnostics: failed.diagnostics.map((diagnostic) => ({
+          ...diagnostic,
+          error: "UnifyMismatch",
+          message:
+            "the statement and cited premises could not be matched against this rule\nrule: imp_elim",
+          rule: "imp_elim",
+        })),
+        ok: false,
+      };
+    });
+    const mounted = mountExercise(await compileExercise(fitch()));
+
+    await until(() => squiggles(mounted).length > 0);
+
+    // Fitch's idiom: the formulas alone, the contexts left to the layout.
+    // (This theory keeps outer brackets; forallx's display drops them.)
+    expect(squiggles(mounted)).toEqual([
+      [
+        "the statement and cited premises could not be matched against this rule\nimp_elim: (a → b), a ∴ b",
+        "a       :ax",
+      ],
+    ]);
+
+    // Drawn, each premise is its own box, and the separators a reader of the
+    // text needs are there, hidden: the drawing reads as the text does.
+    const view = editorOf(mounted);
+    const drawn: HTMLElement[] = [];
+    forEachDiagnostic(view.state, (diagnostic) => {
+      const rendered = diagnostic.renderMessage?.(view);
+      if (rendered instanceof HTMLElement) {
+        drawn.push(rendered);
+      }
+    });
+    const premises = drawn[0]?.querySelectorAll(".rule-shape-premise") ?? [];
+    expect(Array.from(premises, (premise) => premise.textContent)).toEqual([
+      "(a → b)",
+      "a",
+    ]);
+    expect(
+      drawn[0]?.querySelector(".rule-shape-conclusion")?.textContent,
+    ).toBe("b");
+    expect(drawn[0]?.querySelector(".rule-shape")?.textContent).toBe(
+      "\nimp_elim: (a → b), a ∴ b",
+    );
+  });
+
   test("terse feedback withholds the underline, not the verdict", async () => {
     compile.mockImplementationOnce(failsOnLastLine);
     const calls = compile.mock.calls.length;

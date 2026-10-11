@@ -27,7 +27,6 @@
  */
 
 import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
-import type { Diagnostic } from "@codemirror/lint";
 import { EditorState } from "@codemirror/state";
 import { EditorView, keymap, lineNumbers } from "@codemirror/view";
 import { proofTheoryText } from "../../worker/exercise-kit/proof/formulas";
@@ -46,6 +45,7 @@ import {
   PROOF_HEADER_SEPARATOR,
   proofTextOf,
 } from "../../worker/exercise-kit/proof/proof-text";
+import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
 import type { AufbauProofStringId } from "../../worker/exercises/aufbau-proof/strings";
 import type { AufbauProofPublicData } from "../../worker/exercises/aufbau-proof/types";
 import { byteToCharIndex, type CompileDiagnostic } from "../proof-compiler";
@@ -54,12 +54,14 @@ import {
   clamp,
   mountProofEditor,
   mountProofEditorHelp,
+  type ProofDiagnostic,
   problemKeys,
   showCompileFailure,
   showDiagnostics,
 } from "./proof-editor";
 import editorStyles from "./proof-editor.css" with { type: "text" };
 import { ProofExerciseElement } from "./proof-element";
+import { problemText } from "./proof-problem";
 
 function isProofPublicData(value: unknown): value is AufbauProofPublicData {
   return (
@@ -108,6 +110,7 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
     }
 
     this.theory = proofTheoryText(data);
+    this.ruleShapes = ruleShapeReader(this.theory.source, "sequent", "axiom");
     this.playground = data.playground === true;
     this.allowSorry = data.allowSorry === true;
     this.goalName = data.goalName;
@@ -321,10 +324,10 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
     // The body the editor holds starts after the header, so the compiler's
     // byte spans shift left by this many (ASCII) characters.
     const headerLength = this.goalName.length + PROOF_HEADER_SEPARATOR.length;
-    const diagnostics: Diagnostic[] = [];
+    const diagnostics: ProofDiagnostic[] = [];
 
     for (const problem of problems) {
-      const message = problem.message ?? this.t("Error in the proof.");
+      const said = this.problemOf(problem, this.t("Error in the proof."));
 
       let from = 0;
       let to = docLength;
@@ -344,7 +347,13 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
         }
       }
 
-      diagnostics.push({ from, message, severity: problem.severity, to });
+      diagnostics.push({
+        from,
+        message: problemText(said),
+        problem: said,
+        severity: problem.severity,
+        to,
+      });
     }
 
     showDiagnostics(editor, diagnostics);
