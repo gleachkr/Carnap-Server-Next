@@ -74,8 +74,6 @@ export type RuleShapeReader = (rule: string) => RuleShape | null;
 /** Shows nothing — the reader where the theory cannot say. */
 export const NO_RULE_SHAPES: RuleShapeReader = () => null;
 
-const FALLBACK = /^@fallback\s+(\S+)/;
-
 /**
  * The shape reader for a proof exercise's frozen theory text, in `style`:
  * the rule's shape, or `null` for a rule the theory does not state as
@@ -142,29 +140,26 @@ function readShape(
 }
 
 /**
- * The rule and every rule its `@fallback`s reach, in declaration order — the
- * order the signatures are keyed in. A fallback only points backwards, but a
- * loop is cut regardless.
+ * The rule and every rule its `@fallback` chain reaches, in declaration
+ * order. A fallback always names an earlier rule (the reader refuses any
+ * other), so the chain ends, and reversed it is in declaration order.
  */
 function fallbackPair(
   signatures: RuleSignatures,
   rule: string,
 ): readonly string[] {
   const { spec } = signatures.language;
-  const reached = new Set<string>();
-  let name: string | undefined = rule;
+  const chain: string[] = [];
 
-  while (name !== undefined && !reached.has(name)) {
-    reached.add(name);
-    name = spec.rules
-      .get(name)
-      ?.foreignAnnotations.map((annotation) =>
-        FALLBACK.exec(annotation.text.trim()),
-      )
-      .find((match) => match !== null)?.[1];
+  for (
+    let name: string | null | undefined = rule;
+    name !== null && name !== undefined;
+    name = spec.rules.get(name)?.fallback
+  ) {
+    chain.push(name);
   }
 
-  return [...signatures.rules.keys()].filter((key) => reached.has(key));
+  return chain.reverse();
 }
 
 function shapeLine(
