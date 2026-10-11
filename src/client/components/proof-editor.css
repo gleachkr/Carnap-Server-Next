@@ -77,6 +77,16 @@
 .proof-editor .cm-editor .cm-diagnostic {
   white-space: pre-line;
 }
+/* The line a message is on, which the error list needs and the bubble,
+   floated beside the squiggle itself, does not (`numbered` in
+   `./proof-editor.ts`). Weighted as the problem line's own is. */
+.proof-editor .cm-editor .cm-diagnosticLine {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.proof-editor .cm-editor .cm-tooltip .cm-diagnosticLine {
+  display: none;
+}
 /* The squiggle under a problem, drawn as the tree and Prawitz editors draw
    theirs. The base theme paints it as a background image in a raw #f11 — an
    SVG in a data URL, which no custom property reaches, so neither the palette

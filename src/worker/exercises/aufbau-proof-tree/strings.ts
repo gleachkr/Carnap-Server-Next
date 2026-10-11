@@ -71,9 +71,9 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
       },
     ),
     /** Help: what F8 does. */
-    "Go to the next problem": i18n.t("Go to the next problem"),
+    "Go to the next error": i18n.t("Go to the next error"),
     /** Help: what Shift-F8 does. */
-    "Go to the previous problem": i18n.t("Go to the previous problem"),
+    "Go to the previous error": i18n.t("Go to the previous error"),
     /** Help: what `r` does. */
     "Edit the line's rule": i18n.t("Edit the line's rule"),
     /** Help: what Esc does. */
@@ -85,14 +85,14 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
     /** Help: what `?` does. */
     "Open this help": i18n.t("Open this help"),
     /** Fallback on a node whose compiler diagnostic has no readable message. */
-    "Problem here.": i18n.t("Problem here."),
+    "Error here.": i18n.t("Error here."),
     /** Problem line: which of the proof's problems it holds. Both values are numbers. */
-    "Problem {index} of {count}": i18n.t(
-      "Problem {index} of {count}",
+    "{index} of {count}": i18n.t(
+      "{index} of {count}",
       placeholders("index", "count"),
       {
         comment:
-          "Beside a problem shown below a proof: it is problem {index} of the {count} problems in the proof, counted in the order F8 visits them.",
+          "Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.",
       },
     ),
     /**
@@ -113,9 +113,9 @@ export function buildAufbauProofTreeStrings(i18n: Translator) {
       },
     ),
     /** Help: the third orientation paragraph. */
-    "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it.":
+    "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it.":
       i18n.t(
-        "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it.",
+        "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it.",
       ),
     /** Help: the first orientation paragraph. */
     "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward.":

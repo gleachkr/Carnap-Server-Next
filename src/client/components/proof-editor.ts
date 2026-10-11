@@ -105,7 +105,42 @@ export function showDiagnostics(
   editor: EditorView,
   diagnostics: readonly Diagnostic[],
 ): void {
-  editor.dispatch(setDiagnostics(editor.state, [...diagnostics]));
+  editor.dispatch(setDiagnostics(editor.state, diagnostics.map(numbered)));
+}
+
+/**
+ * The diagnostic, drawn with the number of the line it is on before its
+ * message. The number is for the error list (Mod-Shift-M), where a message
+ * stands apart from the proof; the hover bubble, drawn by the same renderer
+ * beside the squiggle itself, hides it (`./proof-editor.css`). It is counted
+ * where the diagnostic lies when drawn, not where it was reported: the list
+ * can open after edits the next compile has not yet caught up with.
+ *
+ * Worded through the state's phrases, where {@link problemKeys} puts the
+ * reader's language; `message` is left as it was, for F8 and the problem line.
+ */
+function numbered(diagnostic: Diagnostic): Diagnostic {
+  const drawn: Diagnostic = {
+    ...diagnostic,
+    renderMessage(view) {
+      let from = diagnostic.from;
+      forEachDiagnostic(view.state, (each, start) => {
+        if (each === drawn) {
+          from = start;
+        }
+      });
+      const line = document.createElement("span");
+      line.className = "cm-diagnosticLine";
+      line.textContent = view.state.phrase(
+        "Line $1",
+        view.state.doc.lineAt(Math.min(from, view.state.doc.length)).number,
+      );
+      const text = document.createElement("span");
+      text.append(line, " ", diagnostic.message);
+      return text;
+    },
+  };
+  return drawn;
 }
 
 /**
@@ -154,23 +189,26 @@ type ProofEditorText = (
  * aloud, and leaves it in `line`, under the editor, with its text tinted
  * ({@link pinnedProblem}). Where CodeMirror's own commands float the tooltip
  * instead, these do not — the line is where a problem gone to by key is read.
- * Mod-Shift-M opens CodeMirror's problem panel, a list of them all. Escape
- * puts a hovered problem's tooltip away ({@link escapeClosesTooltip}). The
- * help dialog ({@link mountProofEditorHelp}) is where a reader learns of
- * them.
+ * Mod-Shift-M opens CodeMirror's diagnostics panel, the error list, each
+ * entry numbered by its line ({@link numbered}). Escape puts a hovered
+ * problem's tooltip away ({@link escapeClosesTooltip}). The help dialog
+ * ({@link mountProofEditorHelp}) is where a reader learns of them.
  */
 export function problemKeys(
   t: ProofEditorText,
   line: ProblemLine,
 ): Extension {
-  const none = t("No problems.");
+  const none = t("No errors.");
 
   return [
     escapeClosesTooltip,
     pinnedProblem(t, line),
     EditorState.phrases.of({
       close: t("Close"),
-      Diagnostics: t("Problems"),
+      Diagnostics: t("Errors"),
+      // CodeMirror fills `$1` itself, so the translation is formatted with
+      // it standing in for the number ({@link numbered}).
+      "Line $1": t("Line {line}", { line: "$1" }),
       "No diagnostics": none,
     }),
     keymap.of([
@@ -316,7 +354,7 @@ function pinnedProblem(t: ProofEditorText, line: ProblemLine): Extension {
         });
         line.show({
           message: said.map((diagnostic) => diagnostic.message).join("\n"),
-          position: t("Problem {index} of {count}", {
+          position: t("{index} of {count}", {
             count: ranges.length,
             index: ranges.indexOf(first) + 1,
           }),
@@ -397,7 +435,7 @@ export function mountProofEditorHelp(
     intro: [
       ...content.intro,
       t(
-        "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it.",
+        "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it.",
       ),
     ],
     keyboard: t("Keyboard"),
@@ -406,10 +444,10 @@ export function mountProofEditorHelp(
       { action: t("Redo"), keys: [MAC ? "Cmd-Shift-Z" : "Ctrl-Y"] },
       ...(problems
         ? [
-            { action: t("Go to the next problem"), keys: ["F8"] },
-            { action: t("Go to the previous problem"), keys: ["Shift-F8"] },
-            { action: t("List every problem"), keys: [`${mod}-Shift-M`] },
-            { action: t("Close the problem message"), keys: ["Esc"] },
+            { action: t("Go to the next error"), keys: ["F8"] },
+            { action: t("Go to the previous error"), keys: ["Shift-F8"] },
+            { action: t("List every error"), keys: [`${mod}-Shift-M`] },
+            { action: t("Close the error message"), keys: ["Esc"] },
           ]
         : []),
     ],

@@ -37,16 +37,17 @@ Use Tab, Shift-Tab, arrows, Enter, Space, and Escape.
         buttons below roots are reachable. Enter/r/l/d edit line fields;
         a/b/p/h/Delete match the toolbar actions. An unselected focused line
         has a focus ring distinct from the selection highlight.
-  - [ ] Proof problems, in all four proof widgets: with a problem in the
-        proof, F8 and Shift-F8 go to the next and previous problem from
+  - [ ] Proof errors, in all four proof widgets: with an error in the
+        proof, F8 and Shift-F8 go to the next and previous error from
         anywhere in the widget, wrapping at the ends. In the linear and Fitch
-        editors, Ctrl+Shift+M (Cmd+Shift+M on a Mac) opens the problem list;
+        editors, Ctrl+Shift+M (Cmd+Shift+M on a Mac) opens the error list,
+        each entry starting with its line number;
         check the browser does not take the key first. Under terse or no
         feedback, F8 does nothing.
-  - [ ] Proof problems stay in sight: the problem F8 went to is shown below
+  - [ ] Proof errors stay in sight: the error F8 went to is shown below
         the proof, its line number named in the linear and Fitch editors and
         its place tinted in all four, with no tooltip covering the proof. It
-        stays while focus moves to another line, and clears when the problem
+        stays while focus moves to another line, and clears when the error
         is fixed. The tint reads at a glance in both colour schemes.
   - [ ] Problem bubbles, in all four proof widgets and the truth tree:
         resting the pointer on an underlined problem floats its message in
@@ -122,11 +123,11 @@ Use Tab, Shift-Tab, arrows, Enter, Space, and Escape.
 
 - [ ] **3.3.1 Error identification:** errors are announced and identify the
       relevant field in text.
-  - [ ] Proof problems: F8 says each problem. In the tree and Prawitz
+  - [ ] Proof errors: F8 says each error. In the tree and Prawitz
         editors it is read as the line's description when focus arrives, and
         the field at fault reads as invalid. In the linear and Fitch editors
-        it is announced after the selected text. With no problems, F8 says
-        "No problems."
+        it is announced after the selected text. With no errors, F8 says
+        "No errors."
 - [ ] **3.3.3 Error suggestion:** messages explain how to fix a problem when
       a correction is known.
 - [ ] **1.4.1 Use of color:** required, incorrect, and correct states have a

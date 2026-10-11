@@ -458,9 +458,9 @@ const SHORTCUTS: readonly {
   },
   { action: "Undo", icon: "undo", keys: ["Ctrl-Z"] },
   { action: "Redo", icon: "redo", keys: ["Ctrl-Y"] },
-  { action: "Go to the next problem", keys: ["F8"], problems: true },
+  { action: "Go to the next error", keys: ["F8"], problems: true },
   {
-    action: "Go to the previous problem",
+    action: "Go to the previous error",
     keys: ["Shift-F8"],
     problems: true,
   },
@@ -470,7 +470,7 @@ const SHORTCUTS: readonly {
 const INTRO_IDS: readonly AufbauProofTreeStringId[] = [
   "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward.",
   "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses.",
-  "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it.",
+  "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it.",
 ];
 
 /**
@@ -1014,8 +1014,7 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
       this.pinned = new PinnedProblem(
         root,
         mountProblemLine(root, container, actionsSlot),
-        (index, count) =>
-          this.t("Problem {index} of {count}", { count, index }),
+        (index, count) => this.t("{index} of {count}", { count, index }),
       );
     }
     mountProblemPopup(root, container, this.listeners.signal);
@@ -1094,11 +1093,7 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
     const step = problemStep(event);
     if (step !== null && this.announce !== null && this.shadowRoot !== null) {
       event.preventDefault();
-      const said = stepToProblem(
-        this.shadowRoot,
-        step,
-        this.t("No problems."),
-      );
+      const said = stepToProblem(this.shadowRoot, step, this.t("No errors."));
       if (said !== null) {
         this.announce(said);
       }
@@ -1621,7 +1616,7 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
       warning: new Map<string, string[]>(),
     };
     for (const problem of problems) {
-      const message = problem.message ?? this.t("Problem here.");
+      const message = problem.message ?? this.t("Error here.");
       const charIndex =
         problem.spanStart !== undefined
           ? byteToCharIndex(proof, problem.spanStart)

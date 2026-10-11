@@ -66,7 +66,7 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
     "New assumption": i18n.t("New assumption"),
     "New assumption (a)": i18n.t("New assumption (a)"),
     /** Fallback on a node whose compiler diagnostic has no readable message. */
-    "Problem here.": i18n.t("Problem here."),
+    "Error here.": i18n.t("Error here."),
     /** Accessible name of the workspace; it is a `role="tree"` and needs one. */
     "Prawitz proof workspace": i18n.t("Prawitz proof workspace"),
     /** The Select chip once ticked: this tree's position in the premise order.
@@ -99,9 +99,9 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
       },
     ),
     /** Help: the closing orientation paragraph, shared with the other proof editors. */
-    "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it.":
+    "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it.":
       i18n.t(
-        "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it.",
+        "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it.",
       ),
     /** Help: the first orientation paragraph. */
     "Every proof starts from assumptions. New assumption puts one in the workspace; the goal is a single tree whose bottom line is what you were asked to prove.":
@@ -131,17 +131,17 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
     "Tick or untick the line": i18n.t("Tick or untick the line"),
     "Edit the line's formula": i18n.t("Edit the line's formula"),
     "Edit the line's rule": i18n.t("Edit the line's rule"),
-    "Go to the next problem": i18n.t("Go to the next problem"),
+    "Go to the next error": i18n.t("Go to the next error"),
     /** Problem line: which of the proof's problems it holds. Both values are numbers. */
-    "Problem {index} of {count}": i18n.t(
-      "Problem {index} of {count}",
+    "{index} of {count}": i18n.t(
+      "{index} of {count}",
       placeholders("index", "count"),
       {
         comment:
-          "Beside a problem shown below a proof: it is problem {index} of the {count} problems in the proof, counted in the order F8 visits them.",
+          "Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.",
       },
     ),
-    "Go to the previous problem": i18n.t("Go to the previous problem"),
+    "Go to the previous error": i18n.t("Go to the previous error"),
     /** One row: `l` opens whichever of the two a line has (never both). */
     "Edit the line's label or discharge marks": i18n.t(
       "Edit the line's label or discharge marks",

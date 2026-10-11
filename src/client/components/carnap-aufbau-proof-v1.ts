@@ -144,7 +144,7 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
             "aria-label": this.t("Proof editor"),
           }),
           // Where feedback withholds the squiggles there is nothing to step
-          // to, and an F8 that said "No problems." would be a verdict.
+          // to, and an F8 that said "No errors." would be a verdict.
           this.showsDetail
             ? problemKeys((id, values) => this.t(id, values), chrome.problems)
             : [],
@@ -324,7 +324,7 @@ class AufbauProof extends ProofExerciseElement<AufbauProofStringId> {
     const diagnostics: Diagnostic[] = [];
 
     for (const problem of problems) {
-      const message = problem.message ?? this.t("Problem in the proof.");
+      const message = problem.message ?? this.t("Error in the proof.");
 
       let from = 0;
       let to = docLength;

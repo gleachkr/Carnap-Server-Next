@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { diagnosticCount, nextDiagnostic } from "@codemirror/lint";
+import {
+  diagnosticCount,
+  nextDiagnostic,
+  openLintPanel,
+} from "@codemirror/lint";
 import {
   EditorView,
   hasHoverTooltips,
@@ -200,7 +204,7 @@ describe("the tree editor", () => {
     typeInto(ruleField, "mp");
     await until(() => !premise.hasAttribute("aria-describedby"));
     press(mounted, "F8");
-    expect(spoken(mounted)).toBe("No problems.");
+    expect(spoken(mounted)).toBe("No errors.");
   });
 
   test("the line F8 went to is pinned: its problem below the proof, its formula tinted, until it is fixed", async () => {
@@ -211,12 +215,12 @@ describe("the tree editor", () => {
     root.focus();
     press(mounted, "F8");
     // A tree's lines have no numbers to name; the tint is where.
-    expect(problemLine(mounted)).toBe(`${MESSAGE} | Problem 1 of 1`);
+    expect(problemLine(mounted)).toBe(`${MESSAGE} | 1 of 1`);
     expect(premise.classList.contains("is-pinned")).toBe(true);
 
     // Moving on — to fix it, say — leaves it where it is.
     root.focus();
-    expect(problemLine(mounted)).toBe(`${MESSAGE} | Problem 1 of 1`);
+    expect(problemLine(mounted)).toBe(`${MESSAGE} | 1 of 1`);
     expect(premise.classList.contains("is-pinned")).toBe(true);
 
     typeInto(ruleField, "mp");
@@ -277,7 +281,7 @@ describe("the Prawitz editor", () => {
     expect(mounted.root.activeElement).toBe(second);
 
     // One line pinned at a time: the one F8 last went to.
-    expect(problemLine(mounted)).toBe("Expected a formula. | Problem 2 of 2");
+    expect(problemLine(mounted)).toBe("Expected a formula. | 2 of 2");
     expect(second.classList.contains("is-pinned")).toBe(true);
     expect(first.classList.contains("is-pinned")).toBe(false);
   });
@@ -338,7 +342,7 @@ describe("the linear editor", () => {
     view.dispatch({ changes: { from, insert: "mp", to } });
     await until(() => diagnosticCount(view.state) === 0);
     key(view, "F8");
-    expect(announced(mounted)).toBe("No problems.");
+    expect(announced(mounted)).toBe("No errors.");
   });
 
   test("Escape puts away a problem's message, wherever focus is, and only while one is open", async () => {
@@ -373,7 +377,7 @@ describe("the linear editor", () => {
     expect(problemLine(mounted)).toBeNull();
 
     key(view, "F8");
-    expect(problemLine(mounted)).toBe(`Line 1 | ${MESSAGE} | Problem 1 of 1`);
+    expect(problemLine(mounted)).toBe(`Line 1 | ${MESSAGE} | 1 of 1`);
     expect(hasHoverTooltips(view.state)).toBe(false);
     expect(
       mounted.root.querySelector(".cm-problem-pinned")?.textContent,
@@ -383,13 +387,32 @@ describe("the linear editor", () => {
     // carries it along, and the next compile reports it again.
     view.dispatch({ changes: { from: 0, insert: "\n" } });
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(problemLine(mounted)).toBe(`Line 2 | ${MESSAGE} | Problem 1 of 1`);
+    expect(problemLine(mounted)).toBe(`Line 2 | ${MESSAGE} | 1 of 1`);
 
     const at = view.state.doc.toString().indexOf("nope");
     view.dispatch({ changes: { from: at, insert: "mp", to: at + 4 } });
     await until(() => diagnosticCount(view.state) === 0);
     expect(problemLine(mounted)).toBeNull();
     expect(mounted.root.querySelector(".cm-problem-pinned")).toBeNull();
+  });
+
+  test("the error list is titled Errors and numbers each entry by its line", async () => {
+    const mounted = mountExercise(
+      await compileExercise(
+        linear("l1: $ p $ by mp [#1]\nl2: $ p $ by nope [#1]"),
+      ),
+    );
+    const view = editorOf(mounted);
+    await until(() => diagnosticCount(view.state) > 0);
+
+    openLintPanel(view);
+    const entry = mounted.root.querySelector(".cm-panel-lint .cm-diagnostic");
+    expect(entry?.textContent).toBe(`Line 2 ${MESSAGE}`);
+    expect(
+      mounted.root
+        .querySelector(".cm-panel-lint ul")
+        ?.getAttribute("aria-label"),
+    ).toBe("Errors");
   });
 
   test("terse feedback has the help, but neither the problem keys nor their rows", async () => {

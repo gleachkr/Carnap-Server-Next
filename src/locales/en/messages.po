@@ -254,6 +254,15 @@ msgstr "{formula}: witnesses {objects}."
 msgid "{id} — {status}"
 msgstr "{id} — {status}"
 
+#. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
+#. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
+#. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
+#: src/worker/exercise-kit/proof/editor-strings.ts
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "{index} of {count}"
+msgstr "{index} of {count}"
+
 #: src/worker/application/lti-admin.ts
 msgid "{label} is required."
 msgstr "{label} is required."
@@ -1398,8 +1407,8 @@ msgid "Close the branch on row {row}"
 msgstr "Close the branch on row {row}"
 
 #: src/worker/exercise-kit/proof/editor-strings.ts
-msgid "Close the problem message"
-msgstr "Close the problem message"
+msgid "Close the error message"
+msgstr "Close the error message"
 
 #. Disambiguating id; only the word Closed is shown. A badge beside an assignment past its closing date.
 #: src/worker/web/assignments.tsx
@@ -2212,6 +2221,20 @@ msgstr "Enter your email address and we will send you a one-time login link. If 
 msgid "Error code {code} · request {requestId}"
 msgstr "Error code {code} · request {requestId}"
 
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+#: src/worker/exercises/aufbau-proof-tree/strings.ts
+msgid "Error here."
+msgstr "Error here."
+
+#: src/worker/exercises/aufbau-proof-fitch/strings.ts
+#: src/worker/exercises/aufbau-proof/strings.ts
+msgid "Error in the proof."
+msgstr "Error in the proof."
+
+#: src/worker/exercise-kit/proof/editor-strings.ts
+msgid "Errors"
+msgstr "Errors"
+
 #: src/worker/routes/assignments.ts
 msgid "Evaluation not saved"
 msgstr "Evaluation not saved"
@@ -2490,14 +2513,14 @@ msgstr "Go to the login page"
 #: src/worker/exercise-kit/proof/editor-strings.ts
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Go to the next problem"
-msgstr "Go to the next problem"
+msgid "Go to the next error"
+msgstr "Go to the next error"
 
 #: src/worker/exercise-kit/proof/editor-strings.ts
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Go to the previous problem"
-msgstr "Go to the previous problem"
+msgid "Go to the previous error"
+msgstr "Go to the previous error"
 
 #: src/worker/web/errors.tsx
 msgid "Go to your courses"
@@ -2827,7 +2850,7 @@ msgstr "Line “{label}” is cited more than once, so this proof is a graph, no
 msgid "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
 msgstr "Line “{label}” is not connected to the root of the proof; every line must feed into the conclusion."
 
-#. Before a problem shown below a proof: the problem is on line {line} of the proof editor.
+#. Before an error shown below a proof: the error is on line {line} of the proof editor.
 #: src/worker/exercise-kit/proof/editor-strings.ts
 msgid "Line {line}"
 msgstr "Line {line}"
@@ -2857,8 +2880,8 @@ msgid "Linked LMS access"
 msgstr "Linked LMS access"
 
 #: src/worker/exercise-kit/proof/editor-strings.ts
-msgid "List every problem"
-msgstr "List every problem"
+msgid "List every error"
+msgstr "List every error"
 
 #: src/worker/web/profile.tsx
 msgid "LMS"
@@ -3271,6 +3294,10 @@ msgstr "No email address yet"
 msgid "No enrollment links have been created yet."
 msgstr "No enrollment links have been created yet."
 
+#: src/worker/exercise-kit/proof/engine-strings.ts
+msgid "No errors."
+msgstr "No errors."
+
 #: src/worker/web/admin.tsx
 msgid "No external identities."
 msgstr "No external identities."
@@ -3291,10 +3318,6 @@ msgstr "no longer in the assignment"
 #: src/worker/exercises/multiple-choice/assessment.ts
 msgid "No option selected"
 msgstr "No option selected"
-
-#: src/worker/exercise-kit/proof/engine-strings.ts
-msgid "No problems."
-msgstr "No problems."
 
 #: src/worker/web/content.tsx
 msgid "No revisions have been created yet."
@@ -3791,29 +3814,6 @@ msgstr "Preview"
 #: src/worker/web/courses.tsx
 msgid "Problem"
 msgstr "Problem"
-
-#. Beside a problem shown below a proof: it is problem {index} of the {count} problems in the proof, counted in the order F8 visits them.
-#. Beside a problem shown below a proof: it is problem {index} of the {count} problems in the proof, counted in the order F8 visits them.
-#. Beside a problem shown below a proof: it is problem {index} of the {count} problems in the proof, counted in the order F8 visits them.
-#: src/worker/exercise-kit/proof/editor-strings.ts
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-#: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Problem {index} of {count}"
-msgstr "Problem {index} of {count}"
-
-#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
-#: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "Problem here."
-msgstr "Problem here."
-
-#: src/worker/exercises/aufbau-proof-fitch/strings.ts
-#: src/worker/exercises/aufbau-proof/strings.ts
-msgid "Problem in the proof."
-msgstr "Problem in the proof."
-
-#: src/worker/exercise-kit/proof/editor-strings.ts
-msgid "Problems"
-msgstr "Problems"
 
 #: src/worker/web/profile.tsx
 msgid "Profile"
@@ -5197,8 +5197,8 @@ msgstr "The LTI platform was not found."
 #: src/worker/exercise-kit/proof/editor-strings.ts
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
-msgid "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it."
-msgstr "The mark beside the Submit button shows whether the proof checks. A line with a problem is underlined. Hover it to read what is wrong, or press F8 to go to it: the problem then stays below the proof while you fix it."
+msgid "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it."
+msgstr "The mark beside the Submit button shows whether the proof checks. A line with an error is underlined. Hover it to read what is wrong, or press F8 to go to it: the error then stays below the proof while you fix it."
 
 #: src/worker/web/admin.tsx
 msgid "The most recent administrative audit events."

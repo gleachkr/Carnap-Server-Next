@@ -62,7 +62,7 @@ export function buildProofEngineStrings(i18n: Translator) {
      * Said aloud when F8 or Shift-F8 finds no line with a problem to step to,
      * and listed in the CodeMirror editors' problem panel when it is empty.
      */
-    "No problems.": i18n.t("No problems."),
+    "No errors.": i18n.t("No errors."),
     /** Label on a playground's goal row, before the sequent the proof derives. */
     Proves: i18n.t("Proves"),
     "The proof engine couldn't read this proof — check for unexpected characters.":

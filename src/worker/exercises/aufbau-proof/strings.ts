@@ -12,7 +12,7 @@ export function buildAufbauProofStrings(i18n: Translator) {
     ...buildProofEngineStrings(i18n),
     ...buildProofEditorStrings(i18n),
     /** Fallback when a compiler diagnostic arrives with no readable message. */
-    "Problem in the proof.": i18n.t("Problem in the proof."),
+    "Error in the proof.": i18n.t("Error in the proof."),
     /** Label on the goal row, before the sequent the student must derive. */
     Prove: i18n.t("Prove"),
     /**

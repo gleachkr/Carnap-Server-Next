@@ -27,7 +27,7 @@ export interface ShownProblem {
   readonly where: string | null;
   /** The problem itself; several on one place are joined by newlines. */
   readonly message: string;
-  /** Which of the problems it is: `Problem 2 of 3`. */
+  /** Which of the problems it is: `2 of 3`. */
   readonly position: string;
   readonly severity: "error" | "warning";
 }
