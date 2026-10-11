@@ -563,6 +563,11 @@ export interface SetContentItemArchivedInput {
   readonly archivedAt: Timestamp | null;
 }
 
+export interface SetContentItemTitleInput {
+  readonly id: AppId;
+  readonly title: string;
+}
+
 export interface UpdateContentRevisionSharingInput {
   readonly id: AppId;
   readonly sharing: ContentRevision["sharing"];
@@ -642,6 +647,15 @@ export interface ContentStore {
   setItemArchived(
     input: SetContentItemArchivedInput,
   ): Promise<ContentItem | null>;
+  /**
+   * Rename an item. Null for an id that names nothing.
+   *
+   * The title names the item and is no part of any revision, so this changes
+   * no revision's source, artifact or hash, and — as `setItemArchived` does —
+   * leaves `updatedAt` alone: renaming is not writing content, and the item
+   * keeps its place in the library.
+   */
+  setItemTitle(input: SetContentItemTitleInput): Promise<ContentItem | null>;
   createRevision(input: CreateContentRevisionInput): Promise<ContentRevision>;
   getRevision(id: AppId): Promise<ContentRevision | null>;
   /**

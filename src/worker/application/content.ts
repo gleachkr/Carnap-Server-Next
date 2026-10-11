@@ -8,6 +8,7 @@ import type {
 } from "../domain/content";
 import {
   CONTENT_DETAILS_MAX_LENGTH,
+  CONTENT_TITLE_MAX_LENGTH,
   isContentSharing,
 } from "../domain/content";
 import type { AppId } from "../domain/ids";
@@ -61,7 +62,6 @@ export interface CreateContentRevisionCommand {
   readonly sourceText: string;
 }
 
-const CONTENT_TITLE_MAX_LENGTH = 200;
 const CONTENT_SOURCE_MAX_LENGTH = 200_000;
 
 function normalizeTitle(title: string): string {
@@ -318,6 +318,37 @@ export class ContentService {
         ? timestampNow(this.options.now?.() ?? new Date())
         : null,
       id: item.id,
+    });
+
+    if (updated === null) {
+      throw contentNotFound();
+    }
+
+    return updated;
+  }
+
+  /**
+   * Rename an item. The title is the item's, not any revision's, so this
+   * leaves every revision as it was; the library, the pickers and the
+   * breadcrumbs read the new name at once, and an assignment keeps the title
+   * it was published under. Checked and trimmed as `createItem` checks one,
+   * and refused to anyone but the owner as archiving is.
+   */
+  async setItemTitle(
+    actor: AuthenticatedActor,
+    itemId: AppId,
+    title: string,
+  ): Promise<ContentItem> {
+    requireContentAuthor(actor);
+
+    const item = await this.getItem(actor, itemId);
+    const trimmed = normalizeTitle(title);
+
+    assertTitle(trimmed);
+
+    const updated = await this.options.stores.content.setItemTitle({
+      id: item.id,
+      title: trimmed,
     });
 
     if (updated === null) {

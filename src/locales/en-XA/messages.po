@@ -1512,6 +1512,10 @@ msgstr ""
 msgid "Content item created."
 msgstr ""
 
+#: src/worker/routes/content.ts
+msgid "Content item renamed."
+msgstr ""
+
 #: src/worker/web/content.tsx
 msgid "Content item title"
 msgstr ""
@@ -4041,6 +4045,14 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Removed user"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Rename {name}"
+msgstr ""
+
+#: src/worker/web/content.tsx
+msgid "Rename content item"
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts

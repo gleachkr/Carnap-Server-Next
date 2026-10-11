@@ -1512,6 +1512,10 @@ msgstr "Inhaltsobjekt archiviert."
 msgid "Content item created."
 msgstr "Inhaltsobjekt angelegt."
 
+#: src/worker/routes/content.ts
+msgid "Content item renamed."
+msgstr "Inhaltsobjekt umbenannt."
+
 #: src/worker/web/content.tsx
 msgid "Content item title"
 msgstr "Titel des Inhaltsobjekts"
@@ -4042,6 +4046,14 @@ msgstr "Der Block in Spalte {col}, Zeile {row} wurde entfernt."
 #: src/worker/web/courses.tsx
 msgid "Removed user"
 msgstr "Entferntes Konto"
+
+#: src/worker/web/content.tsx
+msgid "Rename {name}"
+msgstr "{name} umbenennen"
+
+#: src/worker/web/content.tsx
+msgid "Rename content item"
+msgstr "Inhaltsobjekt umbenennen"
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Replace {from} with {to}"

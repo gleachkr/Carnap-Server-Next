@@ -43,6 +43,12 @@ export type {
 export type ContentSourceFormat = "markdown" | "mm0";
 
 /**
+ * The longest title an item may carry, in UTF-16 code units — what both the
+ * service's check and the rename field's `maxlength` count.
+ */
+export const CONTENT_TITLE_MAX_LENGTH = 200;
+
+/**
  * The longest note a revision may carry, in UTF-16 code units — what both the
  * service's check and a form field's `maxlength` count.
  */

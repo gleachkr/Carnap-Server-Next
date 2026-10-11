@@ -71,6 +71,7 @@ import type {
   ScoreStore,
   ScoringScope,
   SetContentItemArchivedInput,
+  SetContentItemTitleInput,
   SetCourseArchivedInput,
   SetGradesVisibleAtInput,
   UnpublishAssignmentInput,
@@ -1681,6 +1682,18 @@ class SqliteContentStore implements ContentStore {
       await this.db
         .update(contentItems)
         .set({ archivedAt: input.archivedAt })
+        .where(eq(contentItems.id, input.id))
+        .returning(),
+    );
+  }
+
+  async setItemTitle(
+    input: SetContentItemTitleInput,
+  ): Promise<ContentItem | null> {
+    return nullableSingle(
+      await this.db
+        .update(contentItems)
+        .set({ title: input.title })
         .where(eq(contentItems.id, input.id))
         .returning(),
     );

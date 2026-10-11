@@ -86,6 +86,10 @@ interface SetDetailsBody {
   readonly details?: unknown;
 }
 
+interface SetTitleBody {
+  readonly title?: unknown;
+}
+
 interface CreateRevisionBody {
   readonly details?: unknown;
   readonly sourceText?: unknown;
@@ -226,13 +230,15 @@ function itemNotices(
   ];
 }
 
-/** The library's own: the archive controls are on its rows and return here. */
+/** The library's own: the rename and archive controls are on its rows and
+ * return here. */
 function libraryNotices(
   i18n: Translator,
 ): readonly { readonly message: string; readonly param: string }[] {
   return [
     { message: i18n.t("Content item archived."), param: "archived" },
     { message: i18n.t("Content item unarchived."), param: "unarchived" },
+    { message: i18n.t("Content item renamed."), param: "renamed" },
   ];
 }
 
@@ -369,6 +375,30 @@ async function setItemArchivedFromForm(
     await contentService(context).setItemArchived(actor, itemId, archived);
 
     return redirect(`/content?${archived ? "archived" : "unarchived"}=1`);
+  } catch (error) {
+    return contentReadFailure(context, error);
+  }
+}
+
+/**
+ * Rename, from the dialog on the item's row in the library, which is where
+ * the reader goes back to.
+ */
+async function setItemTitleFromForm(
+  context: Context<AppBindings>,
+): Promise<Response> {
+  const actor = requireAuthenticated(context);
+  const itemId = requiredParam(context, "itemId");
+  const form = await context.req.raw.formData();
+
+  try {
+    await contentService(context).setItemTitle(
+      actor,
+      itemId,
+      fieldValue(form.get("title")),
+    );
+
+    return redirect("/content?renamed=1");
   } catch (error) {
     return contentReadFailure(context, error);
   }
@@ -987,6 +1017,30 @@ contentRoutes.post("/:itemId/unarchive", async (context) => {
     requireAuthenticated(context),
     requiredParam(context, "itemId"),
     false,
+  );
+
+  return context.json({ item: publicContentItem(item) });
+});
+
+contentRoutes.post("/:itemId/title", async (context) => {
+  if (isFormSubmission(context)) {
+    return setItemTitleFromForm(context);
+  }
+
+  const actor = requireAuthenticated(context);
+  const body = (await readJsonObject(context)) as SetTitleBody;
+
+  if (typeof body.title !== "string") {
+    throw badRequest(
+      "invalid_content_title",
+      "Content title must be a string.",
+    );
+  }
+
+  const item = await contentService(context).setItemTitle(
+    actor,
+    requiredParam(context, "itemId"),
+    body.title,
   );
 
   return context.json({ item: publicContentItem(item) });

@@ -1920,6 +1920,107 @@ Which sentence is a tautology?
     });
   });
 
+  test("an item can be renamed from its library row", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "renaming-author@example.test");
+      const item = await createContent(env, author);
+      const before = await appRequest(
+        createTestApp(),
+        "/content",
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+      const beforeHtml = await before.text();
+
+      // The row's pen opens a dialog that posts the title back, prefilled
+      // with what is there now.
+      expect(beforeHtml).toContain(
+        `data-dialog-target="title-${item.item.id}"`,
+      );
+      expect(beforeHtml).toContain(`action="/content/${item.item.id}/title"`);
+      expect(beforeHtml).toContain('value="Truth tables"');
+
+      const form = new FormData();
+
+      form.set("csrfToken", author.csrfToken);
+      form.set("title", "  Truth tables, week 2  ");
+
+      const response = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/title`,
+        {
+          body: form,
+          headers: { Cookie: author.cookieHeader },
+          method: "POST",
+        },
+        env,
+      );
+
+      expect(response.status).toBe(303);
+      expect(response.headers.get("Location")).toBe("/content?renamed=1");
+
+      const after = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}`,
+        { headers: { Cookie: author.cookieHeader } },
+        env,
+      );
+
+      // Trimmed as a new item's title is.
+      expect(((await after.json()) as ContentItemResponse).item.title).toBe(
+        "Truth tables, week 2",
+      );
+
+      const library = await appRequest(
+        createTestApp(),
+        "/content?renamed=1",
+        { headers: { Accept: "text/html", Cookie: author.cookieHeader } },
+        env,
+      );
+
+      expect(await library.text()).toContain("Content item renamed.");
+    });
+  });
+
+  test("a new title is checked as a new item's is", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "long-renaming@example.test");
+      const item = await createContent(env, author);
+
+      for (const title of ["   ", "x".repeat(201), 42]) {
+        const response = await appRequest(
+          createTestApp(),
+          `/content/${item.item.id}/title`,
+          jsonRequest({ title }, author),
+          env,
+        );
+        const body = (await response.json()) as ErrorEnvelope;
+
+        expect(response.status).toBe(400);
+        expect(body.error.code).toBe("invalid_content_title");
+      }
+    });
+  });
+
+  test("an item is its owner's alone to rename", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "title-owner@example.test");
+      const other = await login(env, "title-stranger@example.test");
+      const item = await createContent(env, author);
+      const response = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/title`,
+        jsonRequest({ title: "Yours now" }, other),
+        env,
+      );
+      const body = (await response.json()) as ErrorEnvelope;
+
+      // The miss an id that names nothing gets, as for archiving.
+      expect(response.status).toBe(404);
+      expect(body.error.code).toBe("content_item_not_found");
+    });
+  });
+
   test("the same source cannot be saved a second time under one item", async () => {
     await withStorage(async (_storage, env) => {
       const author = await login(env, "repeat-author@example.test");

@@ -13,6 +13,7 @@ import type {
 import {
   CONTENT_DETAILS_MAX_LENGTH,
   CONTENT_SHARING_VALUES,
+  CONTENT_TITLE_MAX_LENGTH,
 } from "../domain/content";
 import { type AppBindings, publicRequestUrl } from "../http";
 import {
@@ -144,6 +145,55 @@ const SourceDownload: FC<{
 );
 
 /**
+ * The control that renames an item: the icon on its library row, and the
+ * dialog it opens. Beside archiving, the other thing an author does to the
+ * item as a whole, rather than on the item's page, which is about its
+ * revisions.
+ */
+const ItemTitleEdit: FC<{
+  readonly context: Context<AppBindings>;
+  readonly item: ContentItem;
+}> = ({ context, item }) => {
+  const i18n = useI18n();
+  const dialogId = `title-${item.id}`;
+  const fieldId = `${dialogId}-field`;
+  const label = i18n.t("Rename {name}", { name: item.title });
+
+  return (
+    <>
+      <button
+        aria-label={label}
+        class="icon-button"
+        data-dialog-target={dialogId}
+        title={label}
+        type="button"
+      >
+        <PenIcon />
+      </button>
+      <ModalDialog id={dialogId} title={i18n.t("Rename content item")}>
+        <form action={`/content/${item.id}/title`} method="post">
+          <CsrfInput context={context} />
+          <label for={fieldId}>
+            {i18n.t("Title")}
+            <br />
+            <input
+              id={fieldId}
+              maxlength={CONTENT_TITLE_MAX_LENGTH}
+              name="title"
+              required
+              value={item.title}
+            />
+          </label>
+          <button class="secondary" type="submit">
+            {i18n.t("Save changes")}
+          </button>
+        </form>
+      </ModalDialog>
+    </>
+  );
+};
+
+/**
  * The library's rows, active or archived: the same table either way, with
  * the date column saying when the item was last written or when it was put
  * away, and the actions column offering the way across. Downloads are on the
@@ -186,10 +236,10 @@ const ItemsTable: FC<{
           <SortHeader
             label={archived ? i18n.t("Archived") : i18n.t("Updated")}
           />
-          {/* Archiving needs the permission that made the item, as sharing
-              does; an author who has lost it is not offered a control the
-              server would refuse, and with nothing to put in it the column
-              is not drawn. */}
+          {/* Renaming and archiving need the permission that made the item,
+              as sharing does; an author who has lost it is not offered a
+              control the server would refuse, and with nothing to put in it
+              the column is not drawn. */}
           {canAuthor ? <th scope="col">{i18n.t("Actions")}</th> : null}
         </tr>
       </thead>
@@ -209,6 +259,7 @@ const ItemsTable: FC<{
               </td>
               {canAuthor ? (
                 <td>
+                  <ItemTitleEdit context={context} item={item} />
                   <ArchiveToggle
                     archived={item.archivedAt !== null}
                     context={context}
@@ -983,8 +1034,8 @@ export function renderContentItem(
 
   // One sheet: the revisions. A "content record" used to sit above it, with
   // the owner (always the reader — `getItem` answers only the owner) and a
-  // revision count (the rows below). The item's archive control is on its
-  // library row, one page up.
+  // revision count (the rows below). The item's rename and archive controls
+  // are on its library row, one page up.
   return renderShell(
     context,
     { breadcrumb: [contentCrumb(i18n)], title: model.item.title },

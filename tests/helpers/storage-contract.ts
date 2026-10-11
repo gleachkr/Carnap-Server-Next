@@ -1345,6 +1345,32 @@ export function describeStorageContract(
       });
     });
 
+    test("renaming a content item changes its title alone", async () => {
+      await withStorage(async ({ stores }) => {
+        const { item, revision } = await createContentRevision(stores);
+        const renamed = await stores.content.setItemTitle({
+          id: item.id,
+          title: "Conditional Proof",
+        });
+
+        // As with archiving, `updatedAt` stays: a rename is not a change to
+        // the content, and the item keeps its place in the library.
+        expect(renamed).toEqual({ ...item, title: "Conditional Proof" });
+        await expect(stores.content.getItem(item.id)).resolves.toEqual(
+          renamed,
+        );
+        await expect(
+          stores.content.getRevision(revision.id),
+        ).resolves.toEqual(revision);
+        await expect(
+          stores.content.setItemTitle({
+            id: "content-item-nobody-made",
+            title: "Nothing",
+          }),
+        ).resolves.toBeNull();
+      });
+    });
+
     test("assignments can be published by content revision ID", async () => {
       await withStorage(async ({ stores }) => {
         const { assignment, instructor } =
