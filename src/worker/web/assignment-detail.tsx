@@ -14,7 +14,10 @@ import type {
   AttemptActivity,
   EffectiveAssignmentPolicy,
 } from "../application/policies";
-import type { SubmissionHistoryEntry } from "../application/submissions";
+import type {
+  QueueExercise,
+  SubmissionHistoryEntry,
+} from "../application/submissions";
 import type { UserDirectory } from "../application/users";
 import {
   type Attempt,
@@ -85,6 +88,7 @@ import {
   artifactDocumentProps,
   renderContentDocument,
 } from "./content-document";
+import { FilterIcon } from "./icons";
 import {
   assessmentModeLabel,
   assessmentModeOptions,
@@ -1894,12 +1898,21 @@ const ManualEvaluationForm: FC<{
   readonly courseId: string;
   readonly maxScore: number | null;
   readonly submissionId: string;
-}> = ({ assignmentId, context, courseId, maxScore, submissionId }) => {
+  /** The queue's view, which a grade posted without script returns to. */
+  readonly viewQuery: string;
+}> = ({
+  assignmentId,
+  context,
+  courseId,
+  maxScore,
+  submissionId,
+  viewQuery,
+}) => {
   const i18n = useI18n();
 
   return (
     <form
-      action={`/courses/${courseId}/instructor/assignments/${assignmentId}/submissions/${submissionId}/evaluations`}
+      action={`/courses/${courseId}/instructor/assignments/${assignmentId}/submissions/${submissionId}/evaluations${viewQuery}`}
       class="manual-evaluation-form"
       method="post"
     >
@@ -1922,10 +1935,53 @@ const ManualEvaluationForm: FC<{
 };
 
 /**
- * The review queue's tabs. `active` is every submission on an attempt that
- * still counts; `all` adds the work of reset attempts, kept as a record.
+ * The review queue's tabs. `active` is every try that counts toward a grade;
+ * `needs-review` is the part of it still waiting for a grader; `all` adds the
+ * tries that do not count and a reset attempt's work, kept as a record.
  */
 export type SubmissionReviewFilter = "needs-review" | "active" | "all";
+
+/**
+ * What the review queue is showing: a tab, narrowed to one exercise, one
+ * student, both or neither. Null is every exercise, or every student.
+ */
+export interface SubmissionReviewQuery {
+  readonly exercise: string | null;
+  readonly review: SubmissionReviewFilter;
+  readonly student: string | null;
+}
+
+/**
+ * The query string that reopens the queue on `query`, led by its `?`, or
+ * empty for the default view. `notice` names a one-time flag to add, such as
+ * the one a grade posted without script returns with.
+ */
+export function reviewQueryString(
+  query: SubmissionReviewQuery,
+  notice?: string,
+): string {
+  const params = new URLSearchParams();
+
+  if (query.review !== "needs-review") {
+    params.set("review", query.review);
+  }
+
+  if (query.exercise !== null) {
+    params.set("exercise", query.exercise);
+  }
+
+  if (query.student !== null) {
+    params.set("student", query.student);
+  }
+
+  if (notice !== undefined) {
+    params.set(notice, "1");
+  }
+
+  const text = params.toString();
+
+  return text === "" ? "" : `?${text}`;
+}
 
 /**
  * The score line on a review card. The evaluator used to print as its raw enum
@@ -1952,12 +2008,13 @@ const ApproveScoreForm: FC<{
   readonly context: Context<AppBindings>;
   readonly courseId: string;
   readonly submissionId: string;
-}> = ({ assignmentId, context, courseId, submissionId }) => {
+  readonly viewQuery: string;
+}> = ({ assignmentId, context, courseId, submissionId, viewQuery }) => {
   const i18n = useI18n();
 
   return (
     <form
-      action={`/courses/${courseId}/instructor/assignments/${assignmentId}/submissions/${submissionId}/approve`}
+      action={`/courses/${courseId}/instructor/assignments/${assignmentId}/submissions/${submissionId}/approve${viewQuery}`}
       class="approve-score-form"
       method="post"
     >
@@ -1983,7 +2040,8 @@ const SubmissionReviewCard: FC<{
    * on a reset attempt's card, which is not one of them and offers no grade.
    */
   readonly tries?: TriesAtExercise | undefined;
-}> = ({ assignmentId, context, courseId, entry, tries }) => {
+  readonly viewQuery: string;
+}> = ({ assignmentId, context, courseId, entry, tries, viewQuery }) => {
   const i18n = useI18n();
   const submission = entry.submission;
   const state = reviewStateOf(entry);
@@ -2098,6 +2156,7 @@ const SubmissionReviewCard: FC<{
                 entry.nominalPoints ?? entry.evaluation?.maxScore ?? null
               }
               submissionId={submission.id}
+              viewQuery={viewQuery}
             />
           </details>
           {canApprove ? (
@@ -2106,6 +2165,7 @@ const SubmissionReviewCard: FC<{
               context={context}
               courseId={courseId}
               submissionId={submission.id}
+              viewQuery={viewQuery}
             />
           ) : null}
         </div>
@@ -2117,10 +2177,10 @@ const SubmissionReviewCard: FC<{
 const ReviewFilterBar: FC<{
   readonly activeCount: number;
   readonly base: string;
-  readonly filter: SubmissionReviewFilter;
   readonly needsReviewCount: number;
+  readonly query: SubmissionReviewQuery;
   readonly total: number;
-}> = ({ activeCount, base, filter, needsReviewCount, total }) => {
+}> = ({ activeCount, base, needsReviewCount, query, total }) => {
   const i18n = useI18n();
   // The counts are live elements the review script rewrites, so each label is
   // split around its count rather than assembled from the word plus
@@ -2131,38 +2191,118 @@ const ReviewFilterBar: FC<{
   const [activeBefore, activeAfter] = splitAtValue(
     i18n.t("Active ({count})", { count: VALUE }),
   );
+  // Each tab keeps the exercise and student the grader narrowed to.
+  const tab = (review: SubmissionReviewFilter) => ({
+    href: `${base}${reviewQueryString({ ...query, review })}`,
+    ...(query.review === review ? { "aria-current": "page" as const } : {}),
+  });
 
   return (
     <nav
       aria-label={i18n.t("Filter submissions")}
       class="segmented review-filter"
-      data-filter={filter}
+      data-filter={query.review}
     >
-      <a
-        href={base}
-        {...(filter === "needs-review"
-          ? { "aria-current": "page" as const }
-          : {})}
-      >
+      <a {...tab("needs-review")}>
         {countBefore}
         <span class="review-count-needs">{needsReviewCount}</span>
         {countAfter}
       </a>
-      <a
-        href={`${base}?review=active`}
-        {...(filter === "active" ? { "aria-current": "page" as const } : {})}
-      >
+      <a {...tab("active")}>
         {activeBefore}
         <span class="review-count-active">{activeCount}</span>
         {activeAfter}
       </a>
-      <a
-        href={`${base}?review=all`}
-        {...(filter === "all" ? { "aria-current": "page" as const } : {})}
-      >
-        {i18n.t("All ({count})", { count: total })}
-      </a>
+      <a {...tab("all")}>{i18n.t("All ({count})", { count: total })}</a>
     </nav>
+  );
+};
+
+interface ReviewChoice {
+  readonly label: string;
+  readonly value: string;
+}
+
+/**
+ * Narrow the queue to one exercise, one student, or both, behind a funnel at
+ * the end of the tab row. A native disclosure, so it opens without script,
+ * and a plain GET form: the result is a link a grader can keep, and changing
+ * a select does not move the page under anyone — Apply does. It is open
+ * whenever the queue is narrowed, so a narrowed queue never passes for the
+ * whole of it. The tab rides along, so narrowing keeps the tab the grader is
+ * on.
+ */
+const ReviewNarrowForm: FC<{
+  readonly base: string;
+  readonly exercises: readonly ReviewChoice[];
+  readonly query: SubmissionReviewQuery;
+  readonly students: readonly ReviewChoice[];
+}> = ({ base, exercises, query, students }) => {
+  const i18n = useI18n();
+  const narrowed = query.exercise !== null || query.student !== null;
+  const toggle = i18n.t("Filter by exercise or student");
+
+  return (
+    <details class="review-narrow" open={narrowed}>
+      <summary class="icon-button review-narrow-toggle" title={toggle}>
+        <FilterIcon />
+        <span class="visually-hidden">{toggle}</span>
+      </summary>
+      <form action={base} method="get">
+        {query.review === "needs-review" ? null : (
+          <input name="review" type="hidden" value={query.review} />
+        )}
+        <label>
+          {i18n.t("Exercise")}
+          <select name="exercise">
+            <option value="">{i18n.t("All exercises")}</option>
+            {exercises.map((choice) => (
+              <option
+                selected={choice.value === query.exercise}
+                value={choice.value}
+              >
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {i18n.t("Student")}
+          <select name="student">
+            <option value="">{i18n.t("All students")}</option>
+            {students.map((choice) => (
+              <option
+                selected={choice.value === query.student}
+                value={choice.value}
+              >
+                {choice.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div class="review-narrow-actions">
+          <button type="submit">{i18n.t("Apply")}</button>
+          {/* Both selects back to "All", and applied: the same box as Apply,
+              since it does the same kind of thing. */}
+          {narrowed ? (
+            <a
+              class="button"
+              href={`${base}${reviewQueryString({
+                exercise: null,
+                review: query.review,
+                student: null,
+              })}`}
+            >
+              {i18n.t("Clear (review filters)", undefined, {
+                comment:
+                  "Button on the review queue that sets the exercise and student filters back to all.",
+                message: "Clear",
+              })}
+            </a>
+          ) : null}
+        </div>
+      </form>
+    </details>
   );
 };
 
@@ -2182,13 +2322,153 @@ function triesKey(entry: InstructorSubmissionReviewEntry): string {
   return `${entry.submission.userId} ${entry.submission.exerciseId ?? ""}`;
 }
 
+/** Each student's display name, by user id, worked out once for the queue. */
+function studentNames(
+  i18n: Translator,
+  entries: readonly InstructorSubmissionReviewEntry[],
+): ReadonlyMap<string, string> {
+  const names = new Map<string, string>();
+
+  for (const entry of entries) {
+    const id = entry.submission.userId;
+
+    if (!names.has(id)) {
+      names.set(id, userDisplayName(i18n, entry.user, id));
+    }
+  }
+
+  return names;
+}
+
+/**
+ * The queue in the order a grader works through it: exercise by exercise as
+ * the lesson asks them, each exercise's answers by student name, and a
+ * student's tries oldest first. An exercise the lesson no longer has follows
+ * the ones it does, and work with no exercise recorded comes last.
+ */
+function reviewOrder(
+  entries: readonly InstructorSubmissionReviewEntry[],
+  exercises: readonly QueueExercise[],
+  names: ReadonlyMap<string, string>,
+  collator: Intl.Collator,
+): InstructorSubmissionReviewEntry[] {
+  const position = new Map(
+    exercises.map((exercise, index) => [exercise.id, index]),
+  );
+  const exerciseRank = (entry: InstructorSubmissionReviewEntry) => {
+    const id = entry.submission.exerciseId;
+
+    return id === null
+      ? exercises.length + 1
+      : (position.get(id) ?? exercises.length);
+  };
+  const name = (entry: InstructorSubmissionReviewEntry) =>
+    names.get(entry.submission.userId) ?? "";
+
+  return [...entries].sort(
+    (left, right) =>
+      exerciseRank(left) - exerciseRank(right) ||
+      (left.submission.exerciseId ?? "").localeCompare(
+        right.submission.exerciseId ?? "",
+      ) ||
+      collator.compare(name(left), name(right)) ||
+      // Two students of one name stay apart, each with their tries together.
+      left.submission.userId.localeCompare(right.submission.userId) ||
+      left.submission.submittedAt.localeCompare(
+        right.submission.submittedAt,
+      ) ||
+      left.submission.id.localeCompare(right.submission.id),
+  );
+}
+
+/**
+ * The choices the narrowing form offers, drawn from the work on file: each
+ * exercise in queue order, by its title where it has one, else its id; each
+ * student by name, with their email or id beside it where two share one.
+ */
+function reviewChoices(
+  i18n: Translator,
+  ordered: readonly InstructorSubmissionReviewEntry[],
+  exercises: readonly QueueExercise[],
+  names: ReadonlyMap<string, string>,
+  collator: Intl.Collator,
+): {
+  readonly exercises: readonly ReviewChoice[];
+  readonly students: readonly ReviewChoice[];
+} {
+  const titles = new Map(
+    exercises.map((exercise) => [exercise.id, exercise.title]),
+  );
+  const exerciseChoices = new Map<string, ReviewChoice>();
+  const studentEntries = new Map<string, InstructorSubmissionReviewEntry>();
+
+  for (const entry of ordered) {
+    const id = entry.submission.exerciseId;
+
+    if (id !== null && !exerciseChoices.has(id)) {
+      exerciseChoices.set(id, { label: titles.get(id) ?? id, value: id });
+    }
+
+    if (!studentEntries.has(entry.submission.userId)) {
+      studentEntries.set(entry.submission.userId, entry);
+    }
+  }
+
+  const holders = new Map<string, number>();
+
+  for (const name of names.values()) {
+    holders.set(name, (holders.get(name) ?? 0) + 1);
+  }
+
+  // Sorted by name in their own right: a student who skipped the first
+  // exercise first turns up later in the queue.
+  const students = [...studentEntries.values()].map((entry) => ({
+    entry,
+    name: names.get(entry.submission.userId) ?? "",
+  }));
+
+  return {
+    exercises: [...exerciseChoices.values()],
+    students: students
+      .sort(
+        (left, right) =>
+          collator.compare(left.name, right.name) ||
+          left.entry.submission.userId.localeCompare(
+            right.entry.submission.userId,
+          ),
+      )
+      .map(({ entry, name }) => ({
+        label:
+          (holders.get(name) ?? 0) > 1
+            ? i18n.t("{name} ({detail})", {
+                detail: userDisplayMeta(
+                  i18n,
+                  entry.user,
+                  entry.submission.userId,
+                ),
+                name,
+              })
+            : name,
+        value: entry.submission.userId,
+      })),
+  };
+}
+
 const SubmissionsReview: FC<{
   readonly assignmentId: string;
   readonly context: Context<AppBindings>;
   readonly courseId: string;
   readonly entries: readonly InstructorSubmissionReviewEntry[];
-  readonly filter: SubmissionReviewFilter;
-}> = ({ assignmentId, context, courseId, entries, filter }) => {
+  readonly exercises: readonly QueueExercise[];
+  readonly query: SubmissionReviewQuery;
+}> = ({
+  assignmentId,
+  context,
+  courseId,
+  entries,
+  exercises,
+  query: asked,
+}) => {
   const i18n = useI18n();
 
   if (entries.length === 0) {
@@ -2199,18 +2479,45 @@ const SubmissionsReview: FC<{
     );
   }
 
+  const names = studentNames(i18n, entries);
+  const collator = new Intl.Collator(i18n.locale);
+  const ordered = reviewOrder(entries, exercises, names, collator);
+  const choices = reviewChoices(i18n, ordered, exercises, names, collator);
+  // A choice the work on file does not offer — a stale link, a hand-edited
+  // address — narrows nothing, as the form would show it.
+  const query: SubmissionReviewQuery = {
+    exercise: choices.exercises.some(
+      (choice) => choice.value === asked.exercise,
+    )
+      ? asked.exercise
+      : null,
+    review: asked.review,
+    student: choices.students.some((choice) => choice.value === asked.student)
+      ? asked.student
+      : null,
+  };
+  // Narrowing goes by student and by exercise, which is how tries group, so
+  // every try in a group is in view or none is: the counts and the review
+  // script's group arithmetic hold within the narrowed queue as without it.
+  const narrowed = ordered.filter(
+    (entry) =>
+      (query.exercise === null ||
+        entry.submission.exerciseId === query.exercise) &&
+      (query.student === null || entry.submission.userId === query.student),
+  );
+
   // Active is the work a grade is drawn from: for each student and exercise,
   // the try the score takes, and the latest while it waits for a grade. The
   // other tries, and a reset attempt's work, are on file under All. Needs
   // review is the part of Active still waiting for a grader.
-  const active = entries.filter((entry) => entry.counts);
+  const active = narrowed.filter((entry) => entry.counts);
   const needsReview = active.filter(
     (entry) => reviewStateOf(entry) === "needs-review",
   );
   const waiting = new Set(needsReview);
   const tries = new Map<string, TriesAtExercise>();
 
-  for (const entry of entries) {
+  for (const entry of narrowed) {
     if (entry.attemptVoided) {
       continue;
     }
@@ -2226,19 +2533,21 @@ const SubmissionsReview: FC<{
   }
 
   const visible =
-    filter === "needs-review"
+    query.review === "needs-review"
       ? needsReview
-      : filter === "active"
+      : query.review === "active"
         ? active
-        : entries;
-  // Counted over every live entry, not the filtered view: the banner announces
-  // a fact about the assignment's grades, which does not come and go with the
-  // tabs.
-  const anyDrift = active.some(
+        : narrowed;
+  // Counted over every live entry, not the view: the banner announces a fact
+  // about the assignment's grades, which does not come and go with the tabs
+  // or the narrowing.
+  const anyDrift = entries.some(
     (entry) =>
+      entry.counts &&
       storedPointsDrift(entry.evaluation, entry.nominalPoints) !== null,
   );
   const base = `/courses/${courseId}/instructor/assignments/${assignmentId}/submissions`;
+  const viewQuery = reviewQueryString(query);
 
   return (
     <>
@@ -2249,22 +2558,36 @@ const SubmissionsReview: FC<{
           )}
         </Notice>
       ) : null}
-      <ReviewFilterBar
-        activeCount={active.length}
-        base={base}
-        filter={filter}
-        needsReviewCount={needsReview.length}
-        total={entries.length}
-      />
-      <p class="small review-other-try" role="status" />
+      {/* One block, so the page's gap falls around the controls rather than
+          between each of them, and around an empty status line besides. The
+          narrowing panel opens under the tabs; its funnel sits at the end of
+          their row. */}
+      <div class="review-controls">
+        <ReviewFilterBar
+          activeCount={active.length}
+          base={base}
+          needsReviewCount={needsReview.length}
+          query={query}
+          total={narrowed.length}
+        />
+        <ReviewNarrowForm
+          base={base}
+          exercises={choices.exercises}
+          query={query}
+          students={choices.students}
+        />
+        <p class="small review-other-try" role="status" />
+      </div>
       {visible.length === 0 ? (
         <Sheet>
           <p>
-            {filter === "needs-review"
-              ? i18n.t("Every submission that counts has been reviewed.")
-              : i18n.t(
-                  "None of the recorded submissions counts toward a grade. They are listed under All.",
-                )}
+            {narrowed.length === 0
+              ? i18n.t("No submissions match these choices.")
+              : query.review === "needs-review"
+                ? i18n.t("Every submission that counts has been reviewed.")
+                : i18n.t(
+                    "None of the recorded submissions counts toward a grade. They are listed under All.",
+                  )}
           </p>
         </Sheet>
       ) : (
@@ -2279,6 +2602,7 @@ const SubmissionsReview: FC<{
               tries={
                 entry.attemptVoided ? undefined : tries.get(triesKey(entry))
               }
+              viewQuery={viewQuery}
             />
           ))}
         </div>
@@ -3003,8 +3327,9 @@ export function renderInstructorSubmissions(
     readonly courseId: string;
     readonly courseTitle: string;
     readonly entries: readonly InstructorSubmissionReviewEntry[];
-    readonly filter: SubmissionReviewFilter;
+    readonly exercises: readonly QueueExercise[];
     readonly manualEvaluation: boolean;
+    readonly query: SubmissionReviewQuery;
     readonly staffTier: CourseStaffTier;
   },
 ): Response {
@@ -3053,7 +3378,8 @@ export function renderInstructorSubmissions(
         context={context}
         courseId={model.courseId}
         entries={model.entries}
-        filter={model.filter}
+        exercises={model.exercises}
+        query={model.query}
       />
       {/* Must precede the script, which reads it. */}
       {raw(

@@ -141,6 +141,19 @@ export interface InstructorSubmissionEntry extends SubmissionHistoryEntry {
   readonly counts: boolean;
 }
 
+/** An exercise the review queue can be narrowed to, as the lesson names it. */
+export interface QueueExercise {
+  readonly id: string;
+  /** The author's title; null for an untitled exercise. */
+  readonly title: string | null;
+}
+
+export interface InstructorSubmissionQueue {
+  readonly entries: readonly InstructorSubmissionEntry[];
+  /** The assignment's exercises, in the order the lesson asks them. */
+  readonly exercises: readonly QueueExercise[];
+}
+
 export interface StudentAttemptResult {
   readonly entries: readonly SubmissionHistoryEntry[];
   readonly ordinal: number;
@@ -617,7 +630,7 @@ export class SubmissionService {
     courseId: AppId,
     assignmentId: AppId,
     i18n: Translator,
-  ): Promise<InstructorSubmissionEntry[]> {
+  ): Promise<InstructorSubmissionQueue> {
     await requireCourseStaff(this.options.stores, actor, courseId);
 
     const assignment = await assignmentInCourse(
@@ -657,7 +670,7 @@ export class SubmissionService {
     const studentAttempts = attempts.filter((attempt) =>
       students.has(attempt.userId),
     );
-    const [histories, counting] = await Promise.all([
+    const [histories, counting, declarations] = await Promise.all([
       Promise.all(
         studentAttempts.map(async (attempt) =>
           (
@@ -675,12 +688,20 @@ export class SubmissionService {
       }).countingSubmissions(assignment, [
         ...new Set(studentAttempts.map((attempt) => attempt.userId)),
       ]),
+      this.declarationsForAssignment(assignment),
     ]);
 
-    return histories.flat().map((entry) => ({
-      ...entry,
-      counts: counting.has(entry.submission.id),
-    }));
+    return {
+      entries: histories.flat().map((entry) => ({
+        ...entry,
+        counts: counting.has(entry.submission.id),
+      })),
+      // The manifest is in document order, and so is a map built from it.
+      exercises: [...declarations.values()].map((declaration) => ({
+        id: declaration.id,
+        title: declaration.title ?? null,
+      })),
+    };
   }
 
   /**

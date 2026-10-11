@@ -130,7 +130,9 @@ those, and Needs review the ones among them still waiting for a grader. Every
 other try, and a reset attempt's work, is listed under All, marked "Does not
 count" or "Reset". A grade on one of a student's several tries can change
 which one counts, so the reply to a grade carries the new state of each of
-them and the page redraws their cards in place.
+them and the page redraws their cards in place. The queue runs in the
+lesson's exercise order, then by student name, and can be narrowed to one
+exercise, one student, or both; the tab counts follow the narrowing.
 
 Resetting an attempt voids it. Its old work remains available as history but
 no longer contributes to the score, and a voided attempt does not count toward

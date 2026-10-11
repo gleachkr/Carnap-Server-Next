@@ -2699,6 +2699,181 @@ Explain the rule.
   });
 });
 
+describe("narrowing and ordering the review queue", () => {
+  test("orders by exercise as the lesson asks them, then by student name, and narrows to either", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "narrow-teacher@example.test");
+      // Created first, so first by account; last by name.
+      const zed = await login(env, "zed-narrow@example.test");
+      const amy = await login(env, "amy-narrow@example.test");
+      const courseId = await createCourse(env, instructor);
+      // The lesson asks `zeta` first: document order, not the ids', decides.
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Essays
+
+::::free-response{#zeta title="Opening question" points="5"}
+Begin.
+::::
+
+::::free-response{#alpha points="5"}
+Continue.
+::::`,
+      );
+
+      for (const student of [zed, amy]) {
+        await enrollStudent(env, instructor, student, courseId);
+      }
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const base = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+      // Amy answers alpha before zeta; Zed answers zeta alone.
+      const work = [
+        [amy, "amy-narrow@example.test", ["alpha", "zeta"]],
+        [zed, "zed-narrow@example.test", ["zeta"]],
+      ] as const;
+
+      for (const [student, email, exerciseIds] of work) {
+        const attemptId = await beginAttempt(
+          env,
+          student,
+          courseId,
+          assignment.id,
+        );
+
+        for (const exerciseId of exerciseIds) {
+          const submitted = await submitAnswer(
+            env,
+            student,
+            courseId,
+            assignment.id,
+            attemptId,
+            {
+              ...freeResponseAnswer(`${email} on ${exerciseId}.`),
+              exerciseId,
+            },
+          );
+
+          expect(submitted.status).toBe(201);
+        }
+      }
+
+      const page = async (query: string) =>
+        (
+          await appRequest(
+            createTestApp(),
+            `${base}/submissions${query}`,
+            {
+              headers: {
+                Accept: "text/html",
+                Cookie: instructor.cookieHeader,
+              },
+            },
+            env,
+          )
+        ).text();
+      const order = (html: string, needles: readonly string[]) =>
+        needles.map((needle) => html.indexOf(needle));
+      const queue = await page("");
+      const cards = order(queue, [
+        "amy-narrow@example.test on zeta.",
+        "zed-narrow@example.test on zeta.",
+        "amy-narrow@example.test on alpha.",
+      ]);
+
+      expect(cards.every((index) => index !== -1)).toBe(true);
+      expect([...cards].sort((left, right) => left - right)).toEqual(cards);
+
+      // The form offers each exercise by its title where it has one, and
+      // each student by name, both in queue order.
+      const options = order(queue, [
+        ">Opening question</option>",
+        ">alpha</option>",
+        ">amy-narrow@example.test</option>",
+        ">zed-narrow@example.test</option>",
+      ]);
+
+      expect(options.every((index) => index !== -1)).toBe(true);
+      // Behind the funnel, closed while nothing is narrowed.
+      expect(queue).toContain('<details class="review-narrow">');
+      expect(options[0]).toBeLessThan(options[1] ?? -1);
+      expect(options[2]).toBeLessThan(options[3] ?? -1);
+
+      // Narrowed to an exercise, the counts follow, and every tab and the
+      // grading forms keep the narrowing.
+      const alpha = await page("?exercise=alpha");
+
+      expect(alpha).toContain("amy-narrow@example.test on alpha.");
+      expect(alpha).not.toContain("on zeta.");
+      expect(alpha).toContain('<span class="review-count-needs">1</span>');
+      expect(alpha).toContain("All (1)");
+      expect(alpha).toContain(
+        `href="${base}/submissions?review=all&amp;exercise=alpha"`,
+      );
+      expect(alpha).toContain('<option selected="" value="alpha">');
+      // Open while narrowed, so a narrowed queue never passes for the whole.
+      expect(alpha).toContain('<details class="review-narrow" open="">');
+      expect(alpha).toMatch(/\/evaluations\?exercise=alpha"/);
+
+      // Narrowed to a student, on a tab.
+      const zeds = await page(`?review=all&student=${zed.actorId}`);
+
+      expect(zeds).toContain("zed-narrow@example.test on zeta.");
+      expect(zeds).not.toContain("amy-narrow@example.test on");
+      expect(zeds).toContain(
+        '<input name="review" type="hidden" value="all"',
+      );
+
+      // Both at once can match nothing, which is said; a choice the work on
+      // file does not offer narrows nothing.
+      expect(await page(`?exercise=alpha&student=${zed.actorId}`)).toContain(
+        "No submissions match these choices.",
+      );
+      expect(await page("?exercise=missing")).toContain("All (3)");
+
+      // A grade posted without script returns to the view it came from.
+      const amyAlpha = (
+        (await (
+          await appRequest(
+            createTestApp(),
+            `${base}/submissions`,
+            { headers: { Cookie: instructor.cookieHeader } },
+            env,
+          )
+        ).json()) as InstructorReviewSubmissionsResponse
+      ).submissions.find(
+        (entry) =>
+          entry.submission.userId === amy.actorId &&
+          entry.submission.exerciseId === "alpha",
+      );
+      const graded = await appRequest(
+        createTestApp(),
+        `${base}/submissions/${amyAlpha?.submission.id}/evaluations?review=active&exercise=alpha`,
+        {
+          body: new URLSearchParams({ score: "4" }).toString(),
+          headers: {
+            ...authHeaders(instructor),
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          method: "POST",
+        },
+        env,
+      );
+
+      expect(graded.status).toBe(303);
+      expect(graded.headers.get("Location")).toBe(
+        `${base}/submissions?review=active&exercise=alpha&manualEvaluation=1`,
+      );
+    });
+  });
+});
+
 describe("which submission counts, in the review queue", () => {
   interface CountsResponse {
     readonly submissions: readonly {

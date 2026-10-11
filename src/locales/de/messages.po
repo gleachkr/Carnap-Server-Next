@@ -303,6 +303,10 @@ msgstr "{minutes} Min."
 msgid "{minutes} min limit"
 msgstr "{minutes} Min. Zeitlimit"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "{name} ({detail})"
+msgstr "{name} ({detail})"
+
 #: src/worker/exercises/world/strings.ts
 msgid "{name} already names {block}."
 msgstr "{name} ist schon vergeben: {block}."
@@ -818,6 +822,10 @@ msgstr "Alle ({count})"
 msgid "All cells correct."
 msgstr "Alle Felder richtig."
 
+#: src/worker/web/assignment-detail.tsx
+msgid "All exercises"
+msgstr "Alle Übungen"
+
 #: src/worker/routes/gradebook.ts
 msgid "All grades"
 msgstr "Alle Noten"
@@ -829,6 +837,10 @@ msgstr "Alle Ihre Inhaltsobjekte sind archiviert."
 #: src/worker/web/courses.tsx
 msgid "All of your courses are archived."
 msgstr "Alle Ihre Kurse sind archiviert."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "All students"
+msgstr "Alle Studierenden"
 
 #: src/worker/exercises/world/strings.ts
 msgid "Allowed symbols: {symbols}"
@@ -903,6 +915,10 @@ msgstr "Alle mit dem Link"
 #: src/worker/web/content.tsx
 msgid "Anyone with the link can view this revision"
 msgstr "Alle mit dem Link können diese Revision ansehen"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Apply"
+msgstr "Anwenden"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 msgid "Apply rule below"
@@ -1383,6 +1399,11 @@ msgstr "Behaupten Sie von jedem Satz, er sei wahr oder falsch, und verteidigen S
 #: src/worker/web/courses.tsx
 msgid "Clear"
 msgstr "Entfernen"
+
+#. Button on the review queue that sets the exercise and student filters back to all.
+#: src/worker/web/assignment-detail.tsx
+msgid "Clear (review filters)"
+msgstr "Zurücksetzen"
 
 #: src/worker/exercises/world/strings.ts
 msgid "Click a board, or move into it with Tab, to make it the one the palette edits."
@@ -2325,6 +2346,7 @@ msgstr "Entschuldigte Übung"
 msgid "Excusing exercises is only available for graded assignments."
 msgstr "Übungen können nur bei bewerteten Aufgaben entschuldigt werden."
 
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Exercise"
 msgstr "Übung"
@@ -2447,6 +2469,10 @@ msgstr "Füllen Sie eine Zeile aus, in der jede Prämisse wahr ist und die Konkl
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Fill in a row where the formulas disagree, then mark it as your counterexample."
 msgstr "Füllen Sie eine Zeile aus, in der die Formeln nicht übereinstimmen, und markieren Sie sie als Ihr Gegenbeispiel."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Filter by exercise or student"
+msgstr "Nach Übung oder studierender Person filtern"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Filter submissions"
@@ -3364,6 +3390,10 @@ msgstr "Keine Abgabe in diesem Versuch."
 #: src/worker/web/assignment-detail.tsx
 msgid "No submissions have been recorded."
 msgstr "Es wurden keine Abgaben erfasst."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No submissions match these choices."
+msgstr "Keine Abgaben entsprechen dieser Auswahl."
 
 #: src/worker/web/gradebook.tsx
 msgid "No submissions were recorded in this attempt."

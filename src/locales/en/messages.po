@@ -303,6 +303,10 @@ msgstr "{minutes} min"
 msgid "{minutes} min limit"
 msgstr "{minutes} min limit"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "{name} ({detail})"
+msgstr "{name} ({detail})"
+
 #: src/worker/exercises/world/strings.ts
 msgid "{name} already names {block}."
 msgstr "{name} already names {block}."
@@ -818,6 +822,10 @@ msgstr "All ({count})"
 msgid "All cells correct."
 msgstr "All cells correct."
 
+#: src/worker/web/assignment-detail.tsx
+msgid "All exercises"
+msgstr "All exercises"
+
 #: src/worker/routes/gradebook.ts
 msgid "All grades"
 msgstr "All grades"
@@ -829,6 +837,10 @@ msgstr "All of your content items are archived."
 #: src/worker/web/courses.tsx
 msgid "All of your courses are archived."
 msgstr "All of your courses are archived."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "All students"
+msgstr "All students"
 
 #: src/worker/exercises/world/strings.ts
 msgid "Allowed symbols: {symbols}"
@@ -903,6 +915,10 @@ msgstr "Anyone with the link"
 #: src/worker/web/content.tsx
 msgid "Anyone with the link can view this revision"
 msgstr "Anyone with the link can view this revision"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Apply"
+msgstr "Apply"
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 msgid "Apply rule below"
@@ -1382,6 +1398,11 @@ msgstr "Claim each sentence true or false, then defend your claim against the co
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/courses.tsx
 msgid "Clear"
+msgstr "Clear"
+
+#. Button on the review queue that sets the exercise and student filters back to all.
+#: src/worker/web/assignment-detail.tsx
+msgid "Clear (review filters)"
 msgstr "Clear"
 
 #: src/worker/exercises/world/strings.ts
@@ -2325,6 +2346,7 @@ msgstr "Excused exercise"
 msgid "Excusing exercises is only available for graded assignments."
 msgstr "Excusing exercises is only available for graded assignments."
 
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Exercise"
 msgstr "Exercise"
@@ -2447,6 +2469,10 @@ msgstr "Fill in a row where every premise is true and the conclusions disagree, 
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Fill in a row where the formulas disagree, then mark it as your counterexample."
 msgstr "Fill in a row where the formulas disagree, then mark it as your counterexample."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Filter by exercise or student"
+msgstr "Filter by exercise or student"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Filter submissions"
@@ -3364,6 +3390,10 @@ msgstr "No submission in this attempt."
 #: src/worker/web/assignment-detail.tsx
 msgid "No submissions have been recorded."
 msgstr "No submissions have been recorded."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No submissions match these choices."
+msgstr "No submissions match these choices."
 
 #: src/worker/web/gradebook.tsx
 msgid "No submissions were recorded in this attempt."

@@ -74,7 +74,8 @@ import {
   renderInstructorSubmissions,
   renderNewAssignmentPage,
   renderStudentAssignmentPage,
-  type SubmissionReviewFilter,
+  reviewQueryString,
+  type SubmissionReviewQuery,
 } from "../web/assignment-detail";
 import {
   courseCrumb,
@@ -1034,7 +1035,10 @@ async function createManualEvaluation(
   if (formSubmission) {
     return redirect(
       `/courses/${courseId}/instructor/assignments/${assignmentId}` +
-        "/submissions?manualEvaluation=1",
+        `/submissions${reviewQueryString(
+          reviewQueryParam(new URL(context.req.url)),
+          "manualEvaluation",
+        )}`,
     );
   }
 
@@ -1059,7 +1063,10 @@ async function approveSubmission(
   if (isFormSubmission(context)) {
     return redirect(
       `/courses/${courseId}/instructor/assignments/${assignmentId}` +
-        "/submissions?approved=1",
+        `/submissions${reviewQueryString(
+          reviewQueryParam(new URL(context.req.url)),
+          "approved",
+        )}`,
     );
   }
 
@@ -1758,9 +1765,25 @@ async function instructorSubmissionReviewEntries(
   }));
 }
 
-/** The review queue's tab; anything unrecognised is the default queue. */
-function reviewFilterParam(value: string | null): SubmissionReviewFilter {
-  return value === "active" || value === "all" ? value : "needs-review";
+/**
+ * The review queue's view from a URL: its tab, where anything unrecognised is
+ * the default queue, and the exercise and student it is narrowed to. Read from
+ * the page's own address, and from a grading form's action, which carries the
+ * view it was posted from so that a grade made without script returns to it.
+ */
+function reviewQueryParam(url: URL): SubmissionReviewQuery {
+  const review = url.searchParams.get("review");
+  const narrowing = (name: string) => {
+    const value = url.searchParams.get(name);
+
+    return value === null || value === "" ? null : value;
+  };
+
+  return {
+    exercise: narrowing("exercise"),
+    review: review === "active" || review === "all" ? review : "needs-review",
+    student: narrowing("student"),
+  };
 }
 
 async function listInstructorSubmissions(
@@ -1775,7 +1798,7 @@ async function listInstructorSubmissions(
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
   const assignmentId = requiredParam(context, "assignmentId");
-  const entries = await submissionService(
+  const { entries, exercises } = await submissionService(
     context,
   ).listForInstructorAssignment(
     actor,
@@ -1794,8 +1817,9 @@ async function listInstructorSubmissions(
       courseId,
       courseTitle: await courseTitleFor(context, courseId),
       entries: await instructorSubmissionReviewEntries(context, entries),
-      filter: reviewFilterParam(url.searchParams.get("review")),
+      exercises,
       manualEvaluation: url.searchParams.has("manualEvaluation"),
+      query: reviewQueryParam(url),
       staffTier: await staffTierFor(context, actor, courseId),
     });
   }

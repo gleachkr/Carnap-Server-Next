@@ -303,6 +303,10 @@ msgstr ""
 msgid "{minutes} min limit"
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
+msgid "{name} ({detail})"
+msgstr ""
+
 #: src/worker/exercises/world/strings.ts
 msgid "{name} already names {block}."
 msgstr ""
@@ -818,6 +822,10 @@ msgstr ""
 msgid "All cells correct."
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
+msgid "All exercises"
+msgstr ""
+
 #: src/worker/routes/gradebook.ts
 msgid "All grades"
 msgstr ""
@@ -828,6 +836,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "All of your courses are archived."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "All students"
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts
@@ -902,6 +914,10 @@ msgstr ""
 
 #: src/worker/web/content.tsx
 msgid "Anyone with the link can view this revision"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Apply"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
@@ -1382,6 +1398,11 @@ msgstr ""
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/courses.tsx
 msgid "Clear"
+msgstr ""
+
+#. Button on the review queue that sets the exercise and student filters back to all.
+#: src/worker/web/assignment-detail.tsx
+msgid "Clear (review filters)"
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts
@@ -2325,6 +2346,7 @@ msgstr ""
 msgid "Excusing exercises is only available for graded assignments."
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Exercise"
 msgstr ""
@@ -2446,6 +2468,10 @@ msgstr ""
 
 #: src/worker/exercises/truth-table/strings.ts
 msgid "Fill in a row where the formulas disagree, then mark it as your counterexample."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Filter by exercise or student"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -3363,6 +3389,10 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "No submissions have been recorded."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "No submissions match these choices."
 msgstr ""
 
 #: src/worker/web/gradebook.tsx

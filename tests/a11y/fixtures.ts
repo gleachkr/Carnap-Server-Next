@@ -1014,6 +1014,13 @@ export async function collectFixtures(
     `${instructorBase}/attempts${noticeQuery("attemptReset")}`,
     instructor,
   );
+  // Narrowed to the exercise and student the work is on: the funnel's panel
+  // renders open, with Clear beside Apply and the tabs carrying the choice.
+  await add(
+    "instructor-submissions-narrowed",
+    `${instructorBase}/submissions?review=active&exercise=mc&student=${student.actorId}`,
+    instructor,
+  );
   // The review page as an assistant's own: it carries the view switch in
   // its header, which the instructor's does not.
   await add(
