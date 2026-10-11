@@ -1452,6 +1452,13 @@ student-formula lints, such as redundant-bracket checks, but it still requires
 valid language syntax. Failures produce `invalid_goal_formula`.
 The linear `aufbau-proof` directive keeps its goal and lines in engine syntax.
 
+A Fitch or Prawitz goal must be a sequent, because every line of those proofs
+is one and no proof could end with a bare sentence; a goal without a turnstile
+is refused with `goal_not_sequent`. A theorem with no premises writes the
+theory's empty context before the turnstile: `_ ⊢ P → P` in the forallx
+systems. A tree proof's goal may be a bare formula, since its nodes need not
+be sequents.
+
 In Magnus Fitch reductio, one range can cite a subproof whose final two lines
 are a sentence followed by its negation. For example, `neg_intro 2-5` uses
 lines 4 and 5 as the contradictory pair. Explicit citations such as

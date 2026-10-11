@@ -141,7 +141,9 @@ export async function compileAufbauProofFitch(
     // The goal is read the way the lines are (`goalEngineDeclaration`): the
     // engine is handed what it can parse, and what it cannot is the author's
     // to hear about here rather than the widget's to refuse.
-    const read = readGoalDeclaration(theory, header, goalLine, diagnostics);
+    const read = readGoalDeclaration(theory, header, goalLine, diagnostics, {
+      sequent: true,
+    });
 
     if (read === null) {
       return null;

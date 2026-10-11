@@ -5022,6 +5022,11 @@ msgstr "The fill attribute must be all, connectives, or main."
 msgid "The game"
 msgstr "The game"
 
+#. Said of a Fitch or Prawitz proof exercise. {turnstile} is the symbol the author types, such as ⊢.
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal “{formula}” has no turnstile, so no proof of this kind can end with it: every line is a sequent. Put “{turnstile}” between the premises and the conclusion."
+msgstr "The goal “{formula}” has no turnstile, so no proof of this kind can end with it: every line is a sequent. Put “{turnstile}” between the premises and the conclusion."
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term."
 msgstr "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term."

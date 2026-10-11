@@ -130,7 +130,7 @@ theorem thm_tree: $ top $
 :::aufbau-proof-prawitz{system="prop" id="pz" points="1"}
 Build a Prawitz tree for top.
 
-theorem thm_prawitz: $ top $
+theorem thm_prawitz: $ top ⊢ top $
 :::
 
 :::aufbau-proof-fitch{system="forallx-calgary-2019" id="fi" points="1"}

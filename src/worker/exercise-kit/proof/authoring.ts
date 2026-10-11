@@ -142,12 +142,18 @@ export function starterRuleReader(
  * to the engine as written, and nothing is frozen beside it. Spread the
  * result into `publicData`, so that `goalEngineDecl` exists exactly when a
  * reading happened — which is what the join keys on.
+ *
+ * `sequent` is for the shapes whose every line is a sequent, Fitch and
+ * Prawitz: a goal there that is not one — `P → P` for `_ ⊢ P → P` — reads,
+ * declares, and can never be proved, since the last line cannot match it.
+ * A tree's nodes need not be sequents, so its goal need not be one either.
  */
 export function readGoalDeclaration(
   theory: AufbauTheory,
   header: TheoremHeader,
   line: number,
   diagnostics: CompilerDiagnostic[],
+  shape: { readonly sequent: boolean } = { sequent: false },
 ): { readonly goalEngineDecl?: string } | null {
   const reading = goalEngineDeclaration(
     theoryLanguageSource(theory, header.theoremDecl),
@@ -156,6 +162,24 @@ export function readGoalDeclaration(
 
   if (reading === null) {
     return {};
+  }
+
+  if (reading.ok && shape.sequent && !reading.sequent) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "goal_not_sequent",
+        "The goal “{formula}” has no turnstile, so no proof of this kind can end with it: every line is a sequent. Put “{turnstile}” between the premises and the conclusion.",
+        {
+          params: {
+            formula: header.goalFormula,
+            turnstile: theory.notations?.sequentSymbol ?? "⊢",
+          },
+        },
+      ),
+    );
+
+    return null;
   }
 
   if (reading.ok) {

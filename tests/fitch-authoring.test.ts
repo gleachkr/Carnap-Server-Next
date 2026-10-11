@@ -349,17 +349,15 @@ describe("a goal written the way the lines are", () => {
     );
   });
 
-  test("a goal stated as a bare sentence reads at the sentence sort", async () => {
+  test("a goal stated as a bare sentence is refused: no Fitch proof can end with it", async () => {
+    // It reads, and declares, at the sentence sort; but every line of a Fitch
+    // proof is a sequent, so the last one could never be this.
     const compiled = await compileGoal("theorem t : $ P -> P $");
 
-    expect(compiled.ok).toBe(true);
-    if (!compiled.ok) {
-      return;
-    }
-
-    expect(fitchPublicData(compiled.artifact, "g1").goalEngineDecl).toBe(
-      "theorem t : $ ((P (snil)) → (P (snil))) $;",
-    );
+    expect(compiled.ok).toBe(false);
+    expect(
+      compiled.diagnostics.map((entry) => [entry.code, entry.params]),
+    ).toEqual([["goal_not_sequent", { formula: "P -> P", turnstile: "⊢" }]]);
   });
 
   test("a spelling a line's lints refuse is still a goal", async () => {

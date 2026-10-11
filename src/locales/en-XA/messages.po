@@ -5022,6 +5022,11 @@ msgstr ""
 msgid "The game"
 msgstr ""
 
+#. Said of a Fitch or Prawitz proof exercise. {turnstile} is the symbol the author types, such as ⊢.
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal “{formula}” has no turnstile, so no proof of this kind can end with it: every line is a sequent. Put “{turnstile}” between the premises and the conclusion."
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The goal binds “{name}” as {sort}, and this theory declares a term of that name. Inside this exercise “{name}” is the binder, not the term."
 msgstr ""

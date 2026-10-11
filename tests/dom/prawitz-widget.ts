@@ -28,10 +28,10 @@ axiom ax (g: ctx) (a: wff): $ g , a ⊢ a $;
 axiom top_i: $ top $;
 :::`;
 
-/** `theorem goal: $ top $` over {@link PRAWITZ_THEORY}. */
+/** `theorem goal: $ top ⊢ top $` over {@link PRAWITZ_THEORY}. */
 export function prawitzExercise(attributes = "", theory = PRAWITZ_THEORY) {
   return compileExercise(
-    `${theory}\n\n:::aufbau-proof-prawitz{system="prop" id="z"${attributes}}\nProve it.\n\ntheorem goal: $ top $\n:::`,
+    `${theory}\n\n:::aufbau-proof-prawitz{system="prop" id="z"${attributes}}\nProve it.\n\ntheorem goal: $ top ⊢ top $\n:::`,
   );
 }
 

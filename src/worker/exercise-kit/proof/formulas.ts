@@ -942,7 +942,13 @@ export interface GoalFormulaProblem {
  * {@link goalEngineDeclaration}). Either list may be empty, not both.
  */
 export type GoalDeclarationReading =
-  | { readonly ok: true; readonly declaration: string }
+  | {
+      readonly ok: true;
+      readonly declaration: string;
+      /** Whether the conclusion is a sequent: its head is the theory's
+       *  turnstile. Always false for a theory that names none. */
+      readonly sequent: boolean;
+    }
   | {
       readonly ok: false;
       readonly problems: readonly GoalFormulaProblem[];
@@ -1015,6 +1021,7 @@ export function goalEngineDeclaration(
   }
 
   const { language } = read;
+  const turnstile = roleIndex(language).termFor("turnstile");
   const scope = binderScope(goal);
   const sorts =
     read.sentence === undefined || read.sentence === judgement
@@ -1024,6 +1031,7 @@ export function goalEngineDeclaration(
   const unbound = new Map<string, ProofVariable>();
   let declaration = "";
   let cursor = goal.span.start;
+  let sequent = false;
 
   for (const formula of goalFormulas(goal)) {
     const reading = readAtSorts(language, formula.text, scope, sorts);
@@ -1032,6 +1040,10 @@ export function goalEngineDeclaration(
 
     if (reading.ok) {
       declaration += `$ ${reading.text} $`;
+      if (formula === goal.conclusion) {
+        sequent =
+          reading.term.kind === "app" && reading.term.term === turnstile;
+      }
       for (const variable of reading.variables ?? []) {
         if (!scope.has(variable.name)) {
           unbound.set(variable.name, variable);
@@ -1051,7 +1063,7 @@ export function goalEngineDeclaration(
 
   return problems.length > 0 || unbound.size > 0
     ? { ok: false, problems, unbound: [...unbound.values()] }
-    : { declaration, ok: true };
+    : { declaration, ok: true, sequent };
 }
 
 /** Every math string a goal declaration carries, in source order. */
@@ -1090,7 +1102,9 @@ function readAtSorts(
   text: string,
   scope: Scope,
   sorts: readonly string[],
-): ProofFormulaReading {
+):
+  | (ProofFormulaReading & { readonly ok: true; readonly term: Term })
+  | (ProofFormulaReading & { readonly ok: false }) {
   const refusals: (readonly Diagnostic[])[] = [];
 
   for (const sort of sorts) {
@@ -1099,6 +1113,7 @@ function readAtSorts(
     if (result.ok) {
       return {
         ok: true,
+        term: result.term,
         text: printTerm(language, result.term, "engine"),
         variables: termVariables(result.term),
       };

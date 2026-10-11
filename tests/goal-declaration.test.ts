@@ -167,10 +167,20 @@ theorem g {x y: var} : $ ${statement} $
       expect(await goal(system, "∀xF(x):|-:∀yF(y)")).toBe(turnstile);
     }
     // `|` and `-` are disjunction and negation, and stay so: a goal typed
-    // with `|-` asks for a sentence, which is why `:|-:` is the spelling.
-    expect(
-      await goal("forallx-calgary-2019", "∀x F(x) |- ∀y F(y)"),
-    ).not.toContain("⊢");
+    // with `|-` is a sentence, ∀x F(x) ∨ ¬∀y F(y), which is why `:|-:` is the
+    // spelling — and a Fitch goal with no turnstile is refused for it.
+    const compiled =
+      await compileCarnapMarkdown(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="g" points="1"}
+Prove it.
+
+theorem g {x y: var} : $ ∀x F(x) |- ∀y F(y) $
+----
+:::
+`);
+
+    expect(compiled.diagnostics.map((one) => one.code)).toEqual([
+      "goal_not_sequent",
+    ]);
   });
 
   test("a goal that uses a variable or name it does not bind is refused, with the binder to add", async () => {

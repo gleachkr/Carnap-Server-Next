@@ -73,7 +73,7 @@ describe("aufbau-proof-prawitz authoring", () => {
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 Build a natural-deduction tree for top.
 
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
     );
 
@@ -94,7 +94,7 @@ theorem thm_top: $ top $
 
     const publicData = prawitzPublicData(compiled.artifact, "p1");
     expect(publicData.goalName).toBe("thm_top");
-    expect(publicData.goalFormula).toBe("top");
+    expect(publicData.goalFormula).toBe("top ⊢ top");
     expect(publicData.assumptionRule).toBe("ax");
     // The theory text plus the appended goal declaration — the sole grading input.
     expect(publicData.mm0).toBe(
@@ -104,7 +104,7 @@ theorem thm_top: $ top $
         .replaceAll(
           /--\| @syntax [^\n]*\n/g,
           "",
-        )}\ntheorem thm_top: $ top $;`,
+        )}\ntheorem thm_top: $ ( top ⊢ top ) $;`,
     );
     expect(publicData.promptHtml).toContain(
       "Build a natural-deduction tree for top.",
@@ -123,7 +123,7 @@ theorem thm_top: $ top $
     expect(
       await diagnosticsFor(
         prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" allow-sorry}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
       ),
     ).toContain("unknown_attribute");
@@ -132,7 +132,7 @@ theorem thm_top: $ top $
   test("the assumption axiom the translator keys on is the theory's `role assumption`", async () => {
     const compiled = await compileCarnapMarkdown(
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
     );
 
@@ -150,13 +150,13 @@ theorem thm_top: $ top $
       `${ASCII_THEORY}
 
 :::aufbau-proof-prawitz{system="ascii" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top |- top $
 :::
 
 ${THEORY}
 
 :::aufbau-proof-prawitz{system="prop" id="p2"}
-theorem thm_top2: $ top $
+theorem thm_top2: $ top ⊢ top $
 :::`,
     );
 
@@ -181,7 +181,7 @@ axiom top_i: $ top $;
 :::
 
 :::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`,
     );
 
@@ -201,7 +201,7 @@ theorem thm_top: $ top $
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 Finish the discharge.
 
-theorem thm_top: $ top → top $
+theorem thm_top: $ top ⊢ top → top $
 ----
 a1: $ top ⊢ top $ by ax [] -- label:1
 c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
@@ -230,7 +230,7 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
       )}
 
 :::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top → top $
+theorem thm_top: $ top ⊢ top → top $
 ----
 a1: $ top |- top $ by ax [] -- label:1
 c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
@@ -251,7 +251,7 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
       `${ASCII_THEORY}
 
 :::aufbau-proof-prawitz{system="ascii" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top |- top $
 ----
 l1: $ G |- top $ by top_i []
 :::`,
@@ -271,7 +271,7 @@ l1: $ G |- top $ by top_i []
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
 Prose only, as before.
 
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
     );
 
@@ -288,7 +288,7 @@ theorem thm_top: $ top $
     expect(
       await diagnosticsFor(
         prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 ----
 this is not a proof line
 :::`),
@@ -300,7 +300,7 @@ this is not a proof line
     expect(
       await diagnosticsFor(
         prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top → top $
+theorem thm_top: $ top ⊢ top → top $
 ----
 a1: $ top ⊢ top $ by ax []
 c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
@@ -313,7 +313,7 @@ c1: $ _ ⊢ top → top $ by imp_intro [a1] -- label:1
     expect(
       await diagnosticsFor(
         prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 ----
 l1: $ top $ by top_i []
 :::`),
@@ -324,7 +324,7 @@ l1: $ top $ by top_i []
   test("options=auto complete toggles editor assistance", async () => {
     const compiled = await compileCarnapMarkdown(
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1" options="auto complete"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
     );
 
@@ -342,10 +342,21 @@ theorem thm_top: $ top $
     expect(
       await diagnosticsFor(
         prawitzSource(`:::aufbau-proof-prawitz{system="nope" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
       ),
     ).toContain("unknown_system");
+  });
+
+  test("a goal with no turnstile is refused: every node of the tree is a sequent", async () => {
+    // A tree proof's goal may be a bare formula; a Prawitz proof's may not.
+    expect(
+      await diagnosticsFor(
+        prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
+theorem thm_top: $ top $
+:::`),
+      ),
+    ).toEqual(["goal_not_sequent"]);
   });
 
   test("a goal header without a formula is a compile diagnostic", async () => {
@@ -362,7 +373,7 @@ theorem thm_top:
     expect(
       await diagnosticsFor(
         prawitzSource(`:::aufbau-proof-prawitz{system="prop"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
       ),
     ).toContain("missing_id");
@@ -371,7 +382,7 @@ theorem thm_top: $ top $
   test("the prawitz proof renders its element with the goal seeded", async () => {
     const compiled = await compileCarnapMarkdown(
       prawitzSource(`:::aufbau-proof-prawitz{system="prop" id="p1"}
-theorem thm_top: $ top $
+theorem thm_top: $ top ⊢ top $
 :::`),
     );
     expect(compiled.ok).toBe(true);
@@ -384,7 +395,7 @@ theorem thm_top: $ top $
     expect(html).toContain("<carnap-aufbau-proof-prawitz ");
     // The inert SSR seed shows the goal as a single ProofML node.
     expect(html).toContain(
-      "<proof-tree><proof-proposition>top</proof-proposition></proof-tree>",
+      "<proof-tree><proof-proposition>top ⊢ top</proof-proposition></proof-tree>",
     );
   });
 

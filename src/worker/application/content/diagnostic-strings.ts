@@ -669,6 +669,15 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The goal binds “{name}” as {sort}, and this theory reads “{name}” as a variable of sort {displacedSort}. Inside this exercise the binder wins.",
         placeholders("displacedSort", "name", "sort"),
       ),
+    "The goal “{formula}” has no turnstile, so no proof of this kind can end with it: every line is a sequent. Put “{turnstile}” between the premises and the conclusion.":
+      i18n.t(
+        "The goal “{formula}” has no turnstile, so no proof of this kind can end with it: every line is a sequent. Put “{turnstile}” between the premises and the conclusion.",
+        placeholders("formula", "turnstile"),
+        {
+          comment:
+            "Said of a Fitch or Prawitz proof exercise. {turnstile} is the symbol the author types, such as ⊢.",
+        },
+      ),
     "The goal header must be followed by a '----' underline, then the proof body.":
       i18n.t(
         "The goal header must be followed by a '----' underline, then the proof body.",
