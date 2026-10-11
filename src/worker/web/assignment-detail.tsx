@@ -2203,6 +2203,56 @@ const SubmissionsReview: FC<{
   );
 };
 
+/**
+ * One row's Reset, which asks first: nothing in the interface undoes a void.
+ * The dialog names whose attempt it is, since the button sits in a table row
+ * among many alike. Without JS the form posts directly.
+ */
+const ResetAttemptForm: FC<{
+  readonly action: string;
+  readonly attempt: Attempt;
+  readonly context: Context<AppBindings>;
+  readonly studentName: string;
+}> = ({ action, attempt, context, studentName }) => {
+  const i18n = useI18n();
+  const formId = `reset-attempt-${attempt.id}`;
+  const dialogId = `confirm-${formId}`;
+
+  return (
+    <>
+      <ModalDialog id={dialogId} title={i18n.t("Reset this attempt?")}>
+        <form method="dialog">
+          <p>
+            {i18n.t(
+              "Resetting attempt {ordinal} by {name} keeps their work on file, but it no longer counts toward a grade. They can then start a new attempt.",
+              { name: studentName, ordinal: attempt.ordinal },
+            )}
+          </p>
+          <div class="sheet-actions">
+            <button class="danger" data-confirm-submit={formId} type="button">
+              {i18n.t("Reset attempt")}
+            </button>
+            <button class="secondary" type="submit">
+              {i18n.t("Cancel")}
+            </button>
+          </div>
+        </form>
+      </ModalDialog>
+      <form
+        action={action}
+        data-confirm-dialog={dialogId}
+        id={formId}
+        method="post"
+      >
+        <CsrfInput context={context} />
+        <button class="danger" type="submit">
+          {i18n.t("Reset")}
+        </button>
+      </form>
+    </>
+  );
+};
+
 const AttemptsTable: FC<{
   readonly assignmentId: string;
   readonly attempts: readonly Attempt[];
@@ -2249,18 +2299,33 @@ const AttemptsTable: FC<{
             </td>
             <td>
               <Time value={attempt.voidedAt} />
+              {attempt.voidedById === null ? null : (
+                <>
+                  <br />
+                  <span class="small">
+                    {i18n.t("Reset by {name}", {
+                      name: userDisplayName(
+                        i18n,
+                        directory.get(attempt.voidedById) ?? null,
+                        attempt.voidedById,
+                      ),
+                    })}
+                  </span>
+                </>
+              )}
             </td>
             <td>
               {attempt.status === "voided" ? null : (
-                <form
+                <ResetAttemptForm
                   action={`/courses/${courseId}/instructor/assignments/${assignmentId}/attempts/${attempt.id}/reset`}
-                  method="post"
-                >
-                  <CsrfInput context={context} />
-                  <button class="danger" type="submit">
-                    {i18n.t("Reset")}
-                  </button>
-                </form>
+                  attempt={attempt}
+                  context={context}
+                  studentName={userDisplayName(
+                    i18n,
+                    directory.get(attempt.userId) ?? null,
+                    attempt.userId,
+                  )}
+                />
               )}
             </td>
           </tr>
@@ -2553,6 +2618,8 @@ const UNPUBLISH_DIALOG_ID = "confirm-unpublish";
 export function renderInstructorAssignmentPage(
   context: Context<AppBindings>,
   model: {
+    /** Whether any attempt exists, voided ones included. */
+    readonly attemptsExist: boolean;
     readonly courseId: string;
     readonly courseTitle: string;
     readonly detail: AssignmentDetail;
@@ -2682,10 +2749,32 @@ export function renderInstructorAssignmentPage(
   //
   // Grade export and submission review live on the gradebook page itself, so the
   // strip here carries only the two destinations that don't: the gradebook and
-  // the attempt ledger. Those two *are* about student work, which a draft cannot
-  // have yet, so they alone stay behind publication. The strip sits at the foot
-  // of the body — divided from the roster by a ruled line with breathing room —
-  // rather than flush under the header, for a softer "lines on paper" feel.
+  // the attempt ledger. Those two are about student work. A draft usually has
+  // none, but one unpublished with a reset keeps its voided attempts, and the
+  // ledger is where they are on record; the gradebook, which counts none of
+  // them, waits for publication. The strip sits at the foot of the body —
+  // divided from the roster by a ruled line with breathing room — rather than
+  // flush under the header, for a softer "lines on paper" feel.
+  const workLinks = [
+    ...(isPublishedGraded
+      ? [
+          {
+            hint: i18n.t("Scores, export, and submission review"),
+            href: `${gradingBase}/gradebook`,
+            label: i18n.t("Grades"),
+          },
+        ]
+      : []),
+    ...(isPublishedGraded || model.attemptsExist
+      ? [
+          {
+            hint: i18n.t("Inspect and reset student attempts"),
+            href: `${gradingBase}/attempts`,
+            label: i18n.t("Attempts"),
+          },
+        ]
+      : []),
+  ];
   const policyControls =
     assignment.assessmentMode === "graded" ? (
       <Sheet
@@ -2710,22 +2799,7 @@ export function renderInstructorAssignmentPage(
           overrides={model.overrides}
           students={model.students}
         />
-        {isPublishedGraded ? (
-          <LinkStrip
-            links={[
-              {
-                hint: i18n.t("Scores, export, and submission review"),
-                href: `${gradingBase}/gradebook`,
-                label: i18n.t("Grades"),
-              },
-              {
-                hint: i18n.t("Inspect and reset student attempts"),
-                href: `${gradingBase}/attempts`,
-                label: i18n.t("Attempts"),
-              },
-            ]}
-          />
-        ) : null}
+        {workLinks.length > 0 ? <LinkStrip links={workLinks} /> : null}
       </Sheet>
     ) : null;
   // A practice set records points too, but has no policy sheet to hang its

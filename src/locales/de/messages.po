@@ -1045,6 +1045,10 @@ msgstr "Zum unten angegebenen Zeitpunkt"
 msgid "Attempt {ordinal}"
 msgstr "Versuch {ordinal}"
 
+#: src/worker/web/gradebook.tsx
+msgid "Attempt {ordinal} was reset on {when}. Its work no longer counts toward your grade."
+msgstr "Versuch {ordinal} wurde am {when} zurückgesetzt. Die Arbeit darin zählt nicht mehr für Ihre Note."
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Attempt {ordinal}: {status}"
 msgstr "Versuch {ordinal}: {status}"
@@ -4078,6 +4082,22 @@ msgstr "Alle Versuche zurücksetzen und Veröffentlichung zurücknehmen"
 #: src/worker/web/assignment-detail.tsx
 msgid "Reset all attempts and unpublish?"
 msgstr "Alle Versuche zurücksetzen und Veröffentlichung zurücknehmen?"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset attempt"
+msgstr "Versuch zurücksetzen"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset by {name}"
+msgstr "Zurückgesetzt von {name}"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset this attempt?"
+msgstr "Diesen Versuch zurücksetzen?"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Resetting attempt {ordinal} by {name} keeps their work on file, but it no longer counts toward a grade. They can then start a new attempt."
+msgstr "Wenn Sie Versuch {ordinal} von {name} zurücksetzen, bleibt die Arbeit gespeichert, zählt aber nicht mehr für eine Note. Danach kann die Person einen neuen Versuch beginnen."
 
 #: src/worker/web/content.tsx
 msgid "Resize the editor and preview columns"

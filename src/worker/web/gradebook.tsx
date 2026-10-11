@@ -18,6 +18,7 @@ import type { CourseStaffTier } from "../domain/courses";
 import type { AssignmentScore } from "../domain/grades";
 import type { User } from "../domain/users";
 import type { AppBindings } from "../http";
+import { splitAtValue, VALUE } from "../i18n/translator";
 import {
   courseCrumb,
   coursesCrumb,
@@ -31,6 +32,7 @@ import {
   PointsDriftNote,
   Sheet,
   TableScroll,
+  Time,
 } from "./components";
 import { renderShell, useI18n } from "./layout";
 import { SortHeader, sortNumber } from "./table-sort";
@@ -390,6 +392,28 @@ const ResultExercise: FC<{ readonly entry: SubmissionHistoryEntry }> = ({
   );
 };
 
+/** "Attempt N was reset on <date>", the date element where the translator put it. */
+const ResetAttemptNote: FC<{
+  readonly at: string;
+  readonly ordinal: number;
+}> = ({ at, ordinal }) => {
+  const i18n = useI18n();
+  const [before, after] = splitAtValue(
+    i18n.t(
+      "Attempt {ordinal} was reset on {when}. Its work no longer counts toward your grade.",
+      { ordinal, when: VALUE },
+    ),
+  );
+
+  return (
+    <>
+      {before}
+      <Time value={at} />
+      {after}
+    </>
+  );
+};
+
 export function renderStudentAssignmentResults(
   context: Context<AppBindings>,
   model: {
@@ -411,15 +435,33 @@ export function renderStudentAssignmentResults(
     ),
   ];
 
+  // One line per reset attempt, ahead of the attempts that still count: its
+  // work is no longer shown, and without a word it would simply have gone.
+  const resetNotes =
+    model.results.resetAttempts.length === 0 ? null : (
+      <Notice>
+        {model.results.resetAttempts.map((reset, index) => (
+          <>
+            {index === 0 ? null : " "}
+            <ResetAttemptNote at={reset.resetAt} ordinal={reset.ordinal} />
+          </>
+        ))}
+      </Notice>
+    );
+
+  // With only reset attempts behind them, the notes are the whole answer:
+  // "you have not submitted any work" would deny the work they remember.
   if (model.results.attempts.length === 0) {
     return renderShell(
       context,
       { breadcrumb, title: i18n.t("Results") },
-      <Sheet title={i18n.t("Results")}>
-        <p>
-          {i18n.t("You have not submitted any work for this assignment.")}
-        </p>
-      </Sheet>,
+      resetNotes ?? (
+        <Sheet title={i18n.t("Results")}>
+          <p>
+            {i18n.t("You have not submitted any work for this assignment.")}
+          </p>
+        </Sheet>
+      ),
     );
   }
 
@@ -438,6 +480,7 @@ export function renderStudentAssignmentResults(
     // upstream. Saying so once at the top beats a page of "Not yet graded"
     // with nothing to explain it.
     <>
+      {resetNotes}
       {anyDrift ? (
         <Notice tone="warn">
           {i18n.t(

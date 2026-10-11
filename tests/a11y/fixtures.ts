@@ -674,38 +674,53 @@ export async function collectFixtures(
     );
   }
 
-  // Student opens an attempt so the assignment page is in its answering state.
-  const attemptResponse = await appRequest(
-    createTestApp(),
-    `/courses/${courseId}/assignments/${assignmentId}/attempts`,
-    { headers: authHeaders(student), method: "POST" },
-    env,
-  );
-  const attemptId = (
-    (await attemptResponse.json()) as { attempt: { id: string } }
-  ).attempt.id;
-
-  // …and answers one exercise, so the review templates (instructor queue,
-  // student results) have a submission to render rather than an empty state.
-  await appRequest(
-    createTestApp(),
-    `/courses/${courseId}/assignments/${assignmentId}` +
-      `/attempts/${attemptId}/submissions`,
-    jsonRequest(
-      {
-        answer: {
-          data: { selectedOptionIds: ["yes"] },
-          kind: "multiple-choice-answer@1",
-          schemaVersion: 1,
-        },
-        exerciseId: "mc",
-      },
-      student,
-    ),
-    env,
-  );
-
   const instructorBase = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
+  /** Opens an attempt as the student and answers one exercise in it. */
+  const attemptAndAnswer = async (): Promise<string> => {
+    const attemptResponse = await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments/${assignmentId}/attempts`,
+      { headers: authHeaders(student), method: "POST" },
+      env,
+    );
+    const attemptId = (
+      (await attemptResponse.json()) as { attempt: { id: string } }
+    ).attempt.id;
+
+    await appRequest(
+      createTestApp(),
+      `/courses/${courseId}/assignments/${assignmentId}` +
+        `/attempts/${attemptId}/submissions`,
+      jsonRequest(
+        {
+          answer: {
+            data: { selectedOptionIds: ["yes"] },
+            kind: "multiple-choice-answer@1",
+            schemaVersion: 1,
+          },
+          exerciseId: "mc",
+        },
+        student,
+      ),
+      env,
+    );
+
+    return attemptId;
+  };
+
+  // The student works a first attempt, which the instructor resets, so the
+  // attempt ledger has a reset row (with who reset it) and the results page
+  // its note. The second attempt leaves the assignment page in its answering
+  // state, and gives the review templates (instructor queue, student
+  // results) a submission to render rather than an empty state.
+  const resetAttemptId = await attemptAndAnswer();
+  await formPost(
+    env,
+    `${instructorBase}/attempts/${resetAttemptId}/reset`,
+    {},
+    instructor,
+  );
+  await attemptAndAnswer();
 
   // Grading policy the instructor page renders as a filled-in form, and a
   // per-student override so the roster table has a row with values in it.

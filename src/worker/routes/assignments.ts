@@ -1688,6 +1688,7 @@ async function instructorDetailPage(
   );
 
   return renderInstructorAssignmentPage(context, {
+    attemptsExist: corrections.attemptsExist,
     courseId,
     courseTitle: await courseTitleFor(context, courseId),
     detail,
@@ -1835,9 +1836,14 @@ async function listInstructorAttempts(
       attempts,
       courseId,
       courseTitle: await courseTitleFor(context, courseId),
+      // The students, and whoever reset any of their attempts.
       directory: await resolveUsers(
         storesForContext(context),
-        attempts.map((attempt) => attempt.userId),
+        attempts.flatMap((attempt) =>
+          attempt.voidedById === null
+            ? [attempt.userId]
+            : [attempt.userId, attempt.voidedById],
+        ),
       ),
       staffTier: await staffTierFor(context, actor, courseId),
     });

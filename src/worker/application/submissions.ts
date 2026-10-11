@@ -131,8 +131,18 @@ export interface StudentAttemptResult {
   readonly status: AttemptStatus;
 }
 
+/**
+ * An attempt staff reset: the student is told it happened and when, and shown
+ * none of its work, which no longer counts.
+ */
+export interface StudentResetAttempt {
+  readonly ordinal: number;
+  readonly resetAt: Timestamp;
+}
+
 export interface StudentAssignmentResults {
   readonly attempts: readonly StudentAttemptResult[];
+  readonly resetAttempts: readonly StudentResetAttempt[];
   readonly released: boolean;
   /**
    * Whether the entries carry the work: prompts, answers, and comments. When
@@ -543,14 +553,22 @@ export class SubmissionService {
     const released = !gradesWithheld(assignment, now);
     const workShown = workReleased(assignment, now);
 
-    const attempts = (
+    const allAttempts = (
       await this.options.stores.assessment.listAttemptsForAssignmentUser(
         assignment.id,
         actor.user.id,
       )
-    )
-      .filter((attempt) => attempt.status !== "voided")
-      .sort((left, right) => left.ordinal - right.ordinal);
+    ).sort((left, right) => left.ordinal - right.ordinal);
+    const attempts = allAttempts.filter(
+      (attempt) => attempt.status !== "voided",
+    );
+    // A reset attempt's work stays on file but out of the student's view; a
+    // line saying it was reset keeps it from simply vanishing.
+    const resetAttempts = allAttempts.flatMap((attempt) =>
+      attempt.status === "voided" && attempt.voidedAt !== null
+        ? [{ ordinal: attempt.ordinal, resetAt: attempt.voidedAt }]
+        : [],
+    );
 
     const results = await Promise.all(
       attempts.map(async (attempt) => {
@@ -572,6 +590,7 @@ export class SubmissionService {
     return {
       attempts: results,
       released,
+      resetAttempts,
       workReleased: workShown,
       workToCome: !workShown && assignment.workVisibility !== "never",
     };

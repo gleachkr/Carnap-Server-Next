@@ -2277,6 +2277,127 @@ describe("assignment unpublish", () => {
     });
   });
 
+  test("a reset attempt stays on record: asked first, signed, told to the student, and reachable from the draft", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const student = await login(env, "student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      const draft = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+      );
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      const attemptId = await startAttempt(
+        env,
+        student,
+        courseId,
+        draft.assignment.id,
+      );
+      const path = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
+      const html = async (as: LoginResult, url: string) =>
+        (
+          await appRequest(
+            createTestApp(),
+            url,
+            { headers: { Accept: "text/html", Cookie: as.cookieHeader } },
+            env,
+          )
+        ).text();
+
+      // The row's Reset asks first, naming the attempt and its student.
+      const before = await html(instructor, `${path}/attempts`);
+
+      expect(before).toContain(
+        `data-confirm-dialog="confirm-reset-attempt-${attemptId}"`,
+      );
+      expect(before).toContain(
+        `data-confirm-submit="reset-attempt-${attemptId}"`,
+      );
+      expect(before).toContain(
+        "Resetting attempt 1 by student@example.test keeps their work on file",
+      );
+
+      const reset = await appRequest(
+        createTestApp(),
+        `${path}/attempts/${attemptId}/reset`,
+        { headers: authHeaders(instructor), method: "POST" },
+        env,
+      );
+
+      expect(reset.status).toBe(200);
+
+      // The ledger says who reset it, and offers no second Reset.
+      const after = await html(instructor, `${path}/attempts`);
+
+      expect(after).toContain("Reset by teacher@example.test");
+      expect(after).not.toContain("data-confirm-dialog=");
+
+      // The student is told, rather than finding their attempt gone, and is
+      // not told they never submitted anything.
+      const results = await html(
+        student,
+        `/courses/${courseId}/assignments/${draft.assignment.id}/results`,
+      );
+
+      expect(results).toContain("Attempt 1 was reset on <time");
+      expect(results).toContain(
+        "Its work no longer counts toward your grade.",
+      );
+      expect(results).not.toContain("You have not submitted any work");
+
+      // Unpublished, the draft still leads to the record of the reset, but
+      // not to a gradebook that counts none of it.
+      expect(
+        (await unpublish(env, instructor, courseId, draft.assignment.id))
+          .status,
+      ).toBe(200);
+
+      const record = await html(instructor, path);
+
+      expect(record).toContain(`href="${path}/attempts"`);
+      expect(record).not.toContain(`href="${path}/gradebook"`);
+    });
+  });
+
+  test("a draft no student has worked offers no attempt ledger", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      const draft = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+      );
+      const path = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
+      const record = await (
+        await appRequest(
+          createTestApp(),
+          path,
+          {
+            headers: { Accept: "text/html", Cookie: instructor.cookieHeader },
+          },
+          env,
+        )
+      ).text();
+
+      expect(record).not.toContain(`href="${path}/attempts"`);
+    });
+  });
+
   test("a refused unpublish form leads back to the assignment, for its staff alone", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "teacher@example.test");

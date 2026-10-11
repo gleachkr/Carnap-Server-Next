@@ -160,6 +160,12 @@ export interface AssignmentCorrections {
    */
   readonly studentsWithLiveAttempts: number;
   /**
+   * Whether any attempt exists, voided ones included. A draft can hold
+   * attempts once an unpublish has reset them, and their record stays
+   * reachable from the page.
+   */
+  readonly attemptsExist: boolean;
+  /**
    * Whether a reset here can reach an LMS gradebook: a graded assignment
    * with a line item to send its scores to.
    */
@@ -1313,11 +1319,9 @@ export class AssignmentService {
         published
           ? this.options.stores.assessment.hasEvaluatedWork(assignment.id)
           : Promise.resolve(false),
-        published
-          ? this.options.stores.assessment.listAttemptsForAssignment(
-              assignment.id,
-            )
-          : Promise.resolve([]),
+        this.options.stores.assessment.listAttemptsForAssignment(
+          assignment.id,
+        ),
         assignment.assessmentMode === "graded"
           ? this.options.stores.lti.listResourceLinksForAssignment(
               assignment.id,
@@ -1331,6 +1335,7 @@ export class AssignmentService {
     ).size;
 
     return {
+      attemptsExist: attempts.length > 0,
       gradedWorkExists,
       latePolicy,
       overrides,
