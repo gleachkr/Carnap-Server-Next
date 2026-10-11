@@ -2551,6 +2551,147 @@ describe("the review queue", () => {
       expect(list.submissions[0]?.submission.userId).toBe(student.actorId);
     });
   });
+
+  test("keeps a reset attempt's work under All, marked Reset, with nothing to grade", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "reset-queue-teacher@example.test");
+      const student = await login(env, "reset-queue-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Essay
+
+::::free-response{#essay_1 points="5"}
+Explain the rule.
+::::`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignment = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+        { maxAttempts: 2 },
+      );
+      const base = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+      const work = async (text: string): Promise<string> => {
+        const attemptId = await beginAttempt(
+          env,
+          student,
+          courseId,
+          assignment.id,
+        );
+        const submitted = await submitAnswer(
+          env,
+          student,
+          courseId,
+          assignment.id,
+          attemptId,
+          freeResponseAnswer(text),
+        );
+
+        expect(submitted.status).toBe(201);
+
+        return attemptId;
+      };
+      const firstAttemptId = await work("First try.");
+      const reset = await appRequest(
+        createTestApp(),
+        `${base}/attempts/${firstAttemptId}/reset`,
+        { headers: authHeaders(instructor), method: "POST" },
+        env,
+      );
+
+      expect(reset.status).toBe(200);
+
+      await work("Second try.");
+
+      const page = async (query: string) =>
+        (
+          await appRequest(
+            createTestApp(),
+            `${base}/submissions${query}`,
+            {
+              headers: {
+                Accept: "text/html",
+                Cookie: instructor.cookieHeader,
+              },
+            },
+            env,
+          )
+        ).text();
+
+      // The queue and Active hold the live attempt only, and count only it.
+      const queue = await page("");
+
+      expect(queue).toContain("Second try.");
+      expect(queue).not.toContain("First try.");
+      expect(queue).toContain('<span class="review-count-needs">1</span>');
+      expect(queue).toContain("Active (1)");
+      expect(queue).toContain("All (2)");
+
+      const active = await page("?review=active");
+
+      expect(active).toContain("Second try.");
+      expect(active).not.toContain("First try.");
+      expect(active).toContain("Attempt 2 · ");
+
+      // All adds the reset attempt's work, in the state slot rather than a
+      // badge, and offers a grading form for the live card alone.
+      const all = await page("?review=all");
+
+      expect(all).toContain("First try.");
+      expect(all).toContain(
+        'Attempt 1 · <span class="review-state-label" data-review-state="reset">Reset</span>',
+      );
+      expect(countOccurrences(all, 'data-review-state="reset"')).toBe(1);
+      expect(countOccurrences(all, 'class="manual-evaluation-form"')).toBe(1);
+
+      const list = (await (
+        await appRequest(
+          createTestApp(),
+          `${base}/submissions`,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).json()) as {
+        readonly submissions: readonly {
+          readonly attemptOrdinal: number;
+          readonly attemptVoided: boolean;
+          readonly needsReview: boolean;
+          readonly submission: { readonly id: string };
+        }[];
+      };
+      const voided = list.submissions.find((entry) => entry.attemptVoided);
+
+      expect(voided?.attemptOrdinal).toBe(1);
+      expect(voided?.needsReview).toBe(false);
+      expect(
+        list.submissions.filter((entry) => entry.needsReview),
+      ).toHaveLength(1);
+
+      // Nor will the server take a grade for it, by either route.
+      for (const [path, body] of [
+        ["evaluations", { score: 4 }],
+        ["approve", {}],
+      ] as const) {
+        const refused = await appRequest(
+          createTestApp(),
+          `${base}/submissions/${voided?.submission.id}/${path}`,
+          jsonRequest(body, instructor),
+          env,
+        );
+
+        expect(refused.status).toBe(400);
+        expect(
+          ((await refused.json()) as { error: { code: string } }).error.code,
+        ).toBe("attempt_voided");
+      }
+    });
+  });
 });
 
 describe("a truth tree on an assignment", () => {

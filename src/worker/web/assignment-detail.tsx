@@ -264,6 +264,9 @@ export interface InlineSubmissionContext {
 export interface InstructorSubmissionReviewEntry {
   readonly answerReview: ExerciseAnswerReview | null;
   readonly attemptId: string;
+  readonly attemptOrdinal: number;
+  /** The attempt was reset: the work is a record, with nothing to grade. */
+  readonly attemptVoided: boolean;
   readonly evaluation: ViewerEvaluation | null;
   /** The question the answer is to, as the lesson asked it; null for none. */
   readonly exercisePromptHtml: string | null;
@@ -1917,7 +1920,11 @@ const ManualEvaluationForm: FC<{
   );
 };
 
-export type SubmissionReviewFilter = "needs-review" | "all";
+/**
+ * The review queue's tabs. `active` is every submission on an attempt that
+ * still counts; `all` adds the work of reset attempts, kept as a record.
+ */
+export type SubmissionReviewFilter = "needs-review" | "active" | "all";
 
 /**
  * The score line on a review card. The evaluator used to print as its raw enum
@@ -1940,12 +1947,18 @@ function evaluationText(
 }
 
 /**
- * Which of the three review states a submission is in. Deliberately a value and
- * not a word: the review queue's enhancement script keys off this, so the count
- * and the needs-review filter keep working in every language. `reviewStateLabel`
- * in `labels.ts` turns it into prose, once, for both halves.
+ * Which review state a submission is in. Deliberately a value and not a word:
+ * the review queue's enhancement script keys off this, so the count and the
+ * needs-review filter keep working in every language. `reviewStateLabel` in
+ * `labels.ts` turns it into prose, once, for both halves.
  */
-function reviewState(evaluation: ViewerEvaluation | null): ReviewState {
+function reviewState(entry: InstructorSubmissionReviewEntry): ReviewState {
+  const evaluation = entry.evaluation;
+
+  if (entry.attemptVoided) {
+    return "reset";
+  }
+
   if (submissionNeedsReview(evaluation)) {
     return "needs-review";
   }
@@ -1995,6 +2008,7 @@ const SubmissionReviewCard: FC<{
   // stand behind; a free-response awaiting its first grade has nothing to
   // approve, so it falls through to the manual form.
   const canApprove =
+    !entry.attemptVoided &&
     submissionNeedsReview(entry.evaluation) &&
     entry.evaluation !== null &&
     entry.evaluation.evaluatorKind === "automatic";
@@ -2006,7 +2020,11 @@ const SubmissionReviewCard: FC<{
   const [submittedBefore, submittedAfter] = splitAtValue(
     i18n.t("Submitted {when}", { when: VALUE }),
   );
-  const drift = storedPointsDrift(entry.evaluation, entry.nominalPoints);
+  // Drift is a warning about grades that count, and a reset attempt's do not.
+  const drift = entry.attemptVoided
+    ? null
+    : storedPointsDrift(entry.evaluation, entry.nominalPoints);
+  const state = reviewState(entry);
 
   return (
     <Sheet className="submission-review-card">
@@ -2042,11 +2060,11 @@ const SubmissionReviewCard: FC<{
         <Time value={submission.submittedAt} />
         {submittedAfter}
         {" · "}
-        <span
-          class="review-state-label"
-          data-review-state={reviewState(entry.evaluation)}
-        >
-          {reviewStateLabel(i18n, reviewState(entry.evaluation))}
+        {/* Beside the state, so a reset card reads "Attempt 1 · Reset". */}
+        {i18n.t("Attempt {ordinal}", { ordinal: entry.attemptOrdinal })}
+        {" · "}
+        <span class="review-state-label" data-review-state={state}>
+          {reviewStateLabel(i18n, state)}
         </span>
       </p>
       {/* The question, behind a disclosure: a queue is many answers to the
@@ -2066,42 +2084,47 @@ const SubmissionReviewCard: FC<{
       ) : (
         <AnswerReview review={entry.answerReview} />
       )}
-      <div class="submission-review-footer">
-        <details class="manual-evaluation">
-          <summary>{i18n.t("Add a manual evaluation")}</summary>
-          <ManualEvaluationForm
-            assignmentId={assignmentId}
-            context={context}
-            courseId={courseId}
-            // The current declared points, preferred over the evaluation's
-            // stored figure: `nominalPointsFor` will stamp the new grade with
-            // the manifest's number, and the label must say the number the
-            // grade will actually be out of.
-            maxScore={
-              entry.nominalPoints ?? entry.evaluation?.maxScore ?? null
-            }
-            submissionId={submission.id}
-          />
-        </details>
-        {canApprove ? (
-          <ApproveScoreForm
-            assignmentId={assignmentId}
-            context={context}
-            courseId={courseId}
-            submissionId={submission.id}
-          />
-        ) : null}
-      </div>
+      {/* A reset attempt's work counts toward nothing, and the server refuses
+          a grade for it, so its card offers none. */}
+      {entry.attemptVoided ? null : (
+        <div class="submission-review-footer">
+          <details class="manual-evaluation">
+            <summary>{i18n.t("Add a manual evaluation")}</summary>
+            <ManualEvaluationForm
+              assignmentId={assignmentId}
+              context={context}
+              courseId={courseId}
+              // The current declared points, preferred over the evaluation's
+              // stored figure: `nominalPointsFor` will stamp the new grade with
+              // the manifest's number, and the label must say the number the
+              // grade will actually be out of.
+              maxScore={
+                entry.nominalPoints ?? entry.evaluation?.maxScore ?? null
+              }
+              submissionId={submission.id}
+            />
+          </details>
+          {canApprove ? (
+            <ApproveScoreForm
+              assignmentId={assignmentId}
+              context={context}
+              courseId={courseId}
+              submissionId={submission.id}
+            />
+          ) : null}
+        </div>
+      )}
     </Sheet>
   );
 };
 
 const ReviewFilterBar: FC<{
+  readonly activeCount: number;
   readonly base: string;
   readonly filter: SubmissionReviewFilter;
   readonly needsReviewCount: number;
   readonly total: number;
-}> = ({ base, filter, needsReviewCount, total }) => {
+}> = ({ activeCount, base, filter, needsReviewCount, total }) => {
   const i18n = useI18n();
   // The count is a live element the review script rewrites, so the label is
   // split around it rather than assembled from "Needs review" plus punctuation.
@@ -2124,6 +2147,12 @@ const ReviewFilterBar: FC<{
         {countBefore}
         <span class="review-count-needs">{needsReviewCount}</span>
         {countAfter}
+      </a>
+      <a
+        href={`${base}?review=active`}
+        {...(filter === "active" ? { "aria-current": "page" as const } : {})}
+      >
+        {i18n.t("Active ({count})", { count: activeCount })}
       </a>
       <a
         href={`${base}?review=all`}
@@ -2152,17 +2181,22 @@ const SubmissionsReview: FC<{
     );
   }
 
-  const needsReviewCount = entries.filter((entry) =>
+  // Reset attempts' work is on file, but no grade is drawn from it: it waits for
+  // no review, and the All tab is the only one that shows it.
+  const active = entries.filter((entry) => !entry.attemptVoided);
+  const needsReview = active.filter((entry) =>
     submissionNeedsReview(entry.evaluation),
-  ).length;
+  );
   const visible =
     filter === "needs-review"
-      ? entries.filter((entry) => submissionNeedsReview(entry.evaluation))
-      : entries;
-  // Counted over every entry, not the filtered view: the banner announces a
-  // fact about the assignment's grades, which does not come and go with the
-  // needs-review toggle.
-  const anyDrift = entries.some(
+      ? needsReview
+      : filter === "active"
+        ? active
+        : entries;
+  // Counted over every live entry, not the filtered view: the banner announces
+  // a fact about the assignment's grades, which does not come and go with the
+  // tabs.
+  const anyDrift = active.some(
     (entry) =>
       storedPointsDrift(entry.evaluation, entry.nominalPoints) !== null,
   );
@@ -2178,14 +2212,21 @@ const SubmissionsReview: FC<{
         </Notice>
       ) : null}
       <ReviewFilterBar
+        activeCount={active.length}
         base={base}
         filter={filter}
-        needsReviewCount={needsReviewCount}
+        needsReviewCount={needsReview.length}
         total={entries.length}
       />
       {visible.length === 0 ? (
         <Sheet>
-          <p>{i18n.t("Every recorded submission has been reviewed.")}</p>
+          <p>
+            {filter === "needs-review"
+              ? i18n.t("Every recorded submission has been reviewed.")
+              : i18n.t(
+                  "Every recorded submission is from a reset attempt. They are listed under All.",
+                )}
+          </p>
         </Sheet>
       ) : (
         <div class="submission-review-list">

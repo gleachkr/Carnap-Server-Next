@@ -350,6 +350,7 @@ export function reviewUiStrings(i18n: Translator): ReviewUiStrings {
     states: {
       "auto-graded": reviewStateLabel(i18n, "auto-graded"),
       "needs-review": reviewStateLabel(i18n, "needs-review"),
+      reset: reviewStateLabel(i18n, "reset"),
       reviewed: reviewStateLabel(i18n, "reviewed"),
     },
   };

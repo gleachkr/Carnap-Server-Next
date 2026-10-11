@@ -125,6 +125,16 @@ export interface SubmissionHistoryEntry {
   readonly submission: Submission;
 }
 
+/** A review-queue entry: a history entry, and the attempt it came from. */
+export interface InstructorSubmissionEntry extends SubmissionHistoryEntry {
+  readonly attemptOrdinal: number;
+  /**
+   * The attempt was reset. Its work stays on file, but counts toward no grade,
+   * so there is nothing to review and nothing to grade.
+   */
+  readonly attemptVoided: boolean;
+}
+
 export interface StudentAttemptResult {
   readonly entries: readonly SubmissionHistoryEntry[];
   readonly ordinal: number;
@@ -601,7 +611,7 @@ export class SubmissionService {
     courseId: AppId,
     assignmentId: AppId,
     i18n: Translator,
-  ): Promise<SubmissionHistoryEntry[]> {
+  ): Promise<InstructorSubmissionEntry[]> {
     await requireCourseStaff(this.options.stores, actor, courseId);
 
     const assignment = await assignmentInCourse(
@@ -633,12 +643,19 @@ export class SubmissionService {
     // Instructor review shows the effective grade (latest manual, else best
     // automatic) so the review queue and the gradebook agree, and so an
     // approved or overridden score reads correctly rather than the raw
-    // autograde it replaced.
+    // autograde it replaced. Reset attempts are listed too, marked as such:
+    // a reset keeps the work on file, and the queue is where it is read.
     const histories = await Promise.all(
       attempts
         .filter((attempt) => students.has(attempt.userId))
-        .map((attempt) =>
-          this.historyForAttempt(attempt.id, "instructor", i18n, true),
+        .map(async (attempt) =>
+          (
+            await this.historyForAttempt(attempt.id, "instructor", i18n, true)
+          ).map((entry) => ({
+            ...entry,
+            attemptOrdinal: attempt.ordinal,
+            attemptVoided: attempt.status === "voided",
+          })),
         ),
     );
 

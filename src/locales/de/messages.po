@@ -672,6 +672,10 @@ msgstr "Aktionen"
 msgid "Active"
 msgstr "Aktiv"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Active ({count})"
+msgstr "Aktiv ({count})"
+
 #. Disambiguating id; only the word Active is shown. An attempt still in progress.
 #: src/worker/web/labels.ts
 msgid "Active (attempt)"
@@ -1041,6 +1045,7 @@ msgstr "Aufgaben"
 msgid "At the time below"
 msgstr "Zum unten angegebenen Zeitpunkt"
 
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Attempt {ordinal}"
 msgstr "Versuch {ordinal}"
@@ -2287,6 +2292,10 @@ msgstr "Jeder Beweis beginnt mit Annahmen. „Neue Annahme“ setzt eine in die 
 #: src/worker/web/ui-strings.ts
 msgid "Every recorded submission has been reviewed."
 msgstr "Alle erfassten Abgaben wurden geprüft."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Every recorded submission is from a reset attempt. They are listed under All."
+msgstr "Alle erfassten Abgaben stammen aus zurückgesetzten Versuchen. Sie sind unter „Alle“ aufgeführt."
 
 #: src/worker/exercises/world/strings.ts
 msgid "Every sentence is marked correctly."
@@ -4075,6 +4084,11 @@ msgstr "Anfrage"
 msgid "Reset"
 msgstr "Zurücksetzen"
 
+#. Disambiguating id; only the word Reset is shown. A submission whose attempt staff reset: past participle, not the Reset button.
+#: src/worker/web/labels.ts
+msgid "Reset (review state)"
+msgstr "Zurückgesetzt"
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Reset all attempts and unpublish"
 msgstr "Alle Versuche zurücksetzen und Veröffentlichung zurücknehmen"
@@ -5755,6 +5769,10 @@ msgstr "Diese Abgabe ist nicht in disjunktiver Normalform."
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Prenex Normal Form."
 msgstr "Diese Abgabe ist nicht in pränexer Normalform."
+
+#: src/worker/application/manual-grading.ts
+msgid "This submission's attempt was reset, so its work no longer counts toward a grade and cannot be graded."
+msgstr "Der Versuch dieser Abgabe wurde zurückgesetzt. Die Arbeit zählt nicht mehr für eine Note und kann nicht bewertet werden."
 
 #: src/worker/application/manual-grading.ts
 msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."

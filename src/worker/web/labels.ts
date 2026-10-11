@@ -206,8 +206,15 @@ export function evaluatorKindLabel(
  * every other language, freezing the count and stranding reviewed cards. The
  * state travels in a `data-review-state` attribute instead, and both sides look
  * the prose up from it here.
+ *
+ * `reset` outranks the grading states: once an attempt is reset its work is a
+ * record, and whether it was reviewed no longer matters to anyone.
  */
-export type ReviewState = "auto-graded" | "needs-review" | "reviewed";
+export type ReviewState =
+  | "auto-graded"
+  | "needs-review"
+  | "reset"
+  | "reviewed";
 
 export function reviewStateLabel(
   i18n: Translator,
@@ -218,6 +225,16 @@ export function reviewStateLabel(
       return i18n.t("Auto-graded");
     case "needs-review":
       return i18n.t("Needs review");
+    case "reset":
+      return i18n.t(
+        "Reset (review state)",
+        {},
+        {
+          comment:
+            "Disambiguating id; only the word Reset is shown. A submission whose attempt staff reset: past participle, not the Reset button.",
+          message: "Reset",
+        },
+      );
     case "reviewed":
       return i18n.t("Reviewed");
   }

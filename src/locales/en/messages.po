@@ -672,6 +672,10 @@ msgstr "Actions"
 msgid "Active"
 msgstr "Active"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Active ({count})"
+msgstr "Active ({count})"
+
 #. Disambiguating id; only the word Active is shown. An attempt still in progress.
 #: src/worker/web/labels.ts
 msgid "Active (attempt)"
@@ -1041,6 +1045,7 @@ msgstr "Assignments"
 msgid "At the time below"
 msgstr "At the time below"
 
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Attempt {ordinal}"
 msgstr "Attempt {ordinal}"
@@ -2287,6 +2292,10 @@ msgstr "Every proof starts from assumptions. New assumption puts one in the work
 #: src/worker/web/ui-strings.ts
 msgid "Every recorded submission has been reviewed."
 msgstr "Every recorded submission has been reviewed."
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Every recorded submission is from a reset attempt. They are listed under All."
+msgstr "Every recorded submission is from a reset attempt. They are listed under All."
 
 #: src/worker/exercises/world/strings.ts
 msgid "Every sentence is marked correctly."
@@ -4075,6 +4084,11 @@ msgstr "Request"
 msgid "Reset"
 msgstr "Reset"
 
+#. Disambiguating id; only the word Reset is shown. A submission whose attempt staff reset: past participle, not the Reset button.
+#: src/worker/web/labels.ts
+msgid "Reset (review state)"
+msgstr "Reset"
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Reset all attempts and unpublish"
 msgstr "Reset all attempts and unpublish"
@@ -5755,6 +5769,10 @@ msgstr "This submission is not in Disjunctive Normal Form."
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Prenex Normal Form."
 msgstr "This submission is not in Prenex Normal Form."
+
+#: src/worker/application/manual-grading.ts
+msgid "This submission's attempt was reset, so its work no longer counts toward a grade and cannot be graded."
+msgstr "This submission's attempt was reset, so its work no longer counts toward a grade and cannot be graded."
 
 #: src/worker/application/manual-grading.ts
 msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."

@@ -22,7 +22,7 @@ import {
   effectiveAssignmentPolicy,
 } from "../application/policies";
 import {
-  type SubmissionHistoryEntry,
+  type InstructorSubmissionEntry,
   SubmissionService,
 } from "../application/submissions";
 import { resolveUsers } from "../application/users";
@@ -71,6 +71,7 @@ import {
   renderInstructorSubmissions,
   renderNewAssignmentPage,
   renderStudentAssignmentPage,
+  type SubmissionReviewFilter,
 } from "../web/assignment-detail";
 import {
   courseCrumb,
@@ -1732,7 +1733,7 @@ async function listStudentSubmissions(
 
 async function instructorSubmissionReviewEntries(
   context: Context<AppBindings>,
-  entries: readonly SubmissionHistoryEntry[],
+  entries: readonly InstructorSubmissionEntry[],
 ): Promise<InstructorSubmissionReviewEntry[]> {
   const directory = await resolveUsers(
     storesForContext(context),
@@ -1743,6 +1744,11 @@ async function instructorSubmissionReviewEntries(
     ...entry,
     user: directory.get(entry.submission.userId) ?? null,
   }));
+}
+
+/** The review queue's tab; anything unrecognised is the default queue. */
+function reviewFilterParam(value: string | null): SubmissionReviewFilter {
+  return value === "active" || value === "all" ? value : "needs-review";
 }
 
 async function listInstructorSubmissions(
@@ -1776,8 +1782,7 @@ async function listInstructorSubmissions(
       courseId,
       courseTitle: await courseTitleFor(context, courseId),
       entries: await instructorSubmissionReviewEntries(context, entries),
-      filter:
-        url.searchParams.get("review") === "all" ? "all" : "needs-review",
+      filter: reviewFilterParam(url.searchParams.get("review")),
       manualEvaluation: url.searchParams.has("manualEvaluation"),
       staffTier: await staffTierFor(context, actor, courseId),
     });
@@ -1787,9 +1792,13 @@ async function listInstructorSubmissions(
     submissions: entries.map((entry) => ({
       answerReview: entry.answerReview,
       attemptId: entry.attemptId,
+      attemptOrdinal: entry.attemptOrdinal,
+      attemptVoided: entry.attemptVoided,
       evaluation:
         entry.evaluation === null ? null : publicEvaluation(entry.evaluation),
-      needsReview: submissionNeedsReview(entry.evaluation),
+      // A reset attempt's work is on record, not awaiting a grade.
+      needsReview:
+        !entry.attemptVoided && submissionNeedsReview(entry.evaluation),
       submission: publicSubmission(entry.submission),
     })),
   });

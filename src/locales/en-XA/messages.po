@@ -672,6 +672,10 @@ msgstr ""
 msgid "Active"
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Active ({count})"
+msgstr ""
+
 #. Disambiguating id; only the word Active is shown. An attempt still in progress.
 #: src/worker/web/labels.ts
 msgid "Active (attempt)"
@@ -1041,6 +1045,7 @@ msgstr ""
 msgid "At the time below"
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Attempt {ordinal}"
 msgstr ""
@@ -2286,6 +2291,10 @@ msgstr ""
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/ui-strings.ts
 msgid "Every recorded submission has been reviewed."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Every recorded submission is from a reset attempt. They are listed under All."
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts
@@ -4075,6 +4084,11 @@ msgstr ""
 msgid "Reset"
 msgstr ""
 
+#. Disambiguating id; only the word Reset is shown. A submission whose attempt staff reset: past participle, not the Reset button.
+#: src/worker/web/labels.ts
+msgid "Reset (review state)"
+msgstr ""
+
 #: src/worker/web/assignment-detail.tsx
 msgid "Reset all attempts and unpublish"
 msgstr ""
@@ -5754,6 +5768,10 @@ msgstr ""
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Prenex Normal Form."
+msgstr ""
+
+#: src/worker/application/manual-grading.ts
+msgid "This submission's attempt was reset, so its work no longer counts toward a grade and cannot be graded."
 msgstr ""
 
 #: src/worker/application/manual-grading.ts

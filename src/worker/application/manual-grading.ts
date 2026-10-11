@@ -237,6 +237,17 @@ export class ManualGradingService {
       throw submissionNotFound();
     }
 
+    // A reset attempt's work is kept as a record, not a grade: no score taken
+    // from it counts, so recording one would only mislead the next reader.
+    if (attempt.status === "voided") {
+      throw badRequest(
+        "attempt_voided",
+        deferred.i18n.t(
+          "This submission's attempt was reset, so its work no longer counts toward a grade and cannot be graded.",
+        ),
+      );
+    }
+
     return { assignment, submission };
   }
 
