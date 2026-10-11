@@ -277,7 +277,9 @@ is an exercise.
   `## Part one` is an `h3`), or `h2` when there is none. An untitled
   exercise's heading is its number and kind, such as "Exercise 3: Truth
   table", heard but not shown. The number counts every exercise in the
-  document, titled or not.
+  document, titled or not. The `id` is never shown to students, so an
+  exercise numbered after a textbook, `id="vii.1"`, needs `title="VII.1"`
+  as well to carry that number on the page.
 - `points` defaults to `1`, and may be anything from `0` to `1000`. A
   zero-point exercise is recorded and checked as usual but adds nothing to a
   total, so it suits a playground; its score line shows no `0/0` to the
@@ -1427,6 +1429,13 @@ grouping.
 Theorem binders are in scope while parsing the goal and proof. In
 `theorem mp (a b: wff): $ (a → b) ; a ⊢ b $`, `a` and `b` are formula
 metavariables rather than the language's ordinary names.
+
+Every variable and name the goal uses must be bound there too, since MM0 has
+no free variables. In Calgary,
+`theorem g {x y: var} {c: name}: $ ∀x F(x) ⊢ ∀y F(y) ∧ F(c) $` binds the
+`x` and `y` its quantifiers use and the name `c` it mentions. Leaving one
+out is refused at save time with the binder to add. Proof lines need no
+such declaration: a name or variable first used in a line is bound for it.
 
 A binder that shadows a variable, term, or notation produces a warning but
 does not prevent saving. If it shadows notation, that spelling can become
