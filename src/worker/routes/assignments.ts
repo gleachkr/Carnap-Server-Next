@@ -72,7 +72,11 @@ import {
   renderNewAssignmentPage,
   renderStudentAssignmentPage,
 } from "../web/assignment-detail";
-import { coursesCrumb } from "../web/breadcrumbs";
+import {
+  courseCrumb,
+  coursesCrumb,
+  staffAssignmentCrumb,
+} from "../web/breadcrumbs";
 import { APP_FRAME_PARAM } from "../web/content-document";
 import { renderFormError } from "../web/errors";
 import {
@@ -81,6 +85,7 @@ import {
   redirect,
   wantsHtml,
 } from "../web/html";
+import type { Crumb } from "../web/layout";
 import {
   courseTitleFor,
   type FormErrorChrome,
@@ -181,12 +186,6 @@ function manualGradingService(
 ): ManualGradingService {
   return new ManualGradingService({ stores: storesForContext(context) });
 }
-
-/**
- * The tier of a staff member a service has already admitted to a staff page —
- * so a null here is unreachable, and read as an instructor rather than as a
- * state the page could mean anything by.
- */
 
 async function assignmentTitleFor(
   context: Context<AppBindings>,
@@ -1702,6 +1701,8 @@ async function instructorDetailPage(
     overrides,
     revisions,
     students,
+    studentsWithLiveAttempts: corrections.studentsWithLiveAttempts,
+    syncsToLms: corrections.syncsToLms,
   });
 }
 
@@ -1893,11 +1894,15 @@ async function unpublishAssignmentFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
+  const form = await context.req.raw.formData();
   const unpublished = await assignmentService(context).unpublish(
     actor,
     courseId,
     requiredParam(context, "assignmentId"),
+    { resetAttempts: fieldValue(form.get("resetAttempts")) === "1" },
   );
+
+  kickGradePassback(context);
 
   return redirect(
     `/courses/${courseId}/instructor/assignments/${unpublished.assignment.id}?unpublished=1`,
@@ -2230,17 +2235,69 @@ const COURSES_CHROME: FormErrorChrome = {
   breadcrumb: (i18n) => [coursesCrumb(i18n)],
 };
 
+/**
+ * A failed staff form on one assignment answers under the trail its own page
+ * has, with the assignment itself as the last crumb, so the way back is a
+ * click rather than the browser's Back. Only the course's staff are shown
+ * it: anyone else's failure is a refusal, and must not name the course or
+ * assignment it refused.
+ */
+const STAFF_ASSIGNMENT_CHROME: FormErrorChrome = {
+  breadcrumb: async (i18n, context) => {
+    const trail: Crumb[] = [coursesCrumb(i18n)];
+    const actor = context.get("actor");
+    const courseId = context.req.param("courseId");
+    const assignmentId = context.req.param("assignmentId");
+
+    if (
+      actor === null ||
+      courseId === undefined ||
+      assignmentId === undefined
+    ) {
+      return trail;
+    }
+
+    const stores = storesForContext(context);
+    const tier = await courseStaffTierFor(stores, actor, courseId);
+
+    if (tier === null) {
+      return trail;
+    }
+
+    const [course, assignment] = await Promise.all([
+      stores.courses.getById(courseId),
+      stores.assignments.getById(assignmentId),
+    ]);
+
+    if (course === null) {
+      return trail;
+    }
+
+    trail.push(courseCrumb(courseId, course.title));
+
+    if (assignment !== null && assignment.courseId === courseId) {
+      trail.push(
+        staffAssignmentCrumb(tier, courseId, assignmentId, assignment.title),
+      );
+    }
+
+    return trail;
+  },
+};
+
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/late-policy",
-  withFormErrorPage(upsertLatePolicy, COURSES_CHROME, (i18n) =>
+  withFormErrorPage(upsertLatePolicy, STAFF_ASSIGNMENT_CHROME, (i18n) =>
     i18n.t("Late policy not saved"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/overrides",
-  withFormErrorPage(upsertAssignmentOverride, COURSES_CHROME, (i18n) =>
-    i18n.t("Override not saved"),
+  withFormErrorPage(
+    upsertAssignmentOverride,
+    STAFF_ASSIGNMENT_CHROME,
+    (i18n) => i18n.t("Override not saved"),
   ),
 );
 
@@ -2269,28 +2326,28 @@ assignmentRoutes.post(
 
       return context.json({ cleared });
     },
-    COURSES_CHROME,
+    STAFF_ASSIGNMENT_CHROME,
     (i18n) => i18n.t("Override not cleared"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/grade-visibility",
-  withFormErrorPage(setGradeVisibility, COURSES_CHROME, (i18n) =>
+  withFormErrorPage(setGradeVisibility, STAFF_ASSIGNMENT_CHROME, (i18n) =>
     i18n.t("Grades not updated"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/submissions/:submissionId/evaluations",
-  withFormErrorPage(createManualEvaluation, COURSES_CHROME, (i18n) =>
+  withFormErrorPage(createManualEvaluation, STAFF_ASSIGNMENT_CHROME, (i18n) =>
     i18n.t("Evaluation not saved"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/submissions/:submissionId/approve",
-  withFormErrorPage(approveSubmission, COURSES_CHROME, (i18n) =>
+  withFormErrorPage(approveSubmission, STAFF_ASSIGNMENT_CHROME, (i18n) =>
     i18n.t("Submission not approved"),
   ),
 );
@@ -2302,7 +2359,7 @@ assignmentRoutes.get(
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/attempts/:attemptId/reset",
-  withFormErrorPage(resetAttempt, COURSES_CHROME, (i18n) =>
+  withFormErrorPage(resetAttempt, STAFF_ASSIGNMENT_CHROME, (i18n) =>
     i18n.t("Attempt not reset"),
   ),
 );
@@ -2324,15 +2381,19 @@ assignmentRoutes.post(
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/content-revision",
-  withFormErrorPage(repointPublishedAssignment, COURSES_CHROME, (i18n) =>
-    i18n.t("Assignment not updated"),
+  withFormErrorPage(
+    repointPublishedAssignment,
+    STAFF_ASSIGNMENT_CHROME,
+    (i18n) => i18n.t("Assignment not updated"),
   ),
 );
 
 assignmentRoutes.post(
   "/:courseId/instructor/assignments/:assignmentId/excuses",
-  withFormErrorPage(excuseAssignmentExercise, COURSES_CHROME, (i18n) =>
-    i18n.t("Excuse not saved"),
+  withFormErrorPage(
+    excuseAssignmentExercise,
+    STAFF_ASSIGNMENT_CHROME,
+    (i18n) => i18n.t("Excuse not saved"),
   ),
 );
 
@@ -2371,7 +2432,7 @@ assignmentRoutes.post(
 
       return context.json(assignmentDetailJson(detail, context.get("i18n")));
     },
-    COURSES_CHROME,
+    STAFF_ASSIGNMENT_CHROME,
     (i18n) => i18n.t("Assignment not published"),
   ),
 );
@@ -2385,15 +2446,24 @@ assignmentRoutes.post(
       }
 
       const actor = requireAuthenticated(context);
+      // The body is optional: a bare POST unpublishes or is refused, and
+      // `{"resetAttempts": true}` resets every live attempt to let it through.
+      const resetAttempts =
+        (context.req.header("Content-Type") ?? "").includes(
+          "application/json",
+        ) && (await readJsonObject(context)).resetAttempts === true;
       const detail = await assignmentService(context).unpublish(
         actor,
         requiredParam(context, "courseId"),
         requiredParam(context, "assignmentId"),
+        { resetAttempts },
       );
+
+      kickGradePassback(context);
 
       return context.json(assignmentDetailJson(detail, context.get("i18n")));
     },
-    COURSES_CHROME,
+    STAFF_ASSIGNMENT_CHROME,
     (i18n) => i18n.t("Assignment not unpublished"),
   ),
 );
@@ -2415,7 +2485,7 @@ assignmentRoutes.post(
 
       return context.json({ deleted: true });
     },
-    COURSES_CHROME,
+    STAFF_ASSIGNMENT_CHROME,
     (i18n) => i18n.t("Assignment not deleted"),
   ),
 );

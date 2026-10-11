@@ -7,6 +7,7 @@ import { CONTENT_STYLE_SHEET } from "../src/worker/web/style-assets";
 import { grantTestContentAuthor } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
 import {
+  authHeaders,
   createCourse,
   enrollStudent,
   jsonRequest,
@@ -191,7 +192,7 @@ async function startAttempt(
   student: LoginResult,
   courseId: string,
   assignmentId: string,
-): Promise<void> {
+): Promise<string> {
   const response = await appRequest(
     createTestApp(),
     `/courses/${courseId}/assignments/${assignmentId}/attempts`,
@@ -206,6 +207,8 @@ async function startAttempt(
   );
 
   expect(response.status).toBe(201);
+
+  return ((await response.json()) as { attempt: { id: string } }).attempt.id;
 }
 
 describe("assignment publication", () => {
@@ -2210,6 +2213,266 @@ describe("assignment unpublish", () => {
 
       expect(response.status).toBe(400);
       expect(body.error.code).toBe("assignment_has_attempts");
+    });
+  });
+
+  test("a reset attempt does not hold up unpublishing, but keeps the draft from deletion", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const student = await login(env, "student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      const draft = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+      );
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      const attemptId = await startAttempt(
+        env,
+        student,
+        courseId,
+        draft.assignment.id,
+      );
+      const reset = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${draft.assignment.id}/attempts/${attemptId}/reset`,
+        { headers: authHeaders(instructor), method: "POST" },
+        env,
+      );
+
+      expect(reset.status).toBe(200);
+
+      const response = await unpublish(
+        env,
+        instructor,
+        courseId,
+        draft.assignment.id,
+      );
+      const body = (await response.json()) as AssignmentResponse;
+
+      expect(response.status).toBe(200);
+      expect(body.assignment.state).toBe("draft");
+
+      // The voided attempt is still the record of what was reset, and
+      // deleting the draft would take it and its work along.
+      const deleted = await deleteDraft(
+        env,
+        instructor,
+        courseId,
+        draft.assignment.id,
+      );
+      const deletedBody = (await deleted.json()) as {
+        readonly error: { readonly code: string };
+      };
+
+      expect(deleted.status).toBe(400);
+      expect(deletedBody.error.code).toBe("assignment_has_attempts");
+    });
+  });
+
+  test("a refused unpublish form leads back to the assignment, for its staff alone", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const student = await login(env, "student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      const draft = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+      );
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+      await startAttempt(env, student, courseId, draft.assignment.id);
+
+      const path = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
+      const postForm = (actor: LoginResult) =>
+        appRequest(
+          createTestApp(),
+          `${path}/unpublish`,
+          {
+            body: new URLSearchParams({ csrfToken: actor.csrfToken }),
+            headers: {
+              Accept: "text/html",
+              Cookie: actor.cookieHeader,
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            method: "POST",
+          },
+          env,
+        );
+
+      const refused = await postForm(instructor);
+      const html = await refused.text();
+
+      expect(refused.status).toBe(400);
+      expect(html).toContain("reset attempts first");
+      expect(html).toContain(
+        `class="breadcrumb-link" href="/courses/${courseId}">Intro Logic</a>`,
+      );
+      expect(html).toContain(
+        `class="breadcrumb-link" href="${path}">Homework 1</a>`,
+      );
+
+      // A student's refusal names neither the course nor the assignment.
+      const forbidden = await postForm(student);
+      const forbiddenHtml = await forbidden.text();
+
+      expect(forbidden.status).toBe(403);
+      expect(forbiddenHtml).toContain(
+        'class="breadcrumb-link" href="/courses"',
+      );
+      expect(forbiddenHtml).not.toContain("Intro Logic");
+      expect(forbiddenHtml).not.toContain("Homework 1");
+    });
+  });
+
+  test("an unpublish can reset every live attempt on the way, practice ones too", async () => {
+    await withStorage(async (storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const student = await login(env, "student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      await enrollStudent(env, instructor, student, courseId);
+
+      // Viewing a practice set opens its attempt, and the single-attempt reset
+      // takes graded work only, so this is the one way such a set comes back.
+      const practice = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+        { assessmentMode: "practice", title: "Practice set" },
+      );
+      await publish(env, instructor, courseId, practice.assignment.id);
+      await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/assignments/${practice.assignment.id}/content`,
+        { headers: { Cookie: student.cookieHeader } },
+        env,
+      );
+
+      const blocked = await unpublish(
+        env,
+        instructor,
+        courseId,
+        practice.assignment.id,
+      );
+
+      expect(blocked.status).toBe(400);
+
+      const response = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${practice.assignment.id}/unpublish`,
+        jsonRequest({ resetAttempts: true }, instructor),
+        env,
+      );
+      const body = (await response.json()) as AssignmentResponse;
+
+      expect(response.status).toBe(200);
+      expect(body.assignment.state).toBe("draft");
+
+      const attempts =
+        await storage.stores.assessment.listAttemptsForAssignment(
+          practice.assignment.id,
+        );
+
+      expect(attempts.length).toBe(1);
+      expect(attempts.every((attempt) => attempt.status === "voided")).toBe(
+        true,
+      );
+    });
+  });
+
+  test("the Unpublish button asks first while students hold attempts", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "teacher@example.test");
+      const student = await login(env, "student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q1", "Choose yes."),
+      );
+      const draft = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+      );
+      await enrollStudent(env, instructor, student, courseId);
+      await publish(env, instructor, courseId, draft.assignment.id);
+
+      const path = `/courses/${courseId}/instructor/assignments/${draft.assignment.id}`;
+      const page = async () =>
+        (
+          await appRequest(
+            createTestApp(),
+            path,
+            {
+              headers: {
+                Accept: "text/html",
+                Cookie: instructor.cookieHeader,
+              },
+            },
+            env,
+          )
+        ).text();
+
+      // Nothing to reset: the button posts straight through.
+      expect(await page()).not.toContain(
+        'data-confirm-dialog="confirm-unpublish"',
+      );
+
+      await startAttempt(env, student, courseId, draft.assignment.id);
+
+      const html = await page();
+
+      expect(html).toContain('data-confirm-dialog="confirm-unpublish"');
+      expect(html).toContain(
+        '<dialog aria-labelledby="confirm-unpublish-title"',
+      );
+      expect(html).toContain("1 student has an attempt on this assignment.");
+      expect(html).toContain('name="resetAttempts" type="hidden" value="1"');
+      // No LMS line item, so nothing to say about one.
+      expect(html).not.toContain("sent to the LMS");
+
+      const confirmed = await appRequest(
+        createTestApp(),
+        `${path}/unpublish`,
+        {
+          body: new URLSearchParams({
+            csrfToken: instructor.csrfToken,
+            resetAttempts: "1",
+          }),
+          headers: {
+            Accept: "text/html",
+            Cookie: instructor.cookieHeader,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          method: "POST",
+        },
+        env,
+      );
+
+      expect(confirmed.status).toBe(303);
+      expect(confirmed.headers.get("Location")).toBe(`${path}?unpublished=1`);
     });
   });
 

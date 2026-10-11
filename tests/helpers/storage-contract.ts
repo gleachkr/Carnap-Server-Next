@@ -3148,5 +3148,120 @@ export function describeStorageContract(
         ).resolves.toEqual(after);
       });
     });
+
+    test("unpublish waits only on live attempts, and delete on any attempt", async () => {
+      await withStorage(async ({ stores }) => {
+        const { assignment, instructor, student } =
+          await createAssignmentSlice(stores);
+        await stores.assignments.publish({
+          actorId: instructor.id,
+          contentRevisionId: assignment.contentRevisionId,
+          id: assignment.id,
+          publishedAt: NOW,
+          versionId: "assignment-content-version-1",
+        });
+        const attempt = await stores.assessment.beginAttempt({
+          id: "attempt-1",
+          assignmentId: assignment.id,
+          userId: student.id,
+          openedAt: NOW,
+          expiresAt: null,
+          createdFrom: "student",
+          maxAttempts: 1,
+        });
+
+        if (attempt === null) {
+          throw new Error("Expected attempt to be created.");
+        }
+
+        const unpublish = () =>
+          stores.assignments.unpublish({
+            id: assignment.id,
+            resetAttempts: null,
+            updatedAt: LATER,
+          });
+
+        // The check is in the statement that flips the state, so a student
+        // opening an attempt meanwhile cannot be stranded on a draft.
+        await expect(unpublish()).resolves.toBeNull();
+
+        await stores.assessment.voidAttempt({
+          assignmentId: assignment.id,
+          attemptId: attempt.id,
+          userId: student.id,
+          voidedAt: LATER,
+          voidedById: instructor.id,
+        });
+
+        await expect(unpublish()).resolves.toMatchObject({
+          assignment: {
+            id: assignment.id,
+            publishedAt: null,
+            state: "draft",
+          },
+          voidedAttempts: [],
+        });
+
+        // Deleting would cascade to the voided attempt and its work, so a
+        // draft that was worked on stays.
+        await expect(
+          stores.assignments.delete({ id: assignment.id }),
+        ).resolves.toBeNull();
+        await expect(
+          stores.assessment.listAttemptsForAssignment(assignment.id),
+        ).resolves.toHaveLength(1);
+      });
+    });
+
+    test("unpublish can void the live attempts in the same write", async () => {
+      await withStorage(async ({ stores }) => {
+        const { attempt, student } = await createAttemptSlice(stores);
+        const assignment = await stores.assignments.getById(
+          attempt.assignmentId,
+        );
+
+        if (assignment === null) {
+          throw new Error("Expected the attempt's assignment.");
+        }
+
+        const unpublish = () =>
+          stores.assignments.unpublish({
+            id: assignment.id,
+            resetAttempts: { voidedAt: LATER, voidedById: student.id },
+            updatedAt: LATER,
+          });
+
+        // On a draft nothing happens: the voids are conditional on the same
+        // published state the unpublish is.
+        await expect(unpublish()).resolves.toBeNull();
+        await expect(
+          stores.assessment.getAttempt(attempt.id),
+        ).resolves.toMatchObject({ status: "active" });
+
+        await stores.assignments.publish({
+          actorId: assignment.createdById,
+          contentRevisionId: assignment.contentRevisionId,
+          id: assignment.id,
+          publishedAt: NOW,
+          versionId: "assignment-content-version-1",
+        });
+
+        const unpublished = await unpublish();
+
+        expect(unpublished?.assignment.state).toBe("draft");
+        expect(unpublished?.voidedAttempts).toEqual([
+          expect.objectContaining({
+            id: attempt.id,
+            status: "voided",
+            voidReason: "reset",
+            voidedAt: LATER,
+            voidedById: student.id,
+          }),
+        ]);
+        await expect(
+          stores.assessment.getAttempt(attempt.id),
+        ).resolves.toMatchObject({ status: "voided" });
+      });
+    });
   });
 }

@@ -4,6 +4,7 @@ import {
   count,
   desc,
   eq,
+  exists,
   getTableColumns,
   gt,
   gte,
@@ -14,6 +15,7 @@ import {
   lte,
   min,
   ne,
+  notExists,
   or,
   sql,
 } from "drizzle-orm";
@@ -75,6 +77,7 @@ import type {
   SetCourseArchivedInput,
   SetGradesVisibleAtInput,
   UnpublishAssignmentInput,
+  UnpublishedAssignment,
   UpdateAssignmentInput,
   UpdateContentRevisionDetailsInput,
   UpdateContentRevisionSharingInput,
@@ -2211,25 +2214,82 @@ class SqliteAssignmentStore implements AssignmentStore {
 
   async unpublish(
     input: UnpublishAssignmentInput,
-  ): Promise<Assignment | null> {
-    const row = nullableSingle(
-      await this.db
-        .update(assignments)
-        .set({
-          state: "draft",
-          publishedAt: null,
-          updatedAt: input.updatedAt,
-        })
-        .where(
-          and(
-            eq(assignments.id, input.id),
-            eq(assignments.state, "published"),
+  ): Promise<UnpublishedAssignment | null> {
+    const unpublishQuery = this.db
+      .update(assignments)
+      .set({
+        state: "draft",
+        publishedAt: null,
+        updatedAt: input.updatedAt,
+      })
+      .where(
+        and(
+          eq(assignments.id, input.id),
+          eq(assignments.state, "published"),
+          notExists(
+            this.db
+              .select({ id: attempts.id })
+              .from(attempts)
+              .where(
+                and(
+                  eq(attempts.assignmentId, input.id),
+                  ne(attempts.status, "voided"),
+                ),
+              ),
           ),
-        )
-        .returning(),
-    );
+        ),
+      )
+      .returning();
 
-    return row === null ? null : mapAssignment(row);
+    if (input.resetAttempts === null) {
+      const row = nullableSingle(await unpublishQuery);
+
+      return row === null
+        ? null
+        : { assignment: mapAssignment(row), voidedAttempts: [] };
+    }
+
+    // One batch, so one transaction: the voids land only on a published
+    // assignment, and then nothing live is left for the state change to
+    // refuse on.
+    const voidQuery = this.db
+      .update(attempts)
+      .set({
+        status: "voided",
+        voidReason: "reset",
+        voidedAt: input.resetAttempts.voidedAt,
+        voidedById: input.resetAttempts.voidedById,
+      })
+      .where(
+        and(
+          eq(attempts.assignmentId, input.id),
+          ne(attempts.status, "voided"),
+          exists(
+            this.db
+              .select({ id: assignments.id })
+              .from(assignments)
+              .where(
+                and(
+                  eq(assignments.id, input.id),
+                  eq(assignments.state, "published"),
+                ),
+              ),
+          ),
+        ),
+      )
+      .returning();
+    const [voidedRows, assignmentRows] = await this.db.batch([
+      voidQuery,
+      unpublishQuery,
+    ]);
+    const row = nullableSingle(assignmentRows);
+
+    return row === null
+      ? null
+      : {
+          assignment: mapAssignment(row),
+          voidedAttempts: voidedRows.map(mapAttempt),
+        };
   }
 
   async delete(input: DeleteAssignmentInput): Promise<Assignment | null> {
@@ -2237,7 +2297,16 @@ class SqliteAssignmentStore implements AssignmentStore {
       await this.db
         .delete(assignments)
         .where(
-          and(eq(assignments.id, input.id), eq(assignments.state, "draft")),
+          and(
+            eq(assignments.id, input.id),
+            eq(assignments.state, "draft"),
+            notExists(
+              this.db
+                .select({ id: attempts.id })
+                .from(attempts)
+                .where(eq(attempts.assignmentId, input.id)),
+            ),
+          ),
         )
         .returning(),
     );

@@ -1235,6 +1235,68 @@ describe("LTI grade passback", () => {
     });
   });
 
+  test("unpublishing with a reset sends each synced student their corrected zero", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const instructor = await login(env, "ags-teacher@example.test");
+      const student = await login(env, "ags-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revisionId = await createRevision(env, instructor);
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+      );
+      const { link, platform } = await ltiFixture(stores, courseId, {
+        assignmentId,
+      });
+
+      await linkStudentToLms(stores, platform, student.actorId, "sub-1");
+
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignmentId,
+      );
+
+      await submitCorrectAnswer(
+        env,
+        student,
+        courseId,
+        assignmentId,
+        attemptId,
+      );
+
+      const lms = fakeLms();
+      const service = await passbackService(stores, lms);
+
+      await expect(service.processDueJobs()).resolves.toMatchObject({
+        sent: 1,
+      });
+
+      const unpublishResponse = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/instructor/assignments/${assignmentId}/unpublish`,
+        jsonRequest({ resetAttempts: true }, instructor),
+        env,
+      );
+
+      expect(unpublishResponse.status).toBe(200);
+
+      const requeued = await stores.lti.getGradeJob(link.id, student.actorId);
+
+      expect(requeued?.status).toBe("pending");
+      expect(requeued?.score).toBe(0);
+      await expect(service.processDueJobs()).resolves.toMatchObject({
+        sent: 1,
+      });
+    });
+  });
+
   test("instructor corrections resync scores without a gradebook view", async () => {
     await withStorage(async ({ stores }, env) => {
       const instructor = await login(env, "ags-teacher@example.test");

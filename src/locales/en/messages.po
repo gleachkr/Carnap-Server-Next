@@ -162,6 +162,10 @@ msgstr "{count, plural, one {# attempt used} other {# attempts used}}"
 msgid "{count, plural, one {# attempt} other {# attempts}}"
 msgstr "{count, plural, one {# attempt} other {# attempts}}"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "{count, plural, one {# student has an attempt on this assignment.} other {# students have attempts on this assignment.}} Unpublishing resets them all: their work stays on file but no longer counts toward a grade."
+msgstr "{count, plural, one {# student has an attempt on this assignment.} other {# students have attempts on this assignment.}} Unpublishing resets them all: their work stays on file but no longer counts toward a grade."
+
 #: src/worker/web/revisions.ts
 msgid "{date}: {details}"
 msgstr "{date}: {details}"
@@ -4067,6 +4071,14 @@ msgstr "Request"
 msgid "Reset"
 msgstr "Reset"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset all attempts and unpublish"
+msgstr "Reset all attempts and unpublish"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset all attempts and unpublish?"
+msgstr "Reset all attempts and unpublish?"
+
 #: src/worker/web/content.tsx
 msgid "Resize the editor and preview columns"
 msgstr "Resize the editor and preview columns"
@@ -4404,6 +4416,10 @@ msgid "Scores across every graded assignment"
 msgstr "Scores across every graded assignment"
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Scores already sent to the LMS are corrected to zero."
+msgstr "Scores already sent to the LMS are corrected to zero."
+
+#: src/worker/web/assignment-detail.tsx
 msgid "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points."
 msgstr "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points."
 
@@ -4678,6 +4694,10 @@ msgstr "Student ID"
 #: src/worker/web/courses.tsx
 msgid "Students complete the course's assignments and see only their own work and grades."
 msgstr "Students complete the course's assignments and see only their own work and grades."
+
+#: src/worker/application/assignments.ts
+msgid "Students made attempts on this assignment while it was published. They are kept, reset ones included, so it cannot be deleted."
+msgstr "Students made attempts on this assignment while it was published. They are kept, reset ones included, so it cannot be deleted."
 
 #: src/worker/web/admin.tsx
 msgid "Subject"

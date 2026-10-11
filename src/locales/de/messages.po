@@ -162,6 +162,10 @@ msgstr "{count, plural, one {# Versuch verwendet} other {# Versuche verwendet}}"
 msgid "{count, plural, one {# attempt} other {# attempts}}"
 msgstr "{count, plural, one {# Versuch} other {# Versuche}}"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "{count, plural, one {# student has an attempt on this assignment.} other {# students have attempts on this assignment.}} Unpublishing resets them all: their work stays on file but no longer counts toward a grade."
+msgstr "{count, plural, one {# studierende Person hat einen Versuch zu dieser Aufgabe.} other {# Studierende haben Versuche zu dieser Aufgabe.}} Wenn Sie die Veröffentlichung zurücknehmen, werden alle zurückgesetzt: Die Arbeit der Studierenden bleibt gespeichert, zählt aber nicht mehr für eine Note."
+
 #: src/worker/web/revisions.ts
 msgid "{date}: {details}"
 msgstr "{date}: {details}"
@@ -4067,6 +4071,14 @@ msgstr "Anfrage"
 msgid "Reset"
 msgstr "Zurücksetzen"
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset all attempts and unpublish"
+msgstr "Alle Versuche zurücksetzen und Veröffentlichung zurücknehmen"
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset all attempts and unpublish?"
+msgstr "Alle Versuche zurücksetzen und Veröffentlichung zurücknehmen?"
+
 #: src/worker/web/content.tsx
 msgid "Resize the editor and preview columns"
 msgstr "Breite der Editor- und der Vorschauspalte ändern"
@@ -4404,6 +4416,10 @@ msgid "Scores across every graded assignment"
 msgstr "Punktzahlen aller bewerteten Aufgaben"
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Scores already sent to the LMS are corrected to zero."
+msgstr "Bereits an das LMS gesendete Punktzahlen werden auf null korrigiert."
+
+#: src/worker/web/assignment-detail.tsx
 msgid "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points."
 msgstr "Für diese Aufgabe wurden bereits Punkte erfasst. Eine Korrektur behält jede erfasste Punktzahl samt der Höchstpunktzahl, mit der sie bewertet wurde; die Gesamtwertung der Aufgabe zählt jede Übung mit der Punktzahl der neuen Revision."
 
@@ -4678,6 +4694,10 @@ msgstr "Matrikelnummer"
 #: src/worker/web/courses.tsx
 msgid "Students complete the course's assignments and see only their own work and grades."
 msgstr "Studierende bearbeiten die Aufgaben des Kurses und sehen nur ihre eigenen Abgaben und Noten."
+
+#: src/worker/application/assignments.ts
+msgid "Students made attempts on this assignment while it was published. They are kept, reset ones included, so it cannot be deleted."
+msgstr "Während diese Aufgabe veröffentlicht war, haben Studierende Versuche unternommen. Diese werden aufbewahrt, auch zurückgesetzte, daher kann die Aufgabe nicht gelöscht werden."
 
 #: src/worker/web/admin.tsx
 msgid "Subject"

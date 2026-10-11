@@ -2547,6 +2547,9 @@ const GradeReleaseButtons: FC<{
   );
 };
 
+/** The dialog the Unpublish button opens while live attempts block it. */
+const UNPUBLISH_DIALOG_ID = "confirm-unpublish";
+
 export function renderInstructorAssignmentPage(
   context: Context<AppBindings>,
   model: {
@@ -2564,6 +2567,9 @@ export function renderInstructorAssignmentPage(
     readonly overrides: ReadonlyMap<string, AssignmentOverride>;
     readonly revisions: readonly AssignmentRevisionOption[];
     readonly students: readonly CourseMembership[];
+    /** Students an unpublish would reset; see `AssignmentCorrections`. */
+    readonly studentsWithLiveAttempts: number;
+    readonly syncsToLms: boolean;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -2575,48 +2581,96 @@ export function renderInstructorAssignmentPage(
     assignment.assessmentMode === "graded";
 
   const gradingBase = `/courses/${courseId}/instructor/assignments/${assignment.id}`;
+  // Live attempts block an unpublish, so the button asks instead of posting:
+  // the dialog's form is the one that resets them all on the way. Without JS
+  // the plain form posts and is refused with the reason, as before.
+  const unpublishDialog =
+    model.studentsWithLiveAttempts > 0 ? (
+      <ModalDialog
+        id={UNPUBLISH_DIALOG_ID}
+        title={i18n.t("Reset all attempts and unpublish?")}
+      >
+        <form action={`${gradingBase}/unpublish`} method="post">
+          <CsrfInput context={context} />
+          <input name="resetAttempts" type="hidden" value="1" />
+          <p>
+            {i18n.t(
+              "{count, plural, one {# student has an attempt on this assignment.} other {# students have attempts on this assignment.}} Unpublishing resets them all: their work stays on file but no longer counts toward a grade.",
+              { count: model.studentsWithLiveAttempts },
+            )}
+          </p>
+          {model.syncsToLms ? (
+            <p>
+              {i18n.t(
+                "Scores already sent to the LMS are corrected to zero.",
+              )}
+            </p>
+          ) : null}
+          <div class="sheet-actions">
+            <button class="danger" type="submit">
+              {i18n.t("Reset all attempts and unpublish")}
+            </button>
+            <button class="secondary" formmethod="dialog" type="submit">
+              {i18n.t("Cancel")}
+            </button>
+          </div>
+        </form>
+      </ModalDialog>
+    ) : null;
+
   // Editing, publishing, and grade release live in the Assignment record
   // footer: an "Edit" link plus, for a draft, the publish action, and for a
   // published assignment, the grade-release button (when graded) alongside an
-  // Unpublish control that returns it to draft (server-blocked once attempts
-  // exist).
+  // Unpublish control that returns it to draft (server-blocked while an
+  // attempt that is not voided exists).
   const recordFooter = (
-    <div class="sheet-actions">
-      <a class="button" href={`${gradingBase}/edit`}>
-        {isDraft ? i18n.t("Edit assignment") : i18n.t("Edit settings")}
-      </a>
-      {isDraft ? (
-        <>
-          <form action={`${gradingBase}/publish`} method="post">
-            <CsrfInput context={context} />
-            <button type="submit">{i18n.t("Publish assignment")}</button>
-          </form>
-          <form action={`${gradingBase}/delete`} method="post">
-            <CsrfInput context={context} />
-            <button class="danger" type="submit">
-              {i18n.t("Delete draft")}
-            </button>
-          </form>
-        </>
-      ) : (
-        <>
-          {isPublishedGraded ? (
-            <GradeReleaseButtons
-              assignment={assignment}
-              context={context}
-              courseId={courseId}
-              now={model.now}
-            />
-          ) : null}
-          <form action={`${gradingBase}/unpublish`} method="post">
-            <CsrfInput context={context} />
-            <button class="secondary" type="submit">
-              {i18n.t("Unpublish")}
-            </button>
-          </form>
-        </>
-      )}
-    </div>
+    <>
+      {unpublishDialog}
+      <div class="sheet-actions">
+        <a class="button" href={`${gradingBase}/edit`}>
+          {isDraft ? i18n.t("Edit assignment") : i18n.t("Edit settings")}
+        </a>
+        {isDraft ? (
+          <>
+            <form action={`${gradingBase}/publish`} method="post">
+              <CsrfInput context={context} />
+              <button type="submit">{i18n.t("Publish assignment")}</button>
+            </form>
+            <form action={`${gradingBase}/delete`} method="post">
+              <CsrfInput context={context} />
+              <button class="danger" type="submit">
+                {i18n.t("Delete draft")}
+              </button>
+            </form>
+          </>
+        ) : (
+          <>
+            {isPublishedGraded ? (
+              <GradeReleaseButtons
+                assignment={assignment}
+                context={context}
+                courseId={courseId}
+                now={model.now}
+              />
+            ) : null}
+            <form
+              action={`${gradingBase}/unpublish`}
+              data-confirm-dialog={
+                model.studentsWithLiveAttempts > 0
+                  ? UNPUBLISH_DIALOG_ID
+                  : undefined
+              }
+              method="post"
+            >
+              <CsrfInput context={context} />
+              <button class="secondary" type="submit">
+                {i18n.t("Unpublish")}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </>
   );
 
   // Overrides and the late policy are settings, not results: they are rows

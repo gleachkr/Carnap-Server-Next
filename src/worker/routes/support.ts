@@ -134,9 +134,16 @@ export async function staffTierFor(
  * all for a page framed by an LMS, whose error page has to be chrome-free
  * too — a breadcrumb up to the course list is exactly the navigation such a
  * page is chrome-free in order not to offer.
+ *
+ * The breadcrumb is given the request, for a trail that names the records
+ * the form was about; it must check that the reader may see them, since the
+ * failure may be the refusal of exactly that.
  */
 export interface FormErrorChrome {
-  readonly breadcrumb?: (i18n: Translator) => readonly Crumb[];
+  readonly breadcrumb?: (
+    i18n: Translator,
+    context: Context<AppBindings>,
+  ) => readonly Crumb[] | Promise<readonly Crumb[]>;
   readonly chromeless?: boolean;
 }
 
@@ -146,19 +153,19 @@ export interface FormErrorChrome {
  * else — a JSON API caller's error, or a failure that is not an
  * `AppHttpError` — is re-thrown to the global error handler.
  */
-export function formErrorOrThrow(
+export async function formErrorOrThrow(
   context: Context<AppBindings>,
   error: unknown,
   chrome: FormErrorChrome,
   title: string,
-): Response {
+): Promise<Response> {
   if (error instanceof AppHttpError && isFormSubmission(context)) {
     const i18n = context.get("i18n");
 
     return renderFormError(context, {
       ...(chrome.breadcrumb === undefined
         ? {}
-        : { breadcrumb: chrome.breadcrumb(i18n) }),
+        : { breadcrumb: await chrome.breadcrumb(i18n, context) }),
       ...(chrome.chromeless === true ? { chromeless: true } : {}),
       message: error.localize(i18n),
       status: error.status,

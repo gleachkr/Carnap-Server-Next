@@ -762,7 +762,21 @@ export interface PublishAssignmentInput {
 
 export interface UnpublishAssignmentInput {
   readonly id: AppId;
+  /**
+   * Void every live attempt in the same write, as the reset a student's own
+   * attempt gets; null to refuse while any is live instead.
+   */
+  readonly resetAttempts: {
+    readonly voidedAt: Timestamp;
+    readonly voidedById: AppId;
+  } | null;
   readonly updatedAt: Timestamp;
+}
+
+/** An unpublished assignment, and the attempts its unpublish voided. */
+export interface UnpublishedAssignment {
+  readonly assignment: Assignment;
+  readonly voidedAttempts: readonly Attempt[];
 }
 
 export interface DeleteAssignmentInput {
@@ -881,7 +895,21 @@ export interface AssignmentStore {
     input: UpsertAssignmentOverrideInput,
   ): Promise<AssignmentOverride>;
   publish(input: PublishAssignmentInput): Promise<Assignment | null>;
-  unpublish(input: UnpublishAssignmentInput): Promise<Assignment | null>;
+  /**
+   * Return a published assignment to draft, unless a student holds an attempt
+   * on it that is not voided; null when it is not published or one does. A
+   * voided attempt stays as the record of what was reset and does not block.
+   * With `resetAttempts`, the live ones are voided first, atomically with the
+   * state change, so none can begin between the two.
+   */
+  unpublish(
+    input: UnpublishAssignmentInput,
+  ): Promise<UnpublishedAssignment | null>;
+  /**
+   * Delete a draft that no attempt was ever made on, voided or not; null
+   * otherwise. Deleting cascades to the attempts and their submissions, so a
+   * draft that was published and worked on keeps them by staying.
+   */
   delete(input: DeleteAssignmentInput): Promise<Assignment | null>;
   repointPublished(
     input: RepointPublishedAssignmentInput,

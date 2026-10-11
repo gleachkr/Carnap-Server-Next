@@ -154,6 +154,16 @@ export interface AssignmentCorrections {
   readonly latePolicy: AssignmentLatePolicy | null;
   /** Every student's override on this assignment, at most one each. */
   readonly overrides: readonly AssignmentOverride[];
+  /**
+   * How many students hold an attempt that is not voided — those an
+   * unpublish would have to reset. A draft has none.
+   */
+  readonly studentsWithLiveAttempts: number;
+  /**
+   * Whether a reset here can reach an LMS gradebook: a graded assignment
+   * with a line item to send its scores to.
+   */
+  readonly syncsToLms: boolean;
 }
 
 export interface AssignmentDetail {
@@ -834,13 +844,20 @@ export class AssignmentService {
 
   /**
    * Return a published assignment to draft so it can be edited again. Blocked
-   * once any student has an attempt, since reverting would strand their
-   * attempts and scores; the instructor must reset attempts first.
+   * while any student has an attempt that is not voided, since reverting would
+   * strand their work and scores; the instructor resets those first, or asks
+   * for `resetAttempts`, which voids them all in the same write. A voided
+   * attempt already counts for nothing, so it does not block.
+   *
+   * The reset is a reset of every one, practice attempts included: those carry
+   * no score anywhere but would block the unpublish all the same, and the
+   * single-attempt reset is for graded work only.
    */
   async unpublish(
     actor: AuthenticatedActor,
     courseId: AppId,
     assignmentId: AppId,
+    options: { readonly resetAttempts?: boolean } = {},
   ): Promise<AssignmentDetail> {
     await requireInstructor(this.options.stores, actor, courseId);
 
@@ -857,12 +874,33 @@ export class AssignmentService {
       );
     }
 
-    const attempts =
-      await this.options.stores.assessment.listAttemptsForAssignment(
-        existing.id,
+    // The store refuses while a live attempt exists, in the same statement
+    // that flips the state, so a student beginning one meanwhile cannot slip
+    // between a check and the write. A refusal is re-read to say which.
+    const now = timestampNow(this.options.now?.() ?? new Date());
+    const unpublished = await this.options.stores.assignments.unpublish({
+      id: existing.id,
+      resetAttempts:
+        options.resetAttempts === true
+          ? { voidedAt: now, voidedById: actor.user.id }
+          : null,
+      updatedAt: now,
+    });
+
+    if (unpublished === null) {
+      const current = await assignmentInCourse(
+        this.options.stores,
+        courseId,
+        assignmentId,
       );
 
-    if (attempts.length > 0) {
+      if (current.state !== "published") {
+        throw badRequest(
+          "assignment_not_published",
+          deferred.i18n.t("Only published assignments can be unpublished."),
+        );
+      }
+
       throw badRequest(
         "assignment_has_attempts",
         deferred.i18n.t(
@@ -871,23 +909,28 @@ export class AssignmentService {
       );
     }
 
-    const unpublished = await this.options.stores.assignments.unpublish({
-      id: existing.id,
-      updatedAt: timestampNow(this.options.now?.() ?? new Date()),
-    });
-
-    if (unpublished === null) {
-      throw assignmentNotFound();
+    // As after any reset: the voided work no longer counts, so each student's
+    // ledger row is recomputed and any LMS told. Only graded work has one.
+    if (unpublished.assignment.assessmentMode === "graded") {
+      await this.gradebook().refreshAssignmentScoresForUsers(
+        unpublished.assignment,
+        [
+          ...new Set(
+            unpublished.voidedAttempts.map((attempt) => attempt.userId),
+          ),
+        ],
+      );
     }
 
-    return this.detailForAssignment(unpublished);
+    return this.detailForAssignment(unpublished.assignment);
   }
 
   /**
-   * Permanently discard a draft assignment. Restricted to drafts: a draft has
-   * never been published, so no student has ever seen it and it carries no
-   * attempts or scores to strand. Published assignments stay as permanent
-   * records and must be unpublished first (which is itself attempt-guarded).
+   * Permanently discard a draft assignment. Restricted to drafts no student
+   * has made an attempt on: one that was published and unpublished may hold
+   * voided attempts, and deleting it would take their submissions with it.
+   * Published assignments stay as permanent records and must be unpublished
+   * first (which is itself attempt-guarded).
    */
   async deleteDraft(
     actor: AuthenticatedActor,
@@ -914,7 +957,25 @@ export class AssignmentService {
     });
 
     if (deleted === null) {
-      throw assignmentNotFound();
+      const current = await assignmentInCourse(
+        this.options.stores,
+        courseId,
+        assignmentId,
+      );
+
+      if (current.state !== "draft") {
+        throw badRequest(
+          "assignment_not_draft",
+          deferred.i18n.t("Only draft assignments can be deleted."),
+        );
+      }
+
+      throw badRequest(
+        "assignment_has_attempts",
+        deferred.i18n.t(
+          "Students made attempts on this assignment while it was published. They are kept, reset ones included, so it cannot be deleted.",
+        ),
+      );
     }
   }
 
@@ -1242,17 +1303,40 @@ export class AssignmentService {
       courseId,
       assignmentId,
     );
-    const [overrides, latePolicy, gradedWorkExists] = await Promise.all([
-      this.options.stores.assignments.listOverridesForScoring({
-        assignmentIds: [assignment.id],
-      }),
-      this.options.stores.assignments.getLatePolicy(assignment.id),
-      assignment.state === "published"
-        ? this.options.stores.assessment.hasEvaluatedWork(assignment.id)
-        : Promise.resolve(false),
-    ]);
+    const published = assignment.state === "published";
+    const [overrides, latePolicy, gradedWorkExists, attempts, links] =
+      await Promise.all([
+        this.options.stores.assignments.listOverridesForScoring({
+          assignmentIds: [assignment.id],
+        }),
+        this.options.stores.assignments.getLatePolicy(assignment.id),
+        published
+          ? this.options.stores.assessment.hasEvaluatedWork(assignment.id)
+          : Promise.resolve(false),
+        published
+          ? this.options.stores.assessment.listAttemptsForAssignment(
+              assignment.id,
+            )
+          : Promise.resolve([]),
+        assignment.assessmentMode === "graded"
+          ? this.options.stores.lti.listResourceLinksForAssignment(
+              assignment.id,
+            )
+          : Promise.resolve([]),
+      ]);
+    const studentsWithLiveAttempts = new Set(
+      attempts
+        .filter((attempt) => attempt.status !== "voided")
+        .map((attempt) => attempt.userId),
+    ).size;
 
-    return { gradedWorkExists, latePolicy, overrides };
+    return {
+      gradedWorkExists,
+      latePolicy,
+      overrides,
+      studentsWithLiveAttempts,
+      syncsToLms: links.some((link) => link.agsLineItemUrl !== null),
+    };
   }
 
   async listForStudent(

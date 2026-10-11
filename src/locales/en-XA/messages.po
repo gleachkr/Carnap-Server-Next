@@ -162,6 +162,10 @@ msgstr ""
 msgid "{count, plural, one {# attempt} other {# attempts}}"
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
+msgid "{count, plural, one {# student has an attempt on this assignment.} other {# students have attempts on this assignment.}} Unpublishing resets them all: their work stays on file but no longer counts toward a grade."
+msgstr ""
+
 #: src/worker/web/revisions.ts
 msgid "{date}: {details}"
 msgstr ""
@@ -4067,6 +4071,14 @@ msgstr ""
 msgid "Reset"
 msgstr ""
 
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset all attempts and unpublish"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+msgid "Reset all attempts and unpublish?"
+msgstr ""
+
 #: src/worker/web/content.tsx
 msgid "Resize the editor and preview columns"
 msgstr ""
@@ -4404,6 +4416,10 @@ msgid "Scores across every graded assignment"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Scores already sent to the LMS are corrected to zero."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
 msgid "Scores have already been recorded on this assignment. A correction keeps each recorded score and the points it was graded out of; assignment totals will count every exercise at the new revision's points."
 msgstr ""
 
@@ -4677,6 +4693,10 @@ msgstr ""
 
 #: src/worker/web/courses.tsx
 msgid "Students complete the course's assignments and see only their own work and grades."
+msgstr ""
+
+#: src/worker/application/assignments.ts
+msgid "Students made attempts on this assignment while it was published. They are kept, reset ones included, so it cannot be deleted."
 msgstr ""
 
 #: src/worker/web/admin.tsx
