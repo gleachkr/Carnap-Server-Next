@@ -676,6 +676,15 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "The goal header must state the goal formula inside '$ … $'.": i18n.t(
       "The goal header must state the goal formula inside '$ … $'.",
     ),
+    "The goal uses “{name}” without binding it. Add {binder} to the theorem's binders.":
+      i18n.t(
+        "The goal uses “{name}” without binding it. Add {binder} to the theorem's binders.",
+        placeholders("binder", "name"),
+        {
+          comment:
+            "{binder} is source text the author types, such as {x: var}, and is not translated.",
+        },
+      ),
     "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet.":
       i18n.t(
         "“{path}” is not a path this site serves. A theory kept somewhere else is not supported yet.",

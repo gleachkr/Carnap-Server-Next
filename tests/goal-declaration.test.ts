@@ -172,4 +172,26 @@ theorem g {x y: var} : $ ${statement} $
       await goal("forallx-calgary-2019", "∀x F(x) |- ∀y F(y)"),
     ).not.toContain("⊢");
   });
+
+  test("a goal that uses a variable or name it does not bind is refused, with the binder to add", async () => {
+    // What an author reported: read here, quantifier and all, then
+    // refused by the engine as "unknown token in math string", which named
+    // neither.
+    const compiled =
+      await compileCarnapMarkdown(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="u" points="1"}
+Prove it.
+
+theorem u {x: var} : $ ∀x B(x) ⊢ ∀y B(y) ∧ B(c) $
+----
+:::
+`);
+
+    expect(compiled.ok).toBe(false);
+    expect(
+      compiled.diagnostics.map((one) => [one.code, one.line, one.params]),
+    ).toEqual([
+      ["unbound_goal_variable", 4, { binder: "{y: var}", name: "y" }],
+      ["unbound_goal_variable", 4, { binder: "{c: name}", name: "c" }],
+    ]);
+  });
 });

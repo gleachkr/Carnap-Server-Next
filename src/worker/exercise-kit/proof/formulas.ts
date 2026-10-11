@@ -936,9 +936,18 @@ export interface GoalFormulaProblem {
   readonly formula: string;
 }
 
+/**
+ * A goal that will not go to the engine: the formulas its language refused,
+ * and the variables it uses without binding them (see
+ * {@link goalEngineDeclaration}). Either list may be empty, not both.
+ */
 export type GoalDeclarationReading =
   | { readonly ok: true; readonly declaration: string }
-  | { readonly ok: false; readonly problems: readonly GoalFormulaProblem[] };
+  | {
+      readonly ok: false;
+      readonly problems: readonly GoalFormulaProblem[];
+      readonly unbound: readonly ProofVariable[];
+    };
 
 /**
  * The goal's declaration with every `$ … $` in it read through the theory's
@@ -965,6 +974,15 @@ export type GoalDeclarationReading =
  * the sentence's where there is none); a goal stated as a bare sentence over
  * a theory that also has a turnstile falls back to the sentence sort, since
  * `⊢ P → P` and `P → P` are both things such a theory can be asked to prove.
+ *
+ * A variable the goal uses and does not bind is refused as well, in
+ * `unbound` — a `@vars` token, which in the forallx systems is a name as
+ * much as a variable. MM0 has no free variables: the `x` of `∀x F(x)` is a
+ * token the engine knows only as one of the declaration's binders,
+ * `{x: var}`, and the `a` of `F(a)` only as `{a: name}`. Without
+ * that binder the goal reads here, quantifier and all, and then fails in the
+ * engine as "unknown token in math string" — which names neither the token
+ * nor the cure.
  *
  * Read without the lints. Bracket discipline, chain refusal and closed
  * sentences are the conventions a student's *line* is held to, and a goal is
@@ -1003,6 +1021,7 @@ export function goalEngineDeclaration(
       ? [judgement]
       : [judgement, read.sentence];
   const problems: GoalFormulaProblem[] = [];
+  const unbound = new Map<string, ProofVariable>();
   let declaration = "";
   let cursor = goal.span.start;
 
@@ -1013,6 +1032,11 @@ export function goalEngineDeclaration(
 
     if (reading.ok) {
       declaration += `$ ${reading.text} $`;
+      for (const variable of reading.variables ?? []) {
+        if (!scope.has(variable.name)) {
+          unbound.set(variable.name, variable);
+        }
+      }
     } else {
       for (const error of reading.errors) {
         problems.push({ error, formula: formula.text.trim() });
@@ -1025,8 +1049,8 @@ export function goalEngineDeclaration(
 
   declaration += source.slice(cursor, goal.span.end);
 
-  return problems.length > 0
-    ? { ok: false, problems }
+  return problems.length > 0 || unbound.size > 0
+    ? { ok: false, problems, unbound: [...unbound.values()] }
     : { declaration, ok: true };
 }
 
@@ -1073,7 +1097,11 @@ function readAtSorts(
     const result = language.parse(text, { lints: false, scope, sort });
 
     if (result.ok) {
-      return { ok: true, text: printTerm(language, result.term, "engine") };
+      return {
+        ok: true,
+        text: printTerm(language, result.term, "engine"),
+        variables: termVariables(result.term),
+      };
     }
 
     refusals.push(result.diagnostics);

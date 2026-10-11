@@ -5051,6 +5051,11 @@ msgstr ""
 msgid "The goal sits at the bottom. Click any line to select it, then Add premise to grow the proof upward."
 msgstr ""
 
+#. {binder} is source text the author types, such as {x: var}, and is not translated.
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The goal uses “{name}” without binding it. Add {binder} to the theorem's binders."
+msgstr ""
+
 #: src/worker/application/grade-passback.ts
 msgid "The grade sync record was not found."
 msgstr ""

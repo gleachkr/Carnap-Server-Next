@@ -173,6 +173,24 @@ export function readGoalDeclaration(
     );
   }
 
+  // The binder to add, spelled out: an author who has met MM0 only through
+  // the demo lessons knows `{x: var}` by sight, not by the rule behind it.
+  for (const variable of reading.unbound) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "unbound_goal_variable",
+        "The goal uses “{name}” without binding it. Add {binder} to the theorem's binders.",
+        {
+          params: {
+            binder: `{${variable.name}: ${variable.sort}}`,
+            name: variable.name,
+          },
+        },
+      ),
+    );
+  }
+
   return null;
 }
 
