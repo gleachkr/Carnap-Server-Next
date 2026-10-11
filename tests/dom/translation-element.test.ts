@@ -385,10 +385,13 @@ describe("the checksyntax gate", () => {
     );
   });
 
-  test("lets a parsed answer through, right or wrong", async () => {
+  test("lets a parsed answer through, right or wrong, on an exam", async () => {
     searchResult = async () => null;
+    // On an exam, where a wrong answer is kept: outside one, Submit waits for
+    // the check mark (`submit-hold.test.ts`) whatever this gate says.
     const mounted = mount(
       await translationExercise(PROP, '#t1 options="checksyntax"'),
+      { options: { exam: true } },
     );
 
     type(mounted, "P\\/Q");

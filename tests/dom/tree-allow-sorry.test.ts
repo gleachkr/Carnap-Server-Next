@@ -157,7 +157,7 @@ describe("allow-sorry on the tree widget", () => {
     expect(treeRootRule(mounted).classList.contains("is-warning")).toBe(true);
   });
 
-  test("without allow-sorry an admitted rule is an error on the line, and nothing is held", async () => {
+  test("without allow-sorry an admitted rule is an error on the line, and the sorry! gate stands aside", async () => {
     const mounted = mountExercise(await treeExercise(tree(""), MINI));
     const sent: Event[] = [];
     mounted.form.addEventListener("submit", (event) => {
@@ -174,9 +174,11 @@ describe("allow-sorry on the tree widget", () => {
       false,
     );
     expect(status(mounted)).toBe("");
-    // A wrong proof was always the student's to submit.
+    // A wrong proof like any other: outside an exam Submit waits for the
+    // check mark (`submit-hold.test.ts`), and that is what refuses it.
     submit(mounted);
-    expect(sent.length).toBe(1);
+    expect(sent).toEqual([]);
+    expect(status(mounted)).toBe("");
   });
 
   test("terse feedback withholds the warning and the sentence, not the refusal", async () => {

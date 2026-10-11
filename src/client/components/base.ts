@@ -227,6 +227,12 @@ export abstract class CarnapExerciseElement<
   /** The check a submission is waiting on (see {@link holdSubmit}). */
   private held: Promise<void> | null = null;
 
+  /**
+   * Whether the correctness mark last settled on a check — what releases
+   * Submit where only a correct answer is recorded (see {@link holdsSubmit}).
+   */
+  private markOk = false;
+
   /** This exercise's draft key, or null when drafts are off (see resolveDraftKey). */
   private draftKey: string | null = null;
 
@@ -245,6 +251,9 @@ export abstract class CarnapExerciseElement<
     this.form = this.closest<HTMLFormElement>("form.exercise-submission");
     this.hydration = this.readHydration();
     this.draftKey = this.resolveDraftKey();
+    // The runtime script ran first and set the mark from the recorded answer,
+    // so a correct submission already on file starts Submit released.
+    this.markOk = this.findMark()?.dataset.state === "ok";
 
     // A surviving draft is unsaved work from a page that never came back — a
     // crash, a dead battery. It restores through the priorAnswer channel
@@ -269,6 +278,12 @@ export abstract class CarnapExerciseElement<
     }
 
     this.syncAnswer();
+    this.reflectSubmitHold();
+
+    // Registered after `enhance`, so after any gate the widget registered
+    // there: a widget's own hold or refusal is the more specific, and this one
+    // stands aside for it (see refuseUnchecked).
+    this.gateSubmit((event) => this.refuseUnchecked(event));
 
     // What the element just rendered is the server's own state arriving, not an
     // edit — so it is the mark everything after it is measured against. Under a
@@ -540,6 +555,36 @@ export abstract class CarnapExerciseElement<
     return this.feedback === "full";
   }
 
+  /**
+   * Whether this widget can say in the browser that the work is right — that
+   * it ever writes a check to the mark, live or from its own Check button.
+   * False by default, and for every widget whose answer key is the server's
+   * alone (multiple choice): its mark only ever shows the recorded verdict, so
+   * a Submit held for a check would never be released. The truth table and
+   * the model answer per exercise, since an author can turn their Check off.
+   */
+  protected get gradesLocally(): boolean {
+    return false;
+  }
+
+  /**
+   * Whether Submit is held until the mark is a check (gh #41): outside an exam
+   * only a correct answer is recorded, so a widget that can tell the work is
+   * not correct yet says so on the button rather than after a round trip.
+   *
+   * Not under `feedback: "none"`, where {@link setMark} withholds the check
+   * that would release it. Not in a preview, which has no form and whose
+   * Submit is disabled outright.
+   */
+  private get holdsSubmit(): boolean {
+    return (
+      this.form !== null &&
+      !this.exam &&
+      this.feedback !== "none" &&
+      this.gradesLocally
+    );
+  }
+
   /** The viewer's own prior answer for this attempt, or null when none. */
   protected get priorAnswer(): unknown {
     return this.hydration?.priorAnswer ?? null;
@@ -671,24 +716,28 @@ export abstract class CarnapExerciseElement<
    * not a verdict, and a student staring at a dead widget should be told.
    * `working` is clamped rather than shown because a spinner that always
    * resolves to an empty ring is a promise the mark cannot keep.
+   *
+   * Where only a correct answer is recorded, Submit follows the mark: held
+   * until it is a check (see {@link holdsSubmit}). Every widget that grades
+   * itself already writes its verdict here and withdraws it when the work
+   * changes, so that is the whole of the wiring.
    */
   protected setMark(state: CorrectnessMarkState, title?: string): void {
     if (this.feedback === "none" && state !== "error") {
       state = "idle";
     }
 
-    // The form when there is one, this element otherwise: a preview renders the
-    // action bar (and so the mark) inside the element, with no form around it,
-    // and an author trying their own exercise wants the same verdict a student
-    // will get. Looking inside the element first would be wrong on the
-    // submission path, where a page holds many exercises — but there the bar is
-    // inside the element *and* inside its form, so the wider search still lands
-    // on the right one.
-    const mark = (this.form ?? this).querySelector<HTMLElement>(
-      `.${CORRECTNESS_MARK_CLASS}`,
-    );
+    // `working` leaves Submit as it was: a proof recompiling on every keystroke
+    // would otherwise flicker it, and a click meanwhile is held by the widget's
+    // own gate until the check settles.
+    if (state !== "working") {
+      this.markOk = state === "ok";
+      this.reflectSubmitHold();
+    }
 
-    if (mark == null) {
+    const mark = this.findMark();
+
+    if (mark === null) {
       return;
     }
 
@@ -716,6 +765,68 @@ export abstract class CarnapExerciseElement<
     // that has nothing to add. Always assigned, so a fixed problem's message
     // cannot linger over a green check.
     mark.title = title === undefined || title === "" ? (label ?? "") : title;
+  }
+
+  /**
+   * The correctness mark in the action bar. The form when there is one, this
+   * element otherwise: a preview renders the action bar (and so the mark)
+   * inside the element, with no form around it, and an author trying their own
+   * exercise wants the same verdict a student will get. Looking inside the
+   * element first would be wrong on the submission path, where a page holds
+   * many exercises — but there the bar is inside the element *and* inside its
+   * form, so the wider search still lands on the right one.
+   */
+  private findMark(): HTMLElement | null {
+    return (this.form ?? this).querySelector<HTMLElement>(
+      `.${CORRECTNESS_MARK_CLASS}`,
+    );
+  }
+
+  /**
+   * Show Submit held or released to match the mark, where it is held at all.
+   *
+   * `aria-disabled`, not `disabled`: a disabled button leaves the tab order,
+   * where this one stays focusable and announces itself as unavailable. And
+   * `disabled` is the runtime's, set while a request is in flight and cleared
+   * when it lands, which would release a held button; this attribute is
+   * nobody else's. A press is refused by {@link refuseUnchecked}.
+   */
+  private reflectSubmitHold(): void {
+    if (!this.holdsSubmit) {
+      return;
+    }
+
+    const button = this.form?.querySelector<HTMLElement>(
+      "button[type=submit]",
+    );
+
+    if (button == null) {
+      return;
+    }
+
+    if (this.markOk) {
+      button.removeAttribute("aria-disabled");
+    } else {
+      button.setAttribute("aria-disabled", "true");
+    }
+  }
+
+  /**
+   * The gate behind a held Submit: refuse, silently. The button already looks
+   * and announces itself unavailable, so a press does what pressing a disabled
+   * button does — nothing.
+   *
+   * It stands aside for an event a widget's gate has already cancelled — a
+   * hold on a check still settling resubmits once the check is in, and the
+   * mark it set is what this reads then; a refusal of its own (a proof resting
+   * on `sorry!`) is the more specific explanation.
+   */
+  private refuseUnchecked(event: Event): void {
+    if (event.defaultPrevented || !this.holdsSubmit || this.markOk) {
+      return;
+    }
+
+    event.preventDefault();
   }
 
   /**

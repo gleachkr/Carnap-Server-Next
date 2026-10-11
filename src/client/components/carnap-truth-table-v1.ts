@@ -451,6 +451,11 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
     }
   }
 
+  /** Wherever there is a Check, which grades the table exactly. */
+  protected override get gradesLocally(): boolean {
+    return this.checkMode !== "off";
+  }
+
   protected getAnswer(): TruthTableAnswerData {
     const data = this.publicData;
     const empty: TruthTableAnswerData = { cells: [], reference: [] };

@@ -104,7 +104,10 @@ omits them, their values depend on the assignment:
 
 `exam="true"` records incorrect as well as correct answers. With
 `exam="false"`, automatically evaluated answers are recorded only when fully
-correct. Free responses are always recorded because they await manual grading.
+correct, and exercises that check themselves in the browser keep Submit
+unavailable until their correctness mark shows a check (see
+[Submit follows the correctness mark](./exercise-runtime-api.md#submit-follows-the-correctness-mark)).
+Free responses are always recorded because they await manual grading.
 Readings and previews record nothing regardless of these attributes.
 
 `feedback` controls the displayed verdict and detail. An explicit value always

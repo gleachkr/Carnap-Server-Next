@@ -1926,6 +1926,11 @@ class CarnapWorld extends CarnapExerciseElement<WorldStringId> {
     }
   }
 
+  /** Its Check grades the work in the browser. */
+  protected override get gradesLocally(): boolean {
+    return true;
+  }
+
   protected getAnswer(): unknown {
     return this.currentAnswer();
   }

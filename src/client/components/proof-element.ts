@@ -90,6 +90,11 @@ export abstract class ProofExerciseElement<
    */
   protected abstract compile(): Promise<void>;
 
+  /** A proof checks itself as it is typed: the mark is its compile. */
+  protected override get gradesLocally(): boolean {
+    return true;
+  }
+
   /** The certificate is compiled from the proof, not typed by the reader. */
   protected override authoredAnswer(): string {
     return JSON.stringify(withoutCertificate(this.getAnswer()));

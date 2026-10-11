@@ -3,7 +3,10 @@ import { createDefaultExerciseRegistry } from "../../src/worker/application/cont
 import type { ExerciseManifestItem } from "../../src/worker/domain/content";
 import type { JsonValue } from "../../src/worker/domain/json";
 import { exerciseActionsHtml } from "../../src/worker/exercise-kit/actions";
-import { CORRECTNESS_MARK_CLASS } from "../../src/worker/exercise-kit/correctness-mark";
+import {
+  CORRECTNESS_MARK_CLASS,
+  type CorrectnessMarkState,
+} from "../../src/worker/exercise-kit/correctness-mark";
 import {
   EXERCISE_HYDRATION_VERSION,
   type ExerciseHydration,
@@ -136,6 +139,12 @@ export interface MountedExercise {
 }
 
 export interface MountOptions {
+  /**
+   * The mark as the page runtime leaves it before any element upgrades: set
+   * from the recorded answer's verdict. Idle, as the server draws it, when
+   * omitted.
+   */
+  readonly mark?: CorrectnessMarkState;
   readonly mode?: ExerciseHydration["mode"];
   readonly options?: ExerciseHydrationOptions;
   readonly priorAnswer?: JsonValue | null;
@@ -166,6 +175,7 @@ export function publicDataOf<T>(fixture: ExerciseFixture): T {
 export function mountExercise(
   fixture: ExerciseFixture,
   {
+    mark = "idle",
     mode = "answer",
     options = {},
     preview = false,
@@ -182,8 +192,12 @@ export function mountExercise(
     strings: registry.strings(node.render.assetId, i18n),
     version: EXERCISE_HYDRATION_VERSION,
   };
+  const bar = exerciseActionsHtml(i18n, { slotted: true }).replace(
+    'data-state="idle"',
+    `data-state="${mark}"`,
+  );
   const html = registry.renderExercise(node, {
-    actions: `${exerciseActionsHtml(i18n, { slotted: true })}<script data-exercise-hydration type="application/json">${JSON.stringify(hydration)}</script>`,
+    actions: `${bar}<script data-exercise-hydration type="application/json">${JSON.stringify(hydration)}</script>`,
     heading: { level: 2, number: 1 },
     i18n,
     title: fixture.item.title ?? null,

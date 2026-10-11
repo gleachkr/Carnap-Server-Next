@@ -149,6 +149,11 @@ class CarnapTranslation extends CarnapExerciseElement<TranslationStringId> {
     this.dataset.enhanced = "true";
   }
 
+  /** The equivalence check runs as the answer is typed. */
+  protected override get gradesLocally(): boolean {
+    return true;
+  }
+
   protected getAnswer(): unknown {
     return {
       text: this.input?.value ?? "",

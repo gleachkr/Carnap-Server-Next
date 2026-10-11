@@ -418,6 +418,11 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     return rows[rows.length - 1]?.id ?? null;
   }
 
+  /** Its Check grades the work in the browser. */
+  protected override get gradesLocally(): boolean {
+    return true;
+  }
+
   protected getAnswer(): TruthTreeAnswerData {
     return { nodes: this.tree.nodes };
   }

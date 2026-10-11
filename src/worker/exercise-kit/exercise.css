@@ -70,12 +70,16 @@
 }
 
 /* The same recessed, faint look the page gives any dead control (see
-   `button:disabled` in web/content.css), in the exercise's own tokens. */
+   `button:disabled` in web/content.css), in the exercise's own tokens. A
+   Submit held for the check mark (`aria-disabled`, see the client base
+   class) wears it too: it is unavailable, though it stays focusable. */
 .exercise-submit:disabled,
+.exercise-submit[aria-disabled="true"],
 .exercise-actions button:disabled {
   background: var(--exercise-inset-bg);
   border-color: var(--exercise-border);
   color: var(--exercise-text-faint);
+  cursor: not-allowed;
 }
 
 /* The base form-button margin-top would push controls down inside the bar's

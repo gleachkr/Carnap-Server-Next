@@ -273,6 +273,30 @@ way it ends, a refusal writes its reason to the widget's status line — an
 explanation of why the button did nothing, not a verdict, so it is shown
 under every `feedback` setting.
 
+### Submit follows the correctness mark
+
+Outside an exam (`exam` false), only a correct answer is recorded. A widget
+that can grade itself in the browser therefore holds Submit until its
+correctness mark shows a check. Until then the button carries
+`aria-disabled="true"` and is drawn like a disabled one, and a press is
+refused silently through the same submit gate. The proof widgets and
+translation release Submit as the work checks; truth table, model, world, and
+truth tree release it when their Check passes. An edit that withdraws the
+check holds Submit again.
+
+The base class does this in `setMark`, so a widget only declares that it
+grades locally by overriding `gradesLocally`. Leave it false where the answer
+key is the server's alone (multiple choice) or the Check is turned off,
+because nothing would ever release the button. Nothing is held on an exam,
+under `feedback="none"` (where the mark withholds the check), or in a
+preview. `working` leaves the button as it was, so a recompile does not make
+it flicker, and a widget's own gate runs first: a hold on a pending check
+resubmits once the check is in, and this gate then reads the settled mark.
+
+The mark the runtime sets on load from a recorded correct answer releases
+Submit too. The server still applies the recording rule. The hold only saves
+a round trip.
+
 ## Unsaved work
 
 The content document installs a `beforeunload` guard when answers have changed

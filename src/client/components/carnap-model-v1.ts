@@ -723,6 +723,11 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       : { domain, fields, sentences: this.sentences() };
   }
 
+  /** Wherever there is a Check: an author can turn it off. */
+  protected override get gradesLocally(): boolean {
+    return this.data?.options.check !== "off";
+  }
+
   protected getAnswer(): unknown {
     return this.currentAnswer();
   }
