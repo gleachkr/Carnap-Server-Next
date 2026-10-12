@@ -1,9 +1,9 @@
 
--- ## The derived rules: `forallx-calgary-2019-plus`
+-- ## The derived rules: `forallx-calgary-plus`
 --
--- Everything above this line is `forallx-calgary-2019.mm0`, verbatim. This
--- artifact — served at `/theories/forallx-calgary-2019-plus.mm0`, named by
--- `system="forallx-calgary-2019-plus"` — is that file with the rules the
+-- Everything above this line is `forallx-calgary.mm0`, verbatim. This
+-- artifact — served at `/theories/forallx-calgary-plus.mm0`, named by
+-- `system="forallx-calgary-plus"` — is that file with the rules the
 -- textbook's chapters on additional rules add: disjunctive syllogism, modus
 -- tollens, double-negation elimination, excluded middle and De Morgan for TFL,
 -- and conversion of quantifiers for FOL. They are two systems on purpose.

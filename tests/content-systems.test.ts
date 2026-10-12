@@ -30,9 +30,9 @@ import { THEORY_SOURCES } from "../src/worker/logic/theories";
  * makes the saving free.
  */
 
-const FORALLX_SOURCE = THEORY_SOURCES["forallx-calgary-2019.mm0"] ?? "";
+const FORALLX_SOURCE = THEORY_SOURCES["forallx-calgary.mm0"] ?? "";
 
-const THEORY_BLOCK = `:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}\n:::`;
+const THEORY_BLOCK = `:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0"}\n:::`;
 
 function fitch(id: string, goal: string, system = "forallx"): string {
   return `:::aufbau-proof-fitch{system="${system}" id="${id}"}
@@ -233,12 +233,10 @@ describe("system=", () => {
     // from the textbook's own rules should not have to declare a block whose
     // only job is to have a name.
     const artifact = await compile(
-      fitch("ex1", "andcomm", "forallx-calgary-2019"),
+      fitch("ex1", "andcomm", "forallx-calgary"),
     );
 
-    expect(Object.keys(artifact.systems ?? {})).toEqual([
-      "forallx-calgary-2019",
-    ]);
+    expect(Object.keys(artifact.systems ?? {})).toEqual(["forallx-calgary"]);
     expect(publicDataOf(artifact, "ex1").source).toContain("@syntax");
   });
 
@@ -247,12 +245,12 @@ describe("system=", () => {
     // engine and the alias table alike — and only under this id: the basic
     // system's text carries no `DeM`.
     const artifact = await compile(
-      fitch("ex1", "andcomm", "forallx-calgary-2019-plus"),
+      fitch("ex1", "andcomm", "forallx-calgary-plus"),
     );
     const source = String(publicDataOf(artifact, "ex1").source);
 
     expect(Object.keys(artifact.systems ?? {})).toEqual([
-      "forallx-calgary-2019-plus",
+      "forallx-calgary-plus",
     ]);
     expect(source.startsWith(FORALLX_SOURCE)).toBe(true);
     expect(source).toContain("@syntax alias DeM");
@@ -261,15 +259,15 @@ describe("system=", () => {
 
   test("a block of the same name wins over the shipped id", async () => {
     // The point of the order. A course that extends forallx calls the result
-    // whatever it likes — including `forallx-calgary-2019` — and every exercise
+    // whatever it likes — including `forallx-calgary` — and every exercise
     // naming it gets the extension.
     const artifact = await compile(
-      `:::aufbau-mm0{name="forallx-calgary-2019" src="/theories/forallx-calgary-2019.mm0"}
+      `:::aufbau-mm0{name="forallx-calgary" src="/theories/forallx-calgary.mm0"}
 --| @syntax delimiter $ Cube $
 term Cube (sq: seq): wff;
 :::
 
-${fitch("ex1", "andcomm", "forallx-calgary-2019")}`,
+${fitch("ex1", "andcomm", "forallx-calgary")}`,
     );
 
     expect(publicDataOf(artifact, "ex1").source).toContain("term Cube");
@@ -279,7 +277,7 @@ ${fitch("ex1", "andcomm", "forallx-calgary-2019")}`,
     // Not possible before: `system=` took an id, and a block had no id. This is
     // the half of #257 that a course with its own vocabulary was waiting for.
     const artifact = await compile(
-      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary.mm0"}
 --| @syntax delimiter $ Cube $
 term Cube (sq: seq): wff;
 :::
@@ -316,7 +314,7 @@ People danced.
     // binder is what a table has no column for, and forallx's propositional
     // fragment has none in it.
     const artifact = await compile(
-      `::::truth-table{#tt1 system="forallx-calgary-2019"}
+      `::::truth-table{#tt1 system="forallx-calgary"}
 Fill it in.
 
 - F(a) -> F(b)
@@ -334,7 +332,7 @@ Fill it in.
 
   test("a binder is refused by the formula that uses it, not by the language", async () => {
     const compiled = await compileCarnapMarkdown(
-      `::::truth-table{#tt1 system="forallx-calgary-2019"}
+      `::::truth-table{#tt1 system="forallx-calgary"}
 Fill it in.
 
 - Ax F(x)
@@ -424,7 +422,7 @@ Fill it in.
     // that declaring the whole word is the repair, because whether that is what
     // the author meant is a fact about this spec.
     const compiled = await compileCarnapMarkdown(
-      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary.mm0"}
 term Cube (sq: seq): wff;
 :::
 
@@ -448,7 +446,7 @@ ${fitch("ex1", "andcomm", "ours")}`,
     // and the name reads. Longest spelling wins in the delimiter set, which is
     // why `Cube` outranks the `C` beside it.
     const artifact = await compile(
-      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+      `:::aufbau-mm0{name="ours" src="/theories/forallx-calgary.mm0"}
 --| @syntax delimiter $ Cube $
 term Cube (sq: seq): wff;
 :::
@@ -526,7 +524,7 @@ Fill it in.
 
   test("a broken block under a semantic type's default is diagnosed the same way", async () => {
     const compiled = await compileCarnapMarkdown(
-      `:::aufbau-mm0{name="forallx-calgary-2019"}
+      `:::aufbau-mm0{name="forallx-calgary"}
 this is not mm0 (((
 :::
 
@@ -545,7 +543,7 @@ Make it true.
 
   test("the miss lists the blocks the document declares, not the ids its exercises named", async () => {
     const compiled = await compileCarnapMarkdown(
-      `${fitch("ex1", "andcomm", "forallx-calgary-2019")}\n\n${fitch("ex2", "andcomm", "forallks")}`,
+      `${fitch("ex1", "andcomm", "forallx-calgary")}\n\n${fitch("ex2", "andcomm", "forallks")}`,
     );
     const miss = compiled.diagnostics.find(
       (one) => one.code === "unknown_system",

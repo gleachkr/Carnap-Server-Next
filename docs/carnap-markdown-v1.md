@@ -635,7 +635,7 @@ In addition to the common attributes:
 
 - `variant`: `simple`, `validity`, or `constraint`.
 - `system`: a block name or built-in language ID. Defaults to
-  `forallx-calgary-2019`; `forallx-magnus` uses the original book's notation.
+  `forallx-calgary`; `forallx-magnus` uses the original book's notation.
 - `counterexample-to`: `validity`/`tautology`, `equivalence`, or
   `inconsistency`/`contradiction`.
 - `playground`: boolean, simple variant only. The student writes the
@@ -1089,15 +1089,15 @@ in proofs, models, truth tables, and translations.
 Use `src` to load a built-in into a named block:
 
 ```md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0"}
 :::
 ```
 
 The seven built-in IDs are:
 
-- `forallx-calgary-2019`: Calgary natural deduction, first-order syntax,
+- `forallx-calgary`: Calgary natural deduction, first-order syntax,
   basic rules.
-- `forallx-calgary-2019-plus`: the same language with derived rules.
+- `forallx-calgary-plus`: the same language with derived rules.
 - `forallx-magnus`: the original Magnus forallx QL rules and notation.
 - `forallx-magnus-plus`: the same language with derived/replacement rules.
 - `forallx-ubc`: the language of *forall x: UBC*, without proof rules; the
@@ -1153,7 +1153,7 @@ A block can combine `src` with a body. The body is raw MM0 appended after the
 referenced source:
 
 ```md
-:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+:::aufbau-mm0{name="ours" src="/theories/forallx-calgary.mm0"}
 --| @syntax delimiter $ Cube Loves $
 term Cube (x: tm): wff;
 term Loves (x y: tm): wff;
@@ -1200,7 +1200,7 @@ Theory blocks are hidden by default. Add `show` to render a collapsed source
 panel labeled with the theory name:
 
 ```md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0" show}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0" show}
 :::
 ```
 
@@ -1295,7 +1295,7 @@ In both, a goal's turnstile is `⊢` or old Carnap's ASCII `:|-:`. `|-` is not a
 turnstile: `|` and `-` are disjunction and negation, so `P |- Q` is the
 sentence P ∨ ¬Q.
 
-**Calgary (`forallx-calgary-2019`)**
+**Calgary (`forallx-calgary`)**
 
 - Predicates use parentheses: `F(x)`, `R(a,b)`. A bare uppercase letter is
   a sentence letter.
@@ -1565,7 +1565,7 @@ theory's assumption rule with no references. A deeper indent opens its
 scope; a later shallower line can discharge it by citing the range.
 
 ```md
-:::aufbau-proof-fitch{system="forallx-calgary-2019" id="fitch-mp"}
+:::aufbau-proof-fitch{system="forallx-calgary" id="fitch-mp"}
 Derive Q from P → Q and P.
 
 theorem mp: $ (P → Q) ; P ⊢ Q $
@@ -1579,7 +1579,7 @@ Q       :→E 1 2
 For conditional introduction, indent the assumption and cite that subproof:
 
 ```md
-:::aufbau-proof-fitch{system="forallx-calgary-2019" id="fitch-self"}
+:::aufbau-proof-fitch{system="forallx-calgary" id="fitch-self"}
 Prove P → P.
 
 theorem self: $ _ ⊢ P → P $
@@ -1623,7 +1623,7 @@ The body is a prompt and theorem line, optionally followed by `----` and a
 starter:
 
 ```md
-:::aufbau-proof-prawitz{system="forallx-calgary-2019" id="prawitz-self"}
+:::aufbau-proof-prawitz{system="forallx-calgary" id="prawitz-self"}
 Prove the conditional by discharging its antecedent.
 
 theorem self: $ _ ⊢ P → P $

@@ -67,7 +67,7 @@ A theory block accepts raw MM0, a `src` URL, or both. With both, the body is
 appended to the referenced source. For example:
 
 ```md
-:::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}
+:::aufbau-mm0{name="ours" src="/theories/forallx-calgary.mm0"}
 --| @syntax delimiter $ Cube $
 term Cube (x: tm): wff;
 :::

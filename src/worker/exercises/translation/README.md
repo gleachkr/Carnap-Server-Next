@@ -6,7 +6,7 @@ certificate proving equivalence to one. An `exact` variant accepts only the
 parsed match. Additional tests can require a normal form or limit connective
 counts.
 
-The default language is forallx: Calgary 2019. `system` can select another
+The default language is forallx: Calgary. `system` can select another
 built-in or a theory block; parsing uses the shared first-order
 core and `@aufbau/syntax`, not a per-exercise notation table.
 
@@ -88,7 +88,7 @@ Attributes:
   solutions and submitted answers. `exact` compares parsed formulas without
   equivalence search.
 - `system`: theory-block name or built-in system ID; defaults to
-  `forallx-calgary-2019`. For example, use `carnap-prop` for its propositional
+  `forallx-calgary`. For example, use `carnap-prop` for its propositional
   notation with `variant="prop"`.
 - `tests`: space-separated `CNF`, `DNF`, `PNF` (first-order only),
   `maxCon:N`, `maxNeg:N`/`maxNot:N`, `maxAnd:N`, `maxOr:N`, `maxIf:N`,

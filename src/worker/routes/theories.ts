@@ -11,7 +11,7 @@ import { hashAssetText } from "../web/asset-hash";
  * The built-in proof theories, at the paths authored content names them by.
  *
  * Serving them is what makes the path an honest address rather than an id
- * dressed as one: an author who writes `src="/theories/forallx-calgary-2019.mm0"`
+ * dressed as one: an author who writes `src="/theories/forallx-calgary.mm0"`
  * can open it and read the rules, the axiom names their proofs will cite, and
  * the commentary shipped alongside. The compiler still resolves from the module
  * graph — this route is for people.

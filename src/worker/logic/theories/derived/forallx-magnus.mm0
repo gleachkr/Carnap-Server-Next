@@ -5,7 +5,7 @@
 -- `system="forallx-magnus-plus"` — is that file with the rules the book's
 -- chapter on derived rules adds: dilemma, modus tollens and hypothetical
 -- syllogism, the five rules of replacement for SL, and quantifier negation
--- for QL. Two systems on purpose, for the reason `forallx-calgary-2019-plus`
+-- for QL. Two systems on purpose, for the reason `forallx-calgary-plus`
 -- gives: every rule here is a theorem of the basic set, and which set a
 -- proof may cite is the course's call. Old Carnap draws the same line
 -- (`magnusQL` against `magnusQLPlus`), and the citation names are its.

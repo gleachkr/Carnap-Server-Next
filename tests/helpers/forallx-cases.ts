@@ -33,7 +33,7 @@ export interface ForallxCase {
   readonly shouldFail?: true;
   /**
    * The built-in the exercise names. Unset means the basic system; the cases
-   * over the book's derived rules name `forallx-calgary-2019-plus`, and one
+   * over the book's derived rules name `forallx-calgary-plus`, and one
    * case cites a derived rule *without* naming it, to pin that the basic
    * system refuses it.
    */
@@ -384,14 +384,14 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl:
       "theorem smuggle {x: var} {a: name}: $ ∃ x G(x) ; F(a) ⊢ ∃ x (G(x) ∧ F(x)) $;",
   },
-  // The derived rules, which only `forallx-calgary-2019-plus` declares. Each
+  // The derived rules, which only `forallx-calgary-plus` declares. Each
   // is cited by the book's name, and every form a name covers is exercised —
   // the fallback chain has to land on each of them.
   {
     name: "DS, both sides",
     theoremDecl: "theorem ds: $ P ∨ Q ; ¬ P ; ¬ Q ⊢ Q ∧ P $;",
     goalName: "ds",
-    system: "forallx-calgary-2019-plus",
+    system: "forallx-calgary-plus",
     fitch: [
       "P ∨ Q   :PR",
       "¬ P     :PR",
@@ -405,21 +405,21 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     name: "MT",
     theoremDecl: "theorem mttest: $ P → Q ; ¬ Q ⊢ ¬ P $;",
     goalName: "mttest",
-    system: "forallx-calgary-2019-plus",
+    system: "forallx-calgary-plus",
     fitch: ["P → Q   :PR", "¬ Q     :PR", "¬ P     :MT 1 2"].join("\n"),
   },
   {
     name: "DNE",
     theoremDecl: "theorem dnerule: $ ¬ ¬ P ⊢ P $;",
     goalName: "dnerule",
-    system: "forallx-calgary-2019-plus",
+    system: "forallx-calgary-plus",
     fitch: ["¬ ¬ P   :PR", "P       :DNE 1"].join("\n"),
   },
   {
     name: "LEM (two subproofs)",
     theoremDecl: "theorem lemtest: $ _ ⊢ P ∨ ¬ P $;",
     goalName: "lemtest",
-    system: "forallx-calgary-2019-plus",
+    system: "forallx-calgary-plus",
     fitch: [
       "    P           :AS",
       "    P ∨ ¬ P     :∨I 1",
@@ -433,7 +433,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl:
       "theorem dem: $ ¬ (P ∨ Q) ; ¬ (R ∧ S) ⊢ ¬ (P ∨ Q) ∧ ¬ (R ∧ S) $;",
     goalName: "dem",
-    system: "forallx-calgary-2019-plus",
+    system: "forallx-calgary-plus",
     // Out and back again, so each premise goes through both of its forms.
     fitch: [
       "¬ (P ∨ Q)               :PR",
@@ -450,7 +450,7 @@ export const FORALLX_CASES: readonly ForallxCase[] = [
     theoremDecl:
       "theorem cq {x: var}: $ ¬ ∃ x F(x) ; ¬ ∀ x G(x) ⊢ ¬ ∃ x F(x) ∧ ¬ ∀ x G(x) $;",
     goalName: "cq",
-    system: "forallx-calgary-2019-plus",
+    system: "forallx-calgary-plus",
     fitch: [
       "¬ ∃x F(x)                 :PR",
       "¬ ∀x G(x)                 :PR",

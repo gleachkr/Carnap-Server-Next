@@ -75,12 +75,12 @@ describe("built-in theories", () => {
   });
 
   test("a path names its theory; anything else is a miss", () => {
-    const forallx = theoryByPath("/theories/forallx-calgary-2019.mm0");
+    const forallx = theoryByPath("/theories/forallx-calgary.mm0");
 
-    expect(forallx).toBe(THEORY_SOURCES["forallx-calgary-2019.mm0"] ?? "");
+    expect(forallx).toBe(THEORY_SOURCES["forallx-calgary.mm0"] ?? "");
     // The stem alone, a bare name, and a path elsewhere are all the same miss.
-    expect(theoryByPath("/theories/forallx-calgary-2019")).toBeNull();
-    expect(theoryByPath("forallx-calgary-2019.mm0")).toBeNull();
+    expect(theoryByPath("/theories/forallx-calgary")).toBeNull();
+    expect(theoryByPath("forallx-calgary.mm0")).toBeNull();
     expect(theoryByPath("/content/revisions/abc/source")).toBeNull();
   });
 

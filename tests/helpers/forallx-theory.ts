@@ -1,8 +1,8 @@
 /**
  * The forallx: Calgary natural-deduction theory, as the tests see it.
  *
- * The theory itself ships at `src/worker/logic/theories/forallx-calgary-2019.mm0`
- * and is served at `/theories/forallx-calgary-2019.mm0`; its header is where the
+ * The theory itself ships at `src/worker/logic/theories/forallx-calgary.mm0`
+ * and is served at `/theories/forallx-calgary.mm0`; its header is where the
  * rule→axiom table, the eigenvariable discussion, and the warning about
  * dependency lists now live. This module is a re-export so that the Fitch
  * and Prawitz suites and `scripts/{forallx,prawitz}-verify.ts` exercise the
@@ -26,10 +26,10 @@ import { ruleCitationShapes } from "../../src/worker/exercises/aufbau-proof-fitc
 import type { RuleCitationShape } from "../../src/worker/exercises/aufbau-proof-fitch/translate";
 import { THEORY_SOURCES } from "../../src/worker/logic/theories";
 
-const source = THEORY_SOURCES["forallx-calgary-2019.mm0"];
+const source = THEORY_SOURCES["forallx-calgary.mm0"];
 
 if (source === undefined) {
-  throw new Error("the forallx-calgary-2019 theory is no longer registered");
+  throw new Error("the forallx-calgary theory is no longer registered");
 }
 
 /** The artifact as it is served and as an author reads it, `@syntax` and all. */
@@ -60,12 +60,12 @@ export const FORALLX_THEORY_BLOCK = `:::aufbau-mm0{name="forallx"}\n${FORALLX_TH
  * exercise a path an author cannot reach.
  *
  * `system` is the built-in the exercise names; the default is the basic
- * system, and a case over the book's derived rules names `forallx-calgary-2019-plus`.
+ * system, and a case over the book's derived rules names `forallx-calgary-plus`.
  */
 export function forallxExercise(
   goalName: string,
   theoremDecl: string,
-  system: string = "forallx-calgary-2019",
+  system: string = "forallx-calgary",
 ): {
   readonly citationShapes: ReadonlyMap<string, RuleCitationShape>;
   readonly mm0: string;

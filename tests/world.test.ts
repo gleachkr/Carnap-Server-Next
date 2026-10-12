@@ -645,7 +645,7 @@ describe("grading", () => {
     // Calgary's `E` is the predicate letter E and, through an elab rule,
     // an ASCII ∃: an author who lists `E` means the quantifier too.
     const calgary = [
-      ':::aufbau-mm0{name="calgary-blocks" src="/theories/forallx-calgary-2019.mm0"}',
+      ':::aufbau-mm0{name="calgary-blocks" src="/theories/forallx-calgary.mm0"}',
       "--| @syntax delimiter $ LeftOf $",
       "--| @syntax role blocks.left-of",
       "term LeftOf (s: seq): wff;",

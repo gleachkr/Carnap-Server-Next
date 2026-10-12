@@ -70,7 +70,7 @@ infer witnesses and eigenvariables from the sequents.
 ## Authoring
 
 ```md
-:::aufbau-proof-fitch{system="forallx-calgary-2019" id="mp"}
+:::aufbau-proof-fitch{system="forallx-calgary" id="mp"}
 Derive Q from P → Q and P.
 
 theorem mp: $ (P → Q) ; P ⊢ Q $

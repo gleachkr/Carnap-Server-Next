@@ -631,7 +631,7 @@ describe("judging a task", () => {
 
 describe("a connective the course declares itself", () => {
   // What an instructor actually writes is an `:::aufbau-mm0` block with
-  // `src="/theories/forallx-calgary-2019.mm0"` and their own constructor after
+  // `src="/theories/forallx-calgary.mm0"` and their own constructor after
   // it; this is the same two texts joined. The point of the fixture is that
   // nothing in the server declares `↑` — the role is read, the notation is the
   // course's.

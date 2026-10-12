@@ -118,7 +118,7 @@ describe("language specs", () => {
     ];
     const engineOnly: Readonly<Record<string, readonly string[]>> = {
       "carnap-prop": [],
-      "forallx-calgary-2019": PROOF_THEORY_NOTATIONS,
+      "forallx-calgary": PROOF_THEORY_NOTATIONS,
       "forallx-magnus": PROOF_THEORY_NOTATIONS,
       "forallx-ubc": [],
     };
@@ -241,8 +241,8 @@ describe("language specs", () => {
     });
   });
 
-  describe("forallx-calgary-2019", () => {
-    const id = "forallx-calgary-2019";
+  describe("forallx-calgary", () => {
+    const id = "forallx-calgary";
 
     test("reads tight textbook notation and prints logical symbols", () => {
       expect(display(id, "AxEy~R(x,y)")).toBe("∀x∃y¬R(x,y)");

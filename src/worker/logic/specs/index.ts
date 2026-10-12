@@ -44,7 +44,7 @@ export { type LanguageRead, languageFromSource, readLanguage } from "./read";
  */
 const LANGUAGE_IDS: readonly string[] = [
   "carnap-prop",
-  "forallx-calgary-2019",
+  "forallx-calgary",
   "forallx-magnus",
   "forallx-ubc",
 ];
@@ -74,7 +74,7 @@ function sourceFor(id: string): string {
  *
  * **A language and a proof system can be one file, and where they are, they
  * are.** forallx: Calgary's entry is the same text a proof exercise resolves
- * from `src="/theories/forallx-calgary-2019.mm0"`, so a model or translation
+ * from `src="/theories/forallx-calgary.mm0"`, so a model or translation
  * exercise and a Fitch proof set from that course cannot disagree about what
  * `A` means. What made that possible is the judgement sort: `⊢` builds one,
  * student input is read at `wff`, so a sequent cannot appear where a sentence

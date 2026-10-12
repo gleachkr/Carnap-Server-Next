@@ -7,7 +7,7 @@
  * re-resolving a shipped theory at grade time would re-grade stored proofs
  * every time one of those files was edited — and freezing is not in question.
  * What was wrong is that each exercise froze its *own* copy:
- * `forallx-calgary-2019.mm0` is 30 KB, so a lesson setting thirty proofs from
+ * `forallx-calgary.mm0` is 30 KB, so a lesson setting thirty proofs from
  * it stored thirty copies and sent thirty copies to the browser, one inside
  * every widget's hydration payload. Keying the text by name and storing it
  * once per document costs the same safety and none of the duplication.

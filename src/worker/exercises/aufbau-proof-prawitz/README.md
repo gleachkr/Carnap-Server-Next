@@ -50,7 +50,7 @@ logical rules, including eigenvariable conditions.
 ## Authoring
 
 ```md
-:::aufbau-proof-prawitz{system="forallx-calgary-2019" id="p1"}
+:::aufbau-proof-prawitz{system="forallx-calgary" id="p1"}
 Prove the conditional by discharging its antecedent.
 
 theorem self: $ _ ⊢ P → P $

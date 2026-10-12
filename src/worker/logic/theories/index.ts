@@ -8,7 +8,7 @@
  * three hundred lines of MM0 in the lesson source.
  *
  * **A theory may also be a language.** Both forallx files —
- * `forallx-calgary-2019.mm0` and `forallx-magnus.mm0` — carry
+ * `forallx-calgary.mm0` and `forallx-magnus.mm0` — carry
  * `@syntax` annotations and are registered by `../specs` under the language id
  * of the same stem, so `system=` on a model or translation exercise and `src=`
  * on a proof exercise's theory block name the same bytes and cannot disagree
@@ -50,15 +50,13 @@
  */
 
 import carnapProp from "./carnap-prop.mm0" with { type: "text" };
-import forallxCalgary2019Derived from "./derived/forallx-calgary-2019.mm0" with {
+import forallxCalgaryDerived from "./derived/forallx-calgary.mm0" with {
   type: "text",
 };
 import forallxMagnusDerived from "./derived/forallx-magnus.mm0" with {
   type: "text",
 };
-import forallxCalgary2019 from "./forallx-calgary-2019.mm0" with {
-  type: "text",
-};
+import forallxCalgary from "./forallx-calgary.mm0" with { type: "text" };
 import forallxMagnus from "./forallx-magnus.mm0" with { type: "text" };
 import forallxUbc from "./forallx-ubc.mm0" with { type: "text" };
 import gentzenLk from "./gentzen-lk.mm0" with { type: "text" };
@@ -92,10 +90,10 @@ function withDerivedRules(base: string, derived: string): string {
  */
 export const THEORY_SOURCES: Readonly<Record<string, string>> = {
   "carnap-prop.mm0": carnapProp,
-  "forallx-calgary-2019.mm0": forallxCalgary2019,
-  "forallx-calgary-2019-plus.mm0": withDerivedRules(
-    forallxCalgary2019,
-    forallxCalgary2019Derived,
+  "forallx-calgary.mm0": forallxCalgary,
+  "forallx-calgary-plus.mm0": withDerivedRules(
+    forallxCalgary,
+    forallxCalgaryDerived,
   ),
   "forallx-magnus.mm0": forallxMagnus,
   "forallx-magnus-plus.mm0": withDerivedRules(

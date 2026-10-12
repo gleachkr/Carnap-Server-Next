@@ -621,7 +621,7 @@ function lowerReferences(
  * file became both the proof system and the *language*: there the comma is
  * already the student's argument separator in `R(a,b)`, and MM0 gives a math
  * token one meaning, so the context takes `;` instead. See
- * `logic/theories/forallx-calgary-2019.mm0`.
+ * `logic/theories/forallx-calgary.mm0`.
  *
  * Returns the assembled proof text, a source-line map for diagnostics, and any
  * structural diagnostics (best-effort `proofText` is still returned when they

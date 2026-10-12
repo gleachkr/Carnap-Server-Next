@@ -31,7 +31,7 @@ quantifier binds. A sequent's premises are separated by \`;\`, because the
 comma already separates a predicate's arguments. The editor checks your proof
 as you type; a ✓ means it verifies.
 
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0"}
 :::
 
 ## 1. Modus ponens (worked)

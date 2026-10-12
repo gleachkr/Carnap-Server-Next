@@ -74,10 +74,10 @@ function publicDataOf(item: ExerciseManifestItem): ModelPublicData {
 
 /** Stored engine text as a reader is shown it, in the default language. */
 function shown(engines: readonly string[]): string[] {
-  const language = languageById("forallx-calgary-2019");
+  const language = languageById("forallx-calgary");
 
   if (language === null) {
-    throw new Error("forallx-calgary-2019 is not built in");
+    throw new Error("forallx-calgary is not built in");
   }
 
   return engines.map((engine) => {
@@ -133,7 +133,7 @@ describe("compiling a model directive", () => {
     expect(item.kind).toBe(MODEL_KIND);
     expect(item.nominalPoints).toBe(3);
     expect(data.variant).toBe("simple");
-    expect(data.system).toBe("forallx-calgary-2019");
+    expect(data.system).toBe("forallx-calgary");
     expect(data.required).toEqual([]);
     // Stored as engine text, and shown in the spec's canonical spelling:
     // what an author types is ASCII, what a reader sees is the glyph.

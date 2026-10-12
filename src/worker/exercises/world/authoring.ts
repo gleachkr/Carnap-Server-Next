@@ -836,7 +836,7 @@ export async function compileWorld(
     block,
     resolveSystem,
     diagnostics,
-    { defaultId: "forallx-calgary-2019" },
+    { defaultId: "forallx-calgary" },
   );
   const resolvedSystem = named !== null && diagnostics.length === before;
   const body = parseBody(block, diagnostics);

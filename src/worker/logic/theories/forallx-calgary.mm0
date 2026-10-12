@@ -3,9 +3,9 @@
 -- model or translation exercise and a Fitch proof set from this file cannot
 -- disagree about what `A` means, because there is only one declaration of it.
 --
--- Served at `/theories/forallx-calgary-2019.mm0`, which is what an
+-- Served at `/theories/forallx-calgary.mm0`, which is what an
 -- `:::aufbau-mm0` block names with `src=`; the same text is registered as the
--- language id `forallx-calgary-2019`, which is what a `system=` names.
+-- language id `forallx-calgary`, which is what a `system=` names.
 --
 -- ## What the sorts do
 --
@@ -70,7 +70,7 @@
 -- spelled `PR`. These are forallx's primitive basic rules — the ones the
 -- textbook introduces as the proof system itself, not the derived rules (DS,
 -- MT, LEM, DeMorgan, …), which are provable from these. Those ship too, as
--- `forallx-calgary-2019-plus`: this file with `derived/forallx-calgary-2019.mm0`
+-- `forallx-calgary-plus`: this file with `derived/forallx-calgary.mm0`
 -- appended, so a course picks which set a proof may cite by naming one or the
 -- other.
 --

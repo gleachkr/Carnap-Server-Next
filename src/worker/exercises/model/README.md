@@ -7,7 +7,7 @@ There is no secret answer key; the server independently checks submitted data.
 
 Variants are `simple` (make sentences true), `validity` (find an argument
 counterexample), and `constraint` (satisfy additional constraints).
-The default language is forallx: Calgary 2019; other built-in languages or
+The default language is forallx: Calgary; other built-in languages or
 course-defined systems can be selected with `system`.
 
 ## Authoring
@@ -30,7 +30,7 @@ Build a model in which both sentences are true.
   non-whitespace characters, excluding control and formatting characters.
 - `variant`: `simple` (default), `validity`, or `constraint`.
 - `system`: a theory-block name or built-in system ID; defaults to
-  `forallx-calgary-2019`. `forallx-magnus` uses the original book's notation.
+  `forallx-calgary`. `forallx-magnus` uses the original book's notation.
 - `counterexample-to`: `validity`/`tautology`, `equivalence`, or
   `inconsistency`/`contradiction`; defaults depend on the variant below.
 - `check`: legacy `on`/`off`, equivalent to feedback `full`/`none`. Prefer

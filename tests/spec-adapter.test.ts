@@ -38,7 +38,7 @@ function errorsFor(id: string, source: string) {
 }
 
 describe("roles", () => {
-  const forallx = language("forallx-calgary-2019");
+  const forallx = language("forallx-calgary");
   const prop = language("carnap-prop");
 
   test("a constructor's role is read off the spec", () => {
@@ -100,17 +100,17 @@ describe("roles", () => {
 
 describe("parse errors", () => {
   test("the sentences the library shares with us pass straight through", () => {
-    expect(errorsFor("forallx-calgary-2019", "(P")).toEqual([
+    expect(errorsFor("forallx-calgary", "(P")).toEqual([
       {
         message: "Expected “{bracket}”.",
         params: { bracket: ")" },
         position: 2,
       },
     ]);
-    expect(errorsFor("forallx-calgary-2019", "P /\\")).toEqual([
+    expect(errorsFor("forallx-calgary", "P /\\")).toEqual([
       { message: "Expected a formula.", position: 4 },
     ]);
-    expect(errorsFor("forallx-calgary-2019", "P Q")).toEqual([
+    expect(errorsFor("forallx-calgary", "P Q")).toEqual([
       {
         message: "Unexpected “{token}”.",
         params: { token: "Q" },
@@ -120,7 +120,7 @@ describe("parse errors", () => {
   });
 
   test("forallx's two refusal conventions are said as such", () => {
-    expect(errorsFor("forallx-calgary-2019", "P -> Q -> R")).toEqual([
+    expect(errorsFor("forallx-calgary", "P -> Q -> R")).toEqual([
       {
         message:
           "“{operator}” cannot be chained; add parentheses to group it.",
@@ -128,7 +128,7 @@ describe("parse errors", () => {
         position: 5,
       },
     ]);
-    expect(errorsFor("forallx-calgary-2019", "P /\\ (Q)")).toEqual([
+    expect(errorsFor("forallx-calgary", "P /\\ (Q)")).toEqual([
       {
         message:
           "Parentheses may only enclose a sentence joined by a two-place connective.",
@@ -138,7 +138,7 @@ describe("parse errors", () => {
   });
 
   test("an unbound variable names itself", () => {
-    expect(errorsFor("forallx-calgary-2019", "F(x)")).toEqual([
+    expect(errorsFor("forallx-calgary", "F(x)")).toEqual([
       {
         message:
           "“{name}” is a free variable; every formula must be a sentence.",
@@ -152,14 +152,14 @@ describe("parse errors", () => {
     // The library says "This has sort wff where seq is needed", which is true
     // and unusable: `seq` is the encoding that makes one letter cover `P` and
     // `P(a,b)`, and nobody typing `F(P)` has heard of it.
-    expect(errorsFor("forallx-calgary-2019", "F(P)")).toEqual([
+    expect(errorsFor("forallx-calgary", "F(P)")).toEqual([
       {
         message: "This is a {actual} where a {expected} is needed.",
         params: { actual: "sentence", expected: "term" },
         position: 2,
       },
     ]);
-    expect(errorsFor("forallx-calgary-2019", "a")).toEqual([
+    expect(errorsFor("forallx-calgary", "a")).toEqual([
       {
         message: "This is a {kind}, not a complete sentence.",
         params: { kind: "term" },

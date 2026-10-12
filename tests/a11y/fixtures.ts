@@ -133,7 +133,7 @@ Build a Prawitz tree for top.
 theorem thm_prawitz: $ top ⊢ top $
 :::
 
-:::aufbau-proof-fitch{system="forallx-calgary-2019" id="fi" points="1"}
+:::aufbau-proof-fitch{system="forallx-calgary" id="fi" points="1"}
 Prove P from P.
 
 theorem fitch_id: $ P ⊢ P $

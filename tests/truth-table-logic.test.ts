@@ -209,7 +209,7 @@ describe("atoms over a language whose letters take arguments", () => {
   // `R(a,b)` — and a truth table set over such a language has to tell those
   // three apart. Keying a column by the constructor name gave all of them the
   // column `F`.
-  const registered = languageById("forallx-calgary-2019");
+  const registered = languageById("forallx-calgary");
 
   if (registered === null) {
     throw new Error("no forallx spec registered");

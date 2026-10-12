@@ -58,7 +58,7 @@ async function frozen(directive: string) {
 describe("a goal read into engine text", () => {
   test("declares, and its starter verifies, against the real engine", async () => {
     const data =
-      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="cd" points="3"}
+      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary" id="cd" points="3"}
 Constructive dilemma
 
 theorem cd : $ P \\/ Q ; P -> S ; Q -> S ⊢ S $
@@ -97,7 +97,7 @@ S     :or_elim 1 4-5 6-7
 
   test("a quantifier touching its variable declares cleanly", async () => {
     const data =
-      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="ex" points="3"}
+      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary" id="ex" points="3"}
 Prove it.
 
 theorem exelim {x y: var} : $ ∃x F(x) ; ∀x (F(x) → G(x)) ⊢ ∃x G(x) $
@@ -126,7 +126,7 @@ theorem exelim {x y: var} : $ ∃x F(x) ; ∀x (F(x) → G(x)) ⊢ ∃x G(x) $
     // splits them. The sentence letters take their elided argument by hand,
     // which is the one thing engine text still asks for.
     const data =
-      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="raw" points="1"}
+      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary" id="raw" points="1"}
 Prove it.
 
 theorem raw : $ P ⊢ P $
@@ -159,7 +159,7 @@ theorem g {x y: var} : $ ${statement} $
 `)
       ).goalEngineDecl;
 
-    for (const system of ["forallx-calgary-2019", "forallx-magnus"]) {
+    for (const system of ["forallx-calgary", "forallx-magnus"]) {
       const turnstile = await goal(system, "∀x F(x) ⊢ ∀y F(y)");
 
       expect(turnstile).toContain("⊢");
@@ -170,7 +170,7 @@ theorem g {x y: var} : $ ${statement} $
     // with `|-` is a sentence, ∀x F(x) ∨ ¬∀y F(y), which is why `:|-:` is the
     // spelling — and a Fitch goal with no turnstile is refused for it.
     const compiled =
-      await compileCarnapMarkdown(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="g" points="1"}
+      await compileCarnapMarkdown(`:::aufbau-proof-fitch{system="forallx-calgary" id="g" points="1"}
 Prove it.
 
 theorem g {x y: var} : $ ∀x F(x) |- ∀y F(y) $
@@ -188,7 +188,7 @@ theorem g {x y: var} : $ ∀x F(x) |- ∀y F(y) $
     // refused by the engine as "unknown token in math string", which named
     // neither.
     const compiled =
-      await compileCarnapMarkdown(`:::aufbau-proof-fitch{system="forallx-calgary-2019" id="u" points="1"}
+      await compileCarnapMarkdown(`:::aufbau-proof-fitch{system="forallx-calgary" id="u" points="1"}
 Prove it.
 
 theorem u {x: var} : $ ∀x B(x) ⊢ ∀y B(y) ∧ B(c) $

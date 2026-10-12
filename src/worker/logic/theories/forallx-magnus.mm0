@@ -8,7 +8,7 @@
 -- block names with `src=`; the same text is registered as the language id
 -- `forallx-magnus`, which is what a `system=` names.
 --
--- Read `forallx-calgary-2019.mm0` first: the sort layout, the judgement layer,
+-- Read `forallx-calgary.mm0` first: the sort layout, the judgement layer,
 -- the equational layer, the substitution rewrites and the eigenvariable
 -- treatment are all the same design and its header is where they are argued
 -- for. This header says only what is *Magnus's*, which is more than the name

@@ -57,7 +57,7 @@ export {
   substitute,
 } from "./syntax";
 
-export const DEFAULT_LANGUAGE_ID = "forallx-calgary-2019";
+export const DEFAULT_LANGUAGE_ID = "forallx-calgary";
 
 /**
  * The language an exercise is set in, or `null` where its stored data no longer

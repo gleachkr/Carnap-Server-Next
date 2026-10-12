@@ -20,7 +20,7 @@ import {
  * What the model and translation types accept as a formula, and what they show
  * back.
  *
- * The language is `logic/theories/forallx-calgary-2019.mm0` — registered as a
+ * The language is `logic/theories/forallx-calgary.mm0` — registered as a
  * spec under the same name, since that file is both — and the parser is
  * `@aufbau/syntax`; what is tested here is the pairing — that *this* spec, read
  * by *that* parser, is still the forallx of the 2019 Calgary edition, and that

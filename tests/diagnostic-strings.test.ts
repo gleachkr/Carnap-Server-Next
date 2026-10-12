@@ -66,7 +66,7 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
   ],
   [
     "unreadable goal formula",
-    ':::aufbau-proof-fitch{system="forallx-calgary-2019" id="g" points="1"}\ntheorem g : $ P ∧ ⊢ Q $\n----\n:::',
+    ':::aufbau-proof-fitch{system="forallx-calgary" id="g" points="1"}\ntheorem g : $ P ∧ ⊢ Q $\n----\n:::',
   ],
   [
     "a theory with no role for the proof type to read",
@@ -76,7 +76,7 @@ const BROKEN_SOURCES: readonly (readonly [string, string])[] = [
     // The block alone: a spec-read failure is now the block's own diagnostic,
     // so this needs no exercise to be set in it.
     "a name the delimiters split",
-    ':::aufbau-mm0{name="ours" src="/theories/forallx-calgary-2019.mm0"}\nterm Cube (sq: seq): wff;\n:::',
+    ':::aufbau-mm0{name="ours" src="/theories/forallx-calgary.mm0"}\nterm Cube (sq: seq): wff;\n:::',
   ],
 ];
 

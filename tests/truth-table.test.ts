@@ -290,13 +290,13 @@ describe("truth-table compile", () => {
     // `given_row_arity` complaint against its own formula.
     const artifact = await compileArtifact(
       directive(
-        '#fx system="forallx-calgary-2019" variant="validity"',
+        '#fx system="forallx-calgary" variant="validity"',
         "Valid?\n\nR(a,b) | F(a), _|_ :|-: R(a,b)",
       ),
     );
     const data = publicDataOf(artifact.manifest[0] as ExerciseManifestItem);
 
-    expect(shownIn("forallx-calgary-2019", data.formulas)).toEqual([
+    expect(shownIn("forallx-calgary", data.formulas)).toEqual([
       "(R(a,b) ∨ F(a))",
       "⊥",
       "R(a,b)",
@@ -309,13 +309,13 @@ describe("truth-table compile", () => {
     // first formula was already in, and `|` was the whole test.
     const artifact = await compileArtifact(
       directive(
-        '#fx2 system="forallx-calgary-2019"',
+        '#fx2 system="forallx-calgary"',
         "- F(a)\n- F(a) | F(b)\n\nT F | T | . T .",
       ),
     );
     const data = publicDataOf(artifact.manifest[0] as ExerciseManifestItem);
 
-    expect(shownIn("forallx-calgary-2019", data.formulas)).toEqual([
+    expect(shownIn("forallx-calgary", data.formulas)).toEqual([
       "F(a)",
       "(F(a) ∨ F(b))",
     ]);

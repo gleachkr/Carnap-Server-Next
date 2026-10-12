@@ -12,7 +12,7 @@
  * argument-list`, see {@link readArguments}).
  *
  * The language is not written here. It is a spec `logic/specs` registers — for
- * forallx that is `logic/theories/forallx-calgary-2019.mm0`, the same file the
+ * forallx that is `logic/theories/forallx-calgary.mm0`, the same file the
  * proof exercises name as their theory — an ordinary MM0 signature with
  * `@syntax` annotations, read by `@aufbau/syntax`; this module only converts
  * what that parser returns into the {@link Formula} tree the two types

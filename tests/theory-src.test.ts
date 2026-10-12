@@ -16,9 +16,9 @@ import { THEORY_SOURCES } from "../src/worker/logic/theories";
  * preview.
  */
 
-const FORALLX = "/theories/forallx-calgary-2019.mm0";
+const FORALLX = "/theories/forallx-calgary.mm0";
 
-const FORALLX_SOURCE = THEORY_SOURCES["forallx-calgary-2019.mm0"] ?? "";
+const FORALLX_SOURCE = THEORY_SOURCES["forallx-calgary.mm0"] ?? "";
 
 /**
  * What the engine gets. forallx: Calgary is one artifact serving as both the

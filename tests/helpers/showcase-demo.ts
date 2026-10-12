@@ -68,7 +68,7 @@ available to the proof exercises further down. This one names a system the site
 already serves, so the lesson does not carry three hundred lines of MM0:
 
 \`\`\`md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0"}
 :::
 \`\`\`
 
@@ -77,7 +77,7 @@ A course with its own vocabulary adds to it in the body of the same block, and
 the declarations arrive after the ones the path brought:
 
 \`\`\`md
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0"}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0"}
 --| @syntax delimiter $ Cube $
 term Cube (x: tm): wff;
 
@@ -89,7 +89,7 @@ axiom Cube_congr (a b: tm): $ a = b $ > $ Cube a ↔ Cube b $;
 Declaring a theory does not put it on the page — add \`show\` when you want
 students to be able to read the axioms, as the panel below does:
 
-:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary-2019.mm0" show}
+:::aufbau-mm0{name="forallx" src="/theories/forallx-calgary.mm0" show}
 :::
 
 ## 1. Multiple choice
