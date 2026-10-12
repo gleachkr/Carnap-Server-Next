@@ -677,6 +677,19 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
         continue;
       }
 
+      // A try that has come to need a grade opens its form, as the server
+      // draws one; a form the grader opened is never shut under them.
+      if (
+        entry.state === NEEDS_REVIEW &&
+        label.dataset.reviewState !== NEEDS_REVIEW
+      ) {
+        const form = other.querySelector("details.manual-evaluation");
+
+        if (form !== null) {
+          form.open = true;
+        }
+      }
+
       // Both halves: the value for the script, the word for the reader.
       label.dataset.reviewState = entry.state;
       label.textContent = stateLabelText(entry.state);
@@ -709,9 +722,40 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     }
   }
 
-  async function submit(form, payload) {
+  // The cards after this one, in order, before a grade can remove any: the
+  // card a grader moves on to is the first of them still on the page.
+  function cardsAfter(card) {
+    const cards = [...document.querySelectorAll(".submission-review-card")];
+
+    return cards.slice(cards.indexOf(card) + 1);
+  }
+
+  // Ctrl+Enter's second half: open the next card's grading form and put the
+  // grader in its score field.
+  function moveOn(following) {
+    const next = following.find((other) => other.isConnected);
+    const details =
+      next === undefined
+        ? null
+        : next.querySelector("details.manual-evaluation");
+
+    if (details === null) {
+      return;
+    }
+
+    details.open = true;
+
+    const score = details.querySelector("[name=score]");
+
+    if (score !== null) {
+      score.focus();
+    }
+  }
+
+  async function submit(form, payload, advance) {
     const card = form.closest(".submission-review-card");
     const button = form.querySelector("button[type=submit]");
+    const following = advance && card !== null ? cardsAfter(card) : [];
 
     if (button !== null) {
       button.disabled = true;
@@ -735,6 +779,10 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
 
       if (card !== null) {
         applyResult(card, body);
+      }
+
+      if (advance) {
+        moveOn(following);
       }
     } catch (error) {
       if (card !== null) {
@@ -760,22 +808,48 @@ ${readStringsPrelude(REVIEW_UI_STRINGS_ATTRIBUTE)}
     });
   }
 
+  function grade(form, advance) {
+    // While a grade is on its way the button is disabled, which stops a
+    // browser's own Enter; the shortcut goes round the button, so it asks too.
+    const button = form.querySelector("button[type=submit]");
+
+    if ((button !== null && button.disabled) || !form.reportValidity()) {
+      return;
+    }
+
+    const data = new FormData(form);
+    const feedback = String(data.get("feedback") || "");
+    // The score alone: what it is out of belongs to the exercise, and the
+    // server reads it there. Sending one would be refused.
+    submit(
+      form,
+      {
+        feedback: feedback.length === 0 ? null : feedback,
+        score: Number(data.get("score")),
+      },
+      advance,
+    );
+  }
+
   for (const form of document.querySelectorAll("form.manual-evaluation-form")) {
     form.addEventListener("submit", (event) => {
       event.preventDefault();
+      grade(form, false);
+    });
 
-      if (!form.reportValidity()) {
-        return;
+    // Ctrl+Enter (Cmd+Enter on a Mac) saves and moves to the next card, from
+    // the score or the feedback alike. Plain Enter keeps what a browser does
+    // with it — saves from the score, starts a line in the feedback — so it
+    // never moves the grader anywhere they did not ask to go.
+    form.addEventListener("keydown", (event) => {
+      if (
+        event.key === "Enter" &&
+        (event.ctrlKey || event.metaKey) &&
+        !event.isComposing
+      ) {
+        event.preventDefault();
+        grade(form, true);
       }
-
-      const data = new FormData(form);
-      const feedback = String(data.get("feedback") || "");
-      // The score alone: what it is out of belongs to the exercise, and the
-      // server reads it there. Sending one would be refused.
-      submit(form, {
-        feedback: feedback.length === 0 ? null : feedback,
-        score: Number(data.get("score")),
-      });
     });
   }
 })();

@@ -2142,7 +2142,10 @@ const SubmissionReviewCard: FC<{
           data-group-needs={tries.needsReview}
           data-try-group={tries.key}
         >
-          <details class="manual-evaluation">
+          {/* Open where a grade is wanted, so the queue's real work takes no
+              click; shut on a try that already has its grade, where opening
+              it is the exception. */}
+          <details class="manual-evaluation" open={state === "needs-review"}>
             <summary>{i18n.t("Add a manual evaluation")}</summary>
             <ManualEvaluationForm
               assignmentId={assignmentId}

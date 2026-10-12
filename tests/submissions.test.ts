@@ -3179,6 +3179,7 @@ describe("grading in place on the review queue", () => {
     path: string,
   ): Promise<{
     readonly grade: (text: string, score: number) => Promise<void>;
+    readonly settle: () => Promise<void>;
     readonly window: Window & typeof globalThis;
   }> {
     const html = await (
@@ -3218,6 +3219,11 @@ describe("grading in place on the review queue", () => {
     (window as unknown as { eval(code: string): void }).eval(REVIEW_SCRIPT);
 
     return {
+      // Waits out the request a key or a click set off, and the redraw after.
+      settle: async () => {
+        await inFlight;
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      },
       grade: async (text, score) => {
         const card = [
           ...window.document.querySelectorAll(".submission-review-card"),
@@ -3323,6 +3329,51 @@ Explain the rule.
         needs: "1",
         note: "",
       });
+      // The grading form is open on the try waiting for a grade, and shut on
+      // the one that has it.
+      expect(
+        [...document.querySelectorAll("details.manual-evaluation")].map(
+          (details) => (details as HTMLDetailsElement).open,
+        ),
+      ).toEqual([false, true]);
+
+      // Ctrl+Enter in the feedback saves the grade with it and moves on: the
+      // next card's form opens, with its score field focused.
+      const cards = [...document.querySelectorAll(".submission-review-card")];
+      const firstForm = cards[0]?.querySelector(
+        "form.manual-evaluation-form",
+      ) as HTMLFormElement;
+      const nextScore = cards[1]?.querySelector(
+        "[name=score]",
+      ) as HTMLInputElement;
+      const textarea = firstForm.querySelector(
+        "textarea",
+      ) as HTMLTextAreaElement;
+
+      (firstForm.querySelector("[name=score]") as HTMLInputElement).value =
+        "4";
+      textarea.value = "Well argued.";
+      textarea.dispatchEvent(
+        new page.window.KeyboardEvent("keydown", {
+          bubbles: true,
+          cancelable: true,
+          ctrlKey: true,
+          key: "Enter",
+        }),
+      );
+      await page.settle();
+
+      expect(
+        cards[0]?.querySelector(".submission-review-status")?.textContent,
+      ).toBe("4/5 · manual");
+      expect(document.activeElement).toBe(nextScore);
+      expect(
+        (
+          cards[1]?.querySelector(
+            "details.manual-evaluation",
+          ) as HTMLDetailsElement
+        ).open,
+      ).toBe(true);
 
       // Graded below the first, the latest stops counting and leaves Active.
       await page.grade("Third try.", 2);

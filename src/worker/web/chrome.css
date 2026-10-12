@@ -1478,7 +1478,8 @@ th > .column-sort:hover {
 }
 
 /* Manual grading is the exception (auto-graded work rarely needs it), so
-   the form waits behind a disclosure instead of padding out every card. */
+   the form waits behind a disclosure instead of padding out every card —
+   drawn open on a card that needs review, where grading is the point. */
 
 .manual-evaluation {
   margin-top: 0.9rem;
