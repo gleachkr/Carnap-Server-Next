@@ -15,7 +15,7 @@ import {
   type ViewerEvaluation,
 } from "../domain/assessment";
 import type { CourseStaffTier } from "../domain/courses";
-import type { AssignmentScore } from "../domain/grades";
+import { type AssignmentScore, roundPoints } from "../domain/grades";
 import type { User } from "../domain/users";
 import type { AppBindings } from "../http";
 import { splitAtValue, VALUE } from "../i18n/translator";
@@ -85,7 +85,7 @@ const TotalCell: FC<{
 
   return (
     <>
-      {earned}/{possible}
+      {roundPoints(earned)}/{roundPoints(possible)}
     </>
   );
 };

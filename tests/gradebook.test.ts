@@ -4,6 +4,7 @@ import {
   contentArtifactFromRevision,
   parseManifestPoints,
 } from "../src/worker/application/content/artifact";
+import { roundPoints } from "../src/worker/domain/grades";
 import { timestampNow } from "../src/worker/domain/time";
 import type { Env } from "../src/worker/env";
 import { appRequest, createTestApp } from "./helpers/app";
@@ -1825,6 +1826,160 @@ Choose yes.
       await expect(
         stores.scores.getAssignmentScore(assignmentId, student.actorId),
       ).resolves.toMatchObject({ maxScore: 2, score: 1 });
+    });
+  });
+
+  test("points round to the hundredth the way their decimal spelling reads", () => {
+    expect(roundPoints(0.1 + 0.2)).toBe(0.3);
+    expect(roundPoints(2.3000000000000003)).toBe(2.3);
+    // 1.005 is stored as 1.00499999999999989…, and 1.005 * 100 as
+    // 100.49999999999999; a bare Math.round would give 1.
+    expect(roundPoints(1.005)).toBe(1.01);
+    expect(roundPoints(0.004)).toBe(0);
+    expect(roundPoints(1000)).toBe(1000);
+  });
+
+  test("a fractional score is kept to the hundredth on every page, export and ledger row", async () => {
+    await withStorage(async ({ stores }, env) => {
+      const instructor = await login(env, "round-teacher@example.test");
+      const student = await login(env, "round-student@example.test");
+      const courseId = await createCourse(env, instructor);
+      // In binary floating point 0.1 + 0.2 is 0.30000000000000004, and 30%
+      // off 0.1 and 0.2 is 0.06999999999999999 and 0.13999999999999999.
+      const revisionId = await createRevision(
+        env,
+        instructor,
+        `# Lesson\n\n${question("q1", 0.1)}\n\n${question("q2", 0.2)}`,
+      );
+
+      await enrollStudent(env, instructor, student, courseId);
+
+      const assignmentId = await createPublishedAssignment(
+        env,
+        instructor,
+        courseId,
+        revisionId,
+        { dueAt: new Date(Date.now() - 3_600_000).toISOString() },
+      );
+      const gradingBase = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
+      const asInstructor = { headers: { Cookie: instructor.cookieHeader } };
+
+      expect(
+        (
+          await appRequest(
+            createTestApp(),
+            `${gradingBase}/late-policy`,
+            jsonRequest(
+              {
+                graceMinutes: 0,
+                kind: "percent_once_after_due",
+                maxPercentPenalty: 30,
+                percentPenalty: 30,
+              },
+              instructor,
+            ),
+            env,
+          )
+        ).status,
+      ).toBe(200);
+
+      const attemptId = await beginAttempt(
+        env,
+        student,
+        courseId,
+        assignmentId,
+      );
+      const first = await submitAnswer(
+        env,
+        student,
+        courseId,
+        assignmentId,
+        attemptId,
+        ["yes"],
+        "q1",
+      );
+
+      expect(first.status).toBe(201);
+      expect(
+        (
+          await submitAnswer(
+            env,
+            student,
+            courseId,
+            assignmentId,
+            attemptId,
+            ["yes"],
+            "q2",
+          )
+        ).status,
+      ).toBe(201);
+
+      const read = async () => ({
+        assignmentCsv: await (
+          await appRequest(
+            createTestApp(),
+            `${gradingBase}/grades.csv`,
+            asInstructor,
+            env,
+          )
+        ).text(),
+        courseCsv: await (
+          await appRequest(
+            createTestApp(),
+            `/courses/${courseId}/instructor/grades.csv`,
+            asInstructor,
+            env,
+          )
+        ).text(),
+        gradebook: (await (
+          await appRequest(
+            createTestApp(),
+            `${gradingBase}/gradebook`,
+            asInstructor,
+            env,
+          )
+        ).json()) as FullGradebookResponse,
+        ledger: await stores.scores.getAssignmentScore(
+          assignmentId,
+          student.actorId,
+        ),
+      });
+      const late = await read();
+
+      expect(late.gradebook.rows[0]?.score).toMatchObject({
+        maxScore: 0.3,
+        score: 0.21,
+      });
+      expect(late.gradebook.rows[0]?.exerciseScores).toEqual([0.07, 0.14]);
+      expect(late.ledger).toMatchObject({ maxScore: 0.3, score: 0.21 });
+      expect(late.assignmentCsv).toContain(",0.07,0.14,0.21\n");
+      expect(late.courseCsv.split("\n")[0]).toEndWith(",Homework /0.3,total");
+      expect(late.courseCsv).toContain(",0.21,0.21\n");
+
+      // A hand grade finer than the form's step is kept to the hundredth too,
+      // before the penalty: 0.123 is recorded as 0.12, and 30% off is 0.084.
+      const submissionId = (
+        (await first.json()) as {
+          readonly submission: { readonly id: string };
+        }
+      ).submission.id;
+
+      expect(
+        (
+          await appRequest(
+            createTestApp(),
+            `${gradingBase}/submissions/${submissionId}/evaluations`,
+            jsonRequest({ score: 0.123 }, instructor),
+            env,
+          )
+        ).status,
+      ).toBe(201);
+
+      const graded = await read();
+
+      expect(graded.gradebook.rows[0]?.exerciseScores).toEqual([0.08, 0.14]);
+      expect(graded.ledger).toMatchObject({ maxScore: 0.3, score: 0.22 });
+      expect(graded.courseCsv).toContain(",0.22,0.22\n");
     });
   });
 

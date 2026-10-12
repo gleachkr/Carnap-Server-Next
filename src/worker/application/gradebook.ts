@@ -12,7 +12,7 @@ import {
   gradesReleased,
 } from "../domain/assignments";
 import type { CourseAccommodation } from "../domain/courses";
-import type { AssignmentScore } from "../domain/grades";
+import { type AssignmentScore, roundPoints } from "../domain/grades";
 import type { AppId } from "../domain/ids";
 import type { LtiResourceLink } from "../domain/lti";
 import { timestampNow } from "../domain/time";
@@ -184,7 +184,7 @@ function applyLatePolicy(input: {
 
   return {
     ...input.evaluation,
-    score: input.evaluation.score * multiplier,
+    score: roundPoints(input.evaluation.score * multiplier),
   };
 }
 
@@ -336,7 +336,9 @@ export function courseGradebookCsv(gradebook: CourseGradebook): string {
       ...scores.map((score) =>
         score === null ? "" : score.score.toString(),
       ),
-      scores.reduce((sum, score) => sum + (score?.score ?? 0), 0).toString(),
+      roundPoints(
+        scores.reduce((sum, score) => sum + (score?.score ?? 0), 0),
+      ).toString(),
     ]),
   );
 }
@@ -517,7 +519,9 @@ function exercisesFor(
 
 /** What an assignment is out of: its counted exercises' points, summed. */
 function pointsPossible(exercises: readonly GradebookExercise[]): number {
-  return exercises.reduce((sum, exercise) => sum + exercise.points, 0);
+  return roundPoints(
+    exercises.reduce((sum, exercise) => sum + exercise.points, 0),
+  );
 }
 
 function effectiveDueAt(
@@ -715,9 +719,11 @@ function calculateAssignmentScore(
     );
   }
 
-  const score = [...bestByExercise.values()].reduce(
-    (sum, evaluation) => sum + evaluation.score,
-    0,
+  const score = roundPoints(
+    [...bestByExercise.values()].reduce(
+      (sum, evaluation) => sum + evaluation.score,
+      0,
+    ),
   );
 
   return {

@@ -123,6 +123,14 @@ The gradebook calculates scores from non-voided evidence:
 3. Sum the selected exercise scores and current nominal points, excluding
    excused exercises.
 
+Points are kept to the hundredth (`roundPoints` in `domain/grades.ts`), the
+grading form's step. A manual grade is rounded when it is recorded, a late
+penalty when it is applied, and each sum (an assignment's score and points
+possible, a course total) when it is taken. The pages, the CSVs, and the
+passback ledger therefore show the same number, without binary-float residue
+such as `2.3000000000000003`. AGS accepts decimal scores, so nothing is
+rounded to whole points for an LMS.
+
 The review queue asks the same calculation which submissions count: for each
 exercise, the one step 2 selected, and the student's latest try while it has
 no grade yet, since its grade could still be the best. Its Active tab lists

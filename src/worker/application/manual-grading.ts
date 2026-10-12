@@ -4,6 +4,7 @@ import {
   type Submission,
 } from "../domain/assessment";
 import type { Assignment } from "../domain/assignments";
+import { roundPoints } from "../domain/grades";
 import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import { assertJsonValue, type JsonValue } from "../domain/json";
@@ -93,7 +94,8 @@ function submissionNotFound(): AppHttpError {
  * awarded, and the arithmetic downstream is built for it. An assignment's total
  * divides by the sum of the manifest's declared points, so an extra mark here
  * adds to the numerator and leaves the denominator alone — which is what makes
- * it offset a low score elsewhere instead of quietly costing one.
+ * it offset a low score elsewhere instead of quietly costing one. It is kept
+ * to the hundredth, as every score is ({@link roundPoints}).
  */
 function assertScore(score: number): void {
   if (!Number.isFinite(score) || score < 0) {
@@ -131,7 +133,7 @@ export class ManualGradingService {
       feedback,
       gradedById: actor.user.id,
       maxScore,
-      score: command.score,
+      score: roundPoints(command.score),
     });
   }
 
