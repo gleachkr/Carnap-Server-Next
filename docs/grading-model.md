@@ -167,3 +167,27 @@ Ledger refreshes must be deterministic and idempotent. They must not rewrite
 the evidence used to calculate the score. The score store coordinates ledger
 updates with LTI outbox jobs; preserve its claim, retry, and supersession
 checks when changing delivery behavior.
+
+## Grade exports
+
+Both CSV exports have one row per active student, in the gradebook's order:
+`student_name`, `student_email`, `student_id` (the LMS's identifier, when a
+launch has supplied one), and `user_id`. Next come the points earned on each
+part, and last a `total` column summing them.
+
+- **An assignment's export** has one column per counted exercise, in content
+  order. Each column is headed `Title (id) /points`, or `id /points` if the
+  exercise has no title. An empty cell means no evaluated work; it is not a
+  zero.
+- **The course export** has one column per published graded assignment,
+  headed `Title /points`. Excusals apply to everyone, so every student in an
+  assignment is out of the same points. An assignment the student never
+  started, or started and submitted nothing for, is `0`, the same value the
+  total uses. Practice sets stay out of the course export, as they stay out
+  of the course total.
+
+No column holds a maximum, percentage, status or timestamp. A part's worth is
+in its heading, and the spreadsheet or LMS receiving the file derives the rest.
+Every cell, header included, is quoted where needed. A cell that would open
+with `=`, `+`, `-`, `@`, tab or carriage return gets a leading apostrophe, so
+a spreadsheet reads it as text, not as a formula.

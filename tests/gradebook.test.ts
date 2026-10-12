@@ -488,8 +488,9 @@ describe("gradebook", () => {
       expect(csvResponse.headers.get("Content-Disposition")).toMatch(
         /^attachment; filename="Intro Logic - Homework - \d{4}-\d{2}-\d{2} \d{2}-\d{2}\.csv"; filename\*=UTF-8''/,
       );
-      expect(csv).toContain(
-        "student_name,student_email,student_id,user_id,score,max_score,percent,status",
+      // Who, the parts, the total — and nothing worked out from them.
+      expect(csv.split("\n")[0]).toMatch(
+        /^student_name,student_email,student_id,user_id,.* \/2,total$/,
       );
       expect(csv.indexOf("a-correct@example.test")).toBeLessThan(
         csv.indexOf("b-incorrect@example.test"),
@@ -513,19 +514,22 @@ describe("gradebook", () => {
       expect(courseCsvResponse.headers.get("Content-Disposition")).toMatch(
         /^attachment; filename="Intro Logic - All grades - \d{4}-\d{2}-\d{2} \d{2}-\d{2}\.csv"/,
       );
-      // Tidy long format: the assignment leads each row, then the same columns
-      // the per-assignment export uses.
-      expect(courseCsv).toContain(
-        "assignment_id,assignment_title,student_name,student_email,student_id,user_id,score,max_score,percent,status,calculated_at",
+      const [courseHeader, ...courseRows] = courseCsv.trimEnd().split("\n");
+
+      // One row per student, the student first, one column per assignment
+      // headed with what it is out of, then the total.
+      expect(courseHeader).toBe(
+        "student_name,student_email,student_id,user_id,Homework /2,total",
       );
-      expect(courseCsv).toContain(`${assignmentId},`);
-      // One row per (student, assignment) score, grouped by student in row order.
-      expect(courseCsv.indexOf("a-correct@example.test")).toBeLessThan(
-        courseCsv.indexOf("b-incorrect@example.test"),
-      );
-      expect(courseCsv.indexOf("b-incorrect@example.test")).toBeLessThan(
-        courseCsv.indexOf("c-missing@example.test"),
-      );
+      // In the gradebook's row order. The student who never started is a
+      // zero, as the total counts them, not a blank an LMS would skip.
+      expect(courseRows).toHaveLength(3);
+      expect(courseRows[0]).toContain("a-correct@example.test");
+      expect(courseRows[0]).toEndWith(",2,2");
+      expect(courseRows[1]).toContain("b-incorrect@example.test");
+      expect(courseRows[1]).toEndWith(",0,0");
+      expect(courseRows[2]).toContain("c-missing@example.test");
+      expect(courseRows[2]).toEndWith(",0,0");
     });
   });
 
@@ -605,14 +609,13 @@ describe("gradebook", () => {
       // Titled by its author where there is a title, by the id either way, and
       // always with what it is worth: a bare "1" is unreadable out of nothing.
       expect(header).toBe(
-        "student_name,student_email,student_id,user_id,score,max_score,percent,status," +
-          "calculated_at,Modus ponens (q1) /2,q2 /1",
+        "student_name,student_email,student_id,user_id," +
+          "Modus ponens (q1) /2,q2 /1,total",
       );
       expect(header).not.toContain("q3");
       // Two of two on the first, zero of one on the second, and the earned
-      // columns sum to the score three cells to their left.
-      expect(row).toContain(",2,3,66.67,partial,");
-      expect(row.endsWith(",2,0")).toBe(true);
+      // columns sum to the total beside them.
+      expect(row.endsWith(",2,0,2")).toBe(true);
 
       const gradebookResponse = await appRequest(
         createTestApp(),
@@ -674,8 +677,8 @@ Choose yes.
 
       expect(csvResponse.status).toBe(200);
       expect(header).toBe(
-        "student_name,student_email,student_id,user_id,score,max_score,percent,status," +
-          'calculated_at,"Modus ponens, twice (q1.a) /2"',
+        "student_name,student_email,student_id,user_id," +
+          '"Modus ponens, twice (q1.a) /2",total',
       );
     });
   });
@@ -725,6 +728,23 @@ Choose yes.
       // formula would sit right after a newline, bare or freshly quoted.
       expect(csv).not.toContain("\n=");
       expect(csv).not.toContain('\n"=');
+
+      // The course export leads its rows with the same name, through the
+      // same cell writer.
+      const courseCsv = await (
+        await appRequest(
+          createTestApp(),
+          `/courses/${courseId}/instructor/grades.csv`,
+          { headers: { Cookie: instructor.cookieHeader } },
+          env,
+        )
+      ).text();
+
+      expect(courseCsv).toContain(
+        `"'=HYPERLINK(""https://evil.example"",""2,4"")"`,
+      );
+      expect(courseCsv).not.toContain("\n=");
+      expect(courseCsv).not.toContain('\n"=');
     });
   });
 
@@ -807,7 +827,7 @@ Choose yes.
 
       expect(csvResponse.status).toBe(200);
       expect(csv).toContain("practice-student@example.test");
-      expect(csv).toContain(",2,5,40.00,partial,");
+      expect(csv).toContain(",2,0,2\n");
 
       const reviewResponse = await appRequest(
         createTestApp(),

@@ -111,6 +111,13 @@ export interface CourseGradebookRow {
 
 export interface CourseGradebook {
   readonly assignments: readonly Assignment[];
+  /**
+   * What each of {@link assignments} is out of, by position: its exercises'
+   * points less the excused ones. Excusals are made for the whole assignment,
+   * so this is every student's denominator, and it is read from the content
+   * rather than from a row so that a class with no students still has one.
+   */
+  readonly maxScores: readonly number[];
   readonly rows: readonly CourseGradebookRow[];
 }
 
@@ -220,14 +227,6 @@ function csvCell(value: string): string {
   return `"${cell.replaceAll('"', '""')}"`;
 }
 
-function percent(score: AssignmentScore): string {
-  if (score.maxScore === 0) {
-    return "";
-  }
-
-  return ((score.score / score.maxScore) * 100).toFixed(2);
-}
-
 /**
  * What an exercise's column is called: the title the author gave it, with the
  * id that identifies it either way.
@@ -248,122 +247,98 @@ function exerciseColumn(exercise: GradebookExercise): string {
 }
 
 /**
- * One row per student: the assignment total, then the points earned on each
- * exercise that counts toward it, in the order the content declares them.
+ * Both exports share one shape: who the student is, then the points they
+ * earned on each part, then the total of those points. Nothing derived from
+ * the numbers rides along — no maximum, percentage or status column. A part's
+ * worth is in its heading, and the rest is a formula the spreadsheet or the
+ * LMS the file is going to already has; per-row copies of it only stand
+ * between a reader and the scores (gh #23).
+ */
+const STUDENT_HEADERS = [
+  "student_name",
+  "student_email",
+  "student_id",
+  "user_id",
+] as const;
+
+/** A student's cells under {@link STUDENT_HEADERS}. */
+function studentColumns(user: User): string[] {
+  return [
+    user.name ?? "",
+    user.email,
+    // The institution's own identifier, when an LMS launch has supplied one —
+    // empty otherwise, which is every student who has only ever signed in here.
+    user.studentId ?? "",
+    user.id,
+  ];
+}
+
+/**
+ * Every row quoted the same way, the header included. Every column name of
+ * our own is a literal, but a part's column carries an author's title, and a
+ * comma in it would otherwise shift every column after it — silently, in the
+ * one row a reader uses to know what the numbers mean.
+ */
+function csvTable(
+  header: readonly string[],
+  rows: readonly string[][],
+): string {
+  return `${[header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n")}\n`;
+}
+
+/**
+ * One row per student: the points earned on each exercise that counts toward
+ * the assignment, in the order the content declares them, then their total.
  *
- * The per-exercise cells sum to `score` and their column headings' worths sum
- * to `max_score` — excused exercises are in neither, which is what makes the
- * two halves of a row reconcilable. An empty cell is work with no evaluation
- * behind it, and is deliberately not a zero: a student who never answered a
- * problem and one who answered it wrongly are the same number in the total and
- * two different conversations.
+ * The per-exercise cells sum to the total and their headings' worths sum to
+ * what the assignment is out of — excused exercises are in neither. An empty
+ * cell is work with no evaluation behind it, and is deliberately not a zero:
+ * a student who never answered a problem and one who answered it wrongly are
+ * the same number in the total and two different conversations.
  */
 export function assignmentGradebookCsv(
   gradebook: AssignmentGradebook,
 ): string {
-  const header = [
-    "student_name",
-    "student_email",
-    // The institution's own identifier, when an LMS launch has supplied one —
-    // empty otherwise, which is every student who has only ever signed in here.
-    // It sits with the other identifying columns rather than at the end because
-    // the per-exercise columns after them vary in number per assignment.
-    "student_id",
-    "user_id",
-    "score",
-    "max_score",
-    "percent",
-    "status",
-    "calculated_at",
-    ...gradebook.exercises.map(exerciseColumn),
-  ];
-  const rows = gradebook.rows.map(({ exerciseScores, score, user }) =>
-    [
-      user.name ?? "",
-      user.email,
-      user.studentId ?? "",
-      user.id,
-      score.score.toString(),
-      score.maxScore.toString(),
-      percent(score),
-      score.status,
-      score.calculatedAt,
+  return csvTable(
+    [...STUDENT_HEADERS, ...gradebook.exercises.map(exerciseColumn), "total"],
+    gradebook.rows.map(({ exerciseScores, score, user }) => [
+      ...studentColumns(user),
       ...exerciseScores.map((earned) =>
         earned === null ? "" : earned.toString(),
       ),
-    ]
-      .map(csvCell)
-      .join(","),
+      score.score.toString(),
+    ]),
   );
-
-  // The header is quoted like any other row. Every other column name here is a
-  // literal, but an exercise column carries the author's title and ID, and a
-  // comma in either would otherwise shift every column after it — silently, in
-  // the one row a reader uses to know what the numbers mean.
-  return `${header.map(csvCell).join(",")}\n${rows.join("\n")}\n`;
 }
 
 /**
- * Every graded assignment score for every active student in the course, in a
- * tidy long format — one row per (student, assignment) score record. Columns
- * mirror {@link assignmentGradebookCsv}'s own with the assignment prepended, so
- * the per-assignment and whole-course exports read the same. Per-exercise
- * columns stop at that export: two assignments share no exercises, so a course
- * file carrying them would be one row of blanks per assignment per student. The
- * per-assignment export is where a problem breakdown lives. Rows are grouped by
- * student (in the gradebook's row order) then by assignment (in column order),
- * making the output deterministic. Null cells — a student with no score record
- * for an assignment — are skipped.
+ * One row per student, one column per graded assignment in the gradebook's
+ * order, then the course total — the course gradebook page's own table, and
+ * the shape Carnap v1 exported. An assignment the student never started, or
+ * started and submitted nothing for, is a 0, as it is in the total: the page
+ * tells those apart from earned zeros, and a spreadsheet or an LMS import
+ * wants the number. Per-exercise columns stop at the per-assignment export:
+ * two assignments share no exercises, so a course file carrying them would be
+ * mostly blanks.
  */
 export function courseGradebookCsv(gradebook: CourseGradebook): string {
-  const header = [
-    "assignment_id",
-    "assignment_title",
-    "student_name",
-    "student_email",
-    "student_id",
-    "user_id",
-    "score",
-    "max_score",
-    "percent",
-    "status",
-    "calculated_at",
-  ];
-  const rows: string[] = [];
-
-  for (const { scores, user } of gradebook.rows) {
-    scores.forEach((score, index) => {
-      if (score === null) {
-        return;
-      }
-
-      const assignment = gradebook.assignments[index];
-
-      if (assignment === undefined) {
-        return;
-      }
-
-      rows.push(
-        [
-          assignment.id,
-          assignment.title,
-          user.name ?? "",
-          user.email,
-          user.studentId ?? "",
-          user.id,
-          score.score.toString(),
-          score.maxScore.toString(),
-          percent(score),
-          score.status,
-          score.calculatedAt,
-        ]
-          .map(csvCell)
-          .join(","),
-      );
-    });
-  }
-
-  return `${header.join(",")}\n${rows.join("\n")}\n`;
+  return csvTable(
+    [
+      ...STUDENT_HEADERS,
+      ...gradebook.assignments.map(
+        (assignment, index) =>
+          `${assignment.title} /${gradebook.maxScores[index] ?? 0}`,
+      ),
+      "total",
+    ],
+    gradebook.rows.map(({ scores, user }) => [
+      ...studentColumns(user),
+      ...scores.map((score) =>
+        score === null ? "" : score.score.toString(),
+      ),
+      scores.reduce((sum, score) => sum + (score?.score ?? 0), 0).toString(),
+    ]),
+  );
 }
 
 /** A student's score, and the per-exercise points it was summed from. */
@@ -524,7 +499,7 @@ function groupBy<T>(
 }
 
 function exercisesFor(
-  inputs: ScoringInputs,
+  inputs: ScoringContext,
   assignment: Assignment,
 ): readonly GradebookExercise[] {
   const exercises = inputs.exercises.get(assignment.id);
@@ -538,6 +513,11 @@ function exercisesFor(
   }
 
   return exercises;
+}
+
+/** What an assignment is out of: its counted exercises' points, summed. */
+function pointsPossible(exercises: readonly GradebookExercise[]): number {
+  return exercises.reduce((sum, exercise) => sum + exercise.points, 0);
 }
 
 function effectiveDueAt(
@@ -720,10 +700,7 @@ function calculateAssignmentScore(
   const pointByExercise = new Map(
     exercises.map((exercise) => [exercise.id, exercise.points]),
   );
-  const maxScore = exercises.reduce(
-    (sum, exercise) => sum + exercise.points,
-    0,
-  );
+  const maxScore = pointsPossible(exercises);
   const attempts = liveAttempts(assignment, userId, inputs);
   const bestByExercise = new Map<string, EvaluationForScoring>();
 
@@ -1273,6 +1250,9 @@ export class GradebookService {
 
     return {
       assignments,
+      maxScores: assignments.map((assignment) =>
+        pointsPossible(exercisesFor(context, assignment)),
+      ),
       rows: students.map((user, index) => ({
         user,
         scores: columns.map((column) => column[index] ?? null),
