@@ -40,6 +40,14 @@ export type CompileMarkdownResult =
   | {
       readonly artifact: CompiledContentArtifact;
       readonly diagnostics: readonly CompilerDiagnostic[];
+      /**
+       * The source line each exercise's directive opens on, by exercise ID. Not
+       * part of the artifact, which is what a reader is served and has no use
+       * for the author's line numbers: it is for the editor preview, whose
+       * engine checks run after the compile and are about an exercise, not a
+       * line, until this places them.
+       */
+      readonly exerciseLines: ReadonlyMap<string, number>;
       readonly ok: true;
     }
   | {
@@ -492,7 +500,7 @@ export async function compileCarnapMarkdown(
   ];
   const nodes: ContentNode[] = [];
   const manifest: ExerciseManifestItem[] = [];
-  const exerciseIds = new Set<string>();
+  const exerciseLines = new Map<string, number>();
   // The `:::aufbau-mm0` blocks this document declares, by name, and every
   // system an exercise resolved — those blocks plus whichever shipped ids were
   // asked for, entered as they are asked for. `referencedSystems` freezes the
@@ -714,7 +722,7 @@ export async function compileCarnapMarkdown(
       continue;
     }
 
-    if (exerciseIds.has(compiled.manifestItem.id)) {
+    if (exerciseLines.has(compiled.manifestItem.id)) {
       diagnostics.push(
         diagnostic(
           block.line,
@@ -726,7 +734,7 @@ export async function compileCarnapMarkdown(
       continue;
     }
 
-    exerciseIds.add(compiled.manifestItem.id);
+    exerciseLines.set(compiled.manifestItem.id, block.line);
     nodes.push(compiled.node);
     manifest.push(compiled.manifestItem);
   }
@@ -776,6 +784,7 @@ export async function compileCarnapMarkdown(
       ...(Object.keys(systems).length === 0 ? {} : { systems }),
     }),
     diagnostics,
+    exerciseLines,
     ok: true,
   };
 }

@@ -214,11 +214,9 @@ export interface EditorUiStrings {
   readonly preview: EditorPreviewStrings;
   /** The author-only proof-engine checks the preview runs after a clean compile. */
   readonly proofChecks: {
-    readonly declaresCleanly: string;
     readonly notVerified: string;
     /** One check's line, with the exercise id as the placeholder. */
     readonly result: string;
-    readonly starterVerifies: string;
     readonly unreadableStarter: string;
     readonly unreadableTheory: string;
     /** The engine met a token nothing declares, as `{token}`. */
@@ -292,10 +290,11 @@ export function editorUiStrings(
       strings: translatedStrings(buildPreviewStrings, i18n),
     },
     proofChecks: {
-      declaresCleanly: i18n.t("goal declares cleanly ✓"),
       notVerified: i18n.t("not verified"),
-      result: i18n.t("{id} — {status}", placeholders("id", "status")),
-      starterVerifies: i18n.t("starter verifies ✓"),
+      result: i18n.t(
+        "line {line}: {id} — {status}",
+        placeholders("line", "id", "status"),
+      ),
       unreadableStarter: i18n.t(
         "the proof engine could not read this starter",
       ),

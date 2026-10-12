@@ -254,10 +254,6 @@ msgstr "{formula}: witnesses {objects}, and others: {count} in all."
 msgid "{formula}: witnesses {objects}."
 msgstr "{formula}: witnesses {objects}."
 
-#: src/worker/web/ui-strings.ts
-msgid "{id} — {status}"
-msgstr "{id} — {status}"
-
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
@@ -2592,10 +2588,6 @@ msgstr "Go to your courses"
 msgid "Goal"
 msgstr "Goal"
 
-#: src/worker/web/ui-strings.ts
-msgid "goal declares cleanly ✓"
-msgstr "goal declares cleanly ✓"
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Grace minutes"
 msgstr "Grace minutes"
@@ -2913,6 +2905,10 @@ msgstr "Line “{label}” is not connected to the root of the proof; every line
 #: src/worker/exercise-kit/proof/editor-strings.ts
 msgid "Line {line}"
 msgstr "Line {line}"
+
+#: src/worker/web/ui-strings.ts
+msgid "line {line}: {id} — {status}"
+msgstr "line {line}: {id} — {status}"
 
 #: src/worker/web/courses.tsx
 msgid "Link"
@@ -4735,10 +4731,6 @@ msgstr "Start attempt"
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols})."
 msgstr "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols})."
-
-#: src/worker/web/ui-strings.ts
-msgid "starter verifies ✓"
-msgstr "starter verifies ✓"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "State"

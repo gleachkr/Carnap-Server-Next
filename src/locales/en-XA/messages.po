@@ -254,10 +254,6 @@ msgstr ""
 msgid "{formula}: witnesses {objects}."
 msgstr ""
 
-#: src/worker/web/ui-strings.ts
-msgid "{id} — {status}"
-msgstr ""
-
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
@@ -2592,10 +2588,6 @@ msgstr ""
 msgid "Goal"
 msgstr ""
 
-#: src/worker/web/ui-strings.ts
-msgid "goal declares cleanly ✓"
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Grace minutes"
 msgstr ""
@@ -2912,6 +2904,10 @@ msgstr ""
 #. Before an error shown below a proof: the error is on line {line} of the proof editor.
 #: src/worker/exercise-kit/proof/editor-strings.ts
 msgid "Line {line}"
+msgstr ""
+
+#: src/worker/web/ui-strings.ts
+msgid "line {line}: {id} — {status}"
 msgstr ""
 
 #: src/worker/web/courses.tsx
@@ -4734,10 +4730,6 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols})."
-msgstr ""
-
-#: src/worker/web/ui-strings.ts
-msgid "starter verifies ✓"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx

@@ -254,10 +254,6 @@ msgstr "{formula}: Zeugen {objects} und weitere, insgesamt {count}."
 msgid "{formula}: witnesses {objects}."
 msgstr "{formula}: Zeugen {objects}."
 
-#: src/worker/web/ui-strings.ts
-msgid "{id} — {status}"
-msgstr "{id} — {status}"
-
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
 #. Beside an error shown below a proof: it is error {index} of the {count} errors in the proof, counted in the order F8 visits them.
@@ -2592,10 +2588,6 @@ msgstr "Zu Ihren Kursen"
 msgid "Goal"
 msgstr "Ziel"
 
-#: src/worker/web/ui-strings.ts
-msgid "goal declares cleanly ✓"
-msgstr "Ziel wird fehlerfrei deklariert ✓"
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Grace minutes"
 msgstr "Kulanzminuten"
@@ -2913,6 +2905,10 @@ msgstr "Zeile „{label}“ ist nicht mit der Wurzel des Beweises verbunden; jed
 #: src/worker/exercise-kit/proof/editor-strings.ts
 msgid "Line {line}"
 msgstr "Zeile {line}"
+
+#: src/worker/web/ui-strings.ts
+msgid "line {line}: {id} — {status}"
+msgstr "Zeile {line}: {id} — {status}"
 
 #: src/worker/web/courses.tsx
 msgid "Link"
@@ -4735,10 +4731,6 @@ msgstr "Versuch starten"
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Starter line “{line}” must be a full sequent — its formula has no turnstile ({symbols})."
 msgstr "Die Vorgabezeile „{line}“ muss eine vollständige Sequenz sein – ihrer Formel fehlt das Ableitungszeichen ({symbols})."
-
-#: src/worker/web/ui-strings.ts
-msgid "starter verifies ✓"
-msgstr "Vorlage verifiziert ✓"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "State"

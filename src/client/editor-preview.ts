@@ -67,13 +67,12 @@ import { warnBeforeDiscarding } from "./unsaved-changes";
 
 const DEBOUNCE_MS = 250;
 
-// The engine's diagnostic for a well-formed theory + goal with no proof body —
-// benign at authoring time (the student supplies the proof), so a tree exercise
-// whose only complaint is this counts as "declares cleanly".
 /**
  * The engine's complaint about a proof with no lines. Since 0.0.10 the engine
  * goes on to name the theorem and the phase; `readCompileResult` keeps only
- * the headline, and this is it.
+ * the headline, and this is it. Benign at authoring time — the student
+ * supplies the proof — so a check whose only complaint is this has nothing
+ * to say.
  */
 const EMPTY_PROOF_MESSAGE = "proof block is empty";
 
@@ -112,10 +111,8 @@ function proofCheckStrings(): ProofCheckStrings {
   const fromPage = editorStrings().proofChecks;
 
   return {
-    declaresCleanly: fromPage?.declaresCleanly || "goal declares cleanly ✓",
     notVerified: fromPage?.notVerified || "not verified",
-    result: fromPage?.result || "{id} — {status}",
-    starterVerifies: fromPage?.starterVerifies || "starter verifies ✓",
+    result: fromPage?.result || "line {line}: {id} — {status}",
     unreadableStarter:
       fromPage?.unreadableStarter ||
       "the proof engine could not read this starter",
@@ -128,20 +125,24 @@ function proofCheckStrings(): ProofCheckStrings {
   };
 }
 
+/**
+ * One thing an engine check found worth saying about an exercise. A check
+ * that passes says nothing, as the compiler's own diagnostics do: an empty
+ * list is the all-clear.
+ */
 interface ProofCheck {
   readonly id: string;
-  readonly ok: boolean;
-  /** What to show on success (types differ: "verifies" vs "declares cleanly"). */
-  readonly okLabel: string;
-  readonly message: string | null;
+  /** Where the exercise's directive opens, so the author can find it. */
+  readonly line: number | undefined;
+  readonly message: string;
 }
 
 /**
  * Run the Aufbau engine over each linear proof exercise's frozen theory +
  * starter, exactly as a student's browser would — so an author sees a
- * malformed theory or a starter that does not yet verify while writing. A stub
- * starter legitimately fails to verify; the note is informational, not a
- * content error.
+ * malformed theory or a starter that does not yet verify while writing. A
+ * partial starter may fail on purpose, so this warns and never refuses the
+ * save; an empty one is the usual case and passes.
  *
  * A playground has no goal to verify against: its theory carries no
  * `theorem playground`, and the goal is derived from whatever the student
@@ -150,6 +151,7 @@ interface ProofCheck {
  */
 async function proofChecksFor(
   artifact: CompiledContentArtifact,
+  lines: ReadonlyMap<string, number>,
   strings: ProofCheckStrings,
 ): Promise<ProofCheck[]> {
   const proofs = artifact.manifest.filter(
@@ -165,29 +167,28 @@ async function proofChecksFor(
 
   const compiler = await loadProofCompiler();
 
-  return proofs.map((proof) => {
+  return proofs.flatMap((proof) => {
     const { goalName, mm0, starterBody } = proof.publicData;
+    const line = lines.get(proof.id);
     try {
       const result = compiler.compile(
         mm0,
         proofTextOf(goalName, starterBody),
       );
-      const verified = readCompileResult(result).certificate !== null;
-      return {
-        id: proof.id,
-        message: verified ? null : firstProblem(result, strings),
-        ok: verified,
-        okLabel: strings.starterVerifies,
-      };
+
+      if (readCompileResult(result).certificate !== null) {
+        return [];
+      }
+
+      const message = firstProblem(result, strings) ?? strings.notVerified;
+
+      return message === EMPTY_PROOF_MESSAGE
+        ? []
+        : [{ id: proof.id, line, message }];
     } catch {
       // Malformed source can make the compiler throw instead of reporting a
       // diagnostic; keep the preview alive with a generic note.
-      return {
-        id: proof.id,
-        message: strings.unreadableStarter,
-        ok: false,
-        okLabel: strings.starterVerifies,
-      };
+      return [{ id: proof.id, line, message: strings.unreadableStarter }];
     }
   });
 }
@@ -211,6 +212,7 @@ interface GoalCheckData {
  */
 async function goalChecksFor(
   artifact: CompiledContentArtifact,
+  lines: ReadonlyMap<string, number>,
   strings: ProofCheckStrings,
 ): Promise<ProofCheck[]> {
   const goals = artifact.manifest.filter(
@@ -230,29 +232,21 @@ async function goalChecksFor(
 
   const compiler = await loadProofCompiler();
 
-  return goals.map((goal) => {
+  return goals.flatMap((goal) => {
     const { goalName } = goal.publicData;
     const { mm0 } = proofTheoryText(goal.publicData);
+    const line = lines.get(goal.id);
     try {
       const result = compiler.compile(mm0, proofTextOf(goalName, ""));
       const message = firstProblem(result, strings);
-      const declaresCleanly =
-        result.ok === true ||
+
+      return result.ok === true ||
         message === null ||
-        message === EMPTY_PROOF_MESSAGE;
-      return {
-        id: goal.id,
-        message: declaresCleanly ? null : message,
-        ok: declaresCleanly,
-        okLabel: strings.declaresCleanly,
-      };
+        message === EMPTY_PROOF_MESSAGE
+        ? []
+        : [{ id: goal.id, line, message }];
     } catch {
-      return {
-        id: goal.id,
-        message: strings.unreadableTheory,
-        ok: false,
-        okLabel: strings.declaresCleanly,
-      };
+      return [{ id: goal.id, line, message: strings.unreadableTheory }];
     }
   });
 }
@@ -280,13 +274,13 @@ function renderProofChecks(
     const [before, after] = splitAtValue(
       formatMessage(strings.result, {
         id: VALUE,
-        status: check.ok
-          ? check.okLabel
-          : (check.message ?? strings.notVerified),
+        // The compile that made the artifact placed every exercise in it; the
+        // "?" only answers the map lookup's type.
+        line: check.line ?? "?",
+        status: check.message,
       }),
     );
     entry.append(before, code, after);
-    entry.dataset.state = check.ok ? "ok" : "error";
     list.append(entry);
   }
 
@@ -534,8 +528,16 @@ function drawPreview(
     // linear starters verify; tree, Fitch and Prawitz goals declare cleanly.
     const checkStrings = proofCheckStrings();
     const checks = [
-      ...(await proofChecksFor(artifact, checkStrings)),
-      ...(await goalChecksFor(artifact, checkStrings)),
+      ...(await proofChecksFor(
+        artifact,
+        compiled.exerciseLines,
+        checkStrings,
+      )),
+      ...(await goalChecksFor(
+        artifact,
+        compiled.exerciseLines,
+        checkStrings,
+      )),
     ];
 
     if (!stale()) {

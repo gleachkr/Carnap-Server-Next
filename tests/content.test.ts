@@ -749,6 +749,30 @@ Explain the proof.
     );
   });
 
+  test("the compile says which line each exercise opens on, outside the artifact", async () => {
+    const compiled = await compileCarnapMarkdown(`# Lesson
+
+::::free-response{#essay_1 points="5"}
+Explain why the argument is valid.
+::::
+
+Some prose.
+
+::::short-answer{#term_1 answer="modus ponens" points="2"}
+Name the rule.
+::::`);
+
+    if (!compiled.ok) {
+      throw new Error("Expected successful compilation.");
+    }
+
+    expect([...compiled.exerciseLines]).toEqual([
+      ["essay_1", 3],
+      ["term_1", 9],
+    ]);
+    expect(JSON.stringify(compiled.artifact)).not.toContain("exerciseLines");
+  });
+
   test("unsupported syntax produces useful diagnostics", async () => {
     const compiled = await compileCarnapMarkdown(`Unsafe <script></script>
 

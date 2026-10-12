@@ -953,22 +953,15 @@ th > .column-sort:hover {
   color: var(--gold);
 }
 
-/* Per-proof engine checks under the editor: subtle, informational — a stub
-   starter legitimately fails to verify, so these are not content errors. */
+/* Per-proof engine checks under the editor, listed only when one finds
+   something. None refuses the save — a partial starter may fail on purpose —
+   so they take the warning's gold, not the error's red. */
 .proof-checks {
-  color: var(--ink-muted, #5f7388);
+  color: var(--gold);
   font-size: 0.9rem;
   list-style: none;
   margin-top: 0.75rem;
   padding: 0;
-}
-
-.proof-checks li[data-state="ok"] {
-  color: var(--green, #1b7048);
-}
-
-.proof-checks li[data-state="error"] {
-  color: var(--ink-muted, #5f7388);
 }
 
 .create-bar {
