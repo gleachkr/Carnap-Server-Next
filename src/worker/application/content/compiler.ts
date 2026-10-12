@@ -2,9 +2,11 @@ import type { Root } from "mdast";
 import type { ContainerDirective } from "mdast-util-directive";
 import type {
   CompiledContentArtifact,
+  CompiledSystemOrigins,
   ContentNode,
   ContentSourceProfile,
   ExerciseManifestItem,
+  SystemOrigin,
 } from "../../domain/content";
 import type { DirectiveBlock } from "../../exercise-kit/authoring";
 import { withSystemSources } from "../../exercise-kit/systems/join";
@@ -18,8 +20,9 @@ import {
 } from "../../exercise-kit/systems/theory";
 import type { ExerciseType } from "../../exercise-kit/type";
 import type { TheoryResolver } from "../../logic/theories";
-import { BUILT_IN_SYSTEM_IDS } from "../../logic/theories";
+import { BUILT_IN_SYSTEM_IDS, theoryByPath } from "../../logic/theories";
 import { type CompilerDiagnostic, diagnostic } from "./diagnostics";
+import { builtInTheoryHash, mm0TextHash } from "./hash";
 import {
   createFootnoteNumbering,
   directiveBlockFromNode,
@@ -49,6 +52,15 @@ export type CompileMarkdownResult =
        */
       readonly exerciseLines: ReadonlyMap<string, number>;
       readonly ok: true;
+      /**
+       * Where each theory the artifact froze was read from, for those read
+       * from an address. Beside the artifact rather than in it for the same
+       * reason as `exerciseLines`: nothing that renders or grades the lesson
+       * reads it. A save stores it in its own column, which is what lets the
+       * outdated-theory check run over a list of revisions without loading
+       * their artifacts.
+       */
+      readonly systemOrigins: CompiledSystemOrigins;
     }
   | {
       readonly diagnostics: readonly CompilerDiagnostic[];
@@ -457,6 +469,36 @@ function referencedSystems(
 }
 
 /**
+ * Where each frozen system was read from, for those read from an address.
+ *
+ * Hashed here rather than when the system was resolved because resolving a
+ * built-in by id is synchronous. Keyed by the names `systems` uses, so the
+ * two tables say the same things about the same entries.
+ */
+async function referencedOrigins(
+  theories: ReadonlyMap<string, AufbauTheory>,
+  systems: Readonly<Record<string, string>>,
+): Promise<Record<string, SystemOrigin>> {
+  const origins: Record<string, SystemOrigin> = {};
+
+  for (const name of Object.keys(systems)) {
+    const origin = theories.get(name)?.origin;
+
+    if (origin !== undefined) {
+      origins[name] = {
+        hash:
+          theoryByPath(origin.src) === null
+            ? await mm0TextHash(origin.text)
+            : await builtInTheoryHash(origin.src, origin.text),
+        src: origin.src,
+      };
+    }
+  }
+
+  return origins;
+}
+
+/**
  * What a caller can lend the compiler beyond the source text.
  *
  * Both are optional, and the defaults are what makes this compiler runnable
@@ -765,6 +807,7 @@ export async function compileCarnapMarkdown(
 
   const css = cssParts.join("\n\n");
   const systems = referencedSystems(namedSystems, manifest);
+  const systemOrigins = await referencedOrigins(namedSystems, systems);
 
   return {
     // Joined, not keyed. A compiled artifact is nearly always about to be
@@ -786,5 +829,6 @@ export async function compileCarnapMarkdown(
     diagnostics,
     exerciseLines,
     ok: true,
+    systemOrigins,
   };
 }

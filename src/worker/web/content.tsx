@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { FC } from "hono/jsx";
+import type { OutdatedTheory } from "../application/content";
 import type { DiagnosticMessageId } from "../application/content/diagnostic-strings";
 import type { DiagnosticSeverity } from "../application/content/diagnostics";
 import type { CompiledTheoryArtifact } from "../application/content/mm0";
@@ -44,9 +45,9 @@ import {
 } from "./components";
 import type { ContentDocumentModel } from "./content-document";
 import { renderContentDocument } from "./content-document";
-import { DownloadIcon, PenIcon, PeopleIcon } from "./icons";
+import { DownloadIcon, PenIcon, PeopleIcon, WarningIcon } from "./icons";
 import { type PageStatus, renderShell, useI18n } from "./layout";
-import { revisionDetailsText } from "./revisions";
+import { outdatedTheoryText, revisionDetailsText } from "./revisions";
 import { SortHeader } from "./table-sort";
 import {
   EDITOR_UI_STRINGS_ATTRIBUTE,
@@ -208,7 +209,9 @@ const ItemsTable: FC<{
    * different facts, and the first sentence would be a lie under the second. */
   readonly hasArchived: boolean;
   readonly items: readonly ContentItem[];
-}> = ({ archived, canAuthor, context, hasArchived, items }) => {
+  /** Items whose latest revision is built on a theory that has changed. */
+  readonly outdated: ReadonlySet<string>;
+}> = ({ archived, canAuthor, context, hasArchived, items, outdated }) => {
   const i18n = useI18n();
 
   if (items.length === 0) {
@@ -251,6 +254,7 @@ const ItemsTable: FC<{
             <tr>
               <td>
                 <a href={`/content/${item.id}`}>{item.title}</a>
+                {outdated.has(item.id) ? <OutdatedMark /> : null}
               </td>
               <td>{sourceFormatLabel(i18n, item.sourceFormat)}</td>
               {/* The instant behind the localized date, which does not sort. */}
@@ -273,6 +277,24 @@ const ItemsTable: FC<{
         })}
       </tbody>
     </TableScroll>
+  );
+};
+
+/**
+ * A warning mark after an item's title, when its latest revision is built on a
+ * theory that has changed since. Only the exceptional row carries anything, so
+ * the mark rides the title cell rather than taking a column; the item's page,
+ * one click away, says which theory and what to do.
+ */
+const OutdatedMark: FC = () => {
+  const i18n = useI18n();
+  const label = i18n.t("A theory this lesson uses has changed");
+
+  return (
+    <span aria-label={label} class="outdated-mark" role="img" title={label}>
+      {" "}
+      <WarningIcon />
+    </span>
   );
 };
 
@@ -928,6 +950,7 @@ export function renderContentLibrary(
     readonly canAuthor: boolean;
     readonly items: readonly ContentItem[];
     readonly notices: readonly string[];
+    readonly outdatedItemIds: ReadonlySet<string>;
   },
 ): Response {
   const i18n = context.get("i18n");
@@ -968,6 +991,7 @@ export function renderContentLibrary(
           context={context}
           hasArchived={archivedItems.length > 0}
           items={activeItems}
+          outdated={model.outdatedItemIds}
         />
       </Sheet>
       {archivedItems.length > 0 ? (
@@ -995,6 +1019,7 @@ export function renderContentLibrary(
               context={context}
               hasArchived
               items={archivedItems}
+              outdated={model.outdatedItemIds}
             />
           </div>
         </details>
@@ -1027,6 +1052,7 @@ export function renderContentItem(
     readonly canAuthor: boolean;
     readonly item: ContentItem;
     readonly notices: readonly string[];
+    readonly outdatedTheories: readonly OutdatedTheory[];
     readonly revisions: readonly ContentRevisionSummary[];
   },
 ): Response {
@@ -1042,6 +1068,11 @@ export function renderContentItem(
     <>
       {model.notices.map((message) => (
         <Notice>{message}</Notice>
+      ))}
+      {model.outdatedTheories.map((theory) => (
+        <Notice tone="warn">
+          {outdatedTheoryText(i18n, theory, "item")}
+        </Notice>
       ))}
       <Sheet
         description={i18n.t(

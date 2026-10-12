@@ -69,6 +69,7 @@ export async function seedCourseWithAssignment(
     compiled: EMPTY_ARTIFACT,
     contentHash: `hash-${key}`,
     createdAt: SEED_NOW,
+    systemOrigins: {},
     createdById: ownerId,
     details: "",
     id: `revision-${key}`,

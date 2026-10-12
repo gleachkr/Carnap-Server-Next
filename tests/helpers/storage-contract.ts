@@ -86,6 +86,7 @@ export function describeStorageContract(
       sourceText: "# Modus Ponens",
       contentHash: "sha256:first",
       compiled: { exercises: [{ id: "mp" }] },
+      systemOrigins: {},
       createdById: instructor.id,
       createdAt: NOW,
     });
@@ -111,6 +112,7 @@ export function describeStorageContract(
       sourceText: "# Conditional Proof",
       contentHash: "sha256:conditional-proof",
       compiled: { exercises: [{ id: "cp" }] },
+      systemOrigins: {},
       createdById: instructor.id,
       createdAt: NOW,
     });
@@ -1171,6 +1173,95 @@ export function describeStorageContract(
       });
     });
 
+    test("a revision keeps its theory origins, and they are read in bulk", async () => {
+      await withStorage(async ({ stores }) => {
+        const { instructor, item, revision } =
+          await createContentRevision(stores);
+        const origins = {
+          logic: { hash: "sha256:theory", src: "/theories/carnap-prop.mm0" },
+        };
+        const second = await stores.content.createRevision({
+          id: "content-revision-2",
+          itemId: item.id,
+          revisionNumber: 2,
+          details: "",
+          sourceFormat: "markdown",
+          sourceText: "# Modus Ponens\n\nWith a theory.",
+          contentHash: "sha256:second",
+          compiled: { exercises: [] },
+          systemOrigins: origins,
+          createdById: instructor.id,
+          createdAt: NOW,
+        });
+        const other = await stores.content.createItem({
+          id: "content-item-2",
+          ownerUserId: instructor.id,
+          sourceFormat: "mm0",
+          title: "A theory",
+          createdAt: NOW,
+        });
+        const otherRevision = await stores.content.createRevision({
+          id: "content-revision-3",
+          itemId: other.id,
+          revisionNumber: 1,
+          details: "",
+          sourceFormat: "mm0",
+          sourceText: "provable sort wff;",
+          contentHash: "sha256:third",
+          compiled: { kind: "mm0" },
+          systemOrigins: {},
+          createdById: instructor.id,
+          createdAt: NOW,
+        });
+
+        expect(second.systemOrigins).toEqual(origins);
+        expect(
+          (await stores.content.getRevision(second.id))?.systemOrigins,
+        ).toEqual(origins);
+        expect(
+          (await stores.content.listRevisionsForItem(item.id))[0]
+            ?.systemOrigins,
+        ).toEqual(origins);
+
+        // One row per item, the latest; an id named twice is one row.
+        const latest = await stores.content.latestRevisionsForItems([
+          item.id,
+          other.id,
+          item.id,
+          "content-item-missing",
+        ]);
+
+        expect(latest.map((one) => one.id).sort()).toEqual([
+          second.id,
+          otherRevision.id,
+        ]);
+        expect(
+          latest.find((one) => one.id === second.id)?.systemOrigins,
+        ).toEqual(origins);
+
+        // Newest first within an item.
+        expect(
+          (await stores.content.listRevisionsForItems([item.id, other.id]))
+            .filter((one) => one.itemId === item.id)
+            .map((one) => one.id),
+        ).toEqual([second.id, revision.id]);
+        expect(
+          (
+            await stores.content.listRevisionSummaries([
+              revision.id,
+              "content-revision-missing",
+            ])
+          ).map((one) => one.id),
+        ).toEqual([revision.id]);
+        expect(
+          (await stores.content.listItemsByIds([other.id, item.id]))
+            .map((one) => one.id)
+            .sort(),
+        ).toEqual([item.id, other.id]);
+        expect(await stores.content.latestRevisionsForItems([])).toEqual([]);
+      });
+    });
+
     test("content revisions are immutable and ordered", async () => {
       await withStorage(async ({ stores }) => {
         const { instructor, item, revision } =
@@ -1184,6 +1275,7 @@ export function describeStorageContract(
           sourceText: "# Modus Ponens\n\nEdited.",
           contentHash: "sha256:second",
           compiled: { exercises: [{ id: "mp" }, { id: "mp-2" }] },
+          systemOrigins: {},
           createdById: instructor.id,
           createdAt: NOW,
         });
@@ -1202,6 +1294,7 @@ export function describeStorageContract(
             sourceText: "# Duplicate",
             contentHash: "sha256:duplicate",
             compiled: { exercises: [] },
+            systemOrigins: {},
             createdById: instructor.id,
             createdAt: NOW,
           }),
@@ -1225,6 +1318,7 @@ export function describeStorageContract(
           shareSource: false,
           sourceFormat: "markdown",
           contentHash: "sha256:second",
+          systemOrigins: {},
           createdById: instructor.id,
           createdAt: NOW,
         });
@@ -1282,6 +1376,7 @@ export function describeStorageContract(
             sourceText: `# Draft ${revisionNumber}`,
             contentHash,
             compiled: { exercises: [] },
+            systemOrigins: {},
             createdById: instructor.id,
             createdAt: NOW,
           });
@@ -1940,6 +2035,7 @@ export function describeStorageContract(
             sourceText: id,
             contentHash: `sha256:${id}`,
             compiled,
+            systemOrigins: {},
             createdById: instructor.id,
             createdAt: NOW,
           });

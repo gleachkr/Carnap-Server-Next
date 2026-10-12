@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
 import type { Child, FC } from "hono/jsx";
+import type { OutdatedTheory } from "../application/content";
 import { createDefaultExerciseRegistry } from "../application/content/registry";
 import { jsonScriptContent } from "../application/content/render-support";
 import {
@@ -105,6 +106,7 @@ import {
 } from "./labels";
 import { type PageStatus, renderShell, useI18n } from "./layout";
 import {
+  outdatedTheoryText,
   revisionDetailsText,
   revisionOptionLabel,
   revisionOptionTimeAttributes,
@@ -3042,6 +3044,8 @@ export function renderInstructorAssignmentPage(
     /** The request's clock — what the release controls read the window and
      *  the release date against, so the view keeps none of its own. */
     readonly now: Timestamp;
+    /** The theories its revision was built on that have changed since. */
+    readonly outdatedTheories: readonly OutdatedTheory[];
     readonly overrides: ReadonlyMap<string, AssignmentOverride>;
     readonly revisions: readonly AssignmentRevisionOption[];
     readonly students: readonly CourseMembership[];
@@ -3291,6 +3295,11 @@ export function renderInstructorAssignmentPage(
     <>
       {model.notices.map((message) => (
         <Notice>{message}</Notice>
+      ))}
+      {model.outdatedTheories.map((theory) => (
+        <Notice tone="warn">
+          {outdatedTheoryText(i18n, theory, "assignment")}
+        </Notice>
       ))}
       <ContentSplit
         content={

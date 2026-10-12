@@ -150,6 +150,7 @@ async function createAssignmentInCourse(
     sourceText: "# Proofs",
     contentHash: "sha256:proofs",
     compiled: EMPTY_ARTIFACT,
+    systemOrigins: {},
     createdById: ownerId,
     createdAt: NOW,
   });
@@ -2211,6 +2212,7 @@ async function createPointedAssignment(
       ...EMPTY_ARTIFACT,
       manifest: [{ id: "q1", nominalPoints: options.points ?? 2 }],
     }) as never,
+    systemOrigins: {},
     createdById: ownerId,
     createdAt: NOW,
   });

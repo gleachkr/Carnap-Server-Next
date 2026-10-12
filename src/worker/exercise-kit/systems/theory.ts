@@ -20,6 +20,7 @@ import { roleIndex } from "../../logic/specs/roles";
 import type { TheoryResolver } from "../../logic/theories";
 import {
   BUILT_IN_THEORY_PATHS,
+  THEORY_ROUTE_PREFIX,
   theoryByPath,
   theorySourceByFileName,
 } from "../../logic/theories";
@@ -51,9 +52,30 @@ export interface AufbauTheory {
    * block reports for itself.
    */
   readonly notations: DeclaredNotations | null;
+  /**
+   * Where the theory's text came from, when it came from a URL — a built-in
+   * named by id or by `src=`, or an instructor-hosted revision — and not from
+   * a body the lesson wrote. See {@link TheoryOrigin}.
+   */
+  readonly origin?: TheoryOrigin;
   /** Whether the author asked (`show`) for the source to appear in the lesson. */
   readonly show: boolean;
   readonly source: string;
+}
+
+/**
+ * The address a theory was resolved from, and the text found there.
+ *
+ * Kept so that a saved lesson can say what it was built on: the compiler
+ * freezes `source`, which is this text plus any extension the block wrote, and
+ * records the address beside it with a hash of `text`. A later check asks the
+ * address for its text again and compares (`ContentService.outdatedTheories`).
+ * The text is held rather than hashed here because the resolver that builds a
+ * built-in system is synchronous and hashing is not.
+ */
+export interface TheoryOrigin {
+  readonly src: string;
+  readonly text: string;
 }
 
 /**
@@ -266,6 +288,9 @@ export async function compileAufbauMm0(
   return {
     name,
     notations: declaredNotations(source),
+    ...(src === undefined || base === null
+      ? {}
+      : { origin: { src, text: base } }),
     show,
     source,
   };
@@ -348,7 +373,8 @@ function reportUnreadableTheory(
  * an exercise cannot behave differently for having skipped the block.
  */
 export function builtInSystem(id: string): AufbauTheory | null {
-  const source = theorySourceByFileName(`${id}.mm0`);
+  const fileName = `${id}.mm0`;
+  const source = theorySourceByFileName(fileName);
 
   if (source === null) {
     return null;
@@ -357,6 +383,7 @@ export function builtInSystem(id: string): AufbauTheory | null {
   return {
     name: id,
     notations: declaredNotations(source),
+    origin: { src: `${THEORY_ROUTE_PREFIX}${fileName}`, text: source },
     show: false,
     source,
   };

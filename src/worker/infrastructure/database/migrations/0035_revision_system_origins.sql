@@ -1,0 +1,14 @@
+-- Where each theory a lesson revision froze was read from: `{name: {src,
+-- hash}}`, the address and the hash of the text found there, for every system
+-- resolved from a built-in or hosted address. What the outdated-theory check
+-- compares with today's theories.
+--
+-- A column rather than a field of `compiled_json` because nothing that renders
+-- or grades a lesson reads it, and the places that do — the content library,
+-- an item's page, an assignment's page — list revisions without loading their
+-- artifacts.
+--
+-- `{}` for every revision that exists when this runs: none of them recorded
+-- where its theories came from, and an empty table is what a lesson with no
+-- theory read from an address has too, so neither ever warns.
+ALTER TABLE `content_revisions` ADD `system_origins_json` text DEFAULT '{}' NOT NULL;

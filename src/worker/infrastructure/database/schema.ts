@@ -305,6 +305,11 @@ export const contentRevisions = sqliteTable(
       .default(false),
     contentHash: text("content_hash").notNull(),
     compiledJson: text("compiled_json", { mode: "json" }).notNull(),
+    /** Where each theory the revision froze was read from; see
+     * `0035_revision_system_origins.sql`. */
+    systemOriginsJson: text("system_origins_json", { mode: "json" })
+      .notNull()
+      .default({}),
     createdById: text("created_by_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

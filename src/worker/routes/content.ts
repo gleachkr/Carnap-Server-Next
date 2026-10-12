@@ -265,6 +265,7 @@ async function libraryPage(context: Context<AppBindings>): Promise<Response> {
   return renderContentLibrary(context, {
     canAuthor: canAuthorContent(actor),
     items,
+    outdatedItemIds: await service.outdatedItems(actor, items),
     notices: collectNotices(
       libraryNotices(context.get("i18n")),
       new URL(context.req.url),
@@ -319,11 +320,18 @@ async function itemPage(context: Context<AppBindings>): Promise<Response> {
   try {
     const item = await service.getItem(actor, itemId);
     const revisions = await service.listRevisions(actor, itemId);
+    // The latest revision is the one a new save replaces, so it is the one
+    // whose theories saving again would bring up to date.
+    const latest = revisions[0];
 
     return renderContentItem(context, {
       canAuthor: canAuthorContent(actor),
       item,
       notices: collectNotices(itemNotices(context.get("i18n")), url),
+      outdatedTheories:
+        latest === undefined
+          ? []
+          : await service.outdatedTheories(actor, latest.systemOrigins),
       revisions,
     });
   } catch (error) {

@@ -527,6 +527,10 @@ msgstr ""
 msgid "A theory named “{name}” is already declared."
 msgstr ""
 
+#: src/worker/web/content.tsx
+msgid "A theory this lesson uses has changed"
+msgstr ""
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A translation exercise requires at least one solution formula."
 msgstr ""
@@ -5202,6 +5206,14 @@ msgstr ""
 msgid "The language uses the role “{role}”, which a {world} world does not have."
 msgstr ""
 
+#: src/worker/web/revisions.ts
+msgid "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one."
+msgstr ""
+
 #: src/worker/application/lti.ts
 msgid "The launch did not identify a course."
 msgstr ""
@@ -5554,6 +5566,14 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "This assignment is not accepting new attempts."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts

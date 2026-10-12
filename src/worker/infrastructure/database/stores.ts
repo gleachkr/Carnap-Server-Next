@@ -114,10 +114,12 @@ import type {
   AssignmentOverride,
 } from "../../domain/assignments";
 import type { AuthSession, NativeLoginChallenge } from "../../domain/auth";
-import type {
-  ContentItem,
-  ContentRevision,
-  ContentRevisionSummary,
+import {
+  type CompiledSystemOrigins,
+  type ContentItem,
+  type ContentRevision,
+  type ContentRevisionSummary,
+  isSystemOrigins,
 } from "../../domain/content";
 import type {
   Course,
@@ -201,6 +203,11 @@ function nullableSingle<T>(rows: readonly T[]): T | null {
  */
 const IN_LIST_SLICE = 50;
 
+/** An id list once each, so a slice never spends a parameter on a repeat. */
+function unique(ids: readonly AppId[]): AppId[] {
+  return [...new Set(ids)];
+}
+
 /**
  * Run a statement once per slice of an id list and hand back one result, so
  * a caller with a course's worth of assignment ids never has to know the
@@ -245,6 +252,68 @@ function chunked<T>(items: readonly T[], size: number): T[][] {
   return chunks;
 }
 
+/**
+ * A revision's origins table, checked at the boundary like every JSON column:
+ * the outdated-theory check compares these strings with today's theories, and
+ * a malformed entry would make it warn, or stay silent, for no reason anyone
+ * could see.
+ */
+function revisionSystemOrigins(
+  revisionId: AppId,
+  value: unknown,
+): CompiledSystemOrigins {
+  if (!isSystemOrigins(value)) {
+    throw new Error(
+      `Content revision ${revisionId} has a malformed system_origins_json`,
+    );
+  }
+
+  return value;
+}
+
+/** Every column but the source and the artifact, the two that grow. */
+const revisionSummaryColumns = {
+  id: contentRevisions.id,
+  itemId: contentRevisions.itemId,
+  revisionNumber: contentRevisions.revisionNumber,
+  details: contentRevisions.details,
+  sharing: contentRevisions.sharing,
+  shareSource: contentRevisions.shareSource,
+  sourceFormat: contentRevisions.sourceFormat,
+  contentHash: contentRevisions.contentHash,
+  systemOriginsJson: contentRevisions.systemOriginsJson,
+  createdById: contentRevisions.createdById,
+  createdAt: contentRevisions.createdAt,
+};
+
+function mapContentRevisionSummary(row: {
+  readonly id: AppId;
+  readonly itemId: AppId;
+  readonly revisionNumber: number;
+  readonly details: string;
+  readonly sharing: ContentRevision["sharing"];
+  readonly shareSource: boolean;
+  readonly sourceFormat: ContentRevision["sourceFormat"];
+  readonly contentHash: string;
+  readonly systemOriginsJson: unknown;
+  readonly createdById: AppId;
+  readonly createdAt: string;
+}): ContentRevisionSummary {
+  return {
+    id: row.id,
+    itemId: row.itemId,
+    revisionNumber: row.revisionNumber,
+    details: row.details,
+    sharing: row.sharing,
+    shareSource: row.shareSource,
+    sourceFormat: row.sourceFormat,
+    contentHash: row.contentHash,
+    systemOrigins: revisionSystemOrigins(row.id, row.systemOriginsJson),
+    createdById: row.createdById,
+    createdAt: row.createdAt,
+  };
+}
+
 function mapContentRevision(row: typeof contentRevisions.$inferSelect) {
   const compiled = row.compiledJson;
 
@@ -261,6 +330,7 @@ function mapContentRevision(row: typeof contentRevisions.$inferSelect) {
     sourceText: row.sourceText,
     contentHash: row.contentHash,
     compiled,
+    systemOrigins: revisionSystemOrigins(row.id, row.systemOriginsJson),
     createdById: row.createdById,
     createdAt: row.createdAt,
   } satisfies ContentRevision;
@@ -796,7 +866,7 @@ class SqliteUserStore implements UserStore {
   }
 
   async listByIds(ids: readonly AppId[]): Promise<User[]> {
-    return overSlices([...new Set(ids)], (slice) =>
+    return overSlices(unique(ids), (slice) =>
       this.db.select().from(users).where(inArray(users.id, slice)),
     );
   }
@@ -921,7 +991,7 @@ class SqliteUserStore implements UserStore {
     platformId: AppId,
   ): Promise<Map<AppId, string>> {
     const prefix = ltiProviderSubject(platformId, "");
-    const rows = await overSlices([...new Set(userIds)], (slice) =>
+    const rows = await overSlices(unique(userIds), (slice) =>
       this.db
         .select({
           providerSubject: externalIdentities.providerSubject,
@@ -1289,7 +1359,7 @@ class SqliteCourseStore implements CourseStore {
   }
 
   async listByIds(ids: readonly AppId[]): Promise<Course[]> {
-    return overSlices([...new Set(ids)], (slice) =>
+    return overSlices(unique(ids), (slice) =>
       this.db.select().from(courses).where(inArray(courses.id, slice)),
     );
   }
@@ -1716,6 +1786,7 @@ class SqliteContentStore implements ContentStore {
         sourceText: input.sourceText,
         contentHash: input.contentHash,
         compiledJson: input.compiled,
+        systemOriginsJson: input.systemOrigins,
         createdById: input.createdById,
         createdAt: input.createdAt,
       })
@@ -1828,22 +1899,72 @@ class SqliteContentStore implements ContentStore {
     // Every column but the source and the artifact: a history is read on
     // every save, every listing and every picker, and the text of a hundred
     // drafts is not what any of them is asking for.
-    return this.db
-      .select({
-        id: contentRevisions.id,
-        itemId: contentRevisions.itemId,
-        revisionNumber: contentRevisions.revisionNumber,
-        details: contentRevisions.details,
-        sharing: contentRevisions.sharing,
-        shareSource: contentRevisions.shareSource,
-        sourceFormat: contentRevisions.sourceFormat,
-        contentHash: contentRevisions.contentHash,
-        createdById: contentRevisions.createdById,
-        createdAt: contentRevisions.createdAt,
-      })
+    const rows = await this.db
+      .select(revisionSummaryColumns)
       .from(contentRevisions)
       .where(eq(contentRevisions.itemId, itemId))
       .orderBy(desc(contentRevisions.revisionNumber));
+
+    return rows.map(mapContentRevisionSummary);
+  }
+
+  async listItemsByIds(ids: readonly AppId[]): Promise<ContentItem[]> {
+    return overSlices(unique(ids), (slice) =>
+      this.db
+        .select()
+        .from(contentItems)
+        .where(inArray(contentItems.id, [...slice])),
+    );
+  }
+
+  async listRevisionSummaries(
+    ids: readonly AppId[],
+  ): Promise<ContentRevisionSummary[]> {
+    const rows = await overSlices(unique(ids), (slice) =>
+      this.db
+        .select(revisionSummaryColumns)
+        .from(contentRevisions)
+        .where(inArray(contentRevisions.id, [...slice])),
+    );
+
+    return rows.map(mapContentRevisionSummary);
+  }
+
+  async listRevisionsForItems(
+    itemIds: readonly AppId[],
+  ): Promise<ContentRevisionSummary[]> {
+    const rows = await overSlices(unique(itemIds), (slice) =>
+      this.db
+        .select(revisionSummaryColumns)
+        .from(contentRevisions)
+        .where(inArray(contentRevisions.itemId, [...slice]))
+        .orderBy(
+          asc(contentRevisions.itemId),
+          desc(contentRevisions.revisionNumber),
+        ),
+    );
+
+    return rows.map(mapContentRevisionSummary);
+  }
+
+  async latestRevisionsForItems(
+    itemIds: readonly AppId[],
+  ): Promise<ContentRevisionSummary[]> {
+    // One row per item, chosen in the database: a library of fifty lessons
+    // edited a hundred times each is fifty rows here, not five thousand.
+    const rows = await overSlices(unique(itemIds), (slice) =>
+      this.db
+        .select(revisionSummaryColumns)
+        .from(contentRevisions)
+        .where(
+          and(
+            inArray(contentRevisions.itemId, [...slice]),
+            sql`${contentRevisions.revisionNumber} = (select max(latest.revision_number) from ${contentRevisions} as latest where latest.item_id = ${contentRevisions.itemId})`,
+          ),
+        ),
+    );
+
+    return rows.map(mapContentRevisionSummary);
   }
 
   async nextRevisionSlot(

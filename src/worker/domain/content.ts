@@ -158,6 +158,12 @@ export interface ContentRevision {
   readonly sourceText: string;
   readonly contentHash: string;
   readonly compiled: JsonValue;
+  /**
+   * Where each theory the revision froze was read from. Not part of
+   * `compiled`, and so in the summary too: the outdated-theory check reads it
+   * from listings that never load an artifact.
+   */
+  readonly systemOrigins: CompiledSystemOrigins;
   readonly createdById: AppId;
   readonly createdAt: Timestamp;
 }
@@ -223,6 +229,49 @@ export interface CompiledContentDocument {
  * cheap and total, so nothing needs the choice.
  */
 export type CompiledSystems = Readonly<Record<string, string>>;
+
+/**
+ * Where a frozen system came from: the address its text was read at, and the
+ * hash of that text when it was read.
+ *
+ * The hash is of the text at the address — before any extension the lesson's
+ * block appended — and is the same hash an MM0 revision carries as its
+ * `contentHash`, so a hosted theory's origin can be compared with that item's
+ * later revisions without reading them, and a built-in's with the file that
+ * ships today. A system the lesson wrote in a block body has no address and no
+ * origin: it cannot fall behind anything.
+ */
+export interface SystemOrigin {
+  readonly hash: string;
+  readonly src: string;
+}
+
+/**
+ * For each frozen system read from an address, where it was read from; keyed
+ * by the names the artifact's `systems` table uses. Empty for a lesson that
+ * read none, for an MM0 revision, and for every revision saved before origins
+ * were recorded — which therefore cannot say whether a theory it froze has
+ * changed since.
+ */
+export type CompiledSystemOrigins = Readonly<Record<string, SystemOrigin>>;
+
+/** Whether untrusted JSON is a {@link CompiledSystemOrigins} table. */
+export function isSystemOrigins(
+  value: unknown,
+): value is CompiledSystemOrigins {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every(
+      (origin: unknown) =>
+        typeof origin === "object" &&
+        origin !== null &&
+        typeof (origin as { src?: unknown }).src === "string" &&
+        typeof (origin as { hash?: unknown }).hash === "string",
+    )
+  );
+}
 
 export interface CompiledContentArtifact {
   readonly componentRegistryVersion: string;

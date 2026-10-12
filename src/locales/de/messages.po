@@ -527,6 +527,10 @@ msgstr "Für diesen Versuch kann keine Abgabe akzeptiert werden."
 msgid "A theory named “{name}” is already declared."
 msgstr "Eine Theorie namens „{name}“ ist bereits deklariert."
 
+#: src/worker/web/content.tsx
+msgid "A theory this lesson uses has changed"
+msgstr "Eine Theorie, die diese Lektion verwendet, hat sich geändert"
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A translation exercise requires at least one solution formula."
 msgstr "Eine Übersetzungsaufgabe braucht mindestens eine Lösungsformel."
@@ -5202,6 +5206,14 @@ msgstr "Die Sprache hat kein Symbol „{symbol}“."
 msgid "The language uses the role “{role}”, which a {world} world does not have."
 msgstr "Die Sprache verwendet die Rolle „{role}“, die eine {world}-Welt nicht hat."
 
+#: src/worker/web/revisions.ts
+msgid "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision."
+msgstr "Die neueste Revision wurde mit {src} erstellt, und diese Theorie hat eine neuere Revision unter {current}. Um sie zu verwenden, ändern Sie src auf die neue Adresse und speichern Sie eine neue Revision."
+
+#: src/worker/web/revisions.ts
+msgid "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one."
+msgstr "Die neueste Revision wurde mit einer älteren Version von {src} erstellt. Speichern Sie eine neue Revision, um sie mit der aktuellen zu erstellen."
+
 #: src/worker/application/lti.ts
 msgid "The launch did not identify a course."
 msgstr "Beim Start wurde kein Kurs angegeben."
@@ -5555,6 +5567,14 @@ msgstr "Diese Antwort enthält keine Welt."
 #: src/worker/web/assignment-detail.tsx
 msgid "This assignment is not accepting new attempts."
 msgstr "Diese Aufgabe nimmt keine neuen Versuche an."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision."
+msgstr "Die Revision dieser Aufgabe wurde mit {src} erstellt, und diese Theorie hat eine neuere Revision unter {current}. Um sie zu verwenden, ändern Sie src in der Lektion auf die neue Adresse, speichern Sie die Lektion und verweisen Sie diese Aufgabe auf die neue Revision."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision."
+msgstr "Die Revision dieser Aufgabe wurde mit einer älteren Version von {src} erstellt. Um die aktuelle zu verwenden, speichern Sie die Lektion erneut und verweisen Sie diese Aufgabe auf die neue Revision."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "This branch has no rows."

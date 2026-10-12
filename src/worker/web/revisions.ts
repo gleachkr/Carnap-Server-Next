@@ -1,3 +1,4 @@
+import type { OutdatedTheory } from "../application/content";
 import type { ContentRevision } from "../domain/content";
 import type { Translator } from "../i18n/translator";
 import { utcTimestampText } from "./timestamp-formats";
@@ -90,4 +91,41 @@ export function revisionOptionLabel(
         details,
         title: itemTitle,
       });
+}
+
+/**
+ * Why a revision's theory is out of date, and what to do about it — on the
+ * content item's page, of its latest revision, and on an assignment's, of the
+ * revision it publishes. A built-in changed in place, so the same lesson saved
+ * again takes the change up; a hosted theory's newer text is at another
+ * address, so the lesson's `src=` has to be pointed there first.
+ */
+export function outdatedTheoryText(
+  i18n: Translator,
+  theory: OutdatedTheory,
+  page: "assignment" | "item",
+): string {
+  const params = { current: theory.current, src: theory.src };
+
+  if (theory.current === theory.src) {
+    return page === "item"
+      ? i18n.t(
+          "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one.",
+          { src: theory.src },
+        )
+      : i18n.t(
+          "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision.",
+          { src: theory.src },
+        );
+  }
+
+  return page === "item"
+    ? i18n.t(
+        "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision.",
+        params,
+      )
+    : i18n.t(
+        "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision.",
+        params,
+      );
 }

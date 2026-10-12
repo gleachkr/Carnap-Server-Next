@@ -1,10 +1,12 @@
 import type {
   CompiledContentArtifact,
+  CompiledSystemOrigins,
   ContentItem,
   ContentRevision,
   ContentRevisionSummary,
   ContentSharing,
   ContentSourceFormat,
+  SystemOrigin,
 } from "../domain/content";
 import {
   CONTENT_DETAILS_MAX_LENGTH,
@@ -18,11 +20,20 @@ import { timestampNow } from "../domain/time";
 import { keyedArtifact } from "../exercise-kit/systems/join";
 import { deferred } from "../i18n/deferred";
 import type { TheoryResolver } from "../logic/theories";
-import { hostedTheoryRevisionId } from "../logic/theories";
+import {
+  hostedTheoryPath,
+  hostedTheoryRevisionId,
+  theoryByPath,
+} from "../logic/theories";
 import type { AuthenticatedActor } from "./auth";
 import { canAuthorContent, requireContentAuthor } from "./authorization";
 import { compileCarnapMarkdown } from "./content/compiler";
-import { sha256Id } from "./content/hash";
+import {
+  builtInTheoryHash,
+  mm0TextHash,
+  sha256Id,
+  stableJson,
+} from "./content/hash";
 import { compileTheorySource } from "./content/mm0";
 import { AppHttpError, badRequest } from "./errors";
 import type { AppStores } from "./stores";
@@ -148,6 +159,32 @@ function ownsItem(
 }
 
 /**
+ * What a lesson revision's `contentHash` is taken over: its source, and the
+ * origins of the theories it froze when there are any. A lesson with none
+ * hashes as it always has.
+ */
+function lessonHashInput(
+  sourceText: string,
+  origins: CompiledSystemOrigins,
+): string {
+  const text = `carnap-markdown-v1\n${sourceText}`;
+
+  return Object.keys(origins).length === 0
+    ? text
+    : `${text}\n\u0000${stableJson(origins)}`;
+}
+
+/**
+ * A theory a lesson revision was built on that has changed since: the address
+ * it was read from, and the address of its current text — the same address
+ * for a built-in, a later revision's for a hosted theory.
+ */
+export interface OutdatedTheory {
+  readonly current: string;
+  readonly src: string;
+}
+
+/**
  * Whether this actor may read this revision — the one place the scope is
  * interpreted, so that the revision page, the document, the source download,
  * the theory route and the compiler's resolver cannot come to disagree about
@@ -163,7 +200,7 @@ function ownsItem(
  * not the history behind it.
  */
 function canReadRevision(
-  revision: ContentRevision,
+  revision: Pick<ContentRevision, "sharing">,
   item: ContentItem,
   actor: AuthenticatedActor | null,
 ): boolean {
@@ -515,6 +552,164 @@ export class ContentService {
       (await this.hostedTheory(actor, path))?.source ?? null;
   }
 
+  /**
+   * The theories a lesson revision froze that have changed since, as this
+   * actor could take the change up. One revision's worth of
+   * {@link outdatedTheoriesOf}.
+   */
+  async outdatedTheories(
+    actor: AuthenticatedActor | null,
+    origins: CompiledSystemOrigins,
+  ): Promise<readonly OutdatedTheory[]> {
+    return (await this.outdatedTheoriesOf(actor, [origins]))[0] ?? [];
+  }
+
+  /**
+   * For each revision's origins, the theories among them that have changed
+   * since, as this actor could take the change up — in bulk, so a listing of
+   * every lesson costs the same few queries as one.
+   *
+   * A built-in is outdated when the file that ships today hashes differently
+   * from the one the revision read: no query at all. A hosted theory names one
+   * immutable revision, so it is outdated when that item has a *later*
+   * revision, one this actor may read, holding different text — the latest
+   * readable, not the latest: a revision its owner has not shared is a draft
+   * this actor could not switch to, and naming it would say it exists. Every
+   * hosted origin in the batch is answered by the same three reads.
+   *
+   * Says nothing about a revision saved before origins were recorded, or a
+   * theory written in the lesson's own block body; neither has an address to
+   * ask again. Nor about a built-in this site has stopped serving: there is
+   * nothing to move to, and the frozen copy still works.
+   */
+  async outdatedTheoriesOf(
+    actor: AuthenticatedActor | null,
+    batch: readonly CompiledSystemOrigins[],
+  ): Promise<readonly (readonly OutdatedTheory[])[]> {
+    const newer = await this.newerHostedTheories(
+      actor,
+      batch.flatMap((origins) => Object.values(origins)),
+    );
+    const answers: OutdatedTheory[][] = [];
+
+    for (const origins of batch) {
+      const outdated: OutdatedTheory[] = [];
+
+      for (const origin of Object.values(origins)) {
+        // Two names for one address are one theory to bring up to date.
+        if (outdated.some((one) => one.src === origin.src)) {
+          continue;
+        }
+
+        const builtIn = theoryByPath(origin.src);
+        const current =
+          builtIn === null
+            ? newer.get(`${origin.src}\n${origin.hash}`)
+            : (await builtInTheoryHash(origin.src, builtIn)) !== origin.hash
+              ? origin.src
+              : undefined;
+
+        if (current !== undefined) {
+          outdated.push({ current, src: origin.src });
+        }
+      }
+
+      answers.push(outdated);
+    }
+
+    return answers;
+  }
+
+  /**
+   * Which of these items' latest revisions is built on an outdated theory —
+   * the library's per-row mark. Two reads for the latest revisions' origins
+   * and the hosted check together, however many items there are; an MM0
+   * item has no origins and is never marked.
+   */
+  async outdatedItems(
+    actor: AuthenticatedActor,
+    items: readonly ContentItem[],
+  ): Promise<ReadonlySet<AppId>> {
+    const latest = await this.options.stores.content.latestRevisionsForItems(
+      items
+        .filter((item) => item.sourceFormat === "markdown")
+        .map((item) => item.id),
+    );
+    const answers = await this.outdatedTheoriesOf(
+      actor,
+      latest.map((revision) => revision.systemOrigins),
+    );
+
+    return new Set(
+      latest
+        .filter((_, at) => (answers[at]?.length ?? 0) > 0)
+        .map((revision) => revision.itemId),
+    );
+  }
+
+  /**
+   * The address of the newer text for each hosted origin that has one, keyed
+   * by `src` and `hash` together. Three reads whatever the batch: the pinned
+   * revisions, their items, and those items' revisions.
+   */
+  private async newerHostedTheories(
+    actor: AuthenticatedActor | null,
+    origins: readonly SystemOrigin[],
+  ): Promise<ReadonlyMap<string, string>> {
+    const hosted = origins.flatMap((origin) => {
+      const revisionId = hostedTheoryRevisionId(origin.src);
+
+      return revisionId === null ? [] : [{ origin, revisionId }];
+    });
+    const newer = new Map<string, string>();
+
+    if (hosted.length === 0) {
+      return newer;
+    }
+
+    const store = this.options.stores.content;
+    const pinned = new Map(
+      (
+        await store.listRevisionSummaries(hosted.map((one) => one.revisionId))
+      ).map((revision) => [revision.id, revision]),
+    );
+    const itemIds = [...pinned.values()].map((revision) => revision.itemId);
+    const items = new Map(
+      (await store.listItemsByIds(itemIds)).map((item) => [item.id, item]),
+    );
+    // Newest first within an item, so the first readable one is the latest
+    // readable.
+    const latest = new Map<AppId, ContentRevisionSummary>();
+
+    for (const revision of await store.listRevisionsForItems(itemIds)) {
+      const item = items.get(revision.itemId);
+
+      if (
+        item !== undefined &&
+        !latest.has(item.id) &&
+        canReadRevision(revision, item, actor)
+      ) {
+        latest.set(item.id, revision);
+      }
+    }
+
+    for (const { origin, revisionId } of hosted) {
+      const from = pinned.get(revisionId);
+      const to = from === undefined ? undefined : latest.get(from.itemId);
+
+      if (
+        from !== undefined &&
+        to !== undefined &&
+        to.revisionNumber > from.revisionNumber &&
+        to.contentHash !== origin.hash
+      ) {
+        newer.set(`${origin.src}\n${origin.hash}`, hostedTheoryPath(to.id));
+      }
+    }
+
+    return newer;
+  }
+
   async createRevision(
     actor: AuthenticatedActor,
     itemId: AppId,
@@ -564,9 +759,18 @@ export class ContentService {
     // not claimed to hold the same thing. Markdown's prefix is the one it has
     // always had: it is stored on every revision ever saved, and rewriting it
     // would make an existing revision's text look new when it was saved again.
-    const contentHash = await sha256Id(
-      `${item.sourceFormat === "mm0" ? "mm0-v1" : "carnap-markdown-v1"}\n${command.sourceText}`,
-    );
+    //
+    // A lesson's hash also covers the theories it read from an address. The
+    // same source compiled against a changed `forallx-calgary` is a different
+    // lesson — its proofs are graded against other rules — and saving it is
+    // how an author takes up the change, so it must not be refused as a
+    // duplicate of the revision built on the old file.
+    const systemOrigins =
+      "systemOrigins" in compiled ? compiled.systemOrigins : {};
+    const contentHash =
+      item.sourceFormat === "mm0"
+        ? await mm0TextHash(command.sourceText)
+        : await sha256Id(lessonHashInput(command.sourceText, systemOrigins));
 
     // The next number and the hash check come as one aggregate, not as the
     // item's revisions: a save used to read every one of them, artifacts and
@@ -602,6 +806,7 @@ export class ContentService {
       createdAt: now,
       createdById: actor.user.id,
       details,
+      systemOrigins,
       id: createAppId(nowDate.getTime()),
       itemId,
       revisionNumber: slot.revisionNumber,

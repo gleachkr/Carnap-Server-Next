@@ -527,6 +527,10 @@ msgstr "A submission cannot be accepted for this attempt."
 msgid "A theory named “{name}” is already declared."
 msgstr "A theory named “{name}” is already declared."
 
+#: src/worker/web/content.tsx
+msgid "A theory this lesson uses has changed"
+msgstr "A theory this lesson uses has changed"
+
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A translation exercise requires at least one solution formula."
 msgstr "A translation exercise requires at least one solution formula."
@@ -5202,6 +5206,14 @@ msgstr "The language has no symbol “{symbol}”."
 msgid "The language uses the role “{role}”, which a {world} world does not have."
 msgstr "The language uses the role “{role}”, which a {world} world does not have."
 
+#: src/worker/web/revisions.ts
+msgid "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision."
+msgstr "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision."
+
+#: src/worker/web/revisions.ts
+msgid "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one."
+msgstr "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one."
+
 #: src/worker/application/lti.ts
 msgid "The launch did not identify a course."
 msgstr "The launch did not identify a course."
@@ -5555,6 +5567,14 @@ msgstr "This answer holds no world."
 #: src/worker/web/assignment-detail.tsx
 msgid "This assignment is not accepting new attempts."
 msgstr "This assignment is not accepting new attempts."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision."
+msgstr "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision."
+msgstr "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "This branch has no rows."

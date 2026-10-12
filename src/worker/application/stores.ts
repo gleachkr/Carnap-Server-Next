@@ -21,6 +21,7 @@ import type {
 } from "../domain/assignments";
 import type { AuthSession, NativeLoginChallenge } from "../domain/auth";
 import type {
+  CompiledSystemOrigins,
   ContentItem,
   ContentRevision,
   ContentRevisionSummary,
@@ -554,6 +555,7 @@ export interface CreateContentRevisionInput {
   readonly sourceText: string;
   readonly contentHash: string;
   readonly compiled: JsonValue;
+  readonly systemOrigins: CompiledSystemOrigins;
   readonly createdById: AppId;
   readonly createdAt: Timestamp;
 }
@@ -698,6 +700,28 @@ export interface ContentStore {
    * the reason {@link ContentRevisionSummary} gives.
    */
   listRevisionsForItem(itemId: AppId): Promise<ContentRevisionSummary[]>;
+  /** The items with these ids, in no particular order; a miss is absent. */
+  listItemsByIds(ids: readonly AppId[]): Promise<ContentItem[]>;
+  /** The revisions with these ids, as summaries; a miss is absent. */
+  listRevisionSummaries(
+    ids: readonly AppId[],
+  ): Promise<ContentRevisionSummary[]>;
+  /**
+   * Every revision of each of these items, as summaries, newest first within
+   * an item. What the outdated-theory check reads to find the latest revision
+   * of a hosted theory that a given reader may read.
+   */
+  listRevisionsForItems(
+    itemIds: readonly AppId[],
+  ): Promise<ContentRevisionSummary[]>;
+  /**
+   * Each of these items' latest revision, as a summary; an item with none is
+   * absent. One row per item, for a listing that asks about every item's
+   * latest revision at once.
+   */
+  latestRevisionsForItems(
+    itemIds: readonly AppId[],
+  ): Promise<ContentRevisionSummary[]>;
   /**
    * The two facts a save needs, as one aggregate over the item's revisions
    * rather than the revisions themselves — an item edited a few hundred times

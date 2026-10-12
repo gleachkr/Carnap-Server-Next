@@ -1031,11 +1031,14 @@ th > .column-sort:hover {
 
 /* Notices and errors */
 
+/* A notice can name an address — a theory's `/content/revisions/…` path is
+   one unbroken word — so a long word breaks rather than widen the page. */
 .notice,
 .error {
   border: 1px solid;
   border-radius: 4px;
   font-size: 0.92rem;
+  overflow-wrap: break-word;
   padding: 0.85rem 1rem;
 }
 
@@ -1247,6 +1250,14 @@ th > .column-sort:hover {
 .owner-crown .icon {
   font-size: 1.5em;
   position: absolute;
+}
+
+/* The library's outdated-theory mark sits in the text after a title, at text
+   size: unlike the crown it is not decoration on a name but a status, and it
+   stays in flow so a long title wraps around it rather than under it. */
+.outdated-mark .icon {
+  font-size: 1.15em;
+  vertical-align: -0.15em;
 }
 
 /* Result and review surfaces */

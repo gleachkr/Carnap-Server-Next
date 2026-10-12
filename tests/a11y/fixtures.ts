@@ -261,6 +261,109 @@ No formulas at all.
 provable sort wff;
 :::`;
 
+/**
+ * A lesson whose theories have changed since it was saved, and a draft
+ * assignment on it; see the call site.
+ */
+async function outdatedLessonFixture(
+  env: Env,
+  instructor: LoginResult,
+  courseId: string,
+): Promise<{ readonly assignmentId: string; readonly itemId: string }> {
+  const post = async (path: string, body: unknown) => {
+    const response = await appRequest(
+      createTestApp(),
+      path,
+      jsonRequest(body, instructor),
+      env,
+    );
+
+    if (response.status !== 201) {
+      throw new Error(`${path}: ${response.status} ${await response.text()}`);
+    }
+
+    return (await response.json()) as Record<string, { id: string }>;
+  };
+  const theory = `delimiter $ ( ) $;
+provable sort wff;
+term im (a b: wff): wff;
+infixr im: $->$ prec 25;
+axiom ax_k (a b: wff): $ a -> b -> a $;
+`;
+  const theoryId = (
+    await post("/content", { sourceFormat: "mm0", title: "Implication" })
+  ).item?.id;
+  const v1 = (
+    await post(`/content/${theoryId}/revisions`, { sourceText: theory })
+  ).revision?.id;
+  const itemId = (await post("/content", { title: "Outdated lesson" })).item
+    ?.id;
+  const revisionId = (
+    await post(`/content/${itemId}/revisions`, {
+      sourceText: `:::aufbau-mm0{name="hosted" src="/content/revisions/${v1}/theory.mm0"}
+:::
+
+::::aufbau-proof{system="hosted" id="k"}
+Prove it.
+
+theorem thm_k (a b: wff): $ a -> b -> a $
+----
+l1: $ a -> b -> a $ by ax_k []
+::::
+
+::::model{id="m" system="forallx-calgary"}
+Make it true.
+
+- ExF(x)
+::::`,
+    })
+  ).revision?.id;
+
+  await post(`/content/${theoryId}/revisions`, {
+    sourceText: `${theory}axiom ax_i (a: wff): $ a -> a $;\n`,
+  });
+
+  const db = env.DB;
+
+  if (db === undefined || itemId === undefined || revisionId === undefined) {
+    throw new Error("outdatedLessonFixture needs a D1 binding and a lesson.");
+  }
+
+  const row = await db
+    .prepare("SELECT system_origins_json FROM content_revisions WHERE id = ?")
+    .bind(revisionId)
+    .first<{ system_origins_json: string }>();
+  const origins = JSON.parse(row?.system_origins_json ?? "{}") as Record<
+    string,
+    { hash: string; src: string }
+  >;
+  const calgary = origins["forallx-calgary"];
+
+  if (calgary !== undefined) {
+    calgary.hash = "sha256:older";
+  }
+
+  await db
+    .prepare(
+      "UPDATE content_revisions SET system_origins_json = ? WHERE id = ?",
+    )
+    .bind(JSON.stringify(origins), revisionId)
+    .run();
+
+  const assignmentId = (
+    await post(`/courses/${courseId}/assignments`, {
+      contentRevisionId: revisionId,
+      title: "Homework on an older theory",
+    })
+  ).assignment?.id;
+
+  if (assignmentId === undefined) {
+    throw new Error("outdatedLessonFixture made no assignment.");
+  }
+
+  return { assignmentId, itemId };
+}
+
 async function grantCapability(
   env: Env,
   userId: string,
@@ -623,6 +726,13 @@ export async function collectFixtures(
     (await secondDraftResponse.json()) as { assignment: { id: string } }
   ).assignment.id;
 
+  // A lesson built on theories that have since changed: a hosted theory with
+  // a newer revision, and a built-in whose recorded hash is made stale by
+  // hand, since a test cannot change a file the site ships. Its own item and
+  // draft, so the library mark and both pages' notices are rendered without
+  // touching the main lesson's pages.
+  const outdated = await outdatedLessonFixture(env, instructor, courseId);
+
   // A third, published-but-unattempted assignment, so the student page can be
   // captured in its "Before you start" briefing state as well as its
   // answering state — the two share no copy at all.
@@ -966,6 +1076,16 @@ export async function collectFixtures(
   await add(
     "assignment-instructor-draft",
     `/courses/${courseId}/instructor/assignments/${draftAssignmentId}`,
+    instructor,
+  );
+  await add(
+    "assignment-instructor-outdated-theory",
+    `/courses/${courseId}/instructor/assignments/${outdated.assignmentId}`,
+    instructor,
+  );
+  await add(
+    "content-item-outdated-theory",
+    `/content/${outdated.itemId}`,
     instructor,
   );
   await add(

@@ -1130,7 +1130,8 @@ in exercise `system` attributes.
 Hosted theory references have these properties:
 
 - They name a revision, never “latest”. To adopt a newer theory, save a new
-  lesson revision using its new address.
+  lesson revision using its new address; see
+  [When a theory changes](#when-a-theory-changes).
 - The lesson compiler resolves the source at authoring time and freezes it
   into the lesson. Students do not fetch the hosted revision.
 - Sharing is per revision: private, available to content authors on the site,
@@ -1146,6 +1147,34 @@ identified separately from a missing or unsuitable one.
 
 A hosted theory with `@syntax role sentence` can also supply the language
 for semantic exercises.
+
+### When a theory changes
+
+A saved lesson keeps the theory text it was compiled against, so a later
+change to a theory never alters a published assignment's rules or grades on
+its own. The revision also records, for each theory read from an address,
+that address and a hash of the text found there. A theory written in the
+block body has no address and is not tracked.
+
+The content library marks a lesson whose latest revision is affected with a
+warning icon beside its title. The content item page checks its latest
+revision, and an instructor's assignment page checks the revision the
+assignment uses; either page explains the warning. A theory counts as
+changed in these cases:
+
+- **A built-in**, when the file this site ships no longer matches
+  the recorded hash. Save the lesson again, with the same source if nothing
+  else changed, to build a revision on the current file. A revision's content
+  hash covers the theories it read, so this save is not refused as a
+  duplicate.
+- **A hosted theory**, when its item has a later revision with
+  different text that the reader may read. The warning gives that revision's
+  address; point the block's `src` at it and save. A later revision the
+  reader may not read is not mentioned.
+
+An assignment then takes up the new lesson revision through a correction,
+which records the change and refreshes scores. Revisions saved before
+origins were recorded give no warning.
 
 ### Extending a theory, and writing one
 
