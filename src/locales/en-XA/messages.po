@@ -1066,6 +1066,10 @@ msgid "At the time below"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Attempt"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Attempt {ordinal}"
 msgstr ""
@@ -3686,10 +3690,6 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Option labels cannot be empty."
-msgstr ""
-
-#: src/worker/web/assignment-detail.tsx
-msgid "Ordinal"
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx

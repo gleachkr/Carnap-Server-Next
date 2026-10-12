@@ -1066,6 +1066,10 @@ msgid "At the time below"
 msgstr "Zum unten angegebenen Zeitpunkt"
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Attempt"
+msgstr "Versuch"
+
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Attempt {ordinal}"
 msgstr "Versuch {ordinal}"
@@ -3687,10 +3691,6 @@ msgstr "Options-IDs müssen mit einem Buchstaben beginnen und dürfen Buchstaben
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Option labels cannot be empty."
 msgstr "Optionsbeschriftungen dürfen nicht leer sein."
-
-#: src/worker/web/assignment-detail.tsx
-msgid "Ordinal"
-msgstr "Nummer"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Override"

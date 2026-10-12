@@ -1066,6 +1066,10 @@ msgid "At the time below"
 msgstr "At the time below"
 
 #: src/worker/web/assignment-detail.tsx
+msgid "Attempt"
+msgstr "Attempt"
+
+#: src/worker/web/assignment-detail.tsx
 #: src/worker/web/gradebook.tsx
 msgid "Attempt {ordinal}"
 msgstr "Attempt {ordinal}"
@@ -3687,10 +3691,6 @@ msgstr "Option IDs must start with a letter and use letters, numbers, underscore
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Option labels cannot be empty."
 msgstr "Option labels cannot be empty."
-
-#: src/worker/web/assignment-detail.tsx
-msgid "Ordinal"
-msgstr "Ordinal"
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Override"

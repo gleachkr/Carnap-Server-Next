@@ -2682,7 +2682,7 @@ const AttemptsTable: FC<{
       <thead>
         <tr>
           <th>{i18n.t("User")}</th>
-          <th>{i18n.t("Ordinal")}</th>
+          <th>{i18n.t("Attempt")}</th>
           <th>{i18n.t("Status")}</th>
           <th>{i18n.t("Opened")}</th>
           <th>{i18n.t("Expires")}</th>
