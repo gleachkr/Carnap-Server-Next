@@ -81,6 +81,40 @@ describe("readCompileResult", () => {
     ]);
   });
 
+  test("with allow-sorry an admission beside a failed line is not an admitted proof", () => {
+    // Since 0.0.17 the engine checks past a failed line, so it reports the
+    // admission it used to report only on an otherwise clean compile. The
+    // proof's other lines do not all check, which is what `admitted` says.
+    const verdict = readCompileResult(
+      {
+        diagnostics: [
+          {
+            error: "UnifyMismatch",
+            message:
+              "the statement and cited premises could not be matched against this rule",
+            rule: "and_elim_r",
+            severity: "error",
+          },
+          {
+            error: "SorryLine",
+            message:
+              "proof line is admitted with sorry!; the theorem is not verified",
+            severity: "warning",
+          },
+        ],
+        ok: false,
+      } as CompileResult,
+      { allowSorry: true },
+    );
+
+    expect(verdict.certificate).toBeNull();
+    expect(verdict.admitted).toBe(false);
+    expect(verdict.problems.map((problem) => problem.severity)).toEqual([
+      "error",
+      "warning",
+    ]);
+  });
+
   test("keeps the certificate of a proof that proves the goal", () => {
     const verdict = readCompileResult({
       diagnostics: [],

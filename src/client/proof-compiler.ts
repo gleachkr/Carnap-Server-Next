@@ -117,9 +117,10 @@ export interface CompileDiagnostic {
  * line is an error like any other and gets an error's treatment. With
  * `allowSorry` the warning stays a warning, listed in `problems` with its
  * severity intact, and `admitted` says the proof is one of those: every line
- * checks except the ones the student has admitted. (The engine reports
- * admissions only on a compile with no errors, so `admitted` never
- * accompanies an error.)
+ * checks except the ones the student has admitted. Since
+ * `@aufbau/compiler@0.0.17` a compile checks past a failed line, so an
+ * admission can come back beside real errors; that proof is not one whose
+ * other lines check, and `admitted` stays false for it.
  *
  * Every other warning is dropped. Since `@aufbau/compiler@0.0.9` a clean
  * compile carries its warnings, and the ones the engine has are not about the
@@ -229,6 +230,7 @@ export function readCompileResult(
 ): CompileVerdict {
   const problems: CompileDiagnostic[] = [];
   let admitted = false;
+  let failed = false;
 
   if (Array.isArray(result.diagnostics)) {
     for (const item of result.diagnostics) {
@@ -255,6 +257,8 @@ export function readCompileResult(
         severity = options.allowSorry === true ? "warning" : "error";
       } else if (record.severity === "info") {
         severity = "info";
+      } else {
+        failed = true;
       }
 
       problems.push({
@@ -283,7 +287,7 @@ export function readCompileResult(
       : null;
 
   return {
-    admitted: admitted && options.allowSorry === true,
+    admitted: admitted && !failed && options.allowSorry === true,
     certificate,
     problems,
   };
