@@ -5,10 +5,10 @@
     "": {
       "name": "aufbau-server",
       "dependencies": {
-        "@aufbau/compiler": "0.0.14",
-        "@aufbau/lsp": "0.0.14",
+        "@aufbau/compiler": "0.0.17",
+        "@aufbau/lsp": "0.0.17",
         "@aufbau/syntax": "0.0.5-canary.20261011T132040Z.18.g3815f96068d8",
-        "@aufbau/verifier": "0.0.14",
+        "@aufbau/verifier": "0.0.17",
         "@codemirror/commands": "^6.10.4",
         "@codemirror/language": "^6.12.4",
         "@codemirror/lint": "^6.9.7",
@@ -67,13 +67,13 @@
 
     "@asamuzakjp/nwsapi": ["@asamuzakjp/nwsapi@2.3.9", "", {}, "sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q=="],
 
-    "@aufbau/compiler": ["@aufbau/compiler@0.0.14", "", {}, "sha512-D9Q38uFiXwWTyOEyijRPq9DKJFowjLCcAuR7lL+dJDroVR4PBJB+L68wYjkv1hMUkRxjOdOD081q5Dt4tQ7TiQ=="],
+    "@aufbau/compiler": ["@aufbau/compiler@0.0.17", "", {}, "sha512-+aSiqqILAfS7JQZH2mo4O8WJ7QcpKKYzhKzcn2gqPmVahbbPHQa1CHEXcbIAe79etKmuARAZM5QSs/U1svsh2Q=="],
 
-    "@aufbau/lsp": ["@aufbau/lsp@0.0.14", "", {}, "sha512-oclqX08xe0V0ssCTgmoivUPVZKOfLMBhA3S1CDeyJHMsFIYETWBsPV2X4Id1SUIKN3mECf4Ceut+l7sMdfc5Ag=="],
+    "@aufbau/lsp": ["@aufbau/lsp@0.0.17", "", {}, "sha512-RDASx20kPSfgBL9Th9pEuxqILJ277cun5K64Zjl6xDsZUOnKl8ziHRh4c/pq+bCqJ2Mce/dtTCWmwxpVbWFa+w=="],
 
     "@aufbau/syntax": ["@aufbau/syntax@0.0.5-canary.20261011T132040Z.18.g3815f96068d8", "", {}, "sha512-ZK8yjly38diNuJm+q1/dwGA+Yy5h4kdIrNoBJt0NUgZJRsuQk5Aeu8rSvpWD4XUa9j1HlifY7lbmQTpN7qhBkg=="],
 
-    "@aufbau/verifier": ["@aufbau/verifier@0.0.14", "", {}, "sha512-wqKVRkU5qUrtEkNWCsO465zBn9dG7AmVaGWME+YCGqWnqqqRFCtyICkdIkmUjG1PE5XhE8zoVO8W+EJBMr9xvA=="],
+    "@aufbau/verifier": ["@aufbau/verifier@0.0.17", "", {}, "sha512-H07zrI7ppN+TWQyyCT2wX117PdlFzPl5+i4r91a/G/joazthtt8ctMPpetug5buf0Z/8SWDv7Kwikos4XlzQPQ=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 
