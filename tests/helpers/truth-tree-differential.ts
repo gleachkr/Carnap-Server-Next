@@ -863,21 +863,6 @@ export const KNOWN_DIFFERENCES = {
   "identity-completion": (all: readonly Difference[]) =>
     all.filter(identityCompletion),
   /**
-   * An identity's substitution on a branch where some row uses every
-   * variable the language has (`∃x∃y∃z…`): the rule abstracts over a fresh
-   * variable, the engine draws it from the `@vars` pool, and that pool is the
-   * language's `x y z` (design/aufbau-issues-2026-10-15, issue 3). The
-   * generic checker refuses a right step.
-   */
-  "fresh-variable-pool": (all: readonly Difference[]) =>
-    all.filter(
-      (each) =>
-        each.field === "development" &&
-        each.key.endsWith(" (=)") &&
-        each.old === null &&
-        each.generic === "wrong",
-    ),
-  /**
    * A row a step cites by another row's rule: the old checker marks it as
    * developed (with no names, for a general row), the generic one marks rows
    * only by the rule they develop by. Either way the step is wrong.

@@ -70,8 +70,8 @@ is in
   injected fault of each kind, and judges each tree with both checkers as
   the browser runs them. They must agree on the verdict, which developments
   are wrong or unfinished, every end, what an open branch is missing and
-  every mark, bar the differences `KNOWN_DIFFERENCES` names and two tests
-  pin, so that each entry fails when it is fixed.
+  every mark, bar the differences `KNOWN_DIFFERENCES` names. A test pins
+  identity completion, so that it fails, and the entry with it, once fixed.
 - `grading.ts` — guards, the declaration resolved back to formulas, and the
   judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the
@@ -124,9 +124,6 @@ Verifying 5 MB takes about 50 ms in workerd, decoding included.
   each identity is substituted into its literals. The generic checker does
   not ask for it, so it accepts such a branch as complete, and its
   verdict with it.
-- A substitution by an identity on a branch with a row that uses all three
-  variables (`∃x∃y∃z…`) is refused: the rule needs a fresh variable, and
-  the engine draws only from the language's own `x y z`. An upstream ask.
 - Reading an interpretation off a complete open branch, merging the names
   an identity on it equates (§12.7).
 - A `rules=` attribute, which arrives with a second system record.

@@ -5,7 +5,7 @@ import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
 import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
-import { engine, TreeBuilder } from "./helpers/truth-tree";
+import { engine } from "./helpers/truth-tree";
 import type {
   Difference,
   GenerateOptions,
@@ -207,28 +207,6 @@ describe("the known differences are still there", () => {
 
     expect(outcome?.differences.map(describeDifference)).toContain(
       'end n0: old "open-incomplete r3=", generic null',
-    );
-  });
-
-  // When the engine can find a fresh variable past the language's own, this
-  // fails: take the entry out of KNOWN_DIFFERENCES with it.
-  test("a substitution beside a row that uses every variable", async () => {
-    const root = ["∃x∃y∃z((Fx ∧ Gy) ∧ Hz)", "a=b", "Ja"];
-    const { mm0, resolved } = await exercise(root);
-    const t = new TreeBuilder(resolved.rootText);
-    t.stack(t.rootNode, ["r2", "r3"], ["Jb"], "=");
-    const rules = t.answer().rules;
-    const found = differences(
-      project(t.tree, t.check(), rules),
-      project(
-        t.tree,
-        judgeAsBrowser(await engine(), resolved, mm0, t.answer()),
-        rules,
-      ),
-    );
-
-    expect(found.map(describeDifference)).toContain(
-      'development t4 (=): old null, generic "wrong"',
     );
   });
 });

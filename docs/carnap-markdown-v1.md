@@ -1447,7 +1447,9 @@ sentence P ∨ ¬Q.
 
 - The lexicon, juxtaposed predicates and quantifier spellings are Magnus's.
 - Names also take a numeric subscript, `a1`–`w9`, typed as `a1` or `a₁` and
-  shown as `a₁`. Variables and predicate letters do not.
+  shown as `a₁`. Predicate letters do not. Three subscripted variables,
+  `x1`, `y1` and `z1` (ASCII only), are there for the identity rules, which
+  need a fresh variable beyond those a row uses; a student may type them.
 - Canonical glyphs are the book's: `&`, `∨`, `⊃`, `≡`, and `a≠b` for `¬a=b`.
 - The grammar is the book's. Every binary sentence is bracketed except the
   outermost; `[ ]` may stand for `( )`; a run of `&`, or of `∨`, may drop
