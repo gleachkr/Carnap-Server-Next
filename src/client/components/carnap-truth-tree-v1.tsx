@@ -465,6 +465,20 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     return this.resolved !== null && this.resolved.finish !== "closed";
   }
 
+  /**
+   * The instances, like the certificate, are what the engine made of the
+   * tree, not what the student wrote: an answer that gains them when a
+   * compile lands is no less saved than it was.
+   */
+  protected override authoredAnswer(): string {
+    const {
+      instances: _instances,
+      mmb: _mmb,
+      ...authored
+    } = this.getAnswer();
+    return JSON.stringify(authored);
+  }
+
   protected getAnswer(): TruthTreeAnswerData & { readonly mmb?: string } {
     // Only the rules of developments, and the instances of rows, still in
     // the tree.

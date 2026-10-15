@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { loadCompiler } from "@aufbau/compiler";
+import { UNSAVED_ANSWER_ATTRIBUTE } from "../../src/worker/exercise-kit/answer-events";
 import { dom } from "../helpers/dom";
 import {
   compileExercise,
@@ -293,6 +294,10 @@ describe("upgrading", () => {
       [rbb?.id ?? ""]: "b",
     });
     expect(answer.mmb).toBeDefined();
+    // What the engine made of the tree is not work the student has to save.
+    expect(mounted.element.hasAttribute(UNSAVED_ANSWER_ATTRIBUTE)).toBe(
+      false,
+    );
   });
 
   test("a prior answer on a root the exercise no longer gives is set aside", async () => {
