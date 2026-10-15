@@ -47,6 +47,7 @@ const LANGUAGE_IDS: readonly string[] = [
   "forallx-calgary",
   "forallx-magnus",
   "forallx-ubc",
+  "open-logic-tableaux",
 ];
 
 /**

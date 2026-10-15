@@ -129,6 +129,22 @@ describe("language specs", () => {
         "focus",
         "at",
       ],
+      // UBC's, with the signed-formula equation `⇔` among them.
+      "open-logic-tableaux": [
+        "_",
+        "tsub",
+        "/",
+        "subst",
+        "⟺",
+        "≐",
+        "≗",
+        "⇔",
+        "≜",
+        "⟚",
+        "closes",
+        "focus",
+        "at",
+      ],
     };
 
     // Every registered spec, not every entry above: a spec this map does not

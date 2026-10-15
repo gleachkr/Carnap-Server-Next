@@ -1,8 +1,10 @@
 # Truth-tree exercise (`truth-tree@1`)
 
 Students decide whether an argument is valid, or a set of sentences
-consistent, with a truth tree (a semantic tableau), under the rules of
-*forall x: UBC* (Ichikawa and Jenkins, after Magnus), identity included. The
+consistent, with a truth tree (a semantic tableau), under the rules of the
+theory `system=` names: *forall x: UBC* (Ichikawa and Jenkins, after
+Magnus), identity included, by default, or the Open Logic Project's signed
+tableaux (`open-logic-tableaux`, rows `𝕋 A` and `𝔽 A`). The
 authoring contract
 is in
 [`docs/carnap-markdown-v1.md`](../../../../docs/carnap-markdown-v1.md#truth-tree-directive).

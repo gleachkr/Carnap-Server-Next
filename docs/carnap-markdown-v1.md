@@ -1067,6 +1067,24 @@ For `forallx-ubc`, the rules are the book's (§5, §10, §12.7):
   branch (and at least once, if there are none). An identity is not yet
   required to be substituted into the branch's literals, as the book asks.
 
+For `open-logic-tableaux`, the rules are the Open Logic Project's signed
+tableaux (*Sets, Logic, Computation*, "Tableaux"):
+
+- A row is a signed formula, `𝕋 A` or `𝔽 A`, typed `T: A` or `F: A` (not
+  `T A`: `T` and `F` are predicate letters). The root is `𝕋` before each
+  premise and `𝔽` before the conclusion, or `𝕋` before each sentence of a
+  set.
+- A rule is named by its operator, then the sign it applies to, as the book
+  writes it: `∧𝕋`, `→𝔽`, `∀𝕋`, typed `∧T` or `&T`, `->F`, `@T`. There are
+  rules for `¬`, `∧`, `∨`, `→`, `∀` and `∃`, as in the book; a row with `↔`,
+  `⊥` or `⊤` at its top is never developed.
+- `∀𝔽` and `∃𝕋` take a constant new to the branch; `∀𝕋` and `∃𝔽` any
+  closed term, one per step.
+- A closure cites `𝕋 A` and `𝔽 A`.
+- The language is the book's: atoms `A`, `A(a)`, `C(x, b)`, function terms
+  `f(a)`, constants `a`–`e`, `s`, `t`, variables `u`–`z`, and every binary
+  formula bracketed, bar the outermost.
+
 A step with no rule named, or no row cited, is unfinished rather than wrong.
 
 Marks (`✓`, `✓a`, `\a,b`) are computed. The margin (`2 ∨`) is typed, as
@@ -1176,7 +1194,7 @@ Use `src` to load a built-in into a named block:
 :::
 ```
 
-The seven built-in IDs are:
+The eight built-in IDs are:
 
 - `forallx-calgary`: Calgary natural deduction, first-order syntax,
   basic rules.
@@ -1185,6 +1203,8 @@ The seven built-in IDs are:
 - `forallx-magnus-plus`: the same language with derived/replacement rules.
 - `forallx-ubc`: the language of *forall x: UBC*, and its truth-tree rules
   (see [Writing a tree theory](#writing-a-tree-theory)).
+- `open-logic-tableaux`: the Open Logic Project's first-order language, and
+  its signed tableau rules.
 - `gentzen-lk`: classical multi-conclusion sequent calculus, suitable for
   proof trees. It has no student-language annotations.
 - `carnap-prop`: the default propositional signature, without proof rules.
