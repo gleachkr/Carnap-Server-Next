@@ -1,32 +1,37 @@
 /**
- * A truth tree as Aufbau proofs (gh #46).
+ * A truth tree as Aufbau theorems (gh #46).
  *
  * The theory says what a closed branch is and what each rule is; this module
  * only writes the tree down in it. A tree is a derivation of "the root
- * closes", read from the bottom up, and each of its inferences is a lemma of
- * its own:
+ * closes", read from the bottom up, and each of its inferences is a theorem
+ * of its own, appended to the theory as the spec the certificate must prove:
  *
- * - a closed leaf is a lemma that its branch closes, by the closure rule,
+ * - a closed leaf is a theorem that its branch closes, by the closure rule,
  *   citing the rows its × cites;
- * - a step is a lemma that the branch above it closes if the branches it
+ * - a step is a theorem that the branch above it closes if the branches it
  *   writes do, by the rule the student named, focused on the rows they cited
  *   (`focus Γ at Δ`, then `closes Γ` by unfocusing, which checks Δ is on Γ);
+ * - a row of a step whose rule counts instances may have a link: a theorem
+ *   that the row is the rule's template at a given term (`Rab` is
+ *   `{x / a} Rxb`), proved by the judgement relation's reflexivity, so the
+ *   engine confirms which instance the step used;
  * - an open leaf, and a step that cannot be written down (no rule, an
- *   unreadable row), is no lemma at all.
+ *   unreadable row), is no theorem at all.
  *
- * Lemmas rather than one theorem, because a certificate proves the statements
- * it is checked against and nothing about how. One theorem, "the root
- * closes", would be proved as well by any other tree with that root; one
- * lemma per inference is proved only by the inferences this tree makes. The
- * server writes the same lemmas from the stored tree, so a certificate that
- * verifies says that every step and closure written is right, and the tree's
- * shape (which branches are closed, which steps are missing) says the rest.
+ * One theorem per inference rather than one for the tree, because a
+ * certificate proves the statements it is checked against and nothing about
+ * how. One theorem, "the root closes", would be proved as well by any other
+ * tree with that root; one per inference is proved only by the inferences
+ * this tree makes. The server writes the same theorems from the stored tree,
+ * so a certificate that verifies says that every step, closure and instance
+ * written is right, and the tree's shape (which branches are closed, which
+ * steps are missing) says the rest.
  *
  * **Nothing here knows a calculus.** The theory names its plumbing by role
  * (`./theory.ts`), and a step is written the same way in any of them:
  * the rule is the student's name for it, resolved through the theory's
  * `@syntax alias`es, and a row is whatever the theory's row sort reads — a
- * sentence, a signed sentence, a sentence at a world. A lemma binds every
+ * sentence, a signed sentence, a sentence at a world. A theorem binds every
  * name and variable its statements mention at the sort whose `@vars` pool
  * holds it, so a rule asking for a name new to the branch is checked by MM0
  * dependency typing: the branch above may not mention the name.
@@ -41,6 +46,9 @@ import type {
   TableauRow,
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
+import type { TreeDevelopment } from "./criteria";
+import { matchFocus } from "./criteria";
+import { closedSubterms, instantiate, termKey } from "./patterns";
 import { type RowSortReader, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
 /** The theorem every emitted proof proves. */
@@ -60,6 +68,12 @@ export type LineSubject =
       readonly dev: string;
       readonly rows: readonly string[];
     }
+  /** A link: the row was written with this instance of its rule. */
+  | {
+      readonly type: "link";
+      readonly row: string;
+      readonly instance: string;
+    }
   /** A branch's ×. */
   | { readonly type: "closure"; readonly node: string }
   /** The closure's citation. */
@@ -75,7 +89,7 @@ export type EmitProblem =
   | { readonly type: "split-mixed" };
 
 export interface TreeProof {
-  /** The lemmas, to append to the theory. Null if there are none. */
+  /** The theorems, to append to the theory. Null if there are none. */
   readonly goal: string | null;
   /** Their proofs. Null with the goal. */
   readonly proof: string | null;
@@ -88,6 +102,23 @@ export interface TreeProof {
   readonly hypotheses: number;
   /** How many steps or ends were not written down. */
   readonly gaps: number;
+  /** Every step written down, by its `dev`. */
+  readonly steps: ReadonlyMap<string, EmittedStep>;
+  /**
+   * The rows whose rule counts instances, each with the terms it could have
+   * been written with: the closed terms of the instance's sort in it.
+   */
+  readonly slots: ReadonlyMap<string, readonly string[]>;
+  /** The instances each row's link theorems state, by row. */
+  readonly linked: ReadonlyMap<string, readonly string[]>;
+}
+
+/** A step written down: the rule it names, what it cites and writes. */
+export interface EmittedStep {
+  /** The axiom the student's name for the rule resolves to. */
+  readonly rule: string;
+  readonly cites: readonly string[];
+  readonly rows: readonly string[];
 }
 
 export interface EmitOptions {
@@ -98,6 +129,14 @@ export interface EmitOptions {
   readonly rules: ReadonlyMap<string, string>;
   /** The rows' reader, shared with whatever else reads them. */
   readonly reader?: RowSortReader;
+  /** The theory's development rules: where a step's instances are. */
+  readonly development?: TreeDevelopment;
+  /**
+   * The instances to state of each row, by row id: one for a tree to
+   * certify, every candidate for a compile that asks which holds. Only a
+   * row's own candidates are stated.
+   */
+  readonly instances?: ReadonlyMap<string, readonly string[]>;
 }
 
 /** The run of rows from `start` that one development wrote. */
@@ -148,6 +187,9 @@ export function emitTreeProof(
   const endProblems = new Map<string, EmitProblem>();
   const statements: string[] = [];
   const proofs: string[] = [];
+  const steps = new Map<string, EmittedStep>();
+  const slots = new Map<string, readonly string[]>();
+  const linked = new Map<string, readonly string[]>();
   const reader = options.reader ?? rowSortReader(language, theory.rowSort);
   const resolve = (name: string): string =>
     language.spec.ruleAliases.get(name) ?? name;
@@ -181,7 +223,7 @@ export function emitTreeProof(
   const closes = (rows: readonly string[]): string =>
     `${theory.closes} (${branch(rows)})`;
 
-  /** The binders of a lemma: what its statements mention, by sort. */
+  /** The binders of a theorem: what its statements mention, by sort. */
   const binders = (texts: readonly string[]): string => {
     const bound = new Map<string, string[]>();
 
@@ -199,10 +241,10 @@ export function emitTreeProof(
   };
 
   /**
-   * A lemma: `state` closes if each of `children` does, by focusing on
+   * A step's theorem: `state` closes if each of `children` does, by focusing on
    * `cites` and applying `rule`.
    */
-  const lemma = (
+  const inference = (
     state: readonly string[],
     children: readonly (readonly string[])[],
     cites: readonly string[],
@@ -231,6 +273,94 @@ export function emitTreeProof(
     );
     lines.set(main, subject("main"));
     lines.set(cite, subject("cite"));
+  };
+
+  /**
+   * The links of a step whose rule counts instances: for each row it wrote
+   * and each instance asked of it, a theorem that the row is the rule's
+   * template with that instance, which the engine proves only if it is.
+   */
+  const links = (
+    rule: string,
+    cited: readonly string[],
+    rows: readonly TableauRow[],
+  ): void => {
+    const development = options.development;
+    const developing = development?.byAxiom.get(rule);
+    const slot = developing?.instance ?? null;
+    const relation = development?.relation ?? null;
+    const focus = cited.length === 1 ? reader.read(cited[0] as string) : null;
+
+    if (
+      developing === undefined ||
+      slot === null ||
+      relation === null ||
+      focus?.ok !== true
+    ) {
+      return;
+    }
+
+    const bindings = matchFocus(language, developing, focus.term);
+
+    if (bindings === null) {
+      return;
+    }
+
+    for (const row of rows) {
+      const read = reader.read(row.text);
+
+      if (!read.ok) {
+        continue;
+      }
+
+      const candidates = closedSubterms(language, read.term, slot.sort);
+      const asked = (options.instances?.get(row.id) ?? []).filter(
+        (instance, at, all) =>
+          candidates.includes(instance) && all.indexOf(instance) === at,
+      );
+
+      slots.set(row.id, candidates);
+
+      for (const instance of asked) {
+        const term = language.parse(instance, {
+          lints: false,
+          mode: "engine",
+          sort: slot.sort,
+        });
+        const written = term.ok
+          ? termKey(
+              language,
+              instantiate(
+                slot.template,
+                new Map([...bindings, [slot.binder, term.term]]),
+              ),
+            )
+          : null;
+
+        if (written === null) {
+          continue;
+        }
+
+        counter += 1;
+        const name = `${TREE_THEOREM}_${counter}`;
+        const label = `k_${counter}`;
+        const premise = closes([read.engine]);
+        const conclusion = closes([written]);
+
+        statements.push(
+          `theorem ${name}${binders([premise, conclusion])}: $ ${premise} $ > $ ${conclusion} $;`,
+        );
+        proofs.push(
+          [
+            name,
+            "----",
+            `${label}: $ ${conclusion} $ by ${relation.mp} [${relation.refl} [], #1]`,
+          ].join("\n"),
+        );
+        lines.set(label, { instance, row: row.id, type: "link" });
+        linked.set(row.id, [...(linked.get(row.id) ?? []), instance]);
+      }
+    }
   };
 
   /**
@@ -289,11 +419,19 @@ export function emitTreeProof(
       return;
     }
 
-    lemma(state, children, cites as string[], resolve(rule), (label) => ({
+    const axiom = resolve(rule);
+
+    inference(state, children, cites as string[], axiom, (label) => ({
       dev: first.dev,
       rows: ids,
       type: label === "main" ? "step" : "citation",
     }));
+    steps.set(first.dev, { cites: first.cites, rows: ids, rule: axiom });
+    links(
+      axiom,
+      first.cites.map((cite) => index.row(cite)?.row.text ?? ""),
+      rows,
+    );
   };
 
   /** The end of a branch: a closure, or a branch left open. */
@@ -317,7 +455,7 @@ export function emitTreeProof(
       return;
     }
 
-    lemma(state, [], cites as string[], theory.closure, (label) => ({
+    inference(state, [], cites as string[], theory.closure, (label) => ({
       node: node.id,
       type: label === "main" ? "closure" : "closure-citation",
     }));
@@ -361,9 +499,12 @@ export function emitTreeProof(
     gaps,
     goal: null,
     hypotheses: count,
+    linked,
     lines,
     problems,
     proof: null,
+    slots,
+    steps,
   });
 
   if (root === null) {
@@ -388,9 +529,12 @@ export function emitTreeProof(
     gaps,
     goal: statements.join("\n"),
     hypotheses,
+    linked,
     lines,
     problems,
     proof: `${proofs.join("\n\n")}\n`,
+    slots,
+    steps,
   };
 }
 
@@ -437,4 +581,36 @@ export function readTreeDiagnostics(
       },
     ];
   });
+}
+
+/**
+ * The instance each row was written with, from a compile that stated every
+ * candidate (`instances` = a proof's own `slots`): the first whose link the
+ * engine did not refuse. A row whose every link failed has none.
+ */
+export function heldInstances(
+  asked: TreeProof,
+  errors: readonly TreeDiagnostic[],
+): Map<string, string> {
+  const refused = new Set<string>();
+
+  for (const error of errors) {
+    if (error.subject?.type === "link") {
+      refused.add(`${error.subject.row} ${error.subject.instance}`);
+    }
+  }
+
+  const held = new Map<string, string>();
+
+  for (const [row, candidates] of asked.linked) {
+    const instance = candidates.find(
+      (candidate) => !refused.has(`${row} ${candidate}`),
+    );
+
+    if (instance !== undefined) {
+      held.set(row, instance);
+    }
+  }
+
+  return held;
 }

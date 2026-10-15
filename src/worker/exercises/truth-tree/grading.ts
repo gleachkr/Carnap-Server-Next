@@ -17,12 +17,9 @@ import type {
   TableauNode,
   TableauRow,
 } from "../../../tableau/document";
-import type { Formula } from "../../exercise-kit/formula";
-import {
-  firstOrderLanguageFor,
-  parseEngineFormula,
-} from "../../exercise-kit/formula";
-import { sentenceSort } from "../../logic/specs/roles";
+import { firstOrderLanguageFor } from "../../exercise-kit/formula";
+import type { TreeDevelopment } from "./aufbau/criteria";
+import { readTreeDevelopment } from "./aufbau/criteria";
 import type { TreeProof } from "./aufbau/emit";
 import { emitTreeProof } from "./aufbau/emit";
 import type { TreeEvidence } from "./aufbau/judge";
@@ -32,9 +29,6 @@ import { displayRow, rowSortReader } from "./aufbau/rows";
 import type { TreeTheory } from "./aufbau/theory";
 import { isTreeTheory, readTreeTheory } from "./aufbau/theory";
 import type { TreeProblem, TreeReport } from "./logic/check";
-import { checkTree } from "./logic/check";
-import type { RowReader } from "./logic/formulas";
-import { rowReader } from "./logic/formulas";
 import type { TableauSystem } from "./logic/system";
 import { FORALLX_UBC } from "./logic/system";
 import type {
@@ -67,6 +61,8 @@ const MAX_ROW_TEXT = 1000;
 const MAX_SUBMITTED_LENGTH = 131_072;
 /** The longest rule name a margin holds: longer than any book's label. */
 const MAX_RULE_TEXT = 64;
+/** The longest instance a row is written with: a term, not a sentence. */
+const MAX_INSTANCE_TEXT = 256;
 
 export interface ResolvedTree {
   readonly language: SurfaceLanguage;
@@ -81,16 +77,8 @@ export interface ResolvedTree {
   readonly finish: TruthTreeFinish;
   /** The most rows a tree may have before it is not read. */
   readonly rowCap: number;
-  /**
-   * The old checker, where it can read the rows (they are sentences): what
-   * marks a row developed and says whether an open branch is complete, until
-   * the development criteria replace it (#437).
-   */
-  readonly legacy: {
-    readonly reader: RowReader;
-    readonly root: readonly Formula[];
-    readonly system: TableauSystem;
-  } | null;
+  /** When a row is developed, and what closes a branch, as the theory says. */
+  readonly development: TreeDevelopment;
 }
 
 function isStringArray(value: unknown): value is readonly string[] {
@@ -230,7 +218,10 @@ export function isTruthTreeAnswerData(
     rows <= MAX_SUBMITTED_ROWS &&
     JSON.stringify(nodes).length <= MAX_SUBMITTED_LENGTH &&
     isOneTree(nodes) &&
-    (data.rules === undefined || isRules(data.rules, rows))
+    (data.rules === undefined ||
+      isEntries(data.rules, rows, MAX_RULE_TEXT)) &&
+    (data.instances === undefined ||
+      isEntries(data.instances, rows, MAX_INSTANCE_TEXT))
   );
 }
 
@@ -241,8 +232,20 @@ export function answerRules(
   return new Map(Object.entries(answer.rules ?? {}));
 }
 
-/** A development's rules: at most one per row, each a short name. */
-function isRules(value: unknown, rows: number): boolean {
+/** The instance each row was written with, by row id. */
+export function answerInstances(
+  answer: TruthTreeAnswerData,
+): ReadonlyMap<string, readonly string[]> {
+  return new Map(
+    Object.entries(answer.instances ?? {}).map(([row, instance]) => [
+      row,
+      [instance],
+    ]),
+  );
+}
+
+/** Rules by development, or instances by row: at most one per row, short. */
+function isEntries(value: unknown, rows: number, longest: number): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
@@ -252,7 +255,7 @@ function isRules(value: unknown, rows: number): boolean {
   return (
     entries.length <= rows &&
     entries.every(
-      ([, rule]) => typeof rule === "string" && rule.length <= MAX_RULE_TEXT,
+      ([, entry]) => typeof entry === "string" && entry.length <= longest,
     )
   );
 }
@@ -287,9 +290,9 @@ export function resolveTruthTree(
   }
 
   return {
+    development: readTreeDevelopment(language, theory),
     finish: publicData.finish ?? "closed",
     language,
-    legacy: legacyChecker(publicData, language, theory),
     reader,
     root: publicData.root,
     rootText,
@@ -297,33 +300,6 @@ export function resolveTruthTree(
     task: publicData.task,
     theory,
   };
-}
-
-/** The old checker's inputs, where its rows are sentences. */
-function legacyChecker(
-  publicData: TruthTreePublicData,
-  language: SurfaceLanguage,
-  theory: TreeTheory,
-): ResolvedTree["legacy"] {
-  const system = tableauSystemById(publicData.rules);
-
-  if (system === null || theory.rowSort !== sentenceSort(language)) {
-    return null;
-  }
-
-  const root: Formula[] = [];
-
-  for (const engine of publicData.root) {
-    const read = parseEngineFormula(engine, language);
-
-    if (!read.ok) {
-      return null;
-    }
-
-    root.push(read.formula);
-  }
-
-  return { reader: rowReader(language), root, system };
 }
 
 /** The tree the student starts from: the root, and nothing else. */
@@ -398,10 +374,13 @@ export interface TreeJudgement {
 export function treeProofOf(
   resolved: ResolvedTree,
   answer: TruthTreeAnswerData,
+  instances: ReadonlyMap<string, readonly string[]> = answerInstances(answer),
 ): TreeProof {
   return emitTreeProof(
     { nodes: answer.nodes },
     {
+      development: resolved.development,
+      instances,
       language: resolved.language,
       reader: resolved.reader,
       rules: answerRules(answer),
@@ -421,19 +400,9 @@ export function judgeTree(
   proof: TreeProof = treeProofOf(resolved, answer),
 ): TreeJudgement {
   const tree = { nodes: answer.nodes };
-  const legacy = resolved.legacy;
-  const completeness =
-    legacy === null
-      ? null
-      : checkTree({
-          reader: legacy.reader,
-          root: legacy.root,
-          system: legacy.system,
-          tree,
-        });
   const judge = (given: TreeEvidence) =>
     judgeTreeProof({
-      completeness,
+      development: resolved.development,
       evidence: given,
       finish: resolved.finish,
       proof,

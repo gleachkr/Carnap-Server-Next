@@ -9,7 +9,7 @@
  * DOM-free and free of i18n.
  */
 
-import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import { printTerm, UnprintableTermError } from "@aufbau/syntax";
 import type { ParseError } from "../../../exercise-kit/formula";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
@@ -17,9 +17,9 @@ import { formulaParseErrors } from "../../../logic/specs/diagnostics";
 /** The most distinct texts a reader remembers before it starts again. */
 const CACHE_LIMIT = 2000;
 
-/** A row read: its engine text, or why it does not read. */
+/** A row read: its engine text and term, or why it does not read. */
 export type RowRead =
-  | { readonly ok: true; readonly engine: string }
+  | { readonly ok: true; readonly engine: string; readonly term: Term }
   | { readonly ok: false; readonly errors: readonly ParseError[] };
 
 export interface RowSortReader {
@@ -49,7 +49,11 @@ export function rowSortReader(
 
         const parsed = language.parse(key, { sort });
         result = parsed.ok
-          ? { engine: printTerm(language, parsed.term, "engine"), ok: true }
+          ? {
+              engine: printTerm(language, parsed.term, "engine"),
+              ok: true,
+              term: parsed.term,
+            }
           : { errors: formulaParseErrors(parsed.diagnostics), ok: false };
         cache.set(key, result);
       }

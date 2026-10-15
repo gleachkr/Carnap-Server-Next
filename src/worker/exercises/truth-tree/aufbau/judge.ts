@@ -12,9 +12,8 @@
  * named, no row cited) is unfinished, not wrong.
  *
  * When a tree is done is the exercise's `finish=`. A branch marked open is
- * complete by the development criteria (#437); until those land, by the old
- * checker's report where its rows are sentences (`completeness`), and
- * otherwise not at all.
+ * complete by the theory's development criteria (`./complete.ts`), over the
+ * steps the engine confirmed, and is not one a closure rule would close.
  *
  * The result is a {@link TreeReport}, the shape the editor and the review
  * already draw.
@@ -33,7 +32,14 @@ import type {
   TreeReport,
 } from "../logic/check";
 import type { TruthTreeFinish } from "../types";
-import type { EmitProblem, TreeDiagnostic, TreeProof } from "./emit";
+import { TreeCompleteness } from "./complete";
+import type { TreeDevelopment } from "./criteria";
+import type {
+  EmitProblem,
+  EmittedStep,
+  TreeDiagnostic,
+  TreeProof,
+} from "./emit";
 import type { RowSortReader } from "./rows";
 
 /** What the engine has said about a tree's proof. */
@@ -62,11 +68,8 @@ export interface JudgeInput {
   readonly evidence: TreeEvidence;
   readonly finish: TruthTreeFinish;
   readonly rowCap: number;
-  /**
-   * The old checker's report, for the marks and for whether a branch marked
-   * open is complete; `null` where it cannot read the rows. Until #437.
-   */
-  readonly completeness: TreeReport | null;
+  /** The theory's development rules, for completeness and marks. */
+  readonly development: TreeDevelopment;
 }
 
 /**
@@ -186,8 +189,11 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     );
   }
 
-  // What the engine refused, on the step or end it is about.
+  // What the engine refused, on the step or end it is about. A link that
+  // does not hold says only that its row was not written with that
+  // instance, which the step's own line reports if it is wrong.
   const engineErrors = evidence.kind === "compiled" ? evidence.errors : [];
+  const unlinked = new Set<string>();
 
   for (const error of engineErrors) {
     const subject = error.subject;
@@ -206,6 +212,9 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
         }
         break;
       }
+      case "link":
+        unlinked.add(subject.row);
+        break;
       case "closure":
         flagEnd(subject.node, { type: "closure-wrong" });
         break;
@@ -221,8 +230,24 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     treeProblems.push({ type: "unverified" });
   }
 
-  // Ends and branches.
-  const completeness = input.completeness;
+  // Ends and branches. Completeness counts the steps the engine has not
+  // refused; whether it has confirmed them is `confirmed`, below.
+  const refused = evidence.kind === "verified" && !evidence.ok;
+  const completeness = new TreeCompleteness({
+    development: input.development,
+    index,
+    instance: (rowId) => {
+      const linked = proof.linked.get(rowId);
+      return !refused && linked?.length === 1 && !unlinked.has(rowId)
+        ? (linked[0] as string)
+        : null;
+    },
+    proof,
+    reader,
+    verified: (step: EmittedStep) =>
+      !refused && step.rows.every((rowId) => !rowProblems.has(rowId)),
+  });
+  const judged = finish !== "closed" && input.development.annotated;
   const branches = new Map<string, BranchState>();
   const leaves = index.leaves();
 
@@ -237,37 +262,34 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
       flagEnd(leaf.id, { type: "empty-branch" });
     }
 
-    if (leaf.end === undefined) {
-      const old = completeness?.branches.get(leaf.id);
+    const open = leaf.end === undefined || leaf.end.type === "open";
+    const state = judged && open ? completeness.branch(leaf) : null;
 
-      branches.set(
-        leaf.id,
-        old?.type === "unfinished" && finish !== "closed"
-          ? old
-          : {
-              complete: false,
-              contradiction: null,
-              missing: [],
-              type: "unfinished",
-            },
-      );
+    if (leaf.end === undefined) {
+      branches.set(leaf.id, {
+        complete:
+          state !== null &&
+          state.missing.length === 0 &&
+          state.contradiction === null,
+        contradiction: state?.contradiction ?? null,
+        missing: state?.missing ?? [],
+        type: "unfinished",
+      });
       continue;
     }
 
     if (leaf.end.type === "open") {
       if (finish === "closed") {
         flagEnd(leaf.id, { type: "open-not-offered" });
-      } else if (completeness === null) {
+      } else if (state === null) {
         flagEnd(leaf.id, { type: "open-unjudged" });
-      } else {
-        const old = completeness.ends.get(leaf.id);
-
-        if (
-          old?.type === "open-contradiction" ||
-          old?.type === "open-incomplete"
-        ) {
-          flagEnd(leaf.id, old);
-        }
+      } else if (state.contradiction !== null) {
+        flagEnd(leaf.id, {
+          rows: state.contradiction,
+          type: "open-contradiction",
+        });
+      } else if (state.missing.length > 0) {
+        flagEnd(leaf.id, { missing: state.missing, type: "open-incomplete" });
       }
     }
 
@@ -326,7 +348,7 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     ends: endProblems,
     finished,
     justifications: new Map(),
-    marks: completeness?.marks ?? new Map(),
+    marks: completeness.marks(),
     open,
     problems,
     rows: rowProblems,

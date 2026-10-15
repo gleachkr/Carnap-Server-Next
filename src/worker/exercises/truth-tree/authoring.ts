@@ -23,6 +23,8 @@ import {
 } from "../../exercise-kit/formula";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
+import type { TreeDevelopment } from "./aufbau/criteria";
+import { readTreeDevelopment } from "./aufbau/criteria";
 import {
   isTreeTheory,
   readTreeTheory,
@@ -251,6 +253,129 @@ function reportTreeTheory(
   }
 }
 
+/** What is wrong with a theory's development roles, for an open branch. */
+function reportDevelopment(
+  development: TreeDevelopment,
+  name: string,
+  line: number,
+  diagnostics: CompilerDiagnostic[],
+): void {
+  if (!development.annotated) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "truth_tree_no_development",
+        "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed.",
+        { params: { name } },
+      ),
+    );
+  }
+
+  for (const { problem, rule } of development.problems) {
+    switch (problem.type) {
+      case "unknown-kind":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know.",
+            {
+              params: { rule, kind: problem.kind },
+            },
+          ),
+        );
+        break;
+      case "several-kinds":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” names more than one development kind.",
+            {
+              params: { rule },
+            },
+          ),
+        );
+        break;
+      case "bad-arguments":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}.",
+            {
+              params: {
+                expected: `tree.development.${problem.expected}`,
+                rule,
+              },
+            },
+          ),
+        );
+        break;
+      case "unknown-binder":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” names “{binder}” as its instance, but has no binder of that name.",
+            {
+              params: { rule, binder: problem.binder },
+            },
+          ),
+        );
+        break;
+      case "single-row-focus":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row.",
+            {
+              params: { rule },
+            },
+          ),
+        );
+        break;
+      case "no-template":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it.",
+            {
+              params: { rule, binder: problem.binder },
+            },
+          ),
+        );
+        break;
+      case "unknown-flag":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” has the development flag “{flag}”, which its kind does not take.",
+            {
+              params: { rule, flag: problem.flag },
+            },
+          ),
+        );
+        break;
+      case "no-relation":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule.",
+            {
+              params: { rule },
+            },
+          ),
+        );
+        break;
+    }
+  }
+}
+
 export async function compileTruthTree(
   block: DirectiveBlock,
   context: ExerciseCompileContext,
@@ -286,6 +411,16 @@ export async function compileTruthTree(
   }
 
   const theory: TreeTheory = read;
+
+  // A branch can be marked open only where the theory says when it is done.
+  if (finish !== "closed") {
+    reportDevelopment(
+      readTreeDevelopment(language, theory),
+      system,
+      block.line,
+      diagnostics,
+    );
+  }
   let task: TruthTreeTask = "consistency";
   const premises: string[] = [];
   const conclusions: string[] = [];

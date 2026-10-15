@@ -990,6 +990,39 @@ says what that means through `@syntax role` annotations:
 A theory missing any of this is refused when the lesson compiles, with the
 list of what it lacks. `forallx-ubc.mm0` is the worked example.
 
+#### When a row is developed
+
+A tree with `finish` other than `closed` lets a branch be marked open, and an
+open branch must be complete: every row on it developed. Which rows count,
+and when, is the book's, so the theory says it, with roles on the rule a
+student's name resolves to (the aliased axiom; the role covers its
+`@fallback` chain):
+
+| Role | A row the rule applies to is developed on a branch when |
+| --- | --- |
+| `tree.development.once` | a step on the branch develops it by this rule |
+| `tree.development.once.<binder>` | the same, and the mark lists the instance at `<binder>` (`✓a` for `∃`) |
+| `tree.development.general.<binder>` | there is a step with the instance at `<binder>` for every term of that sort on the branch (`\a,b`) |
+| `tree.development.nonempty` | with `general`: one step even when the branch has no terms |
+| `tree.development.none` | never needed |
+
+- A rule with no role is `once` if it develops one row, and asks nothing if
+  it develops several (a closure, an identity step).
+- A rule applies to a row its focus pattern matches: `∀ x ph` matches any
+  universal. The match is syntactic, so a focus that needs the theory to
+  compute (a substitution) matches nothing.
+- Only steps the engine accepted count. A step's instance is found by the
+  engine too: the editor asks it which term each row was written with, and
+  the certificate proves the answer, so the server checks it as it checks
+  the steps. That needs the judgement sort's `@relation` to name a modus
+  ponens rule, as `forallx-ubc`'s `jeq_mp` does.
+- A branch marked open is refused if the closure rule's focus matches one or
+  two of its rows.
+
+A theory with no development roles at all cannot be used with `finish`
+other than `closed`, and a role that does not read (an unknown kind, a
+binder the rule does not have) is reported when the lesson compiles.
+
 The student writes every row. **Stack** (`t`) adds a row at the end of the
 branch, **Split** (`s`) branches it in two, and **Add row** (`r`) adds
 another row to the same step, as `≡` needs. Whether a rule stacks or splits
@@ -1030,11 +1063,9 @@ For `forallx-ubc`, the rules are the book's (§5, §10, §12.7):
 - A closure cites two rows on its branch that are a sentence and its
   negation, or one row `a≠a`.
 - A branch marked `↑` must be open and complete: every row on it developed
-  on that branch, every universal instantiated for every name on the branch
-  (and at least once, if there are none), and every identity `a=b`
-  substituted, in one direction or the other, into every atomic and negated
-  atomic sentence on the branch. A rewriting that says something is itself
-  (`b=b`) is never needed, as in the book's own solutions.
+  on that branch, and every universal instantiated for every name on the
+  branch (and at least once, if there are none). An identity is not yet
+  required to be substituted into the branch's literals, as the book asks.
 
 A step with no rule named, or no row cited, is unfinished rather than wrong.
 

@@ -7,6 +7,10 @@ import { setEnd, splitNode, stackRows } from "../../src/tableau/edit";
 import type { Formula } from "../../src/worker/exercise-kit/formula";
 import { parseFormula } from "../../src/worker/exercise-kit/formula";
 import {
+  heldInstances,
+  readTreeDiagnostics,
+} from "../../src/worker/exercises/truth-tree/aufbau/emit";
+import {
   resolveTruthTree,
   treeProofOf,
 } from "../../src/worker/exercises/truth-tree/grading";
@@ -200,15 +204,7 @@ export class TreeBuilder {
 
 let compiler: Promise<LoadedCompiler> | null = null;
 
-/**
- * A tree's certificate, as the browser compiles it: its derivation against the
- * exercise's theory (`publicData` as the systems join gives it), base64.
- * `undefined` where the compile does not certify every inference.
- */
-export async function certifyTree(
-  publicData: TruthTreePublicData,
-  answer: { readonly nodes: unknown; readonly rules?: unknown },
-): Promise<string | undefined> {
+function engine(): Promise<LoadedCompiler> {
   compiler ??= loadCompiler({
     wasmBytes: readFileSync(
       new URL(
@@ -218,24 +214,74 @@ export async function certifyTree(
     ),
   });
 
-  const resolved = resolveTruthTree(publicData);
-  const proof =
-    resolved === null ? null : treeProofOf(resolved, answer as never);
+  return compiler;
+}
 
-  if (
-    proof?.goal == null ||
-    proof.proof === null ||
-    publicData.mm0 === undefined
-  ) {
-    return undefined;
+/** A tree's answer as the browser would submit it. */
+export interface CertifiedAnswer {
+  readonly nodes: unknown;
+  readonly rules?: unknown;
+  readonly instances?: Readonly<Record<string, string>>;
+  readonly mmb?: string;
+}
+
+/**
+ * A tree as the browser submits it: the instances its general steps were
+ * written with, found by asking the engine, and its certificate, base64,
+ * compiled against the exercise's theory (`publicData` as the systems join
+ * gives it). No `mmb` where the compile does not certify every inference.
+ */
+export async function certifyAnswer(
+  publicData: TruthTreePublicData,
+  answer: { readonly nodes: unknown; readonly rules?: unknown },
+): Promise<CertifiedAnswer> {
+  const loaded = await engine();
+  const resolved = resolveTruthTree(publicData);
+  const mm0 = publicData.mm0;
+
+  if (resolved === null || mm0 === undefined) {
+    return answer;
   }
 
-  const result = (await compiler).compile(
-    `${publicData.mm0}\n${proof.goal}\n`,
-    proof.proof,
+  const data = answer as never;
+  const slots = treeProofOf(resolved, data, new Map()).slots;
+  const asking = treeProofOf(resolved, data, slots);
+
+  if (asking.goal === null || asking.proof === null) {
+    return answer;
+  }
+
+  const asked = loaded.compile(`${mm0}\n${asking.goal}\n`, asking.proof);
+  const held = heldInstances(
+    asking,
+    readTreeDiagnostics(asked.ok ? [] : asked.diagnostics, asking),
   );
+  const instances = Object.fromEntries(held);
+  const submitted = {
+    ...answer,
+    ...(held.size === 0 ? {} : { instances }),
+  };
+  const final = treeProofOf(resolved, submitted as never);
+
+  if (final.goal === null || final.proof === null) {
+    return submitted;
+  }
+
+  const result = loaded.compile(`${mm0}\n${final.goal}\n`, final.proof);
 
   return result.ok && result.mmbBytes !== undefined
-    ? Buffer.from(result.mmbBytes).toString("base64")
-    : undefined;
+    ? { ...submitted, mmb: Buffer.from(result.mmbBytes).toString("base64") }
+    : submitted;
+}
+
+/**
+ * A tree's certificate, as the browser compiles it, or `undefined` where the
+ * compile does not certify every inference. For a tree with no general steps;
+ * {@link certifyAnswer} gives the instances a certificate states.
+ */
+export async function certifyTree(
+  publicData: TruthTreePublicData,
+  answer: { readonly nodes: unknown; readonly rules?: unknown },
+): Promise<string | undefined> {
+  return (await certifyAnswer(publicData, answer)).mmb;
 }

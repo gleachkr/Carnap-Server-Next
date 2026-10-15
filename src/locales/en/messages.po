@@ -5352,6 +5352,38 @@ msgstr "The rows of one step must cite the same row."
 msgid "The rows this closure cites do not close the branch."
 msgstr "The rows this closure cites do not close the branch."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule."
+msgstr "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row."
+msgstr "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}."
+msgstr "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” has the development flag “{flag}”, which its kind does not take."
+msgstr "The rule “{rule}” has the development flag “{flag}”, which its kind does not take."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names “{binder}” as its instance, but has no binder of that name."
+msgstr "The rule “{rule}” names “{binder}” as its instance, but has no binder of that name."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it."
+msgstr "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names more than one development kind."
+msgstr "The rule “{rule}” names more than one development kind."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know."
+msgstr "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know."
+
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The rule for row {cited} does not split the branch."
 msgstr "The rule for row {cited} does not split the branch."
@@ -5451,6 +5483,10 @@ msgstr "The system “{name}” has several sorts that coerce into its branch so
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” is not a tree theory: it declares no {roles}."
 msgstr "The system “{name}” is not a tree theory: it declares no {roles}."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed."
+msgstr "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed."
 
 #: src/worker/exercises/world/strings.ts
 msgid "The table lists every block and can do everything the board does."

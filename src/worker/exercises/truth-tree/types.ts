@@ -85,4 +85,11 @@ export interface TruthTreeAnswerData {
    * here names no rule; a tree saved before rules were typed has none.
    */
   readonly rules?: Readonly<Record<string, string>>;
+  /**
+   * The instance each row of a general step was written with, by row id, as
+   * engine text (`a` for the row `Fa` from `∀x Fx`). The browser finds them
+   * by asking the engine, and the certificate it submits proves each one, so
+   * a stored instance is one the engine confirmed. Completeness counts them.
+   */
+  readonly instances?: Readonly<Record<string, string>>;
 }

@@ -5352,6 +5352,38 @@ msgstr ""
 msgid "The rows this closure cites do not close the branch."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” has the development flag “{flag}”, which its kind does not take."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names “{binder}” as its instance, but has no binder of that name."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names more than one development kind."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know."
+msgstr ""
+
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The rule for row {cited} does not split the branch."
 msgstr ""
@@ -5450,6 +5482,10 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” is not a tree theory: it declares no {roles}."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed."
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts

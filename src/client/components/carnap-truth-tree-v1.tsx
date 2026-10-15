@@ -25,6 +25,10 @@
  * by the engine once the edits pause, as a proof is: full feedback flags a
  * step or closure the engine refused on the row or end it is about, and the
  * certificate the compile produced is what the server verifies at submit.
+ * A general step's instances are asked of the engine first: each row it
+ * wrote is stated, in a link theorem, to be its rule's instance at each term
+ * it could be, and the links that hold say which it was. Those go in the
+ * answer, and into the certificate, so the server confirms them too.
  * What the engine does not see (the root, unreadable rows, where ends sit)
  * is checked on every edit by the same `judgeTree` the grader runs. Marks
  * are computed; the margin's citation and rule are typed. As with the model,
@@ -55,8 +59,12 @@ import { layoutTableau, rowAtLine } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
 import { treeAnnotations } from "../../worker/exercises/truth-tree/annotations";
+import { closesAlone } from "../../worker/exercises/truth-tree/aufbau/complete";
 import type { TreeProof } from "../../worker/exercises/truth-tree/aufbau/emit";
-import { readTreeDiagnostics } from "../../worker/exercises/truth-tree/aufbau/emit";
+import {
+  heldInstances,
+  readTreeDiagnostics,
+} from "../../worker/exercises/truth-tree/aufbau/emit";
 import type { TreeEvidence } from "../../worker/exercises/truth-tree/aufbau/judge";
 import { ruleSpelling } from "../../worker/exercises/truth-tree/aufbau/theory";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
@@ -71,7 +79,6 @@ import {
   treeProofOf,
 } from "../../worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../../worker/exercises/truth-tree/logic/check";
-import { closesAlone } from "../../worker/exercises/truth-tree/logic/check";
 import type { TruthTreeStringId } from "../../worker/exercises/truth-tree/strings";
 import type {
   TruthTreeAnswerData,
@@ -109,9 +116,13 @@ interface Derived {
   readonly tree: TableauDocument;
   readonly index: TableauIndex;
   readonly layout: TableauLayout;
-  /** The tree as a derivation, and its rules as they were when it was made. */
+  /**
+   * The tree as a derivation, and its rules and instances as they were when
+   * it was made.
+   */
   proof?: {
     readonly rules: ReadonlyMap<string, string>;
+    readonly instances: ReadonlyMap<string, string>;
     readonly proof: TreeProof;
   };
   /** The report, and the evidence it was made with. */
@@ -252,6 +263,11 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   /** What the engine said of the tree as it stands; `none` until it has. */
   private evidence: TreeEvidence = { kind: "none" };
   private rules: ReadonlyMap<string, string> = new Map();
+  /**
+   * The instance each row of a general step was written with, as the last
+   * compile found; empty until it has run.
+   */
+  private instances: ReadonlyMap<string, string> = new Map();
   private drafts: Snapshot["drafts"] = { cites: new Map(), rule: new Map() };
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];
@@ -450,13 +466,18 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   }
 
   protected getAnswer(): TruthTreeAnswerData & { readonly mmb?: string } {
-    // Only the rules of developments still in the tree.
-    const devs = new Set(
-      this.tree.nodes.flatMap((node) => node.rows.map((row) => row.dev)),
-    );
+    // Only the rules of developments, and the instances of rows, still in
+    // the tree.
+    const rows = this.tree.nodes.flatMap((node) => node.rows);
+    const devs = new Set(rows.map((row) => row.dev));
+    const ids = new Set(rows.map((row) => row.id));
     const rules = [...this.rules].filter(([dev]) => devs.has(dev));
+    const instances = [...this.instances].filter(([id]) => ids.has(id));
 
     return {
+      ...(instances.length === 0
+        ? {}
+        : { instances: Object.fromEntries(instances) }),
       ...(this.mmb === "" ? {} : { mmb: this.mmb }),
       nodes: this.tree.nodes,
       ...(rules.length === 0 ? {} : { rules: Object.fromEntries(rules) }),
@@ -485,12 +506,16 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     return this.derive().layout;
   }
 
-  /** The tree as a derivation, made once per tree and rules. */
+  /** The tree as a derivation, made once per tree, rules and instances. */
   private proof(resolved: ResolvedTree): TreeProof {
     const derived = this.derive();
 
-    if (derived.proof?.rules !== this.rules) {
+    if (
+      derived.proof?.rules !== this.rules ||
+      derived.proof.instances !== this.instances
+    ) {
       derived.proof = {
+        instances: this.instances,
         proof: treeProofOf(resolved, this.getAnswer()),
         rules: this.rules,
       };
@@ -526,6 +551,12 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * Compile the tree's derivation, and take what the engine says as the
    * evidence the report is made with. A tree with nothing written below its
    * root has nothing to compile.
+   *
+   * The first compile also asks which instance each general row was written
+   * with: it states every candidate, and a link that fails says only that the
+   * row was not that one. The instances that hold are kept, and when the
+   * derivation stating only those differs from the one asked, it is compiled
+   * again for the certificate.
    */
   protected async compile(): Promise<void> {
     const resolved = this.resolved;
@@ -537,31 +568,64 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     const tree = this.tree;
     const rules = this.rules;
-    const proof = this.proof(resolved);
+    const answer = { nodes: tree.nodes, rules: Object.fromEntries(rules) };
+    const slots = treeProofOf(resolved, answer, new Map()).slots;
+    const asking = treeProofOf(resolved, answer, slots);
 
-    if (proof.goal === null || proof.proof === null) {
+    if (asking.goal === null || asking.proof === null) {
+      this.instances = new Map();
       this.evidence = { certified: false, errors: [], kind: "compiled" };
       this.rerender();
       return;
     }
 
-    const run = await this.runCompiler(
-      `${mm0}\n${proof.goal}\n`,
-      proof.proof,
+    const stale = () => this.tree !== tree || this.rules !== rules;
+    const asked = await this.runCompiler(
+      `${mm0}\n${asking.goal}\n`,
+      asking.proof,
     );
 
-    if (run === null || this.tree !== tree || this.rules !== rules) {
+    if (asked === null || stale()) {
       return;
     }
 
-    this.evidence =
-      run.kind === "verdict"
-        ? {
-            certified: run.verdict.certificate !== null,
-            errors: readTreeDiagnostics(run.verdict.problems, proof),
-            kind: "compiled",
-          }
-        : { kind: "none" };
+    if (asked.kind !== "verdict") {
+      this.evidence = { kind: "none" };
+      this.syncAnswer();
+      this.rerender();
+      return;
+    }
+
+    const errors = readTreeDiagnostics(asked.verdict.problems, asking);
+    const instances = heldInstances(asking, errors);
+
+    this.instances = instances;
+
+    const final = this.proof(resolved);
+    const stepErrors = errors.filter(
+      (error) => error.subject?.type !== "link",
+    );
+    let certified = asked.verdict.certificate !== null;
+
+    if (
+      stepErrors.length === 0 &&
+      final.goal !== null &&
+      final.proof !== null &&
+      (final.goal !== asking.goal || final.proof !== asking.proof)
+    ) {
+      const run = await this.runCompiler(
+        `${mm0}\n${final.goal}\n`,
+        final.proof,
+      );
+
+      if (run === null || stale()) {
+        return;
+      }
+
+      certified = run.kind === "verdict" && run.verdict.certificate !== null;
+    }
+
+    this.evidence = { certified, errors: stepErrors, kind: "compiled" };
     this.syncAnswer();
     this.rerender();
   }
@@ -642,6 +706,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   private edited(): void {
     this.forgetVerdict();
     this.evidence = { kind: "none" };
+    this.instances = new Map();
     this.setMark("idle");
     this.syncAnswer();
     this.scheduleCompile();
@@ -1178,19 +1243,17 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     }
 
     const picked = [...closing.picked, rowId];
-    // Until the theory can say which rows close a branch alone (#437), the
-    // old checker says, where it reads the rows.
-    const legacy = this.resolved?.legacy ?? null;
-    const read =
-      legacy === null
-        ? null
-        : legacy.reader.read(index.row(rowId)?.row.text ?? "");
+    // A row closes a branch alone where the theory's closure rule says so.
+    const resolved = this.resolved;
 
     if (
       picked.length === 1 &&
-      read?.ok === true &&
-      legacy !== null &&
-      closesAlone(read.formula, legacy.system)
+      resolved !== null &&
+      closesAlone(
+        resolved.development,
+        resolved.reader,
+        index.row(rowId)?.row.text ?? "",
+      )
     ) {
       this.closing = null;
       this.focusTree = true;

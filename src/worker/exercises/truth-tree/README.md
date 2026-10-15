@@ -43,14 +43,21 @@ is in
 - `aufbau/` — the engine's half (gh #46): `theory.ts` reads a tree theory's
   roles (the contract is in the authoring docs, "Writing a tree theory"),
   `rows.ts` reads rows at its row sort, `emit.ts` writes each step and
-  closure down as a lemma for `@aufbau/compiler`, and `judge.ts` makes the
+  closure down as a theorem for `@aufbau/compiler`, and `judge.ts` makes the
   report from the tree's structure and the engine's word on it. The browser
-  compiles the lemmas; the server writes the same lemmas from the stored tree
-  and verifies the browser's certificate against them, so a certificate for
-  any other tree does not verify.
-- `logic/` — the old UBC checker. It still marks rows (`✓`) and says whether
-  a branch marked open is complete, until the development criteria replace
-  it (#437), and stays for the differential test (#440).
+  compiles the theorems; the server writes the same theorems from the stored
+  tree and verifies the browser's certificate against them, so a certificate
+  for any other tree does not verify. `criteria.ts` reads the theory's
+  development roles into a registry of criteria (`once`, `general`, `none`),
+  `patterns.ts` matches a rule's focus against a row and fills in its
+  templates, and `complete.ts` says from the verified steps whether an open
+  branch is complete and what each row's mark is. A general step's
+  instances are link theorems: the emitter states that a row is its rule's
+  template at a given term, which the engine proves only if it is. The
+  browser compiles every candidate once to find which hold, then the ones
+  that do into the certificate; the answer carries them (`instances`), and
+  the server writes the same links.
+- `logic/` — the old UBC checker, kept for the differential test (#440).
 - `grading.ts` — guards, the declaration resolved back to formulas, and the
   judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the
@@ -62,10 +69,13 @@ The editor is `src/client/components/carnap-truth-tree-v1.tsx`.
 
 ## Answer data
 
-`truth-tree-answer@1` is `{ nodes, rules? }`: `rules` maps a development's
-`dev` to the rule its margin names (the theory's spelling of one of its
-`@syntax alias`es), kept beside the document so that the document stays
-logic-free; a development missing from it names no rule. `nodes` is the
+`truth-tree-answer@1` is `{ nodes, rules?, instances? }`: `rules` maps a
+development's `dev` to the rule its margin names (the theory's spelling of
+one of its `@syntax alias`es), kept beside the document so that the document
+stays logic-free; a development missing from it names no rule. `instances`
+maps a row of a general step to the term it was written with, as engine text
+(`a` for `Fa` from `∀x Fx`): the browser finds it by asking the engine, and
+the certificate proves it. `nodes` is the
 tableau document: each node a run
 of rows with its parent (`null` for the root) and an optional `end`,
 `{ type: "closed", cites }` or `{ type: "open" }`. A row is

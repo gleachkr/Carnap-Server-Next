@@ -12,7 +12,11 @@ import {
   TRUTH_TREE_SCHEMA_VERSION,
 } from "../src/worker/exercises/truth-tree/types";
 import { passthroughTranslator } from "../src/worker/i18n/translator";
-import { certifyTree, TreeBuilder } from "./helpers/truth-tree";
+import {
+  certifyAnswer,
+  certifyTree,
+  TreeBuilder,
+} from "./helpers/truth-tree";
 
 /**
  * The truth-tree type's worker half: the directive, the grader and the
@@ -65,8 +69,10 @@ async function certified(
   item: ExerciseManifestItem,
   answer: { readonly nodes: unknown; readonly rules?: unknown },
 ): Promise<JsonValue> {
-  const mmb = await certifyTree(publicDataOf(item), answer);
-  return { ...answer, ...(mmb === undefined ? {} : { mmb }) } as JsonValue;
+  return (await certifyAnswer(
+    publicDataOf(item),
+    answer,
+  )) as unknown as JsonValue;
 }
 
 async function grade(

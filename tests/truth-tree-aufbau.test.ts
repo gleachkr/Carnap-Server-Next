@@ -198,6 +198,8 @@ function where(errors: readonly TreeDiagnostic[]): string[] {
       case "step":
       case "citation":
         return `${subject.type} ${subject.rows.join(",")}`;
+      case "link":
+        return `link ${subject.row} ${subject.instance}`;
       default:
         return `${subject.type} ${subject.node}`;
     }

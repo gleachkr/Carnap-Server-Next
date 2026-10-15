@@ -710,6 +710,13 @@ axiom tb_niff_r (ga: ctx) (ph ps: wff):
 --| @syntax alias ¬¬ ~~ --
 axiom tb_nn (ga: ctx) (ph: wff): $ closes ga ; ph $ > $ focus ga at (¬ ¬ ph) $;
 
+-- ## When a row is developed (§5.3, §10.2)
+-- A rule with no development role is used once on a row it applies to; the
+-- general rules (∀, ¬∃) are developed when instantiated for every name on
+-- the branch, and once, with a new name, on a branch that has none
+-- (`nonempty`). The rules that name an instance say which binder holds it,
+-- for the margin's ✓a and \a,b. The identity rules ask nothing yet.
+--
 -- ## The quantifier rules (§10)
 -- A universal takes any name; an existential a name new to the branch, which
 -- is the binder list: `ga` may not mention `a`, and `ga` is the whole branch.
@@ -751,16 +758,20 @@ axiom tb_all2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):
 --| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; ps $ > $ focus ga at (∀ x ph) $
 --| @recover te ps ph x
 --| @fallback tb_all2
+--| @syntax role tree.development.general.te
+--| @syntax role tree.development.nonempty
 --| @syntax alias ∀ @
 axiom tb_all1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
   $ closes ga ; {x / te} ph $ > $ focus ga at (∀ x ph) $;
 --| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; ¬ ps $ > $ focus ga at (¬ ∀ x ph) $
 --| @recover a ps ph x
+--| @syntax role tree.development.once.a
 --| @syntax alias ¬∀ ~∀ -∀ ¬@ ~@ -@
 axiom tb_nall {x: var} {a: name} (ga: ctx x) (ph: wff x):
   $ closes ga ; ¬ {x / a} ph $ > $ focus ga at (¬ ∀ x ph) $;
 --| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; ps $ > $ focus ga at (∃ x ph) $
 --| @recover a ps ph x
+--| @syntax role tree.development.once.a
 --| @syntax alias ∃ 3
 axiom tb_ex {x: var} {a: name} (ga: ctx x) (ph: wff x):
   $ closes ga ; {x / a} ph $ > $ focus ga at (∃ x ph) $;
@@ -796,6 +807,8 @@ axiom tb_nex2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):
 --| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; ¬ ps $ > $ focus ga at (¬ ∃ x ph) $
 --| @recover te ps ph x
 --| @fallback tb_nex2
+--| @syntax role tree.development.general.te
+--| @syntax role tree.development.nonempty
 --| @syntax alias ¬∃ ~∃ -∃ ¬3 ~3 -3
 axiom tb_nex1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
   $ closes ga ; ¬ {x / te} ph $ > $ focus ga at (¬ ∃ x ph) $;

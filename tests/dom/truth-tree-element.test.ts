@@ -247,6 +247,54 @@ describe("upgrading", () => {
     expect(answer.rules).toEqual({ [restored[2]?.dev ?? ""]: "&" });
   });
 
+  test("a general step's instances are asked of the engine, and go in the answer", async () => {
+    // `Rab` could be the instance at a or at b: a first compile asks, and a
+    // second certifies the instances that held.
+    const prior = {
+      nodes: [
+        {
+          end: { type: "open" },
+          id: "old-root",
+          parent: null,
+          rows: [
+            { cites: [], dev: "root", id: "r1", text: "∀xRxb" },
+            { cites: [], dev: "root", id: "r2", text: "Fa" },
+            { cites: ["r1"], dev: "d1", id: "r3", text: "Rab" },
+            { cites: ["r1"], dev: "d1", id: "r4", text: "Rbb" },
+          ],
+        },
+      ],
+      rules: { d1: "∀" },
+    };
+    const mounted = mountExercise(
+      await treeExercise(
+        'finish="one-open"',
+        "Is this set consistent?\n\n- ∀x Rxb\n- Fa",
+      ),
+      { priorAnswer: prior },
+    );
+
+    mounted.form
+      .querySelector<HTMLButtonElement>(".truth-tree-check")
+      ?.click();
+    await until(() => statusText(mounted) !== "", 3_000);
+
+    expect(markState(mounted)).toBe("ok");
+
+    const answer = JSON.parse(mounted.answerData.value) as {
+      instances?: Record<string, string>;
+      mmb?: string;
+      nodes: Answer["nodes"];
+    };
+    const [, , rab, rbb] = answer.nodes[0]?.rows ?? [];
+
+    expect(answer.instances).toEqual({
+      [rab?.id ?? ""]: "a",
+      [rbb?.id ?? ""]: "b",
+    });
+    expect(answer.mmb).toBeDefined();
+  });
+
   test("a prior answer on a root the exercise no longer gives is set aside", async () => {
     // As after a correction changed the root: the root cannot be edited, so
     // restoring this tree would leave it wrong for good.

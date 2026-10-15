@@ -342,6 +342,50 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.",
         placeholders("name"),
       ),
+    "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed.":
+      i18n.t(
+        "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed.",
+        placeholders("name"),
+      ),
+    "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know.":
+      i18n.t(
+        "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know.",
+        placeholders("rule", "kind"),
+      ),
+    "The rule “{rule}” names more than one development kind.": i18n.t(
+      "The rule “{rule}” names more than one development kind.",
+      placeholders("rule"),
+    ),
+    "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}.":
+      i18n.t(
+        "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}.",
+        placeholders("rule", "expected"),
+      ),
+    "The rule “{rule}” names “{binder}” as its instance, but has no binder of that name.":
+      i18n.t(
+        "The rule “{rule}” names “{binder}” as its instance, but has no binder of that name.",
+        placeholders("rule", "binder"),
+      ),
+    "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row.":
+      i18n.t(
+        "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row.",
+        placeholders("rule"),
+      ),
+    "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it.":
+      i18n.t(
+        "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it.",
+        placeholders("rule", "binder"),
+      ),
+    "The rule “{rule}” has the development flag “{flag}”, which its kind does not take.":
+      i18n.t(
+        "The rule “{rule}” has the development flag “{flag}”, which its kind does not take.",
+        placeholders("rule", "flag"),
+      ),
+    "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule.":
+      i18n.t(
+        "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule.",
+        placeholders("rule"),
+      ),
     "Write the root as one argument line or as a list of sentences, not both.":
       i18n.t(
         "Write the root as one argument line or as a list of sentences, not both.",
