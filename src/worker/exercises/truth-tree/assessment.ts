@@ -37,6 +37,16 @@ import { describeJudgement } from "./verdict-text";
  */
 const TRUTH_TREE_EVALUATOR_VERSION = "truth-tree-evaluator@2";
 
+/**
+ * The longest certificate a tree may carry, as base64: far past the proof
+ * types' cap, because a tree's grows faster than its rows. Each step restates
+ * its branch, and a first-order step carries its instance's normalization
+ * through the whole branch, so one 48-row first-order branch is 3.3 MB and a
+ * 55-row one 5 MB. Verifying is cheap at that size (about 50 ms in workerd for
+ * 5 MB, decoding included); the cost is the student's upload.
+ */
+const MAX_TREE_CERTIFICATE_LENGTH = 8 * 1024 * 1024;
+
 function treeAnswer(answer: NormalizedAnswer): TruthTreeAnswerData {
   return answer.data as unknown as TruthTreeAnswerData;
 }
@@ -109,7 +119,7 @@ export const TRUTH_TREE_ASSESSMENT = {
     // beside the answer to be verified and let go; a tree never compiled has
     // none, and is graded without one.
     const data = envelope.data;
-    const certificate = readCertificate(data);
+    const certificate = readCertificate(data, MAX_TREE_CERTIFICATE_LENGTH);
 
     if (certificate === null) {
       return {

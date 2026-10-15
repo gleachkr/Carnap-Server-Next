@@ -15,21 +15,21 @@ export const MAX_CERTIFICATE_BASE64_LENGTH = 262_144;
 
 /**
  * Decode the base64 `mmb` field of an envelope's data. `undefined` when the
- * envelope carries none, `null` when it carries one that is over the cap or is
- * not base64. The proof types treat both as malformed; translation accepts the
+ * envelope carries none, `null` when it carries one that is over the cap (the
+ * shared one unless a type gives its own) or is not base64. The proof types treat both as malformed; translation accepts the
  * first (an answer typed but never checked) and refuses only the second.
  */
-export function readCertificate(data: object): Uint8Array | null | undefined {
+export function readCertificate(
+  data: object,
+  maxLength: number = MAX_CERTIFICATE_BASE64_LENGTH,
+): Uint8Array | null | undefined {
   const value = (data as { readonly mmb?: unknown }).mmb;
 
   if (value === undefined) {
     return undefined;
   }
 
-  if (
-    typeof value !== "string" ||
-    value.length > MAX_CERTIFICATE_BASE64_LENGTH
-  ) {
+  if (typeof value !== "string" || value.length > maxLength) {
     return null;
   }
 

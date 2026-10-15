@@ -98,6 +98,12 @@ a parse. A prior answer whose root is not the declaration's (a correction
 changed it) is set aside when the element restores, as the root cannot be
 edited.
 
+The certificate rides beside the answer and is not stored. A tree's may be
+up to 8 MiB of base64, far past the proof types' 256 KiB: each step restates
+its branch, and a first-order step carries its instance's normalization
+through the whole branch, so a 48-row first-order branch certifies in 3.3 MB.
+Verifying 5 MB takes about 50 ms in workerd, decoding included.
+
 ## Not yet
 
 - Reading an interpretation off a complete open branch, merging the names

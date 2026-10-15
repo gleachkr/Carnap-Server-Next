@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import type { JsonValue } from "../src/worker/domain/json";
+import { MAX_CERTIFICATE_BASE64_LENGTH } from "../src/worker/exercise-kit/proof/certificate";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
 import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
@@ -365,6 +366,28 @@ describe("grading", () => {
     expect(withRules({ root: 3 })).toBe(false);
     expect(withRules({ root: "x".repeat(65) })).toBe(false);
     expect(withRules({ a: "&", b: "&", c: "&" })).toBe(false);
+  });
+
+  test("a tree's certificate may be far larger than a proof's, up to 8 MiB", async () => {
+    const item = await declaration(VALID);
+    const root = builderFor(item).tree.nodes;
+    const accepts = (length: number) =>
+      TRUTH_TREE_EXERCISE.normalizeAnswer(
+        {
+          data: {
+            mmb: "A".repeat(length),
+            nodes: root,
+          } as unknown as JsonValue,
+          kind: TRUTH_TREE_ANSWER_KIND,
+          schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+        },
+        item,
+      ).ok;
+
+    // Past the proof types' 256 KiB, as a long first-order branch's is.
+    expect(accepts(MAX_CERTIFICATE_BASE64_LENGTH + 4)).toBe(true);
+    expect(accepts(8 * 1024 * 1024)).toBe(true);
+    expect(accepts(8 * 1024 * 1024 + 4)).toBe(false);
   });
 
   test("nodes that are not one tree are refused, and so is a tree too big to read", async () => {
