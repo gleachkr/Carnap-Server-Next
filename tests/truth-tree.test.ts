@@ -322,6 +322,23 @@ describe("grading", () => {
     expect(graded.status).toBe("correct");
   });
 
+  test("a root with nothing to develop, marked open, needs no certificate", async () => {
+    const item = await declaration(
+      directive(
+        '#tl finish="one-open"',
+        "Is this set consistent?\n\n- Fa\n- ¬Gb",
+      ),
+    );
+    const t = builderFor(item);
+    t.open(t.rootNode);
+
+    const answer = await certified(item, t.answer());
+
+    // There is no inference to state, so nothing to compile or verify.
+    expect((answer as { mmb?: string }).mmb).toBeUndefined();
+    expect((await grade(item, answer)).status).toBe("correct");
+  });
+
   test("a tree whose root is not the exercise's scores nothing", async () => {
     const item = await declaration(VALID);
     const t = new TreeBuilder(["Q & P", "¬P"]);

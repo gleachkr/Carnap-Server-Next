@@ -211,6 +211,13 @@ export interface DevelopmentRule {
   /** It and every axiom it falls back on. */
   readonly chain: ReadonlySet<string>;
   readonly patterns: RulePatterns;
+  /**
+   * How many rows each axiom of the chain writes on each branch, sorted: a
+   * step must write one of these. The engine cannot tell, because a branch
+   * is a set and a row already on it is not written again (`A ∧ B` with `B`
+   * above gives `Γ ; A ; B`, which is `Γ ; A`).
+   */
+  readonly shapes: readonly (readonly number[])[];
   /** Null where its roles do not read: an author's diagnostic. */
   readonly criterion: DevelopmentCriterion | null;
   readonly flags: ReadonlySet<string>;
@@ -368,13 +375,18 @@ function readDevelopment(
       }
     }
 
+    const chain = chainOf(name);
     const rule: DevelopmentRule = {
-      chain: new Set(chainOf(name)),
+      chain: new Set(chain),
       criterion,
       flags,
       instance,
       name,
       patterns,
+      shapes: chain.flatMap((axiom) => {
+        const each = patternsOf(axiom);
+        return each === null ? [] : [rowShape(each.written)];
+      }),
     };
 
     rules.push(rule);
@@ -405,6 +417,13 @@ function readDevelopment(
     relation,
     rules: relation === null ? rules.map(withoutInstance) : rules,
   };
+}
+
+/** How many rows each branch holds, sorted: branches may come in any order. */
+export function rowShape(
+  branches: readonly (readonly unknown[])[],
+): readonly number[] {
+  return branches.map((rows) => rows.length).sort((a, b) => a - b);
 }
 
 /** A rule whose instances cannot be confirmed asks only that it be used. */

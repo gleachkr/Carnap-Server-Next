@@ -34,6 +34,7 @@ import type {
 import type { TruthTreeFinish } from "../types";
 import { TreeCompleteness } from "./complete";
 import type { TreeDevelopment } from "./criteria";
+import { rowShape } from "./criteria";
 import type {
   EmitProblem,
   EmittedStep,
@@ -226,13 +227,41 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     }
   }
 
-  if (evidence.kind === "verified" && !evidence.ok) {
+  // A step must write every row its rule does, even one already on the
+  // branch, which the engine would take as written.
+  for (const step of proof.steps.values()) {
+    const shapes = input.development.byAxiom.get(step.rule)?.shapes ?? [];
+    const byNode = new Map<string, string[]>();
+
+    for (const rowId of step.rows) {
+      const node = index.row(rowId)?.node.id ?? "";
+      byNode.set(node, [...(byNode.get(node) ?? []), rowId]);
+    }
+
+    const shape = rowShape([...byNode.values()]).join(" ");
+
+    if (
+      shapes.length > 0 &&
+      !shapes.some((each) => each.join(" ") === shape)
+    ) {
+      for (const rowId of step.rows) {
+        flag(rowId, { rule: step.rule, type: "step-wrong" });
+      }
+    }
+  }
+
+  // A tree with no inference to state (its root alone, or nothing written
+  // that reads as a step) gives the engine nothing to confirm or refuse: what
+  // is wrong with it is said above, without the engine.
+  const unstated = proof.goal === null;
+  const refused = !unstated && evidence.kind === "verified" && !evidence.ok;
+
+  if (refused) {
     treeProblems.push({ type: "unverified" });
   }
 
   // Ends and branches. Completeness counts the steps the engine has not
   // refused; whether it has confirmed them is `confirmed`, below.
-  const refused = evidence.kind === "verified" && !evidence.ok;
   const completeness = new TreeCompleteness({
     development: input.development,
     index,
@@ -321,11 +350,12 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
 
   // The engine has confirmed every step and closure written.
   const confirmed =
-    evidence.kind === "verified"
+    unstated ||
+    (evidence.kind === "verified"
       ? evidence.ok
       : evidence.kind === "compiled" &&
         evidence.certified &&
-        engineErrors.length === 0;
+        engineErrors.length === 0);
   const states = leaves.map((leaf) => branches.get(leaf.id));
   const rightly = (type: "closed" | "open") =>
     states.filter((state) => state?.type === type && state.right).length;
