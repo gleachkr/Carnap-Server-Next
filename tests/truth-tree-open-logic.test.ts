@@ -153,4 +153,74 @@ describe("open-logic-tableaux", () => {
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
     expect(report.closed).toBe(false);
   }, 60_000);
+
+  test("Cut cites no row, and splits a branch on any formula", async () => {
+    const tree = new TreeBuilder(["T: A → B", "T: ¬A → B", "F: B"]);
+    const cut = tree.split("n0", null, [["T: A"], ["F: A"]], "Cut");
+    const [yes, no] = cut.nodes;
+    const left = tree.split(yes, "r1", [["F: A"], ["T: B"]], "→T");
+    tree.close(
+      left.nodes[0],
+      cut.rows[0][0] as string,
+      left.rows[0][0] as string,
+    );
+    tree.close(left.nodes[1], left.rows[1][0] as string, "r3");
+    const right = tree.split(no, "r2", [["F: ¬A"], ["T: B"]], "→T");
+    const [a] = tree.stack(
+      right.nodes[0],
+      right.rows[0][0] as string,
+      ["T: A"],
+      "¬F",
+    );
+    tree.close(right.nodes[0], a as string, cut.rows[1][0] as string);
+    tree.close(right.nodes[1], right.rows[1][0] as string, "r3");
+    const report = await judge("A → B, ¬A → B :|-: B", tree);
+
+    expect(problems(report)).toEqual([]);
+    expect(report.closed).toBe(true);
+  }, 60_000);
+
+  test("a rule that cites a row, left uncited, is unfinished", async () => {
+    const tree = new TreeBuilder(["T: A ∧ B", "F: A"]);
+    const [row] = tree.stack("n0", null, ["T: A", "T: B"], "∧T");
+    tree.close("n0", row as string, "r2");
+    const report = await judge("A ∧ B :|-: A", tree);
+
+    expect(problems(report)).toContain(`row ${row}: uncited`);
+  }, 60_000);
+
+  // identity.tex: Leibniz's law, symmetry, and transitivity.
+  test("=𝕋 rewrites t₁ as t₂ in a row, from an identity", async () => {
+    const tree = new TreeBuilder(["T: s = t", "T: A(s)", "F: A(t)"]);
+    const [row] = tree.stack("n0", ["r1", "r2"], ["T: A(t)"], "=T");
+    tree.close("n0", row as string, "r3");
+    const report = await judge("s = t, A(s) :|-: A(t)", tree);
+
+    expect(problems(report)).toEqual([]);
+    expect(report.closed).toBe(true);
+  }, 60_000);
+
+  test("= writes t = t citing nothing, and =𝕋 rewrites some occurrences", async () => {
+    const tree = new TreeBuilder(["T: s₁ = s₂", "F: s₂ = s₁"]);
+    const [refl] = tree.stack("n0", null, ["T: s₁ = s₁"], "=");
+    const [row] = tree.stack(
+      "n0",
+      ["r1", refl as string],
+      ["T: s₂ = s₁"],
+      "=T",
+    );
+    tree.close("n0", row as string, "r2");
+    const report = await judge("s₁ = s₂ :|-: s₂ = s₁", tree);
+
+    expect(problems(report)).toEqual([]);
+    expect(report.closed).toBe(true);
+  }, 60_000);
+
+  test("=𝕋 rewrites one way only", async () => {
+    const tree = new TreeBuilder(["T: s = t", "T: A(t)", "F: A(s)"]);
+    const [row] = tree.stack("n0", ["r1", "r2"], ["T: A(s)"], "=T");
+    const report = await judge("s = t, A(t) :|-: A(s)", tree);
+
+    expect(problems(report)).toContain(`row ${row}: step-wrong`);
+  }, 60_000);
 });

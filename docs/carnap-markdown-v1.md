@@ -983,6 +983,9 @@ says what that means through `@syntax role` annotations:
   that a branch may still close on it.
 - A rule may take several instances in one step through variants chained by
   `@fallback`, as `forallx-ubc`'s `∀` does for up to five.
+- A rule that cites no row, such as Cut, focuses on the empty branch: the
+  unit its join's `@acui` annotation names (`focus Γ at _`). A step by it is
+  written with no citation; any other step left uncited is unfinished.
 - **Give the judgements notations.** A language with letter delimiters
   splits a bare multi-letter term name such as `cl` into letters, so
   `forallx-ubc` writes them `closes Γ` and `focus Γ at Δ`.
@@ -1080,10 +1083,14 @@ tableaux (*Sets, Logic, Computation*, "Tableaux"):
   `⊥` or `⊤` at its top is never developed.
 - `∀𝔽` and `∃𝕋` take a constant new to the branch; `∀𝕋` and `∃𝔽` any
   closed term, one per step.
+- **Identity.** `=` cites no row and writes `𝕋 t = t`. `=𝕋` and `=𝔽` cite
+  two, `𝕋 t₁ = t₂` and a row with `t₁` in it, and write that row with some of
+  its `t₁` made `t₂`, in that direction only.
+- **Cut** cites no row and splits the branch into `𝕋 A` and `𝔽 A`.
 - A closure cites `𝕋 A` and `𝔽 A`.
 - The language is the book's: atoms `A`, `A(a)`, `C(x, b)`, function terms
-  `f(a)`, constants `a`–`e`, `s`, `t`, variables `u`–`z`, and every binary
-  formula bracketed, bar the outermost.
+  `f(a)`, constants `a`–`e`, `s`, `t` (subscripted too, `s₁`, typed `s1`),
+  variables `u`–`z`, and every binary formula bracketed, bar the outermost.
 
 A step with no rule named, or no row cited, is unfinished rather than wrong.
 

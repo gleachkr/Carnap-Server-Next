@@ -46,7 +46,10 @@ is in
   roles (the contract is in the authoring docs, "Writing a tree theory"),
   `rows.ts` reads rows at its row sort, `emit.ts` writes each step and
   closure down as a theorem for `@aufbau/compiler`, and `judge.ts` makes the
-  report from the tree's structure and the engine's word on it. The browser
+  report from the tree's structure and the engine's word on it. The root is
+  the exercise's, by count: a row below it with no citation is an unfinished
+  step, unless its rule cites no row (Cut, the Open Logic Project's `=`),
+  which focuses on the join's unit, the empty branch. The browser
   compiles the theorems; the server writes the same theorems from the stored
   tree and verifies the browser's certificate against them, so a certificate
   for any other tree does not verify. A branch is a set, so the engine

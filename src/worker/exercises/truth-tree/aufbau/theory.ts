@@ -10,7 +10,7 @@
  * worker when they write a tree down.
  */
 
-import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { AppTerm, SurfaceLanguage } from "@aufbau/syntax";
 import { printTerm, UnprintableTermError } from "@aufbau/syntax";
 import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
 
@@ -35,6 +35,11 @@ export interface TreeTheory {
   readonly unfocus: string;
   readonly closure: string;
   readonly join: string;
+  /**
+   * The empty branch, the join's `@acui` unit (`_`): what a rule that cites
+   * no row focuses on, as Cut does. Null where the join declares no unit.
+   */
+  readonly empty: { readonly term: string; readonly engine: string } | null;
   readonly rowSort: string;
   /** The term that asserts a sentence as a row; null where it is the row. */
   readonly assert: string | null;
@@ -119,11 +124,48 @@ export function readTreeTheory(
     closes: closes as string,
     closure: closure as string,
     deny,
+    empty: emptyBranch(language, roles.termFor("context-join")),
     focus: focus as string,
     join: join as string,
     rowSort: rowSort as string,
     unfocus: unfocus as string,
   };
+}
+
+/**
+ * The unit the join's `@acui` annotation names (`@acui assoc comm unit
+ * idem`), as a term and as engine text; null if it names none.
+ */
+function emptyBranch(
+  language: SurfaceLanguage,
+  join: string | null,
+): TreeTheory["empty"] {
+  const statement = language.spec.statements.find(
+    (each) => each.kind === "term" && each.name === join,
+  );
+  const acui = statement?.annotations
+    .map((annotation) => annotation.text.trim().split(/\s+/u))
+    .find((words) => words[0] === "@acui");
+  const unit = acui?.[3];
+  const info = unit === undefined ? undefined : language.spec.terms.get(unit);
+
+  if (unit === undefined || info === undefined) {
+    return null;
+  }
+
+  const term: AppTerm = {
+    args: [],
+    fixity: null,
+    grouped: false,
+    kind: "app",
+    prec: null,
+    sort: info.returnSort,
+    span: { end: 0, start: 0 },
+    term: unit,
+    token: null,
+  };
+
+  return { engine: printTerm(language, term, "engine"), term: unit };
 }
 
 /** Whether a read is a theory or the list of what it lacks. */

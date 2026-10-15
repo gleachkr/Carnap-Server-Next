@@ -8,8 +8,8 @@
 -- github.com/OpenLogicProject/OpenLogic, master 1e960be (2026-08-14), CC BY
 -- 4.0: the language from `first-order-logic/syntax-and-semantics`, the rules
 -- from `first-order-logic/tableaux` (`propositional-rules`,
--- `quantifier-rules`). The same text is the tableaux chapter of *Sets, Logic,
--- Computation*.
+-- `quantifier-rules`, `identity`). The same text is the tableaux chapter of
+-- *Sets, Logic, Computation*.
 --
 -- ## The language
 --
@@ -23,7 +23,8 @@
 -- The lexicon, partitioned because the engine refuses a `@vars` token that is
 -- also a declared term:
 --   A–Z         predicate letters
---   a–e, s, t   constants (`s` and `t` as the identity examples use them)
+--   a–e, s, t   constants (`s` and `t` as the identity examples use them),
+--               each also with a subscript 1–9: `s₁`, typed `s1` or `s₁`
 --   f, g, h     function letters
 --   u–z         variables
 --
@@ -44,6 +45,8 @@
 -- `∀𝔽`. Each is an `@syntax alias`, with the ASCII forms after it (`&T`,
 -- `@F`). `↔`, `⊥` and `⊤` have no rules in the book's tableaux, so a row with
 -- one at its top is never developed, and nothing closes on `𝕋 ⊥` alone.
+-- Cut and `=` cite no row (their focus is the empty branch, `_`); `=𝕋` and
+-- `=𝔽` cite two.
 
 -- The surface delimiter set. Every letter is listed, so `∀xA(x)` reads
 -- without spaces; `T:` and `F:` are whole tokens, taken before their letters.
@@ -54,6 +57,72 @@
 --| @syntax delimiter $ -> => → <-> <=> ↔ $
 --| @syntax delimiter $ @ 3 ∀ ∃ = != ≠ !? _|_ ⊥ ⊤ $
 --| @syntax delimiter $ T: F: 𝕋 𝔽 $
+-- The subscripted constants, whole, and the elab rules that read and print
+-- them with a real subscript, as `forallx-ubc` does.
+--| @syntax delimiter $ a1 a2 a3 a4 a5 a6 a7 a8 a9 b1 b2 b3 b4 b5 b6 b7 b8 b9 c1 c2 c3 c4 c5 c6 c7 c8 c9 d1 d2 d3 d4 d5 d6 d7 d8 d9 e1 e2 e3 e4 e5 e6 e7 e8 e9 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 t4 t5 t6 t7 t8 t9 $
+--| @syntax elab $ a ₁ $ => $ a1 $
+--| @syntax elab $ a ₂ $ => $ a2 $
+--| @syntax elab $ a ₃ $ => $ a3 $
+--| @syntax elab $ a ₄ $ => $ a4 $
+--| @syntax elab $ a ₅ $ => $ a5 $
+--| @syntax elab $ a ₆ $ => $ a6 $
+--| @syntax elab $ a ₇ $ => $ a7 $
+--| @syntax elab $ a ₈ $ => $ a8 $
+--| @syntax elab $ a ₉ $ => $ a9 $
+--| @syntax elab $ b ₁ $ => $ b1 $
+--| @syntax elab $ b ₂ $ => $ b2 $
+--| @syntax elab $ b ₃ $ => $ b3 $
+--| @syntax elab $ b ₄ $ => $ b4 $
+--| @syntax elab $ b ₅ $ => $ b5 $
+--| @syntax elab $ b ₆ $ => $ b6 $
+--| @syntax elab $ b ₇ $ => $ b7 $
+--| @syntax elab $ b ₈ $ => $ b8 $
+--| @syntax elab $ b ₉ $ => $ b9 $
+--| @syntax elab $ c ₁ $ => $ c1 $
+--| @syntax elab $ c ₂ $ => $ c2 $
+--| @syntax elab $ c ₃ $ => $ c3 $
+--| @syntax elab $ c ₄ $ => $ c4 $
+--| @syntax elab $ c ₅ $ => $ c5 $
+--| @syntax elab $ c ₆ $ => $ c6 $
+--| @syntax elab $ c ₇ $ => $ c7 $
+--| @syntax elab $ c ₈ $ => $ c8 $
+--| @syntax elab $ c ₉ $ => $ c9 $
+--| @syntax elab $ d ₁ $ => $ d1 $
+--| @syntax elab $ d ₂ $ => $ d2 $
+--| @syntax elab $ d ₃ $ => $ d3 $
+--| @syntax elab $ d ₄ $ => $ d4 $
+--| @syntax elab $ d ₅ $ => $ d5 $
+--| @syntax elab $ d ₆ $ => $ d6 $
+--| @syntax elab $ d ₇ $ => $ d7 $
+--| @syntax elab $ d ₈ $ => $ d8 $
+--| @syntax elab $ d ₉ $ => $ d9 $
+--| @syntax elab $ e ₁ $ => $ e1 $
+--| @syntax elab $ e ₂ $ => $ e2 $
+--| @syntax elab $ e ₃ $ => $ e3 $
+--| @syntax elab $ e ₄ $ => $ e4 $
+--| @syntax elab $ e ₅ $ => $ e5 $
+--| @syntax elab $ e ₆ $ => $ e6 $
+--| @syntax elab $ e ₇ $ => $ e7 $
+--| @syntax elab $ e ₈ $ => $ e8 $
+--| @syntax elab $ e ₉ $ => $ e9 $
+--| @syntax elab $ s ₁ $ => $ s1 $
+--| @syntax elab $ s ₂ $ => $ s2 $
+--| @syntax elab $ s ₃ $ => $ s3 $
+--| @syntax elab $ s ₄ $ => $ s4 $
+--| @syntax elab $ s ₅ $ => $ s5 $
+--| @syntax elab $ s ₆ $ => $ s6 $
+--| @syntax elab $ s ₇ $ => $ s7 $
+--| @syntax elab $ s ₈ $ => $ s8 $
+--| @syntax elab $ s ₉ $ => $ s9 $
+--| @syntax elab $ t ₁ $ => $ t1 $
+--| @syntax elab $ t ₂ $ => $ t2 $
+--| @syntax elab $ t ₃ $ => $ t3 $
+--| @syntax elab $ t ₄ $ => $ t4 $
+--| @syntax elab $ t ₅ $ => $ t5 $
+--| @syntax elab $ t ₆ $ => $ t6 $
+--| @syntax elab $ t ₇ $ => $ t7 $
+--| @syntax elab $ t ₈ $ => $ t8 $
+--| @syntax elab $ t ₉ $ => $ t9 $
 --| @syntax brackets ( ) [ ]
 --| @syntax lint closed-sentences
 --| @syntax lint parenthesize-binary-only
@@ -65,7 +134,7 @@ provable sort wff;
 
 --| @vars u v w x y z
 sort var;
---| @vars a b c d e s t
+--| @vars a b c d e s t a1 a2 a3 a4 a5 a6 a7 a8 a9 b1 b2 b3 b4 b5 b6 b7 b8 b9 c1 c2 c3 c4 c5 c6 c7 c8 c9 d1 d2 d3 d4 d5 d6 d7 d8 d9 e1 e2 e3 e4 e5 e6 e7 e8 e9 s1 s2 s3 s4 s5 s6 s7 s8 s9 t1 t2 t3 t4 t5 t6 t7 t8 t9
 sort name;
 --| @syntax role individual
 sort tm;
@@ -545,3 +614,33 @@ axiom tb_t_ex {x: var} {a: name} (ga: ctx x) (ph: wff x):
 --| @syntax alias ∃𝔽 ∃F 3F
 axiom tb_f_ex {x: var} (ga: ctx x) (te: tm) (ph: wff x):
   $ closes ga ; 𝔽 {x / te} ph $ > $ focus ga at (𝔽 ∃ x ph) $;
+
+-- ## The cut rule (`propositional-rules`)
+--
+-- Cut cites no row: it splits any branch into `𝕋 A` and `𝔽 A`. Its focus is
+-- the empty branch `_`, the join's unit.
+axiom tb_cut_l (ga: ctx) (ph: wff): $ closes ga ; 𝕋 ph $ > $ closes ga ; 𝔽 ph $ > $ focus ga at _ $;
+--| @fallback tb_cut_l
+--| @syntax alias Cut cut
+axiom tb_cut_r (ga: ctx) (ph: wff): $ closes ga ; 𝔽 ph $ > $ closes ga ; 𝕋 ph $ > $ focus ga at _ $;
+
+-- ## Identity (`identity`)
+--
+-- `=` cites no row and writes `𝕋 t = t`, for any closed term. `=𝕋` and `=𝔽`
+-- cite two rows, `𝕋 t₁ = t₂` and one with `t₁` in it, and write that row
+-- with some of its `t₁` made `t₂`. One way only, as the book has it: the
+-- other way round is `=`, then `=𝕋`.
+--| @syntax alias =
+axiom tb_refl (ga: ctx) (te: tm): $ closes ga ; 𝕋 te = te $ > $ focus ga at _ $;
+--| @view (ga: ctx) {z: var} (te ue: tm) (ph: wff z) (ps ch: wff): $ closes ga ; 𝕋 ch $ > $ focus ga at (𝕋 te = ue ; 𝕋 ps) $
+--| @abstract ph ps ch z te ue
+--| @fresh z
+--| @syntax alias =𝕋 =T
+axiom tb_t_eq (ga: ctx) {z: var} (te ue: tm) (ph: wff z):
+  $ closes ga ; 𝕋 {z / ue} ph $ > $ focus ga at (𝕋 te = ue ; 𝕋 {z / te} ph) $;
+--| @view (ga: ctx) {z: var} (te ue: tm) (ph: wff z) (ps ch: wff): $ closes ga ; 𝔽 ch $ > $ focus ga at (𝕋 te = ue ; 𝔽 ps) $
+--| @abstract ph ps ch z te ue
+--| @fresh z
+--| @syntax alias =𝔽 =F
+axiom tb_f_eq (ga: ctx) {z: var} (te ue: tm) (ph: wff z):
+  $ closes ga ; 𝔽 {z / ue} ph $ > $ focus ga at (𝕋 te = ue ; 𝔽 {z / te} ph) $;

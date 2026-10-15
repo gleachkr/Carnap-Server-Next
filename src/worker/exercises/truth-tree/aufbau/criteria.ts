@@ -480,9 +480,10 @@ export function rulePatterns(
   }
 
   const [branch, cited] = conclusion.args as [Term, Term];
+  // A rule that cites no row, as Cut does, focuses on the empty branch.
   const focus = rowsOf(language, theory, cited, null);
 
-  if (focus === null || focus.length === 0) {
+  if (focus === null) {
     return null;
   }
 
@@ -523,7 +524,8 @@ export function rulePatterns(
 /**
  * A branch term's rows, flattened over the join, each unwrapped from its
  * coercion into the branch sort; `branch`, the rule's own branch
- * metavariable, is left out. Null if anything else is in it.
+ * metavariable, and the empty branch are left out. Null if anything else is
+ * in it.
  */
 function rowsOf(
   language: SurfaceLanguage,
@@ -549,6 +551,14 @@ function rowsOf(
   const walk = (node: Term): boolean => {
     if (node.kind === "app" && node.term === join) {
       return node.args.every(walk);
+    }
+
+    if (
+      node.kind === "app" &&
+      node.term === theory.empty?.term &&
+      node.args.length === 0
+    ) {
+      return true;
     }
 
     if (

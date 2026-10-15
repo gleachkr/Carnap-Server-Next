@@ -211,7 +211,12 @@ export function emitTreeProof(
       return engine === null ? [] : [engine];
     });
   const branch = (rows: readonly string[]): string =>
-    rows.map((row) => `(${row})`).join(` ${theory.join} `);
+    rows.length === 0 && theory.empty !== null
+      ? theory.empty.engine
+      : rows.map((row) => `(${row})`).join(` ${theory.join} `);
+  /** Whether a rule is one that cites no row: its focus is the empty branch. */
+  const citesNothing = (axiom: string): boolean =>
+    options.development?.byAxiom.get(axiom)?.patterns.focus.length === 0;
   const closes = (rows: readonly string[]): string =>
     `${theory.closes} (${branch(rows)})`;
 
@@ -380,7 +385,12 @@ export function emitTreeProof(
       return;
     }
 
-    if (first.cites.length === 0) {
+    const rule = options.rules.get(first.dev)?.trim() ?? "";
+    const axiom = resolve(rule);
+
+    // A step that cites nothing is unfinished, unless its rule cites nothing
+    // (Cut): it focuses on the empty branch.
+    if (first.cites.length === 0 && !citesNothing(axiom)) {
       fail({ type: "uncited" });
       return;
     }
@@ -404,14 +414,10 @@ export function emitTreeProof(
       return;
     }
 
-    const rule = options.rules.get(first.dev)?.trim() ?? "";
-
     if (rule.length === 0) {
       fail({ type: "no-rule" });
       return;
     }
-
-    const axiom = resolve(rule);
 
     inference(state, children, cites as string[], axiom, (label) => ({
       dev: first.dev,
