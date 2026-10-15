@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import type { JsonValue } from "../src/worker/domain/json";
@@ -155,6 +156,36 @@ describe("the directive", () => {
     expect(
       await compileCodes(directive("#t", "- P\n\nmore prose")),
     ).toContain("invalid_truth_tree_body");
+  });
+
+  test("a system that is not a tree theory is refused, with what it lacks", async () => {
+    const result = await compileCarnapMarkdown(
+      directive('#t system="forallx-magnus"', "- P"),
+    );
+    const refusal = result.diagnostics.find(
+      (one) => one.code === "truth_tree_not_tree_theory",
+    );
+
+    expect(refusal?.params?.roles).toBe(
+      "tree.closes, tree.focus, tree.unfocus, tree.closure",
+    );
+  });
+
+  test("a theory block is a tree calculus, and writes its own root", async () => {
+    const signed = readFileSync(
+      new URL("./helpers/signed-tableau.mm0", import.meta.url),
+      "utf8",
+    );
+    const data = publicDataOf(
+      await declaration(
+        `:::aufbau-mm0{name="signed"}\n${signed}\n:::\n\n${directive(
+          '#t system="signed"',
+          "P ∧ Q :|-: P",
+        )}`,
+      ),
+    );
+
+    expect(data.root).toEqual(["(T (P ∧ Q))", "(F P)"]);
   });
 });
 

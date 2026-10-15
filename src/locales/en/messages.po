@@ -5130,10 +5130,6 @@ msgid "The label “{label}” is defined more than once."
 msgstr "The label “{label}” is defined more than once."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The language “{name}” has no negation, which a truth tree needs."
-msgstr "The language “{name}” has no negation, which a truth tree needs."
-
-#: src/worker/application/content/diagnostic-strings.ts
 msgid "The language has no symbol “{symbol}”."
 msgstr "The language has no symbol “{symbol}”."
 
@@ -5373,8 +5369,24 @@ msgid "The submission was not found."
 msgstr "The submission was not found."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences."
+msgstr "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it."
 msgstr "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in."
+msgstr "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in."
+msgstr "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” is not a tree theory: it declares no {roles}."
+msgstr "The system “{name}” is not a tree theory: it declares no {roles}."
 
 #: src/worker/exercises/world/strings.ts
 msgid "The table lists every block and can do everything the board does."

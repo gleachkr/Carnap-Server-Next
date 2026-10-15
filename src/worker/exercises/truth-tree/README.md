@@ -40,6 +40,12 @@ is in
 - `logic/` — `system.ts`, `rules.ts`, `check.ts`, `formulas.ts` (the
   caching row reader, and display through the language's own printer, which
   is what writes `a₁` and `a≠b`), `labels.ts` (margin notes and marks).
+- `aufbau/` — the engine-checked successor to `logic/` (gh #46, in
+  progress): `theory.ts` reads a tree theory's roles (the contract is in
+  the authoring docs, "Writing a tree theory"), and `emit.ts` writes a tree
+  down as a derivation for `@aufbau/compiler`. The directive already takes
+  its calculus and root from the theory; the editor and the grader still use
+  `logic/` until the engine replaces it.
 - `grading.ts` — guards, the declaration resolved back to formulas, and the
   judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the

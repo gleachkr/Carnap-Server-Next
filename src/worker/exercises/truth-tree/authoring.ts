@@ -15,7 +15,6 @@ import {
   validateAttributes,
   validateExerciseId,
 } from "../../exercise-kit/authoring";
-import type { Formula } from "../../exercise-kit/formula";
 import {
   freeVariables,
   isArgumentLine,
@@ -24,8 +23,13 @@ import {
 } from "../../exercise-kit/formula";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
-import { roleIndex } from "../../logic/specs/roles";
-import { engineText } from "./logic/formulas";
+import {
+  isTreeTheory,
+  readTreeTheory,
+  rootRow,
+  type TreeTheory,
+  type TreeTheoryProblem,
+} from "./aufbau/theory";
 import { FORALLX_UBC } from "./logic/system";
 import type { TruthTreePublicData, TruthTreeTask } from "./types";
 import {
@@ -44,7 +48,7 @@ const TRUTH_TREE_ATTRIBUTES = [
   "system",
 ] as const;
 
-/** The language a tree is set in when the author names none. */
+/** The tree theory a tree is set in when the author names none. */
 const DEFAULT_TRUTH_TREE_SYSTEM = "forallx-ubc";
 
 interface Located {
@@ -122,13 +126,13 @@ export function truthTreeDataBodyLines(
   return data;
 }
 
-/** Parse one root sentence; `null` after reporting why not. */
+/** Parse one root sentence, as engine text; `null` after reporting why not. */
 function readSentence(
   source: string,
   line: number,
   language: Parameters<typeof parseFormula>[1],
   diagnostics: CompilerDiagnostic[],
-): Formula | null {
+): string | null {
   const trimmed = source.trim();
   const parsed = parseFormula(trimmed, language);
 
@@ -161,7 +165,52 @@ function readSentence(
     return null;
   }
 
-  return parsed.formula;
+  return parsed.engine;
+}
+
+/** Each thing a theory lacks to be a tree theory, as an author reads it. */
+function reportTreeTheory(
+  problems: readonly TreeTheoryProblem[],
+  name: string,
+  line: number,
+  diagnostics: CompilerDiagnostic[],
+): void {
+  const roles = problems.flatMap((problem) =>
+    problem.type === "missing-role" ? [problem.role] : [],
+  );
+
+  if (roles.length > 0) {
+    diagnostics.push(
+      diagnostic(
+        line,
+        "truth_tree_not_tree_theory",
+        "The system “{name}” is not a tree theory: it declares no {roles}.",
+        { params: { name, roles: roles.join(", ") } },
+      ),
+    );
+  }
+
+  for (const problem of problems) {
+    if (problem.type !== "row-sort") {
+      continue;
+    }
+
+    diagnostics.push(
+      problem.candidates.length === 0
+        ? diagnostic(
+            line,
+            "truth_tree_row_sort",
+            "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in.",
+            { params: { name } },
+          )
+        : diagnostic(
+            line,
+            "truth_tree_row_sort",
+            "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in.",
+            { params: { name, sorts: problem.candidates.join(", ") } },
+          ),
+    );
+  }
 }
 
 export async function compileTruthTree(
@@ -190,21 +239,17 @@ export async function compileTruthTree(
 
   validateExerciseId(block, id, diagnostics);
 
-  if (roleIndex(language).termFor("negation") === null) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "truth_tree_no_negation",
-        "The language “{name}” has no negation, which a truth tree needs.",
-        { params: { name: system } },
-      ),
-    );
+  const read = readTreeTheory(language);
+
+  if (!isTreeTheory(read)) {
+    reportTreeTheory(read, system, block.line, diagnostics);
     return null;
   }
 
+  const theory: TreeTheory = read;
   let task: TruthTreeTask = "consistency";
-  const premises: Formula[] = [];
-  const conclusions: Formula[] = [];
+  const premises: string[] = [];
+  const conclusions: string[] = [];
 
   if (body.arguments.length > 0 && body.items.length > 0) {
     diagnostics.push(
@@ -304,21 +349,30 @@ export async function compileTruthTree(
     );
   }
 
-  // The root is what UBC's method says to write (§5.2): the premises, and the
-  // negation of the conclusion. These are the only formulas a reader sees
-  // that the author did not type, so they are printed in the language itself.
-  const rootFormulas: Formula[] = [
-    ...premises,
-    ...conclusions.map(
-      (conclusion): Formula => ({ operand: conclusion, type: "not" }),
-    ),
-  ];
+  if (task === "validity" && theory.deny === null) {
+    diagnostics.push(
+      diagnostic(
+        block.line,
+        "truth_tree_no_denial",
+        "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.",
+        { params: { name: system } },
+      ),
+    );
+    return null;
+  }
+
+  // The root asserts the premises and denies the conclusion (UBC §5.2: the
+  // premises and the conclusion's negation), in the theory's own rows. These
+  // are the only rows a reader sees that the author did not type.
   const root: string[] = [];
 
-  for (const formula of rootFormulas) {
-    const engine = engineText(formula, language);
+  for (const [sentence, polarity] of [
+    ...premises.map((sentence) => [sentence, "assert"] as const),
+    ...conclusions.map((sentence) => [sentence, "deny"] as const),
+  ]) {
+    const row = rootRow(language, theory, sentence, polarity);
 
-    if (engine === null) {
+    if (row === null) {
       diagnostics.push(
         diagnostic(
           block.line,
@@ -329,7 +383,7 @@ export async function compileTruthTree(
       return null;
     }
 
-    root.push(engine);
+    root.push(row);
   }
 
   if (root.length > FORALLX_UBC.rowCap) {

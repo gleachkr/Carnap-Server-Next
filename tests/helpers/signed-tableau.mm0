@@ -1,0 +1,115 @@
+-- A signed propositional tableau (Smullyan), as a test of the tree contract:
+-- a row is not a sentence but a signed one, `T φ` or `F φ`, so the row sort is
+-- not the sentence sort. Self-contained: no shared prelude, only the roles
+-- `aufbau/emit.ts` reads.
+
+--| @syntax delimiter $ ( ) ¬ ∧ ∨ → $
+delimiter $ ( ) ; $;
+
+--| @syntax role sentence
+provable sort wff;
+sort sf;
+sort ctx;
+provable sort judgement;
+
+term P: wff;
+term Q: wff;
+term R: wff;
+
+--| @syntax role negation
+term not (ph: wff): wff;
+prefix not: $¬$ prec 40;
+--| @syntax role conjunction
+term and (ph ps: wff): wff;
+infixr and: $∧$ prec 30;
+--| @syntax role disjunction
+term or (ph ps: wff): wff;
+infixr or: $∨$ prec 30;
+--| @syntax role conditional
+term imp (ph ps: wff): wff;
+infixr imp: $→$ prec 20;
+
+-- The signs. A row is `T φ` (φ is true) or `F φ` (φ is false); a root
+-- asserts a premise with the one and denies a conclusion with the other.
+--| @syntax role tree.assert
+term tt (ph: wff): sf;
+prefix tt: $T$ prec 10;
+--| @syntax role tree.deny
+term ff (ph: wff): sf;
+prefix ff: $F$ prec 10;
+
+-- A branch is a set of signed rows.
+term emp: ctx;
+notation emp: ctx = ($_$:max);
+--| @syntax role context-join
+--| @acui ctx_assoc ctx_comm emp ctx_idem
+term join (ga de: ctx): ctx;
+infixl join: $;$ prec 5;
+term hyp (sg: sf): ctx;
+coercion hyp: sf > ctx;
+
+term ctx_eq (ga de: ctx): judgement;
+infixl ctx_eq: $≜$ prec 1;
+term jeq (jj kk: judgement): judgement;
+infixl jeq: $⟚$ prec 1;
+--| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
+axiom ctx_refl (ga: ctx): $ ga ≜ ga $;
+axiom ctx_trans (ga de si: ctx): $ ga ≜ de $ > $ de ≜ si $ > $ ga ≜ si $;
+axiom ctx_sym (ga de: ctx): $ ga ≜ de $ > $ de ≜ ga $;
+axiom ctx_assoc (ga de si: ctx): $ ((ga ; de) ; si) ≜ (ga ; (de ; si)) $;
+axiom ctx_comm (ga de: ctx): $ (ga ; de) ≜ (de ; ga) $;
+axiom ctx_idem (ga: ctx): $ (ga ; ga) ≜ ga $;
+axiom ctx_unit (ga: ctx): $ (_ ; ga) ≜ ga $;
+--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
+axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
+axiom jeq_trans (jj kk ll: judgement): $ jj ⟚ kk $ > $ kk ⟚ ll $ > $ jj ⟚ ll $;
+axiom jeq_sym (jj kk: judgement): $ jj ⟚ kk $ > $ kk ⟚ jj $;
+axiom jeq_mp (jj kk: judgement): $ jj ⟚ kk $ > $ jj $ > $ kk $;
+--| @congr
+axiom join_congr (ga de si ta: ctx): $ ga ≜ de $ > $ si ≜ ta $ > $ (ga ; si) ≜ (de ; ta) $;
+
+--| @syntax role tree.closes
+term cl (ga: ctx): judgement;
+prefix cl: $closes$ prec 3;
+--| @congr
+axiom cl_congr (ga de: ctx): $ ga ≜ de $ > $ (closes ga) ⟚ (closes de) $;
+--| @syntax role tree.focus
+term fc (ga de: ctx): judgement;
+notation fc (ga de: ctx): judgement = ($focus$:3) ga ($at$:0) de;
+--| @congr
+axiom fc_congr (ga de si ta: ctx): $ ga ≜ de $ > $ si ≜ ta $ > $ (focus ga at si) ⟚ (focus de at ta) $;
+--| @syntax role tree.unfocus
+axiom unfocus (ga de: ctx): $ focus ga at de $ > $ closes ga ; de $;
+
+--| @syntax role tree.closure
+--| @syntax alias ×
+axiom close (ga: ctx) (ph: wff): $ focus ga at (T ph ; F ph) $;
+
+--| @syntax alias T∧
+axiom t_and (ga: ctx) (ph ps: wff): $ closes ga ; T ph ; T ps $ > $ focus ga at T (ph ∧ ps) $;
+axiom f_and_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; F ph $ > $ closes ga ; F ps $ > $ focus ga at F (ph ∧ ps) $;
+--| @fallback f_and_l
+--| @syntax alias F∧
+axiom f_and_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; F ps $ > $ closes ga ; F ph $ > $ focus ga at F (ph ∧ ps) $;
+axiom t_or_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; T ph $ > $ closes ga ; T ps $ > $ focus ga at T (ph ∨ ps) $;
+--| @fallback t_or_l
+--| @syntax alias T∨
+axiom t_or_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; T ps $ > $ closes ga ; T ph $ > $ focus ga at T (ph ∨ ps) $;
+--| @syntax alias F∨
+axiom f_or (ga: ctx) (ph ps: wff): $ closes ga ; F ph ; F ps $ > $ focus ga at F (ph ∨ ps) $;
+axiom t_imp_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; F ph $ > $ closes ga ; T ps $ > $ focus ga at T (ph → ps) $;
+--| @fallback t_imp_l
+--| @syntax alias T→
+axiom t_imp_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; T ps $ > $ closes ga ; F ph $ > $ focus ga at T (ph → ps) $;
+--| @syntax alias F→
+axiom f_imp (ga: ctx) (ph ps: wff): $ closes ga ; T ph ; F ps $ > $ focus ga at F (ph → ps) $;
+--| @syntax alias T¬
+axiom t_not (ga: ctx) (ph: wff): $ closes ga ; F ph $ > $ focus ga at T (¬ ph) $;
+--| @syntax alias F¬
+axiom f_not (ga: ctx) (ph: wff): $ closes ga ; T ph $ > $ focus ga at F (¬ ph) $;

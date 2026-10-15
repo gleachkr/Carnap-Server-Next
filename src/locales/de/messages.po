@@ -5130,10 +5130,6 @@ msgid "The label “{label}” is defined more than once."
 msgstr "Die Beschriftung „{label}“ ist mehr als einmal definiert."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The language “{name}” has no negation, which a truth tree needs."
-msgstr "Die Sprache „{name}“ hat keine Negation, die ein Wahrheitsbaum aber braucht."
-
-#: src/worker/application/content/diagnostic-strings.ts
 msgid "The language has no symbol “{symbol}”."
 msgstr "Die Sprache hat kein Symbol „{symbol}“."
 
@@ -5373,8 +5369,24 @@ msgid "The submission was not found."
 msgstr "Die Abgabe wurde nicht gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences."
+msgstr "Das System „{name}“ kann keinen Satz verneinen, was die Prüfung eines Arguments erfordert: Geben Sie ihm einen tree.deny-Term oder, falls seine Zeilen Sätze sind, eine Negation."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it."
 msgstr "Das System „{name}“ lässt sich nicht als Sprache lesen, daher kann keine Übung darin gestellt werden. Der Grund wird am aufbau-mm0-Block gemeldet, der es deklariert."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in."
+msgstr "Das System „{name}“ hat keine Sorte, die sich in seine Ast-Sorte umwandeln lässt, sodass seine Zeilen in keiner Sorte geschrieben werden können."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in."
+msgstr "Das System „{name}“ hat mehrere Sorten, die sich in seine Ast-Sorte umwandeln lassen ({sorts}), eine Baumtheorie braucht aber genau eine: die Sorte, in der ihre Zeilen geschrieben werden."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” is not a tree theory: it declares no {roles}."
+msgstr "Das System „{name}“ ist keine Baumtheorie: Es deklariert kein {roles}."
 
 #: src/worker/exercises/world/strings.ts
 msgid "The table lists every block and can do everything the board does."

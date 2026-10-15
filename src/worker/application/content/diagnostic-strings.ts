@@ -319,9 +319,24 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "“{formula}” has free variables, and a tree's root must be sentences.",
         placeholders("formula"),
       ),
-    "The language “{name}” has no negation, which a truth tree needs.":
+    "The system “{name}” is not a tree theory: it declares no {roles}.":
       i18n.t(
-        "The language “{name}” has no negation, which a truth tree needs.",
+        "The system “{name}” is not a tree theory: it declares no {roles}.",
+        placeholders("name", "roles"),
+      ),
+    "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in.":
+      i18n.t(
+        "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in.",
+        placeholders("name"),
+      ),
+    "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in.":
+      i18n.t(
+        "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in.",
+        placeholders("name", "sorts"),
+      ),
+    "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.":
+      i18n.t(
+        "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.",
         placeholders("name"),
       ),
     "Write the root as one argument line or as a list of sentences, not both.":

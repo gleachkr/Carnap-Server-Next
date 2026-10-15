@@ -942,8 +942,46 @@ sentences asks whether the set is consistent, and the root is the list.
 There may be no premises (`:|-: P ∨ ¬P` tests a logical truth), and there
 is exactly one conclusion.
 
-- `system` names the language, and defaults to `forallx-ubc`. It must have
-  a negation.
+- `system` names the tree theory, and defaults to `forallx-ubc`. It must be
+  a tree theory (below); a validity question also needs a way to deny a
+  sentence.
+
+### Writing a tree theory
+
+The tree's calculus comes from the theory `system` names, as a proof
+system's does: Carnap ships no default rules. A tree is checked as a
+derivation of "the root closes", read from the bottom up, and the theory
+says what that means through `@syntax role` annotations:
+
+| Role | On | Meaning |
+| --- | --- | --- |
+| `tree.closes` | a term | "this branch closes"; its argument's sort is the branch sort |
+| `tree.focus` | a term | "this branch closes by a step on these rows", both arguments branches |
+| `tree.unfocus` | an axiom | from `focus Γ at Δ` to `closes Γ ; Δ` |
+| `tree.closure` | an axiom | what a closed branch's `×` cites by |
+| `context-join` | a term | the branch join, as for a sequent's context |
+| `tree.assert`, `tree.deny` | terms | how the root says a sentence is true, and is not |
+
+- A **row** is read at the one sort with a coercion into the branch sort:
+  the sentence sort for UBC, a signed-sentence sort for a Smullyan tableau.
+  Where rows are sentences, `tree.assert` may be left out (a sentence
+  asserts itself), and `tree.deny` defaults to the language's negation.
+- Each **rule** is an axiom concluding `focus Γ at Δ`, where `Δ` is the
+  rows a step cites, with one premise `closes Γ ; …` per branch it opens.
+  The student types the rule's `@syntax alias`, the book's margin label. A
+  rule that splits is two axioms, one per order of its branches, with the
+  alias on the second and a `@fallback` onto the first.
+- The branch join should be `@acui`, with idempotence, so that a row written
+  twice is written once, and the rules should keep the row they develop, so
+  that a branch may still close on it.
+- A rule may take several instances in one step through variants chained by
+  `@fallback`, as `forallx-ubc`'s `∀` does for up to five.
+- **Give the judgements notations.** A language with letter delimiters
+  splits a bare multi-letter term name such as `cl` into letters, so
+  `forallx-ubc` writes them `closes Γ` and `focus Γ at Δ`.
+
+A theory missing any of this is refused when the lesson compiles, with the
+list of what it lacks. `forallx-ubc.mm0` is the worked example.
 
 The student writes every row. **Stack** (`t`) adds a row at the end of the
 branch, **Split** (`s`) branches it in two, and **Add row** (`r`) adds
@@ -1096,8 +1134,8 @@ The seven built-in IDs are:
 - `forallx-calgary-plus`: the same language with derived rules.
 - `forallx-magnus`: the original Magnus forallx QL rules and notation.
 - `forallx-magnus-plus`: the same language with derived/replacement rules.
-- `forallx-ubc`: the language of *forall x: UBC*, without proof rules; the
-  language of its truth trees.
+- `forallx-ubc`: the language of *forall x: UBC*, and its truth-tree rules
+  (see [Writing a tree theory](#writing-a-tree-theory)).
 - `gentzen-lk`: classical multi-conclusion sequent calculus, suitable for
   proof trees. It has no student-language annotations.
 - `carnap-prop`: the default propositional signature, without proof rules.

@@ -120,7 +120,15 @@ describe("language specs", () => {
       "carnap-prop": [],
       "forallx-calgary": PROOF_THEORY_NOTATIONS,
       "forallx-magnus": PROOF_THEORY_NOTATIONS,
-      "forallx-ubc": [],
+      // The same layer, with `_` declared first, and the tree judgements:
+      // a student never types a judgement, so none is a delimiter.
+      "forallx-ubc": [
+        "_",
+        ...PROOF_THEORY_NOTATIONS.filter((token) => token !== "_"),
+        "closes",
+        "focus",
+        "at",
+      ],
     };
 
     // Every registered spec, not every entry above: a spec this map does not

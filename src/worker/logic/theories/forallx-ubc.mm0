@@ -1,8 +1,8 @@
--- forall x: UBC (Jonathan Ichikawa and Jennifer Jenkins, after P.D. Magnus)
--- as a language: what a student writes in a truth tree, and what a tree
--- prints back. A language only, like `carnap-prop`: there is no proof system
--- here, because the book's trees are checked by Carnap's built-in tree rules
--- (`exercises/truth-tree/`), not derived in MM0.
+-- forall x: UBC (Jonathan Ichikawa and Jennifer Jenkins, after P.D. Magnus):
+-- the language a student writes a truth tree in, and the book's tree rules,
+-- as `forallx-calgary` is a language and its natural deduction. The language
+-- comes first; the tree system is the second half of the file ("The tree
+-- system", below), and the truth-tree exercise reads it by role.
 --
 -- Served at `/theories/forallx-ubc.mm0` and registered as the language id
 -- `forallx-ubc`, which is what a `system=` names.
@@ -387,3 +387,431 @@ prefix ex: $∃$ prec 40;
 --| @syntax role identity
 term ideq (te ue: tm): wff;
 infixl ideq: $=$ prec 50;
+
+-- ===== The tree system (gh #46) =====
+--
+-- A tree is a derivation of `closes Γ`, "the branch whose rows are Γ
+-- closes", from the bottom up: a closed leaf is an axiom, a step derives its
+-- branch from its children's, and an open leaf is a hypothesis of the theorem
+-- the tree proves. The truth-tree exercise writes the derivation
+-- (`exercises/truth-tree/aufbau/emit.ts`); the engine checks it.
+--
+-- A branch is a context: unordered, and idempotent, so writing a row twice is
+-- writing it once. A step is two lines, after Rudolf (Carnap's old tree
+-- widget, which checked trees as sequents):
+--
+--   focus Γ at Δ — the branch Γ closes, by a step on its rows Δ
+--   closes Γ     — by `unfocus`, which also checks that Δ is on Γ
+--
+-- `focus` names the cited rows apart from the rest, so a rule develops the
+-- rows the student cited and no others. Δ is itself a branch, so two cited
+-- rows match a rule's two in either order. The rules keep the developed row:
+-- the premise is `Γ ; rows written`, and Γ still holds it, so a branch may
+-- close on a row it has developed, as the book allows.
+--
+-- Rule names are the book's margin labels, through `@syntax alias`. A rule
+-- that splits comes as two axioms, one per order of its branches, the alias
+-- on the second with a `@fallback` onto the first, so the student may write
+-- the branches either way round.
+
+provable sort judgement;
+sort ctx;
+
+term emp: ctx;
+notation emp: ctx = ($_$:max);
+--| @syntax role context-join
+--| @acui ctx_assoc ctx_comm emp ctx_idem
+term join (ga de: ctx): ctx;
+infixl join: $;$ prec 5;
+term hyp (ph: wff): ctx;
+coercion hyp: wff > ctx;
+
+-- Substitution, pushed through the syntax so an instance computes.
+term sb_t {x: var} (te: tm x) (ue: tm x): tm;
+notation sb_t {x: var} (te: tm x) (ue: tm x): tm =
+  ($tsub$:41) x ($/$:0) te ue;
+term sb_s {x: var} (te: tm x) (sq: seq x): seq;
+notation sb_s {x: var} (te: tm x) (sq: seq x): seq =
+  ($subst$:41) x ($/$:0) te sq;
+term sb_f {x: var} (te: tm x) (ph: wff x): wff;
+notation sb_f {x: var} (te: tm x) (ph: wff x): wff =
+  (${$:41) x ($/$:0) te ($}$:0) ph;
+
+-- The equational layer: everything lands in `judgement`.
+term weq (ph ps: wff): judgement;
+infixl weq: $⟺$ prec 1;
+term teq (te ue: tm): judgement;
+infixl teq: $≐$ prec 1;
+term sqeq (sq tq: seq): judgement;
+infixl sqeq: $≗$ prec 1;
+term ctx_eq (ga de: ctx): judgement;
+infixl ctx_eq: $≜$ prec 1;
+term jeq (jj kk: judgement): judgement;
+infixl jeq: $⟚$ prec 1;
+
+--| @relation wff weq weq_refl weq_trans weq_sym _
+axiom weq_refl (ph: wff): $ ph ⟺ ph $;
+axiom weq_trans (ph ps ch: wff): $ ph ⟺ ps $ > $ ps ⟺ ch $ > $ ph ⟺ ch $;
+axiom weq_sym (ph ps: wff): $ ph ⟺ ps $ > $ ps ⟺ ph $;
+--| @relation tm teq teq_refl teq_trans teq_sym _
+axiom teq_refl (te: tm): $ te ≐ te $;
+axiom teq_trans (te ue ve: tm): $ te ≐ ue $ > $ ue ≐ ve $ > $ te ≐ ve $;
+axiom teq_sym (te ue: tm): $ te ≐ ue $ > $ ue ≐ te $;
+--| @relation seq sqeq sqeq_refl sqeq_trans sqeq_sym _
+axiom sqeq_refl (sq: seq): $ sq ≗ sq $;
+axiom sqeq_trans (sq tq uq: seq): $ sq ≗ tq $ > $ tq ≗ uq $ > $ sq ≗ uq $;
+axiom sqeq_sym (sq tq: seq): $ sq ≗ tq $ > $ tq ≗ sq $;
+--| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
+axiom ctx_refl (ga: ctx): $ ctx_eq ga ga $;
+axiom ctx_trans (ga de si: ctx): $ ctx_eq ga de $ > $ ctx_eq de si $ > $ ctx_eq ga si $;
+axiom ctx_sym (ga de: ctx): $ ctx_eq ga de $ > $ ctx_eq de ga $;
+axiom ctx_assoc (ga de si: ctx): $ ctx_eq ((ga ; de) ; si) (ga ; (de ; si)) $;
+axiom ctx_comm (ga de: ctx): $ ctx_eq (ga ; de) (de ; ga) $;
+axiom ctx_idem (ga: ctx): $ ctx_eq (ga ; ga) ga $;
+axiom ctx_unit (ga: ctx): $ ctx_eq (_ ; ga) ga $;
+--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
+axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
+axiom jeq_trans (jj kk ll: judgement): $ jj ⟚ kk $ > $ kk ⟚ ll $ > $ jj ⟚ ll $;
+axiom jeq_sym (jj kk: judgement): $ jj ⟚ kk $ > $ kk ⟚ jj $;
+axiom jeq_mp (jj kk: judgement): $ jj ⟚ kk $ > $ jj $ > $ kk $;
+
+--| @congr
+axiom join_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ ctx_eq (ga ; si) (de ; ta) $;
+--| @congr
+axiom hyp_congr (ph ps: wff): $ ph ⟺ ps $ > $ ctx_eq (hyp ph) (hyp ps) $;
+--| @congr
+axiom scomma_congr (sq tq uq vq: seq): $ sq ≗ tq $ > $ uq ≗ vq $ > $ (sq , uq) ≗ (tq , vq) $;
+--| @congr
+axiom t2s_congr (te ue: tm): $ te ≐ ue $ > $ (t2s te) ≗ (t2s ue) $;
+--| @congr
+axiom not_congr (ph ps: wff): $ ph ⟺ ps $ > $ ¬ ph ⟺ ¬ ps $;
+--| @congr
+axiom and_congr (ph ps ch th: wff): $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ∧ ch) ⟺ (ps ∧ th) $;
+--| @congr
+axiom or_congr (ph ps ch th: wff): $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ∨ ch) ⟺ (ps ∨ th) $;
+--| @congr
+axiom imp_congr (ph ps ch th: wff): $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph → ch) ⟺ (ps → th) $;
+--| @congr
+axiom iff_congr (ph ps ch th: wff): $ ph ⟺ ps $ > $ ch ⟺ th $ > $ (ph ↔ ch) ⟺ (ps ↔ th) $;
+--| @congr
+axiom ideq_congr (te ue ve we: tm): $ te ≐ ue $ > $ ve ≐ we $ > $ (te = ve) ⟺ (ue = we) $;
+--| @congr
+axiom all_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∀ x ph ⟺ ∀ x ps $;
+--| @congr
+axiom ex_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∃ x ph ⟺ ∃ x ps $;
+--| @congr
+axiom A_congr (sq tq: seq): $ sq ≗ tq $ > $ A sq ⟺ A tq $;
+--| @congr
+axiom B_congr (sq tq: seq): $ sq ≗ tq $ > $ B sq ⟺ B tq $;
+--| @congr
+axiom C_congr (sq tq: seq): $ sq ≗ tq $ > $ C sq ⟺ C tq $;
+--| @congr
+axiom D_congr (sq tq: seq): $ sq ≗ tq $ > $ D sq ⟺ D tq $;
+--| @congr
+axiom E_congr (sq tq: seq): $ sq ≗ tq $ > $ E sq ⟺ E tq $;
+--| @congr
+axiom F_congr (sq tq: seq): $ sq ≗ tq $ > $ F sq ⟺ F tq $;
+--| @congr
+axiom G_congr (sq tq: seq): $ sq ≗ tq $ > $ G sq ⟺ G tq $;
+--| @congr
+axiom H_congr (sq tq: seq): $ sq ≗ tq $ > $ H sq ⟺ H tq $;
+--| @congr
+axiom I_congr (sq tq: seq): $ sq ≗ tq $ > $ I sq ⟺ I tq $;
+--| @congr
+axiom J_congr (sq tq: seq): $ sq ≗ tq $ > $ J sq ⟺ J tq $;
+--| @congr
+axiom K_congr (sq tq: seq): $ sq ≗ tq $ > $ K sq ⟺ K tq $;
+--| @congr
+axiom L_congr (sq tq: seq): $ sq ≗ tq $ > $ L sq ⟺ L tq $;
+--| @congr
+axiom M_congr (sq tq: seq): $ sq ≗ tq $ > $ M sq ⟺ M tq $;
+--| @congr
+axiom N_congr (sq tq: seq): $ sq ≗ tq $ > $ N sq ⟺ N tq $;
+--| @congr
+axiom O_congr (sq tq: seq): $ sq ≗ tq $ > $ O sq ⟺ O tq $;
+--| @congr
+axiom P_congr (sq tq: seq): $ sq ≗ tq $ > $ P sq ⟺ P tq $;
+--| @congr
+axiom Q_congr (sq tq: seq): $ sq ≗ tq $ > $ Q sq ⟺ Q tq $;
+--| @congr
+axiom R_congr (sq tq: seq): $ sq ≗ tq $ > $ R sq ⟺ R tq $;
+--| @congr
+axiom S_congr (sq tq: seq): $ sq ≗ tq $ > $ S sq ⟺ S tq $;
+--| @congr
+axiom T_congr (sq tq: seq): $ sq ≗ tq $ > $ T sq ⟺ T tq $;
+--| @congr
+axiom U_congr (sq tq: seq): $ sq ≗ tq $ > $ U sq ⟺ U tq $;
+--| @congr
+axiom V_congr (sq tq: seq): $ sq ≗ tq $ > $ V sq ⟺ V tq $;
+--| @congr
+axiom W_congr (sq tq: seq): $ sq ≗ tq $ > $ W sq ⟺ W tq $;
+--| @congr
+axiom X_congr (sq tq: seq): $ sq ≗ tq $ > $ X sq ⟺ X tq $;
+--| @congr
+axiom Y_congr (sq tq: seq): $ sq ≗ tq $ > $ Y sq ⟺ Y tq $;
+--| @congr
+axiom Z_congr (sq tq: seq): $ sq ≗ tq $ > $ Z sq ⟺ Z tq $;
+
+--| @alpha x y
+axiom all_alpha {x y: var} (ph: wff x y): $ ∀ x ph ⟺ ∀ y ({x / y} ph) $;
+--| @alpha x y
+axiom ex_alpha {x y: var} (ph: wff x y): $ ∃ x ph ⟺ ∃ y ({x / y} ph) $;
+
+--| @rewrite
+axiom sb_f_not {x: var} (te: tm x) (ph: wff x): $ {x / te} (¬ ph) ⟺ ¬ ({x / te} ph) $;
+--| @rewrite
+axiom sb_f_and {x: var} (te: tm x) (ph ps: wff x): $ {x / te} (ph ∧ ps) ⟺ ({x / te} ph ∧ {x / te} ps) $;
+--| @rewrite
+axiom sb_f_or {x: var} (te: tm x) (ph ps: wff x): $ {x / te} (ph ∨ ps) ⟺ ({x / te} ph ∨ {x / te} ps) $;
+--| @rewrite
+axiom sb_f_imp {x: var} (te: tm x) (ph ps: wff x): $ {x / te} (ph → ps) ⟺ ({x / te} ph → {x / te} ps) $;
+--| @rewrite
+axiom sb_f_iff {x: var} (te: tm x) (ph ps: wff x): $ {x / te} (ph ↔ ps) ⟺ ({x / te} ph ↔ {x / te} ps) $;
+--| @rewrite
+axiom sb_f_ideq {x: var} (te: tm x) (ue ve: tm x): $ {x / te} (ue = ve) ⟺ ((tsub x / te ue) = (tsub x / te ve)) $;
+--| @rewrite
+axiom sb_f_all {x y: var} (te: tm x) (ph: wff x y): $ {x / te} (∀ y ph) ⟺ ∀ y ({x / te} ph) $;
+--| @rewrite
+axiom sb_f_ex {x y: var} (te: tm x) (ph: wff x y): $ {x / te} (∃ y ph) ⟺ ∃ y ({x / te} ph) $;
+--| @rewrite
+axiom sb_f_id {x: var} (ph: wff x): $ {x / x} ph ⟺ ph $;
+--| @rewrite
+axiom sb_f_irrel {x: var} (te: tm x) (ph: wff): $ {x / te} ph ⟺ ph $;
+--| @rewrite
+axiom sb_f_A {x: var} (te: tm x) (sq: seq x): $ {x / te} (A sq) ⟺ A (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_B {x: var} (te: tm x) (sq: seq x): $ {x / te} (B sq) ⟺ B (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_C {x: var} (te: tm x) (sq: seq x): $ {x / te} (C sq) ⟺ C (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_D {x: var} (te: tm x) (sq: seq x): $ {x / te} (D sq) ⟺ D (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_E {x: var} (te: tm x) (sq: seq x): $ {x / te} (E sq) ⟺ E (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_F {x: var} (te: tm x) (sq: seq x): $ {x / te} (F sq) ⟺ F (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_G {x: var} (te: tm x) (sq: seq x): $ {x / te} (G sq) ⟺ G (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_H {x: var} (te: tm x) (sq: seq x): $ {x / te} (H sq) ⟺ H (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_I {x: var} (te: tm x) (sq: seq x): $ {x / te} (I sq) ⟺ I (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_J {x: var} (te: tm x) (sq: seq x): $ {x / te} (J sq) ⟺ J (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_K {x: var} (te: tm x) (sq: seq x): $ {x / te} (K sq) ⟺ K (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_L {x: var} (te: tm x) (sq: seq x): $ {x / te} (L sq) ⟺ L (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_M {x: var} (te: tm x) (sq: seq x): $ {x / te} (M sq) ⟺ M (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_N {x: var} (te: tm x) (sq: seq x): $ {x / te} (N sq) ⟺ N (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_O {x: var} (te: tm x) (sq: seq x): $ {x / te} (O sq) ⟺ O (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_P {x: var} (te: tm x) (sq: seq x): $ {x / te} (P sq) ⟺ P (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Q {x: var} (te: tm x) (sq: seq x): $ {x / te} (Q sq) ⟺ Q (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_R {x: var} (te: tm x) (sq: seq x): $ {x / te} (R sq) ⟺ R (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_S {x: var} (te: tm x) (sq: seq x): $ {x / te} (S sq) ⟺ S (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_T {x: var} (te: tm x) (sq: seq x): $ {x / te} (T sq) ⟺ T (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_U {x: var} (te: tm x) (sq: seq x): $ {x / te} (U sq) ⟺ U (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_V {x: var} (te: tm x) (sq: seq x): $ {x / te} (V sq) ⟺ V (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_W {x: var} (te: tm x) (sq: seq x): $ {x / te} (W sq) ⟺ W (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_X {x: var} (te: tm x) (sq: seq x): $ {x / te} (X sq) ⟺ X (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Y {x: var} (te: tm x) (sq: seq x): $ {x / te} (Y sq) ⟺ Y (subst x / te sq) $;
+--| @rewrite
+axiom sb_f_Z {x: var} (te: tm x) (sq: seq x): $ {x / te} (Z sq) ⟺ Z (subst x / te sq) $;
+--| @rewrite
+axiom sb_s_comma {x: var} (te: tm x) (sq tq: seq x): $ (subst x / te (sq , tq)) ≗ ((subst x / te sq) , (subst x / te tq)) $;
+--| @rewrite
+axiom sb_s_t2s {x: var} (te: tm x) (ue: tm x): $ (subst x / te (t2s ue)) ≗ (t2s (tsub x / te ue)) $;
+--| @rewrite
+axiom sb_t_var {x: var} (te: tm x): $ (tsub x / te x) ≐ te $;
+--| @rewrite
+axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
+
+-- ## The tree judgements
+--
+-- What Carnap reads, by role, and nothing else:
+--   tree.closes   the judgement "this branch closes"; its argument's sort is
+--                 the branch sort, and a row is whatever coerces into it
+--   tree.focus    "the branch closes, by a step on these rows of it"
+--   tree.unfocus  the axiom from a focused step back to the branch, which
+--                 checks the cited rows are on it
+--   tree.closure  the rule a closed branch's × cites by
+-- The branch is joined by the `context-join` term, as a sequent's context is.
+
+--| @syntax role tree.closes
+term cl (ga: ctx): judgement;
+prefix cl: $closes$ prec 3;
+--| @congr
+axiom cl_congr (ga de: ctx): $ ctx_eq ga de $ > $ (closes ga) ⟚ (closes de) $;
+--| @syntax role tree.focus
+term fc (ga de: ctx): judgement;
+notation fc (ga de: ctx): judgement = ($focus$:3) ga ($at$:0) de;
+--| @congr
+axiom fc_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ (focus ga at si) ⟚ (focus de at ta) $;
+
+--| @syntax role tree.unfocus
+axiom unfocus (ga de: ctx): $ focus ga at de $ > $ closes ga ; de $;
+
+-- ## Closure (×): a sentence and its negation, or a single row a ≠ a.
+axiom tb_close_neq (ga: ctx) (te: tm): $ focus ga at (¬ te = te) $;
+--| @fallback tb_close_neq
+--| @syntax role tree.closure
+--| @syntax alias ×
+axiom tb_close (ga: ctx) (ph: wff): $ focus ga at (ph ; ¬ ph) $;
+
+-- ## The sentential rules (§5)
+--| @syntax alias & ∧ ^ /\
+axiom tb_and (ga: ctx) (ph ps: wff): $ closes ga ; ph ; ps $ > $ focus ga at (ph ∧ ps) $;
+axiom tb_nand_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; ¬ ph $ > $ closes ga ; ¬ ps $ > $ focus ga at (¬ (ph ∧ ps)) $;
+--| @fallback tb_nand_l
+--| @syntax alias ¬& ¬∧ ~& -& ~∧ -∧
+axiom tb_nand_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; ¬ ps $ > $ closes ga ; ¬ ph $ > $ focus ga at (¬ (ph ∧ ps)) $;
+axiom tb_or_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; ph $ > $ closes ga ; ps $ > $ focus ga at (ph ∨ ps) $;
+--| @fallback tb_or_l
+--| @syntax alias ∨ \/ |
+axiom tb_or_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; ps $ > $ closes ga ; ph $ > $ focus ga at (ph ∨ ps) $;
+--| @syntax alias ¬∨ ~∨ -∨ ¬\/ ~\/ -\/
+axiom tb_nor (ga: ctx) (ph ps: wff): $ closes ga ; ¬ ph ; ¬ ps $ > $ focus ga at (¬ (ph ∨ ps)) $;
+axiom tb_imp_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; ¬ ph $ > $ closes ga ; ps $ > $ focus ga at (ph → ps) $;
+--| @fallback tb_imp_l
+--| @syntax alias ⊃ → -> >
+axiom tb_imp_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; ps $ > $ closes ga ; ¬ ph $ > $ focus ga at (ph → ps) $;
+--| @syntax alias ¬⊃ ~⊃ -⊃ ¬→ ~→ ~-> -->
+axiom tb_nimp (ga: ctx) (ph ps: wff): $ closes ga ; ph ; ¬ ps $ > $ focus ga at (¬ (ph → ps)) $;
+axiom tb_iff_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; ph ; ps $ > $ closes ga ; ¬ ph ; ¬ ps $ > $ focus ga at (ph ↔ ps) $;
+--| @fallback tb_iff_l
+--| @syntax alias ≡ ↔ <->
+axiom tb_iff_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; ¬ ph ; ¬ ps $ > $ closes ga ; ph ; ps $ > $ focus ga at (ph ↔ ps) $;
+axiom tb_niff_l (ga: ctx) (ph ps: wff):
+  $ closes ga ; ph ; ¬ ps $ > $ closes ga ; ¬ ph ; ps $ > $ focus ga at (¬ (ph ↔ ps)) $;
+--| @fallback tb_niff_l
+--| @syntax alias ¬≡ ~≡ -≡ ¬↔ ~<->
+axiom tb_niff_r (ga: ctx) (ph ps: wff):
+  $ closes ga ; ¬ ph ; ps $ > $ closes ga ; ph ; ¬ ps $ > $ focus ga at (¬ (ph ↔ ps)) $;
+--| @syntax alias ¬¬ ~~ --
+axiom tb_nn (ga: ctx) (ph: wff): $ closes ga ; ph $ > $ focus ga at (¬ ¬ ph) $;
+
+-- ## The quantifier rules (§10)
+-- A universal takes any name; an existential a name new to the branch, which
+-- is the binder list: `ga` may not mention `a`, and `ga` is the whole branch.
+--
+-- The book lets one step write several instances of a general row (∀, ¬∃),
+-- one per name. Each such rule comes in variants for one to five instances,
+-- one `@recover` per instance, chained by `@fallback`: the alias is on the
+-- one-instance axiom, declared last, so the common case is tried first and a
+-- longer step falls through to the variant with its count.
+--| @view {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x) (ps ch th et ka: wff): $ closes ga ; ps ; ch ; th ; et ; ka $ > $ focus ga at (∀ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @recover ve th ph x
+--| @recover we et ph x
+--| @recover ze ka ph x
+axiom tb_all5 {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x):
+  $ closes ga ; {x / te} ph ; {x / ue} ph ; {x / ve} ph ; {x / we} ph ; {x / ze} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x) (ps ch th et: wff): $ closes ga ; ps ; ch ; th ; et $ > $ focus ga at (∀ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @recover ve th ph x
+--| @recover we et ph x
+--| @fallback tb_all5
+axiom tb_all4 {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x):
+  $ closes ga ; {x / te} ph ; {x / ue} ph ; {x / ve} ph ; {x / we} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x) (ps ch th: wff): $ closes ga ; ps ; ch ; th $ > $ focus ga at (∀ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @recover ve th ph x
+--| @fallback tb_all4
+axiom tb_all3 {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x):
+  $ closes ga ; {x / te} ph ; {x / ue} ph ; {x / ve} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ps ; ch $ > $ focus ga at (∀ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @fallback tb_all3
+axiom tb_all2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):
+  $ closes ga ; {x / te} ph ; {x / ue} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; ps $ > $ focus ga at (∀ x ph) $
+--| @recover te ps ph x
+--| @fallback tb_all2
+--| @syntax alias ∀ @
+axiom tb_all1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
+  $ closes ga ; {x / te} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; ¬ ps $ > $ focus ga at (¬ ∀ x ph) $
+--| @recover a ps ph x
+--| @syntax alias ¬∀ ~∀ -∀ ¬@ ~@ -@
+axiom tb_nall {x: var} {a: name} (ga: ctx x) (ph: wff x):
+  $ closes ga ; ¬ {x / a} ph $ > $ focus ga at (¬ ∀ x ph) $;
+--| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; ps $ > $ focus ga at (∃ x ph) $
+--| @recover a ps ph x
+--| @syntax alias ∃ 3
+axiom tb_ex {x: var} {a: name} (ga: ctx x) (ph: wff x):
+  $ closes ga ; {x / a} ph $ > $ focus ga at (∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x) (ps ch th et ka: wff): $ closes ga ; ¬ ps ; ¬ ch ; ¬ th ; ¬ et ; ¬ ka $ > $ focus ga at (¬ ∃ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @recover ve th ph x
+--| @recover we et ph x
+--| @recover ze ka ph x
+axiom tb_nex5 {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x):
+  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph ; ¬ {x / ve} ph ; ¬ {x / we} ph ; ¬ {x / ze} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x) (ps ch th et: wff): $ closes ga ; ¬ ps ; ¬ ch ; ¬ th ; ¬ et $ > $ focus ga at (¬ ∃ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @recover ve th ph x
+--| @recover we et ph x
+--| @fallback tb_nex5
+axiom tb_nex4 {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x):
+  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph ; ¬ {x / ve} ph ; ¬ {x / we} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x) (ps ch th: wff): $ closes ga ; ¬ ps ; ¬ ch ; ¬ th $ > $ focus ga at (¬ ∃ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @recover ve th ph x
+--| @fallback tb_nex4
+axiom tb_nex3 {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x):
+  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph ; ¬ {x / ve} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ¬ ps ; ¬ ch $ > $ focus ga at (¬ ∃ x ph) $
+--| @recover te ps ph x
+--| @recover ue ch ph x
+--| @fallback tb_nex3
+axiom tb_nex2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):
+  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; ¬ ps $ > $ focus ga at (¬ ∃ x ph) $
+--| @recover te ps ph x
+--| @fallback tb_nex2
+--| @syntax alias ¬∃ ~∃ -∃ ¬3 ~3 -3
+axiom tb_nex1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
+  $ closes ga ; ¬ {x / te} ph $ > $ focus ga at (¬ ∃ x ph) $;
+
+-- ## Identity (§12.7)
+-- From `a = b` and a row, the row with every `a` made `b` (`ph` may not
+-- mention `a`), or every `b` made `a`.
+--| @view {x: var} {a b: name} (ga: ctx x a b) (ph: wff x b) (ps ch: wff): $ closes ga ; ch $ > $ focus ga at (a = b ; ps) $
+--| @abstract ph ps ch x a b
+--| @fresh x
+axiom tb_id_ab {x: var} {a b: name} (ga: ctx x a b) (ph: wff x b):
+  $ closes ga ; {x / b} ph $ > $ focus ga at (a = b ; {x / a} ph) $;
+--| @view {x: var} {a b: name} (ga: ctx x a b) (ph: wff x a) (ps ch: wff): $ closes ga ; ch $ > $ focus ga at (a = b ; ps) $
+--| @abstract ph ps ch x b a
+--| @fresh x
+--| @fallback tb_id_ab
+--| @syntax alias =
+axiom tb_id_ba {x: var} {a b: name} (ga: ctx x a b) (ph: wff x a):
+  $ closes ga ; {x / a} ph $ > $ focus ga at (a = b ; {x / b} ph) $;

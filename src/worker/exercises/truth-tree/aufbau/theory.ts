@@ -1,0 +1,173 @@
+/**
+ * What a theory must declare to be a tree calculus, found by role (gh #46).
+ *
+ * Nothing in Carnap names a calculus's terms: the theory a `system=` names
+ * says which of its terms and axioms play each part, and this module reads
+ * them. A theory that does not say is reported part by part, so an author sees
+ * the whole list at once.
+ *
+ * DOM-free: the compiler reads it at lesson compile, the browser and the
+ * worker when they write a tree down.
+ */
+
+import type { SurfaceLanguage } from "@aufbau/syntax";
+import { printTerm, UnprintableTermError } from "@aufbau/syntax";
+import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
+
+/**
+ * A tree calculus's plumbing:
+ *
+ * - `tree.closes` — the term for "this branch closes"; its one argument's sort
+ *   is the branch sort, joined by the `context-join` term;
+ * - `tree.focus` — the term for "this branch closes by a step on these rows",
+ *   taking the branch and the cited rows, both of the branch sort;
+ * - `tree.unfocus` — the axiom from a focused step to its branch;
+ * - `tree.closure` — the rule a closed branch's × cites by;
+ * - `tree.assert` and `tree.deny` — how the root says a sentence is true, and
+ *   is not (a Smullyan `T φ` and `F φ`). Where a row is a sentence, a sentence
+ *   asserts itself, and the language's negation denies it.
+ *
+ * A row is read at the one sort with a coercion into the branch sort.
+ */
+export interface TreeTheory {
+  readonly closes: string;
+  readonly focus: string;
+  readonly unfocus: string;
+  readonly closure: string;
+  readonly join: string;
+  readonly rowSort: string;
+  /** The term that asserts a sentence as a row; null where it is the row. */
+  readonly assert: string | null;
+  /**
+   * The term that denies a sentence as a row, or null if the theory has none,
+   * in which case it cannot test an argument.
+   */
+  readonly deny: string | null;
+}
+
+/** The roles a tree theory is read by. */
+export type TreeRole =
+  | "tree.closes"
+  | "tree.focus"
+  | "tree.unfocus"
+  | "tree.closure"
+  | "tree.assert"
+  | "context-join";
+
+/** What a theory is missing to be a tree theory. */
+export type TreeTheoryProblem =
+  | { readonly type: "missing-role"; readonly role: TreeRole }
+  /** No sort, or more than one, coerces into the branch sort. */
+  | { readonly type: "row-sort"; readonly candidates: readonly string[] };
+
+/** The theory's tree plumbing, or everything it lacks. */
+export function readTreeTheory(
+  language: SurfaceLanguage,
+): TreeTheory | readonly TreeTheoryProblem[] {
+  const roles = roleIndex(language);
+  const closes = roles.termFor("tree.closes");
+  const focus = roles.termFor("tree.focus");
+  const unfocus = roles.ruleFor("tree.unfocus");
+  const closure = roles.ruleFor("tree.closure");
+  const join = roles.spellingFor("context-join");
+  const problems: TreeTheoryProblem[] = [];
+  const need = (value: string | null, role: TreeRole): void => {
+    if (value === null) {
+      problems.push({ role, type: "missing-role" });
+    }
+  };
+
+  need(closes, "tree.closes");
+  need(focus, "tree.focus");
+  need(unfocus, "tree.unfocus");
+  need(closure, "tree.closure");
+  need(join, "context-join");
+
+  const binder =
+    closes === null ? undefined : language.spec.terms.get(closes)?.binders[0];
+  const branchSort =
+    binder !== undefined && "sort" in binder.type ? binder.type.sort : null;
+  const candidates =
+    branchSort === null
+      ? []
+      : language.spec.coercions
+          .filter((coercion) => coercion.to === branchSort)
+          .map((coercion) => coercion.from);
+
+  if (branchSort !== null && candidates.length !== 1) {
+    problems.push({ candidates, type: "row-sort" });
+  }
+
+  const rowSort = candidates.length === 1 ? (candidates[0] as string) : null;
+  const rowsAreSentences =
+    rowSort !== null && rowSort === sentenceSort(language);
+  const assert = roles.termFor("tree.assert");
+  const deny =
+    roles.termFor("tree.deny") ??
+    (rowsAreSentences ? roles.termFor("negation") : null);
+
+  if (assert === null && rowSort !== null && !rowsAreSentences) {
+    problems.push({ role: "tree.assert", type: "missing-role" });
+  }
+
+  if (problems.length > 0) {
+    return problems;
+  }
+
+  return {
+    assert,
+    closes: closes as string,
+    closure: closure as string,
+    deny,
+    focus: focus as string,
+    join: join as string,
+    rowSort: rowSort as string,
+    unfocus: unfocus as string,
+  };
+}
+
+/** Whether a read is a theory or the list of what it lacks. */
+export function isTreeTheory(
+  read: TreeTheory | readonly TreeTheoryProblem[],
+): read is TreeTheory {
+  return "closes" in read;
+}
+
+/**
+ * A root row as engine text at the row sort: the sentence (engine text)
+ * asserted, or denied. Null if the theory cannot say it — it has no denial —
+ * or the result does not read.
+ */
+export function rootRow(
+  language: SurfaceLanguage,
+  theory: TreeTheory,
+  sentence: string,
+  polarity: "assert" | "deny",
+): string | null {
+  const term = polarity === "assert" ? theory.assert : theory.deny;
+
+  if (polarity === "deny" && term === null) {
+    return null;
+  }
+
+  const text = term === null ? sentence : `${term} (${sentence})`;
+  const parsed = language.parse(text, {
+    lints: false,
+    mode: "engine",
+    sort: theory.rowSort,
+  });
+
+  if (!parsed.ok) {
+    return null;
+  }
+
+  try {
+    return printTerm(language, parsed.term, "engine");
+  } catch (error) {
+    if (error instanceof UnprintableTermError) {
+      return null;
+    }
+
+    throw error;
+  }
+}
