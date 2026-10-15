@@ -57,7 +57,7 @@
 /* Everything drawn as wrong takes one mark, the proof tree's: a red squiggle
    under the field that is wrong. */
 .tableau-row[data-flagged] .tableau-text,
-.tableau-margin[data-flagged],
+:is(.tableau-margin-cites, .tableau-margin-rule)[data-flagged],
 .tableau-end[data-flagged] .tableau-end-mark {
   text-decoration: underline wavy var(--_incorrect);
   text-decoration-skip-ink: none;

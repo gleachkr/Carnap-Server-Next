@@ -52,6 +52,8 @@ const MAX_SUBMITTED_ROWS = 1000;
 const MAX_SUBMITTED_NODES = 1000;
 const MAX_ROW_TEXT = 1000;
 const MAX_SUBMITTED_LENGTH = 131_072;
+/** The longest rule name a margin holds: longer than any book's label. */
+const MAX_RULE_TEXT = 64;
 
 export interface ResolvedTree {
   readonly language: SurfaceLanguage;
@@ -195,7 +197,31 @@ export function isTruthTreeAnswerData(
   return (
     rows <= MAX_SUBMITTED_ROWS &&
     JSON.stringify(nodes).length <= MAX_SUBMITTED_LENGTH &&
-    isOneTree(nodes)
+    isOneTree(nodes) &&
+    (data.rules === undefined || isRules(data.rules, rows))
+  );
+}
+
+/** The rule each development of an answer names, by its `dev`. */
+export function answerRules(
+  answer: TruthTreeAnswerData,
+): ReadonlyMap<string, string> {
+  return new Map(Object.entries(answer.rules ?? {}));
+}
+
+/** A development's rules: at most one per row, each a short name. */
+function isRules(value: unknown, rows: number): boolean {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const entries = Object.entries(value);
+
+  return (
+    entries.length <= rows &&
+    entries.every(
+      ([, rule]) => typeof rule === "string" && rule.length <= MAX_RULE_TEXT,
+    )
   );
 }
 

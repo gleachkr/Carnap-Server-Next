@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { parseFormula } from "../src/worker/exercise-kit/formula";
 import type { TreeReport } from "../src/worker/exercises/truth-tree/logic/check";
-import { ruleLabel } from "../src/worker/exercises/truth-tree/logic/labels";
 import { FORALLX_UBC } from "../src/worker/exercises/truth-tree/logic/system";
-import { readLanguage } from "../src/worker/logic/specs";
-import { THEORY_SOURCES } from "../src/worker/logic/theories";
-import { TreeBuilder, UBC, ubcFormula } from "./helpers/truth-tree";
+import { TreeBuilder, ubcFormula } from "./helpers/truth-tree";
 
 /**
  * The truth-tree checker against *forall x: UBC*'s own worked trees, from
@@ -703,49 +699,5 @@ describe("marks", () => {
       names: [],
       type: "resolved",
     });
-  });
-});
-
-describe("the margin's rule names", () => {
-  test("are the language's own symbols", () => {
-    expect(ruleLabel({ head: { type: "exists" }, negated: true }, UBC)).toBe(
-      "¬∃",
-    );
-    expect(
-      ruleLabel(
-        { head: { connective: "and", type: "binary" }, negated: false },
-        UBC,
-      ),
-    ).toBe("&");
-    expect(
-      ruleLabel({ head: { type: "identity" }, negated: false }, UBC),
-    ).toBe("=");
-  });
-
-  test("name a constructor with no notation by its name, as it is typed", () => {
-    // carnap-prop's negation with its `~` taken away: it is still read, as
-    // MM0 applies a term, by name.
-    const source = (THEORY_SOURCES["carnap-prop.mm0"] ?? "")
-      .replace("prefix not: $~$ prec 50;\n", "")
-      .replace(
-        "--| @syntax delimiter $ ( ) ~ ",
-        "--| @syntax delimiter $ ( ) ",
-      );
-    const language = readLanguage(source).language;
-
-    if (language === null) {
-      throw new Error("the language does not read");
-    }
-
-    expect(parseFormula("not (not P)", language).ok).toBe(true);
-    expect(
-      ruleLabel({ head: { type: "not" }, negated: false }, language),
-    ).toBe("not");
-    expect(
-      ruleLabel(
-        { head: { connective: "and", type: "binary" }, negated: true },
-        language,
-      ),
-    ).toBe("not /\\");
   });
 });

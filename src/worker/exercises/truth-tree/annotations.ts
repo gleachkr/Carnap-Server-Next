@@ -1,7 +1,8 @@
 /**
- * What a truth tree draws beside its rows, from its check: the marks, the
- * margin notes, the closure citations, which rows to flag, and every row and
- * branch end in words. The server's static tree and the browser's editor both
+ * What a truth tree draws beside its rows: the marks (from its check), the
+ * margin notes (each step's citation and the rule it names, as typed), the
+ * closure citations, which rows to flag, and every row and branch end in
+ * words. The server's static tree and the browser's editor both
  * hand these to the tableau component, which knows nothing of logic.
  *
  * DOM-free and catalog-free: words come through a {@link TreeWords} lookup.
@@ -10,11 +11,11 @@
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { TableauDocument } from "../../../tableau/document";
 import { TableauIndex } from "../../../tableau/document";
-import type { TableauAnnotations } from "../../../tableau/html";
+import type { MarginNote, TableauAnnotations } from "../../../tableau/html";
 import type { TableauLayout } from "../../../tableau/layout";
 import type { TreeReport } from "./logic/check";
 import { isCitationProblem, isIncomplete } from "./logic/check";
-import { marginText, markText, ruleLabel } from "./logic/labels";
+import { markText } from "./logic/labels";
 import type { TreeWords } from "./verdict-text";
 
 export function treeAnnotations(
@@ -27,6 +28,8 @@ export function treeAnnotations(
     readonly flag: boolean;
     /** How many of the root node's first rows are the exercise's root. */
     readonly rootRows: number;
+    /** The rule each development names, by its `dev`. */
+    readonly rules: ReadonlyMap<string, string>;
   },
 ): TableauAnnotations {
   const index = new TableauIndex(tree);
@@ -40,7 +43,7 @@ export function treeAnnotations(
     marks.set(rowId, markText(mark, language));
   }
 
-  const margins = new Map<number, string>();
+  const margins = new Map<number, MarginNote>();
 
   // A step is justified once, beside its first line.
   for (const [line, ids] of layout.lineRows) {
@@ -49,18 +52,19 @@ export function treeAnnotations(
     }
 
     for (const id of ids) {
-      if (layout.heads.get(id) !== id) {
+      const row = index.row(id)?.row;
+
+      if (layout.heads.get(id) !== id || row === undefined) {
         continue;
       }
 
-      const text = marginText(
-        report.justifications.get(id),
-        number,
-        language,
-      );
+      const note = {
+        cites: row.cites.map(number).join(", "),
+        rule: options.rules.get(row.dev) ?? "",
+      };
 
-      if (text !== null) {
-        margins.set(line, text);
+      if (note.cites !== "" || note.rule !== "") {
+        margins.set(line, note);
         break;
       }
     }
@@ -124,10 +128,11 @@ export function treeAnnotations(
         : words("Branch closed");
     },
     describeRow: (rowId) => {
-      const text = index.row(rowId)?.row.text.trim() ?? "";
+      const row = index.row(rowId)?.row;
+      const text = row?.text.trim() ?? "";
       const shown = text === "" ? words("Empty row") : text;
-      const justification = report.justifications.get(rowId);
-      const [cited, other] = justification?.cites ?? [];
+      const [cited, other] = row?.cites ?? [];
+      const rule = row === undefined ? undefined : options.rules.get(row.dev);
 
       if (cited === undefined) {
         return isRootRow(index, rowId, options.rootRows)
@@ -138,24 +143,33 @@ export function treeAnnotations(
             });
       }
 
-      const rule =
-        justification?.rule === null || justification?.rule === undefined
-          ? "?"
-          : ruleLabel(justification.rule, language);
+      const values = {
+        cited: number(cited),
+        row: number(rowId),
+        text: shown,
+      };
 
-      return other === undefined
-        ? words("Row {row}: {text}, from row {cited}, {rule}", {
-            cited: number(cited),
-            row: number(rowId),
-            rule,
-            text: shown,
-          })
+      if (other === undefined) {
+        return rule === undefined
+          ? words(
+              "Row {row}: {text}, from row {cited}, no rule named",
+              values,
+            )
+          : words("Row {row}: {text}, from row {cited}, {rule}", {
+              ...values,
+              rule,
+            });
+      }
+
+      return rule === undefined
+        ? words(
+            "Row {row}: {text}, from rows {cited} and {other}, no rule named",
+            { ...values, other: number(other) },
+          )
         : words("Row {row}: {text}, from rows {cited} and {other}, {rule}", {
-            cited: number(cited),
+            ...values,
             other: number(other),
-            row: number(rowId),
             rule,
-            text: shown,
           });
     },
     endNotes,

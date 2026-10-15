@@ -2517,7 +2517,11 @@ msgid "From {platform}."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "From the end of a line, go on to its citation; Delete clears it"
+msgid "From the citation being typed, go on to the rule"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "From the end of a line, go on to its citation, then its rule; Delete clears either"
 msgstr ""
 
 #: src/worker/web/email-change.tsx
@@ -4292,11 +4296,19 @@ msgid "Row {row} no longer cites a row."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} no longer names a rule."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} now cites row {cited}."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} now cites rows {cited} and {other}."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} now names the rule {rule}."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
@@ -4332,7 +4344,15 @@ msgid "Row {row}: {text}, from row {cited}, {rule}"
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row}: {text}, from row {cited}, no rule named"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row}: {text}, from rows {cited} and {other}, {rule}"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row}: {text}, from rows {cited} and {other}, no rule named"
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
@@ -4356,6 +4376,18 @@ msgstr ""
 #: src/worker/exercises/aufbau-proof-prawitz/strings.ts
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Rule (proof line)"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rule of row {row}, not yet named"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rule of row {row}: {rule}"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rule used"
 msgstr ""
 
 #: src/worker/web/content.tsx
@@ -5780,6 +5812,10 @@ msgstr ""
 msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
 msgstr ""
 
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "This system has no rule called “{rule}”."
+msgstr ""
+
 #: src/worker/exercises/translation/strings.ts
 msgid "This translation is logically equivalent to the intended answer."
 msgstr ""
@@ -5939,6 +5975,10 @@ msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Type the row it develops; Alt-C also works while writing the row"
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Type the rule it uses; Alt-J also works while writing the row"
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
@@ -6248,7 +6288,7 @@ msgid "Write at least one sentence."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin."
+msgid "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof/strings.ts

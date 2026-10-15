@@ -98,6 +98,7 @@ export type TableauKeyAction =
   | "last"
   | "edit"
   | "cite"
+  | "rule"
   | "stack"
   | "split"
   | "add-row"
@@ -114,7 +115,10 @@ export interface KeyPress {
   readonly metaKey: boolean;
   readonly shiftKey: boolean;
   readonly altKey: boolean;
-  /** The physical key, which Alt-C matches: on a Mac, Option-C's key is ç. */
+  /**
+   * The physical key, which Alt-C and Alt-J match: on a Mac, Option-C's key
+   * is ç.
+   */
   readonly code?: string;
 }
 
@@ -130,6 +134,7 @@ const PLAIN: Readonly<Record<string, TableauKeyAction>> = {
   F2: "edit",
   Home: "first",
   c: "cite",
+  j: "rule",
   o: "open",
   r: "add-row",
   s: "split",
@@ -151,12 +156,17 @@ export function keyAction(press: KeyPress): TableauKeyAction | null {
     return key === "y" ? "redo" : null;
   }
 
-  // Alt-C cites from inside a row's input too, where a plain c is typing.
-  // Tab is left alone, to leave the tree as it leaves anything.
+  // Alt-C cites, and Alt-J names the rule, from inside a row's input too,
+  // where a plain c or j is typing. Tab is left alone, to leave the tree as
+  // it leaves anything.
   if (press.altKey && !command && !press.shiftKey) {
-    return press.code === "KeyC" || press.key.toLowerCase() === "c"
-      ? "cite"
-      : null;
+    const key = press.key.toLowerCase();
+
+    if (press.code === "KeyC" || key === "c") {
+      return "cite";
+    }
+
+    return press.code === "KeyJ" || key === "j" ? "rule" : null;
   }
 
   if (press.altKey || command) {

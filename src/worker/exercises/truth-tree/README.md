@@ -39,7 +39,7 @@ is in
 
 - `logic/` — `system.ts`, `rules.ts`, `check.ts`, `formulas.ts` (the
   caching row reader, and display through the language's own printer, which
-  is what writes `a₁` and `a≠b`), `labels.ts` (margin notes and marks).
+  is what writes `a₁` and `a≠b`), `labels.ts` (the names a mark lists).
 - `aufbau/` — the engine-checked successor to `logic/` (gh #46, in
   progress): `theory.ts` reads a tree theory's roles (the contract is in
   the authoring docs, "Writing a tree theory"), and `emit.ts` writes a tree
@@ -57,7 +57,11 @@ The editor is `src/client/components/carnap-truth-tree-v1.tsx`.
 
 ## Answer data
 
-`truth-tree-answer@1` is `{ nodes }`, the tableau document: each node a run
+`truth-tree-answer@1` is `{ nodes, rules? }`: `rules` maps a development's
+`dev` to the rule its margin names (the theory's spelling of one of its
+`@syntax alias`es), kept beside the document so that the document stays
+logic-free; a development missing from it names no rule. `nodes` is the
+tableau document: each node a run
 of rows with its parent (`null` for the root) and an optional `end`,
 `{ type: "closed", cites }` or `{ type: "open" }`. A row is
 `{ id, text, cites, dev }`: its text as typed, the row ids it develops, and

@@ -120,7 +120,7 @@
    character, as the proof tree's field does. */
 .tableau-row[role="treeitem"] .tableau-text:empty,
 .tableau-margin-slot,
-:is(.tableau-input, .tableau-cite-input)[data-empty] {
+:is(.tableau-input, .tableau-cite-input, .tableau-rule-input)[data-empty] {
   background: var(--_accent-bg);
   border-radius: 0.2rem;
   display: inline-block;
@@ -143,7 +143,7 @@
 }
 
 .tableau-row[data-cursor] :is(.tableau-text:empty, [data-empty]),
-.tableau-margin[data-cursor] .tableau-margin-slot {
+.tableau-margin[data-cursor] [data-selected] .tableau-margin-slot {
   outline-style: solid;
 }
 
@@ -152,7 +152,15 @@
   min-width: 3.4ch;
 }
 
-/* A line whose margin a click cites from. */
+/* With the selection on a line's margin, the field it is on: the citation
+   or the rule. An empty field shows it by its slot's solid outline. */
+.tableau-margin[data-cursor] [data-selected]:not(:has(.tableau-margin-slot)) {
+  border-radius: 0.2rem;
+  outline: 1px solid var(--_accent);
+  outline-offset: 1px;
+}
+
+/* A line whose margin a click cites from, or names the rule in. */
 .tableau-margin[data-citable] {
   cursor: pointer;
 }
@@ -167,7 +175,8 @@
    sits on the page's. The caret says where typing goes; the ring stays the
    row's. */
 .tableau-input,
-.tableau-cite-input {
+.tableau-cite-input,
+.tableau-rule-input {
   background: none;
   border: 0;
   border-radius: 0;
@@ -182,7 +191,11 @@
   width: 3.5rem;
 }
 
-.tableau-cite-input[data-empty] {
+.tableau-rule-input {
+  width: 4rem;
+}
+
+:is(.tableau-cite-input, .tableau-rule-input)[data-empty] {
   width: 3.4ch;
 }
 

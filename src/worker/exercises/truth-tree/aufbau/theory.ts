@@ -171,3 +171,30 @@ export function rootRow(
     throw error;
   }
 }
+
+/**
+ * The rule a step's margin names, spelled as the theory first spells it
+ * (`\/` is written `∨`), or null if the theory has no rule by that name.
+ *
+ * A student types the book's margin label, which is an `@syntax alias`; the
+ * first alias an axiom declares is the book's own.
+ */
+export function ruleSpelling(
+  language: SurfaceLanguage,
+  typed: string,
+): string | null {
+  const aliases = language.spec.ruleAliases;
+  const axiom = aliases.get(typed.trim());
+
+  if (axiom === undefined) {
+    return null;
+  }
+
+  for (const [alias, named] of aliases) {
+    if (named === axiom) {
+      return alias;
+    }
+  }
+
+  return null;
+}

@@ -103,7 +103,9 @@ export const TRUTH_TREE_ASSESSMENT = {
 
     return {
       answer: {
-        data: { nodes: data.nodes } as unknown as JsonValue,
+        data: (data.rules === undefined
+          ? { nodes: data.nodes }
+          : { nodes: data.nodes, rules: data.rules }) as unknown as JsonValue,
         kind: TRUTH_TREE_ANSWER_KIND,
         schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
       },

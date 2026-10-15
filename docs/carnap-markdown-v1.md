@@ -1026,10 +1026,14 @@ branch may come in any order, and so may the branches of a split.
   is marked `↑`, since one complete open branch settles the question
   (UBC v2.4, §5.x). The other branches may be left unfinished.
 
-Marks (`✓`, `✓a`, `\a,b`) and the rule in each step's margin (`2 ∨`) are
-computed, not typed. As in the book, a step is justified once, beside its
-first row: a row added to the step leaves its margin blank, and a new step
-has its own. Rows are numbered the book's way: lines are shared across
+Marks (`✓`, `✓a`, `\a,b`) are computed. The margin (`2 ∨`) is typed, as
+the book has the student write it: the row a step develops (`c`, or Alt-C
+from inside a row), then the rule it uses (`j`, or Alt-J, or Tab from the
+citation). A rule is one of the theory's `@syntax alias`es, in any of its
+spellings, and is shown in the first: `\/` is written `∨`. A rule the
+theory has no name for stays in the margin, squiggled, and the step names
+no rule. As in the book, a step is justified once, beside its first row: a
+row added to the step leaves its margin blank, and a new step has its own. Rows are numbered the book's way: lines are shared across
 branches, and a step repeated on two branches shares its lines.
 
 Grading is all or nothing: every row and closure right, every `↑` on a

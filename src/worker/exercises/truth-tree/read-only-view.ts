@@ -25,6 +25,7 @@ import { stringsResolver } from "../../i18n/translator";
 import { treeAnnotations } from "./annotations";
 import type { ResolvedTree, TreeJudgement } from "./grading";
 import {
+  answerRules,
   isTruthTreePublicData,
   resolveTruthTree,
   startingTree,
@@ -53,12 +54,14 @@ const TRUTH_TREE_REVIEW_STYLES = [
 
 /**
  * The tree, drawn: the grid for the eye and the outline for a screen reader.
- * `report` is the tree's own, when the caller has already checked it.
+ * `rules` are the rules its steps name; `report` is the tree's own, when the
+ * caller has already checked it.
  */
 export function treeHtml(
   tree: TableauDocument,
   resolved: ResolvedTree,
   words: TreeWords,
+  rules: ReadonlyMap<string, string> = new Map(),
   report: TreeReport = checkTree({
     reader: resolved.reader,
     root: resolved.root,
@@ -73,7 +76,7 @@ export function treeHtml(
     report,
     resolved.language,
     words,
-    { flag: false, rootRows: resolved.root.length },
+    { flag: false, rootRows: resolved.root.length, rules },
   );
 
   return `<div class="tableau-scroller" data-role="tree">${tableauGridHtml(
@@ -146,6 +149,7 @@ export function renderTruthTreeReview(
     tree,
     review.resolved,
     words,
+    answerRules(review.answer),
     review.judgement.report,
   );
 

@@ -17,15 +17,29 @@ import type { TableauDocument, TableauNode } from "./document";
 import { TableauIndex } from "./document";
 import type { ColumnSpan, Guide, TableauLayout } from "./layout";
 
+/**
+ * A line's margin note, `1 ∨`: the rows its step cites, and the rule the step
+ * names. Either may be blank.
+ */
+export interface MarginNote {
+  readonly cites: string;
+  readonly rule: string;
+}
+
+/** The two fields of a margin note. */
+export type MarginField = keyof MarginNote;
+
 export interface TableauAnnotations {
   /** A row's mark, after its text: `✓`, `\a,b`. */
   readonly marks?: ReadonlyMap<string, string>;
-  /** A line's margin note: `1 ∨`. */
-  readonly margins?: ReadonlyMap<number, string>;
+  /** A line's margin note. */
+  readonly margins?: ReadonlyMap<number, MarginNote>;
   /** Rows and branch ends to draw as wrong. */
   readonly flagged?: ReadonlySet<string>;
-  /** Lines whose margin note to draw as wrong. */
+  /** Lines whose margin citation to draw as wrong. */
   readonly flaggedMargins?: ReadonlySet<number>;
+  /** Lines whose margin rule to draw as wrong. */
+  readonly flaggedRules?: ReadonlySet<number>;
   /** The note under a branch's end mark: the rows a closure cites. */
   readonly endNotes?: ReadonlyMap<string, string>;
   /** A row in words, for the outline. */
@@ -111,8 +125,17 @@ export function tableauGridHtml(
     const margin = annotations.margins?.get(line);
 
     if (margin !== undefined) {
+      const field = (name: MarginField, flags?: ReadonlySet<number>) =>
+        margin[name] === ""
+          ? ""
+          : `<span class="tableau-margin-${name}"${flags?.has(line) === true ? " data-flagged" : ""}>${escapeText(margin[name])}</span>`;
+      const fields = [
+        field("cites", annotations.flaggedMargins),
+        field("rule", annotations.flaggedRules),
+      ].filter((each) => each !== "");
+
       parts.push(
-        `<span class="tableau-margin"${annotations.flaggedMargins?.has(line) === true ? " data-flagged" : ""} style="grid-row:${row};grid-column:${layout.columns + 2}">${escapeText(margin)}</span>`,
+        `<span class="tableau-margin" style="grid-row:${row};grid-column:${layout.columns + 2}">${fields.join(" ")}</span>`,
       );
     }
 

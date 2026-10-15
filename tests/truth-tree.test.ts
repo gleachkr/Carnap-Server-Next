@@ -219,16 +219,22 @@ describe("grading", () => {
 
     const [fb] = t.stack(t.rootNode, ["r1", "r2"], ["Fb"]);
     t.close(t.rootNode, "r3", fb as string);
+    const dev = t.tree.nodes[0]?.rows.find((row) => row.id === fb)?.dev;
 
     const graded = await grade(item, {
       nodes: t.tree.nodes,
+      rules: { [dev ?? ""]: "=" },
     } as unknown as JsonValue);
 
     expect(graded.status).toBe("correct");
     expect(graded.summary).toBe(
       "Right: the tree closes, so the argument is valid.",
     );
-    expect(graded.html).toContain("1, 2 =");
+    // The margin is the step's citation and the rule it names.
+    expect(graded.html).toContain(
+      '<span class="tableau-margin-cites">1, 2</span> <span class="tableau-margin-rule">=</span>',
+    );
+    expect(graded.html).toContain("Row 4: Fb, from rows 1 and 2, =");
   });
 
   test("an unfinished tree scores nothing", async () => {
@@ -302,6 +308,24 @@ describe("grading", () => {
     );
 
     expect(refused.ok).toBe(false);
+
+    // Rules are a record of short names, one per development at most.
+    const root = builderFor(item).tree.nodes;
+    const withRules = (rules: unknown) =>
+      TRUTH_TREE_EXERCISE.normalizeAnswer(
+        {
+          data: { nodes: root, rules } as unknown as JsonValue,
+          kind: TRUTH_TREE_ANSWER_KIND,
+          schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+        },
+        item,
+      ).ok;
+
+    expect(withRules({ root: "&" })).toBe(true);
+    expect(withRules(["&"])).toBe(false);
+    expect(withRules({ root: 3 })).toBe(false);
+    expect(withRules({ root: "x".repeat(65) })).toBe(false);
+    expect(withRules({ a: "&", b: "&", c: "&" })).toBe(false);
   });
 
   test("nodes that are not one tree are refused, and so is a tree too big to read", async () => {

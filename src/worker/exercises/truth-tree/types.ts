@@ -68,4 +68,10 @@ export interface TruthTreePublicData {
  */
 export interface TruthTreeAnswerData {
   readonly nodes: readonly TableauNode[];
+  /**
+   * The rule each development names, by its `dev`, as the theory spells it.
+   * Kept beside the document, which knows no logic. A development missing
+   * here names no rule; a tree saved before rules were typed has none.
+   */
+  readonly rules?: Readonly<Record<string, string>>;
 }

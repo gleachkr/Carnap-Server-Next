@@ -15,8 +15,8 @@ the root true; a complete open branch describes something that does.
 ::::truth-tree{#tt-consistent points="3" title="Two disjunctions"}
 Use a tree to decide whether this set is consistent. Write each step's rows
 yourself: **Stack** or **Split** at the end of a branch, type the sentence,
-and press \`Alt-C\` to cite the row it develops. The \`(?)\` below lists the
-keys.
+press \`Alt-C\` to cite the row it develops, and Tab to name the rule (\`∨\`,
+or \`\\/\` on a keyboard without one). The \`(?)\` below lists the keys.
 
 - (D & ¬R) ∨ Q
 - ¬Q ∨ R

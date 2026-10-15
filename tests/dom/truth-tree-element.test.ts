@@ -27,9 +27,11 @@ interface AnswerRow {
   readonly id: string;
   readonly text: string;
   readonly cites: readonly string[];
+  readonly dev: string;
 }
 
 interface Answer {
+  readonly rules?: Readonly<Record<string, string>>;
   readonly nodes: readonly {
     readonly id: string;
     readonly parent: string | null;
@@ -110,6 +112,34 @@ function write(mounted: Mounted, text: string, cite: string): void {
   press(input as Element, "Enter");
 }
 
+/** Name the rule of the step at the cursor, as a student types it. */
+function name(mounted: Mounted, rule: string, key = "Enter"): void {
+  press(cursor(mounted), "j");
+  const input = mounted.root.querySelector<HTMLInputElement>(
+    ".tableau-rule-input",
+  );
+  fill(input, rule);
+  press(input as Element, key);
+}
+
+/** A field of the margin on a line, found by the line number beside it. */
+function marginField(
+  mounted: Mounted,
+  line: number,
+  field: "cites" | "rule",
+): HTMLElement | null {
+  const number = [
+    ...mounted.root.querySelectorAll<HTMLElement>(".tableau-number"),
+  ].find((each) => each.textContent === String(line));
+  const margin = [
+    ...mounted.root.querySelectorAll<HTMLElement>(".tableau-margin"),
+  ].find((each) => each.style.gridRow === number?.style.gridRow);
+
+  return (
+    margin?.querySelector<HTMLElement>(`.tableau-margin-${field}`) ?? null
+  );
+}
+
 describe("upgrading", () => {
   test("the toolbar is icon buttons, named for their actions", async () => {
     const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
@@ -167,6 +197,7 @@ describe("upgrading", () => {
           ],
         },
       ],
+      rules: { d1: "&" },
     };
     const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"), {
       priorAnswer: prior,
@@ -181,8 +212,10 @@ describe("upgrading", () => {
       "Q",
     ]);
     expect(restored.some((each) => each.id === "r1")).toBe(false);
-    // The citation followed its row to the new id.
+    // The citation followed its row to the new id, and the rule its step.
     expect(restored[2]?.cites).toEqual([restored[0]?.id ?? ""]);
+    expect(restored[2]?.dev).not.toBe("d1");
+    expect(answer.rules).toEqual({ [restored[2]?.dev ?? ""]: "&" });
   });
 
   test("a prior answer on a root the exercise no longer gives is set aside", async () => {
@@ -319,12 +352,18 @@ describe("type mode", () => {
 
     press(cursor(mounted), "t");
     write(mounted, "P", "1");
+    // The rule is typed, in any of its spellings, and shown in the book's.
+    name(mounted, "^");
+    expect(announced(mounted)).toBe("Row 3 now names the rule &.");
     press(cursor(mounted), "r");
     fill(mounted.root.querySelector<HTMLInputElement>(".tableau-input"), "Q");
     press(mounted.root.querySelector(".tableau-input") as Element, "Enter");
 
     // Row 4 continues row 3's step: its margin is blank, and not a slot.
     expect(marginOn(3)?.textContent).toBe("1 &");
+    expect(answerOf(mounted)).toMatchObject({
+      rules: { [answerOf(mounted).nodes[0]?.rows[2]?.dev ?? ""]: "&" },
+    });
     expect(marginOn(4)).toBeUndefined();
 
     // Citing from row 4 types the step's citation, beside row 3.
@@ -336,11 +375,15 @@ describe("type mode", () => {
     expect(marginOn(3)?.contains(input as Node)).toBe(true);
     press(input as Element, "Escape");
 
-    // A new step citing the same row says so in its own margin.
+    // A new step citing the same row says so in its own margin, with a slot
+    // for the rule it has not named yet.
     press(cursor(mounted), "Delete");
     press(cursor(mounted), "t");
     write(mounted, "Q", "1");
-    expect(marginOn(4)?.textContent).toBe("1 &");
+    expect(marginField(mounted, 4, "cites")?.textContent).toBe("1");
+    expect(
+      marginField(mounted, 4, "rule")?.querySelector(".tableau-margin-slot"),
+    ).not.toBeNull();
   });
 
   test("a branch's end mark takes the cursor, and Delete takes it back", async () => {
@@ -493,6 +536,10 @@ describe("type mode", () => {
     write(mounted, "Fb", "1, 2");
     expect(announced(mounted)).toBe("Row 3 now cites rows 1 and 2.");
     expect(row(mounted, "Fb").getAttribute("aria-label")).toBe(
+      "Row 3: Fb, from rows 1 and 2, no rule named",
+    );
+    name(mounted, "=");
+    expect(row(mounted, "Fb").getAttribute("aria-label")).toBe(
       "Row 3: Fb, from rows 1 and 2, =",
     );
     expect(mounted.root.querySelector("[data-flagged]")).toBeNull();
@@ -558,7 +605,7 @@ describe("type mode", () => {
     // An uncited line's margin is a slot a click types the citation into,
     // and leaving it keeps what was typed.
     const margin = mounted.root.querySelector<HTMLElement>(
-      ".tableau-margin[data-citable]",
+      ".tableau-margin[data-citable] .tableau-margin-cites",
     );
     expect(margin?.querySelector(".tableau-margin-slot")).not.toBeNull();
     margin?.click();
@@ -602,9 +649,11 @@ describe("type mode", () => {
   test("a problem is drawn on its own field, and a bad citation is kept", async () => {
     const mounted = mountExercise(await treeExercise("", "- A ∨ B"));
     const margin = () =>
-      [...mounted.root.querySelectorAll<HTMLElement>(".tableau-margin")].at(
-        -1,
-      );
+      [
+        ...mounted.root.querySelectorAll<HTMLElement>(
+          ".tableau-margin-cites",
+        ),
+      ].at(-1);
     const cite = (text: string, key: string) => {
       press(cursor(mounted), "c", { altKey: true, code: "KeyC" });
       const input = mounted.root.querySelector<HTMLInputElement>(
@@ -635,12 +684,64 @@ describe("type mode", () => {
 
     // Put right, the margin reads, and the wrong shape is the sentence's.
     cite("1", "Enter");
-    expect(margin()?.textContent).toBe("1 ∨");
+    expect(margin()?.textContent).toBe("1");
     expect(margin()?.hasAttribute("data-flagged")).toBe(false);
     expect(cursor(mounted).hasAttribute("data-flagged")).toBe(true);
 
     press(cursor(mounted), "z", { ctrlKey: true });
     expect(margin()?.textContent).toBe("9");
+  });
+
+  test("the rule is the margin's second field, typed as the citation is", async () => {
+    const mounted = mountExercise(await treeExercise("", "- A ∨ B"));
+    const active = () => mounted.root.activeElement as HTMLElement;
+    const rule = () => marginField(mounted, 2, "rule");
+
+    press(cursor(mounted), "t");
+    fill(mounted.root.querySelector<HTMLInputElement>(".tableau-input"), "A");
+
+    // Alt-C from the row, then Tab from the citation on to the rule.
+    press(mounted.root.querySelector(".tableau-input") as Element, "c", {
+      altKey: true,
+      code: "KeyC",
+    });
+    fill(active() as HTMLInputElement, "1");
+    press(active(), "Tab");
+    expect(active().classList.contains("tableau-rule-input")).toBe(true);
+    expect(answerOf(mounted).nodes[0]?.rows[1]?.cites).toHaveLength(1);
+
+    // A rule the theory has no name for is kept, squiggled, and said; the
+    // step names no rule.
+    fill(active() as HTMLInputElement, "v");
+    press(active(), "Enter");
+    expect(rule()?.textContent).toBe("v");
+    expect(rule()?.hasAttribute("data-flagged")).toBe(true);
+    expect(announced(mounted)).toBe("This system has no rule called “v”.");
+    expect(answerOf(mounted).rules).toBeUndefined();
+
+    // Put right in another of its spellings, it is shown in the book's.
+    name(mounted, "\\/");
+    expect(rule()?.textContent).toBe("∨");
+    expect(rule()?.hasAttribute("data-flagged")).toBe(false);
+    expect(Object.values(answerOf(mounted).rules ?? {})).toEqual(["∨"]);
+
+    // → from the end of the line reaches the citation, → again the rule;
+    // Delete clears the rule and leaves the citation.
+    press(cursor(mounted), "ArrowRight");
+    expect(active().getAttribute("aria-label")).toBe("Citation of row 2: 1");
+    press(active(), "ArrowRight");
+    expect(active().getAttribute("aria-label")).toBe("Rule of row 2: ∨");
+    press(active(), "Delete");
+    expect(announced(mounted)).toBe("Row 2 no longer names a rule.");
+    expect(answerOf(mounted).rules).toBeUndefined();
+    expect(answerOf(mounted).nodes[0]?.rows[1]?.cites).toHaveLength(1);
+    expect(active().getAttribute("aria-label")).toBe(
+      "Rule of row 2, not yet named",
+    );
+
+    // Undo brings the rule back.
+    press(active(), "z", { ctrlKey: true });
+    expect(Object.values(answerOf(mounted).rules ?? {})).toEqual(["∨"]);
   });
 
   test("opening a row and leaving it untouched records no undo step", async () => {

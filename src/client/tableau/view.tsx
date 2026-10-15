@@ -18,7 +18,7 @@ import type { JSX } from "preact";
 import { useLayoutEffect, useRef } from "preact/hooks";
 import type { TableauDocument, TableauEnd } from "../../tableau/document";
 import { TableauIndex } from "../../tableau/document";
-import type { TableauAnnotations } from "../../tableau/html";
+import type { MarginField, TableauAnnotations } from "../../tableau/html";
 import {
   contentRow,
   END_SYMBOLS,
@@ -39,15 +39,26 @@ export interface TableauViewProps {
   readonly cursor: string | null;
   /** The row whose text is being typed. */
   readonly editing: string | null;
-  /** The row whose citation is being typed in the margin, and the draft. */
-  readonly citing: { readonly row: string; readonly draft: string } | null;
-  /** Labels for the two inputs, which have no visible label of their own. */
-  readonly inputLabels: { readonly text: string; readonly cites: string };
+  /**
+   * The row whose margin is being typed in, which of its fields, and the
+   * draft.
+   */
+  readonly citing: {
+    readonly row: string;
+    readonly draft: string;
+    readonly field: MarginField;
+  } | null;
+  /** Labels for the inputs, which have no visible label of their own. */
+  readonly inputLabels: {
+    readonly text: string;
+    readonly cites: string;
+    readonly rule: string;
+  };
   /** Something to say about a row or a branch end: a problem, say. */
   readonly notes?: ReadonlyMap<string, string>;
   /**
-   * The lines whose margin the reader may click to type a citation. Such a
-   * line with nothing in its margin shows an empty slot there.
+   * The lines whose margin the reader may click to type a citation or a
+   * rule. Such a line shows an empty slot for each field with nothing in it.
    */
   readonly citable?: ReadonlySet<number>;
   /**
@@ -69,29 +80,34 @@ export interface TableauViewProps {
       }
     | undefined;
   /**
-   * The selection is on a line's citation, not a row: that margin is the
-   * tree's one tab stop, a tree item named `label`. Its keys go to
+   * The selection is on a field of a line's margin, not a row: that margin is
+   * the tree's one tab stop, a tree item named `label`. Its keys go to
    * `onMarginKey`.
    */
   readonly marginStop?:
-    | { readonly line: number; readonly label: string }
+    | {
+        readonly line: number;
+        readonly label: string;
+        readonly field: MarginField;
+      }
     | undefined;
   readonly onMarginKey?: (event: KeyboardEvent, line: number) => void;
   /** Move focus to the cursor, or to the input being typed in, after render. */
   readonly focus: boolean;
   /** The reader clicked a row, or an end mark (named by its node's id). */
   readonly onCursor: (itemId: string) => void;
-  /** The reader clicked a citable line's margin. */
-  readonly onMargin?: (line: number) => void;
+  /** The reader clicked a field of a citable line's margin. */
+  readonly onMargin?: (line: number, field: MarginField) => void;
   /** A key on a row, or on an end mark (named by its node's id). */
   readonly onRowKey: (event: KeyboardEvent, itemId: string) => void;
   readonly onText: (rowId: string, text: string) => void;
   readonly onTextKey: (event: KeyboardEvent, rowId: string) => void;
   /** Focus left the row's text input: the reader is done typing. */
   readonly onTextBlur: (rowId: string, event: FocusEvent) => void;
+  /** Typing in a margin field, whichever `citing` says. */
   readonly onCiteText: (text: string) => void;
   readonly onCiteKey: (event: KeyboardEvent) => void;
-  /** Focus left the citation input. */
+  /** Focus left the margin field's input. */
   readonly onCiteBlur: (event: FocusEvent) => void;
 }
 
@@ -153,41 +169,99 @@ export function TableauView(props: TableauViewProps) {
       </span>,
     );
 
-    const citingHere =
+    const citing =
       props.citing !== null &&
-      layout.rows.get(props.citing.row)?.line === line;
-    const margin = annotations.margins?.get(line);
+      layout.rows.get(props.citing.row)?.line === line
+        ? props.citing
+        : null;
+    const note = annotations.margins?.get(line);
     const citable = props.citable?.has(line) === true;
-
-    if (citingHere && props.citing !== null) {
-      cells.push(
-        <span
-          class="tableau-margin tableau-margin-editing"
-          key={`m${line}`}
-          style={{
-            gridColumn: String(layout.columns + 2),
-            gridRow: String(row),
-          }}
-        >
+    const stop =
+      props.marginStop?.line === line ? props.marginStop : undefined;
+    const flags: Readonly<
+      Record<MarginField, ReadonlySet<number> | undefined>
+    > = {
+      cites: annotations.flaggedMargins,
+      rule: annotations.flaggedRules,
+    };
+    const field = (name: MarginField): JSX.Element | null => {
+      if (citing?.field === name) {
+        return (
           <input
-            aria-label={props.inputLabels.cites}
+            aria-label={
+              name === "cites"
+                ? props.inputLabels.cites
+                : props.inputLabels.rule
+            }
             autocomplete="off"
-            class="tableau-cite-input"
-            data-empty={props.citing.draft === "" ? "" : undefined}
+            class={`tableau-${name === "cites" ? "cite" : "rule"}-input`}
+            data-empty={citing.draft === "" ? "" : undefined}
             data-focus-input=""
-            inputMode="numeric"
+            inputMode={name === "cites" ? "numeric" : undefined}
+            key={name}
             onBlur={(event) => props.onCiteBlur(event)}
             onInput={(event) => props.onCiteText(event.currentTarget.value)}
             onKeyDown={(event) => props.onCiteKey(event)}
             spellcheck={false}
             type="text"
-            value={props.citing.draft}
+            value={citing.draft}
           />
+        );
+      }
+
+      const text = note?.[name] ?? "";
+
+      if (text === "" && !citable) {
+        return null;
+      }
+
+      // A mouse's way to the field, which the keyboard reaches through the
+      // margin stop; hidden, as the margin is, since the row's description
+      // and the stop's name say it.
+      return (
+        <span
+          aria-hidden="true"
+          class={`tableau-margin-${name}`}
+          data-flagged={flags[name]?.has(line) === true ? "" : undefined}
+          data-selected={stop?.field === name ? "" : undefined}
+          key={name}
+          onClick={
+            citable
+              ? (event) => {
+                  event.stopPropagation();
+                  props.onMargin?.(line, name);
+                }
+              : undefined
+          }
+        >
+          {text === "" ? <span class="tableau-margin-slot" /> : text}
+        </span>
+      );
+    };
+    const fields = [field("cites"), field("rule")].filter(
+      (each) => each !== null,
+    );
+    const content = fields.flatMap((each, at) =>
+      at === 0 ? [each] : [" ", each],
+    );
+    const place = {
+      gridColumn: String(layout.columns + 2),
+      gridRow: String(row),
+    };
+
+    if (citing !== null) {
+      cells.push(
+        <span
+          class="tableau-margin tableau-margin-editing"
+          key={`m${line}`}
+          style={place}
+        >
+          {content}
         </span>,
       );
-    } else if (props.marginStop?.line === line) {
-      // The selection is here: the citation is the item the keys work on.
-      const stop = props.marginStop;
+    } else if (stop !== undefined) {
+      // The selection is here: the margin is the item the keys work on, and
+      // the field it is on is marked.
       const node = ids[0] === undefined ? null : index.row(ids[0]);
 
       cells.push(
@@ -200,44 +274,29 @@ export function TableauView(props: TableauViewProps) {
           class="tableau-margin"
           data-citable={citable ? "" : undefined}
           data-cursor=""
-          data-flagged={
-            annotations.flaggedMargins?.has(line) === true ? "" : undefined
-          }
           data-margin-stop=""
           key={`m${line}`}
-          onClick={citable ? () => props.onMargin?.(line) : undefined}
           onKeyDown={(event) => props.onMarginKey?.(event, line)}
           role="treeitem"
-          style={{
-            gridColumn: String(layout.columns + 2),
-            gridRow: String(row),
-          }}
+          style={place}
           tabIndex={0}
         >
-          <span aria-hidden="true">
-            {margin ?? <span class="tableau-margin-slot" />}
-          </span>
+          <span aria-hidden="true">{content}</span>
         </span>,
       );
-    } else if (margin !== undefined || citable) {
-      // A mouse's way to the citation, which the keyboard reaches from the
-      // row; hidden, as the margin is, since the row's description says it.
+    } else if (fields.length > 0) {
+      // A mouse's way to the citation and rule, which the keyboard reaches
+      // from the row; hidden, as the margin is, since the row's description
+      // says it.
       cells.push(
         <span
           aria-hidden="true"
           class="tableau-margin"
           data-citable={citable ? "" : undefined}
-          data-flagged={
-            annotations.flaggedMargins?.has(line) === true ? "" : undefined
-          }
           key={`m${line}`}
-          onClick={citable ? () => props.onMargin?.(line) : undefined}
-          style={{
-            gridColumn: String(layout.columns + 2),
-            gridRow: String(row),
-          }}
+          style={place}
         >
-          {margin ?? <span class="tableau-margin-slot" />}
+          {content}
         </span>,
       );
     }

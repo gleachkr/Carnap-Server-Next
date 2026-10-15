@@ -2517,8 +2517,12 @@ msgid "From {platform}."
 msgstr "Von {platform}."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "From the end of a line, go on to its citation; Delete clears it"
-msgstr "Vom Ende einer Zeile weiter zu ihrem Zitat; Entf löscht es"
+msgid "From the citation being typed, go on to the rule"
+msgstr "Vom Zitat, das Sie gerade eingeben, zur Regel weitergehen"
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "From the end of a line, go on to its citation, then its rule; Delete clears either"
+msgstr "Vom Ende einer Zeile zu ihrem Zitat und dann zu ihrer Regel weitergehen; Entf leert beides einzeln"
 
 #: src/worker/web/email-change.tsx
 msgid "From then on, sign in with the new address. If you did not ask for this, close this page and nothing will change."
@@ -4292,12 +4296,20 @@ msgid "Row {row} no longer cites a row."
 msgstr "Zeile {row} zitiert keine Zeile mehr."
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} no longer names a rule."
+msgstr "Zeile {row} nennt keine Regel mehr."
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} now cites row {cited}."
 msgstr "Zeile {row} zitiert jetzt Zeile {cited}."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} now cites rows {cited} and {other}."
 msgstr "Zeile {row} zitiert jetzt die Zeilen {cited} und {other}."
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} now names the rule {rule}."
+msgstr "Zeile {row} nennt jetzt die Regel {rule}."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} says something is not identical to itself, so this branch closes."
@@ -4332,8 +4344,16 @@ msgid "Row {row}: {text}, from row {cited}, {rule}"
 msgstr "Zeile {row}: {text}, aus Zeile {cited}, {rule}"
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row}: {text}, from row {cited}, no rule named"
+msgstr "Zeile {row}: {text}, aus Zeile {cited}, keine Regel genannt"
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row}: {text}, from rows {cited} and {other}, {rule}"
 msgstr "Zeile {row}: {text}, aus den Zeilen {cited} und {other}, {rule}"
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row}: {text}, from rows {cited} and {other}, no rule named"
+msgstr "Zeile {row}: {text}, aus den Zeilen {cited} und {other}, keine Regel genannt"
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row}: {text}, not yet cited"
@@ -4357,6 +4377,18 @@ msgstr "Bewertungsraster"
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Rule (proof line)"
 msgstr "Regel"
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rule of row {row}, not yet named"
+msgstr "Regel von Zeile {row}, noch nicht genannt"
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rule of row {row}: {rule}"
+msgstr "Regel von Zeile {row}: {rule}"
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rule used"
+msgstr "Verwendete Regel"
 
 #: src/worker/web/content.tsx
 msgid "Rules"
@@ -5780,6 +5812,10 @@ msgstr "Der Versuch dieser Abgabe wurde zurückgesetzt. Die Arbeit zählt nicht 
 msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
 msgstr "Die Übung zu dieser Abgabe gehört nicht mehr zur Aufgabe; es gibt daher keine Bezugsgröße für die Bewertung."
 
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "This system has no rule called “{rule}”."
+msgstr "Dieses System hat keine Regel namens „{rule}“."
+
 #: src/worker/exercises/translation/strings.ts
 msgid "This translation is logically equivalent to the intended answer."
 msgstr "Diese Übersetzung ist logisch äquivalent zur gesuchten Antwort."
@@ -5940,6 +5976,10 @@ msgstr "Geben Sie Zeilennummern ein, etwa 3."
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Type the row it develops; Alt-C also works while writing the row"
 msgstr "Die Zeile eingeben, die sie entwickelt; Alt-C funktioniert auch, während Sie die Zeile schreiben"
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Type the rule it uses; Alt-J also works while writing the row"
+msgstr "Die Regel eingeben, die sie verwendet; Alt-J funktioniert auch, während Sie die Zeile schreiben"
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Type the rule that justifies each inference in the field beneath its line. Add hypothesis makes a leaf that cites one of the goal's hypotheses."
@@ -6248,8 +6288,8 @@ msgid "Write at least one sentence."
 msgstr "Schreiben Sie mindestens einen Satz."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin."
-msgstr "Schreiben Sie die Zeilen jedes Schritts, wählen Sie, ob sie am Ast angefügt werden oder ihn verzweigen, und geben Sie am Rand die Zeile ein, die sie entwickeln."
+msgid "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin."
+msgstr "Schreiben Sie die Zeilen jedes Schritts, entscheiden Sie, ob sie den Ast verlängern oder ihn teilen, und geben Sie am Rand die Zeile ein, die sie entwickeln, und die Regel, die sie verwenden."
 
 #: src/worker/exercises/aufbau-proof/strings.ts
 msgid "Write one step per line: a label, the formula between dollar signs, then by, the rule's name, and the lines it cites in brackets, as in l3: $ q $ by mp [l1, l2]. Cite the goal's hypotheses as #1, #2, and so on."

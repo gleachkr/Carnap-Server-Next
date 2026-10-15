@@ -47,6 +47,7 @@ export function buildTruthTreeStrings(i18n: Translator) {
     Undo: i18n.t("Undo"),
     Redo: i18n.t("Redo"),
     "Cites row": i18n.t("Cites row"),
+    "Rule used": i18n.t("Rule used"),
     "Mark the rows that close this branch": i18n.t(
       "Mark the rows that close this branch",
     ),
@@ -69,6 +70,14 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "Row {row}: {text}, from row {cited}, {rule}": i18n.t(
       "Row {row}: {text}, from row {cited}, {rule}",
       placeholders("cited", "row", "rule", "text"),
+    ),
+    "Row {row}: {text}, from rows {cited} and {other}, no rule named": i18n.t(
+      "Row {row}: {text}, from rows {cited} and {other}, no rule named",
+      placeholders("cited", "other", "row", "text"),
+    ),
+    "Row {row}: {text}, from row {cited}, no rule named": i18n.t(
+      "Row {row}: {text}, from row {cited}, no rule named",
+      placeholders("cited", "row", "text"),
     ),
     "Row {row}: {text}, not yet cited": i18n.t(
       "Row {row}: {text}, not yet cited",
@@ -105,6 +114,14 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "Citation of row {row}: {cites}",
       placeholders("cites", "row"),
     ),
+    "Rule of row {row}, not yet named": i18n.t(
+      "Rule of row {row}, not yet named",
+      placeholders("row"),
+    ),
+    "Rule of row {row}: {rule}": i18n.t(
+      "Rule of row {row}: {rule}",
+      placeholders("row", "rule"),
+    ),
 
     // ——— What an edit announces, and why one was refused.
     "New row {row}.": i18n.t("New row {row}.", placeholders("row")),
@@ -129,6 +146,14 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "Row {row} no longer cites a row.",
       placeholders("row"),
     ),
+    "Row {row} now names the rule {rule}.": i18n.t(
+      "Row {row} now names the rule {rule}.",
+      placeholders("row", "rule"),
+    ),
+    "Row {row} no longer names a rule.": i18n.t(
+      "Row {row} no longer names a rule.",
+      placeholders("row"),
+    ),
     "Move to the end of a branch first.": i18n.t(
       "Move to the end of a branch first.",
     ),
@@ -139,6 +164,10 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "The root's rows are given, and cannot be changed.",
     ),
     "Type row numbers, such as 3.": i18n.t("Type row numbers, such as 3."),
+    "This system has no rule called “{rule}”.": i18n.t(
+      "This system has no rule called “{rule}”.",
+      placeholders("rule"),
+    ),
 
     // ——— The (?) dialog.
     "Using the tree editor": i18n.t("Using the tree editor"),
@@ -146,9 +175,9 @@ export function buildTruthTreeStrings(i18n: Translator) {
       i18n.t(
         "Move to a row with the arrow keys or by clicking it; each action works on the row or branch there.",
       ),
-    "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin.":
+    "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.":
       i18n.t(
-        "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin.",
+        "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.",
       ),
     "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.":
       i18n.t(
@@ -160,8 +189,15 @@ export function buildTruthTreeStrings(i18n: Translator) {
       i18n.t(
         "Type the row it develops; Alt-C also works while writing the row",
       ),
-    "From the end of a line, go on to its citation; Delete clears it": i18n.t(
-      "From the end of a line, go on to its citation; Delete clears it",
+    "Type the rule it uses; Alt-J also works while writing the row": i18n.t(
+      "Type the rule it uses; Alt-J also works while writing the row",
+    ),
+    "From the end of a line, go on to its citation, then its rule; Delete clears either":
+      i18n.t(
+        "From the end of a line, go on to its citation, then its rule; Delete clears either",
+      ),
+    "From the citation being typed, go on to the rule": i18n.t(
+      "From the citation being typed, go on to the rule",
     ),
     "Add a row at the end of the branch": i18n.t(
       "Add a row at the end of the branch",
