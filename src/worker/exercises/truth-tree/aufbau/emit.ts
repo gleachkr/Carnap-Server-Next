@@ -1,42 +1,47 @@
 /**
- * A truth tree as an Aufbau proof (gh #46).
+ * A truth tree as Aufbau proofs (gh #46).
  *
  * The theory says what a closed branch is and what each rule is; this module
  * only writes the tree down in it. A tree is a derivation of "the root
- * closes", read from the bottom up:
+ * closes", read from the bottom up, and each of its inferences is a lemma of
+ * its own:
  *
- * - a closed leaf is a closure, citing the rows its × cites;
- * - a step derives the branch above it from the branches it writes, by the
- *   rule the student named, focused on the rows they cited (`focus Γ at Δ`,
- *   then `closes Γ` by unfocusing, which checks Δ is on Γ);
- * - an open leaf is a hypothesis of the theorem: a closed tree proves its root
- *   closes outright, and a finished tree with open branches proves it closes
- *   if they do, which says nothing false about a consistent root;
- * - a step that cannot be written down (no rule, an unreadable row) is a gap,
- *   a line admitted with `sorry!`, so the steps below it are still checked and
- *   the tree cannot verify until it is filled.
+ * - a closed leaf is a lemma that its branch closes, by the closure rule,
+ *   citing the rows its × cites;
+ * - a step is a lemma that the branch above it closes if the branches it
+ *   writes do, by the rule the student named, focused on the rows they cited
+ *   (`focus Γ at Δ`, then `closes Γ` by unfocusing, which checks Δ is on Γ);
+ * - an open leaf, and a step that cannot be written down (no rule, an
+ *   unreadable row), is no lemma at all.
+ *
+ * Lemmas rather than one theorem, because a certificate proves the statements
+ * it is checked against and nothing about how. One theorem, "the root
+ * closes", would be proved as well by any other tree with that root; one
+ * lemma per inference is proved only by the inferences this tree makes. The
+ * server writes the same lemmas from the stored tree, so a certificate that
+ * verifies says that every step and closure written is right, and the tree's
+ * shape (which branches are closed, which steps are missing) says the rest.
  *
  * **Nothing here knows a calculus.** The theory names its plumbing by role
  * (`./theory.ts`), and a step is written the same way in any of them:
  * the rule is the student's name for it, resolved through the theory's
  * `@syntax alias`es, and a row is whatever the theory's row sort reads — a
- * sentence, a signed sentence, a sentence at a world. The theorem binds every
- * name and variable its statement mentions (the root, and the open branches)
- * at the sort whose `@vars` pool holds it; a name a step introduces is the
- * proof's own dummy. Either way a rule asking for a name new to the branch is
- * checked by MM0 dependency typing.
+ * sentence, a signed sentence, a sentence at a world. A lemma binds every
+ * name and variable its statements mention at the sort whose `@vars` pool
+ * holds it, so a rule asking for a name new to the branch is checked by MM0
+ * dependency typing: the branch above may not mention the name.
  *
  * DOM-free: the browser emits and compiles, the worker verifies.
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import { printTerm } from "@aufbau/syntax";
 import type {
   TableauDocument,
   TableauNode,
   TableauRow,
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
+import { type RowSortReader, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
 /** The theorem every emitted proof proves. */
 export const TREE_THEOREM = "tree";
@@ -58,9 +63,7 @@ export type LineSubject =
   /** A branch's ×. */
   | { readonly type: "closure"; readonly node: string }
   /** The closure's citation. */
-  | { readonly type: "closure-citation"; readonly node: string }
-  /** A step or end that was not written down; see {@link TreeProof.problems}. */
-  | { readonly type: "gap" };
+  | { readonly type: "closure-citation"; readonly node: string };
 
 /** Why a step was not written down, and so is not checked. */
 export type EmitProblem =
@@ -72,16 +75,16 @@ export type EmitProblem =
   | { readonly type: "split-mixed" };
 
 export interface TreeProof {
-  /** The theorem, to append to the theory. Null if nothing can be checked. */
+  /** The lemmas, to append to the theory. Null if there are none. */
   readonly goal: string | null;
-  /** The proof body. Null with the goal. */
+  /** Their proofs. Null with the goal. */
   readonly proof: string | null;
   readonly lines: ReadonlyMap<string, LineSubject>;
   /** Rows whose step was not written down, and why. */
   readonly problems: ReadonlyMap<string, EmitProblem>;
   /** Node ids whose end was not written down. */
   readonly endProblems: ReadonlyMap<string, EmitProblem>;
-  /** How many open branches the proof assumes closed. */
+  /** How many branches are open: neither closed nor ended by a step. */
   readonly hypotheses: number;
   /** How many steps or ends were not written down. */
   readonly gaps: number;
@@ -93,6 +96,8 @@ export interface EmitOptions {
   readonly theory: TreeTheory;
   /** The rule the student named for each development, by `dev`. */
   readonly rules: ReadonlyMap<string, string>;
+  /** The rows' reader, shared with whatever else reads them. */
+  readonly reader?: RowSortReader;
 }
 
 /** The run of rows from `start` that one development wrote. */
@@ -141,26 +146,26 @@ export function emitTreeProof(
   const lines = new Map<string, LineSubject>();
   const problems = new Map<string, EmitProblem>();
   const endProblems = new Map<string, EmitProblem>();
-  const body: string[] = [];
-  const hypotheses = new Map<string, string>();
-  const read = new Map<string, string | null>();
+  const statements: string[] = [];
+  const proofs: string[] = [];
+  const reader = options.reader ?? rowSortReader(language, theory.rowSort);
   const resolve = (name: string): string =>
     language.spec.ruleAliases.get(name) ?? name;
+  const sortOf = new Map<string, string>();
   let counter = 0;
   let gaps = 0;
+  let hypotheses = 0;
+
+  for (const [sort, info] of language.spec.sorts) {
+    for (const token of info.vars) {
+      sortOf.set(token, sort);
+    }
+  }
 
   /** A row as engine text at the row sort, or null if it does not read. */
   const engineOf = (row: TableauRow): string | null => {
-    const text = row.text.trim();
-    let engine = read.get(text);
-
-    if (engine === undefined) {
-      const parsed = language.parse(text, { sort: theory.rowSort });
-      engine = parsed.ok ? printTerm(language, parsed.term, "engine") : null;
-      read.set(text, engine);
-    }
-
-    return engine;
+    const read = reader.read(row.text);
+    return read.ok ? read.engine : null;
   };
   const engineOfId = (rowId: string): string | null => {
     const location = index.row(rowId);
@@ -176,239 +181,216 @@ export function emitTreeProof(
   const closes = (rows: readonly string[]): string =>
     `${theory.closes} (${branch(rows)})`;
 
-  /** A branch the proof assumes closed. */
-  const assume = (state: readonly string[]): string => {
-    const text = closes(state);
-    let reference = hypotheses.get(text);
+  /** The binders of a lemma: what its statements mention, by sort. */
+  const binders = (texts: readonly string[]): string => {
+    const bound = new Map<string, string[]>();
 
-    if (reference === undefined) {
-      reference = `#${hypotheses.size + 1}`;
-      hypotheses.set(text, reference);
+    for (const token of new Set(texts.flatMap(tokens))) {
+      const sort = sortOf.get(token);
+
+      if (sort !== undefined) {
+        bound.set(sort, [...(bound.get(sort) ?? []), token]);
+      }
     }
 
-    return reference;
-  };
-
-  /** A branch whose step could not be written down: admitted, not checked. */
-  const gap = (state: readonly string[]): string => {
-    counter += 1;
-    const label = `g_${counter}`;
-
-    body.push(`${label}: $ ${closes(state)} $ by sorry!`);
-    lines.set(label, { type: "gap" });
-    gaps += 1;
-
-    return label;
+    return [...bound]
+      .map(([sort, names]) => ` {${names.join(" ")}: ${sort}}`)
+      .join("");
   };
 
   /**
-   * Write `closes state` down by focusing on `cites` and applying `rule` to
-   * `premises`: the focused line, then the unfocusing one. The label of the
-   * second.
+   * A lemma: `state` closes if each of `children` does, by focusing on
+   * `cites` and applying `rule`.
    */
-  const focused = (
+  const lemma = (
     state: readonly string[],
+    children: readonly (readonly string[])[],
     cites: readonly string[],
     rule: string,
-    premises: readonly string[],
     subject: (label: "main" | "cite") => LineSubject,
-  ): string => {
+  ): void => {
     counter += 1;
-    const main = `s_${counter}`;
+    const name = `${TREE_THEOREM}_${counter}`;
+    const main = `f_${counter}`;
     const cite = `u_${counter}`;
+    const premises = children.map((child) => closes(child));
+    const conclusion = closes(state);
 
-    body.push(
-      `${main}: $ ${theory.focus} (${branch(state)}) (${branch(cites)}) $ by ${rule} [${premises.join(", ")}]`,
-      `${cite}: $ ${closes(state)} $ by ${theory.unfocus} [${main}]`,
+    statements.push(
+      `theorem ${name}${binders([...premises, conclusion])}: ${premises
+        .map((premise) => `$ ${premise} $ > `)
+        .join("")}$ ${conclusion} $;`,
+    );
+    proofs.push(
+      [
+        name,
+        "----",
+        `${main}: $ ${theory.focus} (${branch(state)}) (${branch(cites)}) $ by ${rule} [${premises.map((_, at) => `#${at + 1}`).join(", ")}]`,
+        `${cite}: $ ${conclusion} $ by ${theory.unfocus} [${main}]`,
+      ].join("\n"),
     );
     lines.set(main, subject("main"));
     lines.set(cite, subject("cite"));
-
-    return cite;
   };
 
   /**
    * A development: the rows it wrote, one group per branch it opens, and the
-   * proofs of those branches. The label proving the branch above it.
+   * states of those branches.
    */
   const step = (
     state: readonly string[],
     groups: readonly (readonly TableauRow[])[],
-    premises: readonly string[],
-  ): string => {
+    children: readonly (readonly string[])[],
+  ): void => {
     const rows = groups.flat();
     const ids = rows.map((row) => row.id);
     const first = rows[0] as TableauRow;
-    const fail = (problem: EmitProblem): string => {
+    const fail = (problem: EmitProblem): void => {
       for (const id of ids) {
         problems.set(id, problem);
       }
 
-      return gap(state);
+      gaps += 1;
     };
 
     if (groups.some((group) => group[0]?.dev !== first.dev)) {
-      return fail({ type: "split-mixed" });
+      fail({ type: "split-mixed" });
+      return;
     }
 
     if (first.cites.length === 0) {
-      return fail({ type: "uncited" });
+      fail({ type: "uncited" });
+      return;
     }
 
     const citeKey = first.cites.join(" ");
 
     if (rows.some((row) => row.cites.join(" ") !== citeKey)) {
-      return fail({ type: "cites-differ" });
+      fail({ type: "cites-differ" });
+      return;
     }
 
     if (rows.some((row) => engineOf(row) === null)) {
-      return fail({ type: "unreadable" });
+      fail({ type: "unreadable" });
+      return;
     }
 
     const cites = first.cites.map(engineOfId);
 
     if (cites.some((cite) => cite === null)) {
-      return fail({ type: "cite-unknown" });
+      fail({ type: "cite-unknown" });
+      return;
     }
 
     const rule = options.rules.get(first.dev)?.trim() ?? "";
 
     if (rule.length === 0) {
-      return fail({ type: "no-rule" });
+      fail({ type: "no-rule" });
+      return;
     }
 
-    return focused(
-      state,
-      cites as string[],
-      resolve(rule),
-      premises,
-      (label) => ({
-        dev: first.dev,
-        rows: ids,
-        type: label === "main" ? "step" : "citation",
-      }),
-    );
+    lemma(state, children, cites as string[], resolve(rule), (label) => ({
+      dev: first.dev,
+      rows: ids,
+      type: label === "main" ? "step" : "citation",
+    }));
   };
 
-  /** The end of a branch: a closure, or a branch the proof assumes. */
-  const end = (node: TableauNode, state: readonly string[]): string => {
+  /** The end of a branch: a closure, or a branch left open. */
+  const end = (node: TableauNode, state: readonly string[]): void => {
     if (node.end?.type !== "closed") {
-      return assume(state);
+      hypotheses += 1;
+      return;
     }
 
     const cites = node.end.cites.map(engineOfId);
 
     if (cites.length === 0) {
       endProblems.set(node.id, { type: "uncited" });
-      return gap(state);
+      gaps += 1;
+      return;
     }
 
     if (cites.some((cite) => cite === null)) {
       endProblems.set(node.id, { type: "cite-unknown" });
-      return gap(state);
+      gaps += 1;
+      return;
     }
 
-    return focused(state, cites as string[], theory.closure, [], (label) => ({
+    lemma(state, [], cites as string[], theory.closure, (label) => ({
       node: node.id,
       type: label === "main" ? "closure" : "closure-citation",
     }));
   };
 
-  /** The label proving that the branch `state` closes, from `start` in `node`. */
-  const prove = (
+  /** Write down the branch `state`, from `start` in `node`, and below it. */
+  const walk = (
     node: TableauNode,
     start: number,
     state: readonly string[],
-  ): string => {
+  ): void => {
     if (start < node.rows.length) {
       const group = groupAt(node.rows, start);
-      const below = prove(node, start + group.length, [
-        ...state,
-        ...readable(group),
-      ]);
+      const below = [...state, ...readable(group)];
 
-      return step(state, [group], [below]);
+      step(state, [group], [below]);
+      walk(node, start + group.length, below);
+      return;
     }
 
     const children = index.children(node.id);
 
     if (children.length === 0) {
-      return end(node, state);
+      end(node, state);
+      return;
     }
 
     const groups = children.map((child) => groupAt(child.rows, 0));
-    const premises = children.map((child, at) => {
-      const group = groups[at] as TableauRow[];
-      return prove(child, group.length, [...state, ...readable(group)]);
-    });
+    const states = groups.map((group) => [...state, ...readable(group)]);
 
-    return step(state, groups, premises);
+    step(state, groups, states);
+
+    for (const [at, child] of children.entries()) {
+      walk(child, (groups[at] as TableauRow[]).length, states[at] ?? state);
+    }
   };
 
   const root = index.root;
-  const empty: TreeProof = {
+  const nothing = (count: number): TreeProof => ({
     endProblems,
-    gaps: 0,
+    gaps,
     goal: null,
-    hypotheses: 0,
+    hypotheses: count,
     lines,
     problems,
     proof: null,
-  };
+  });
 
   if (root === null) {
-    return empty;
+    return nothing(0);
   }
 
   const rootRows = root.rows.slice(0, rootLength(root));
   const rootState = readable(rootRows);
 
   if (rootState.length !== rootRows.length) {
-    return empty;
+    return nothing(0);
   }
 
-  const last = prove(root, rootRows.length, rootState);
+  walk(root, rootRows.length, rootState);
 
-  if (last.startsWith("#")) {
-    // The root is an open leaf: nothing has been written to check.
-    return { ...empty, hypotheses: hypotheses.size };
+  if (statements.length === 0) {
+    return nothing(hypotheses);
   }
-
-  // Bind every name and variable the statement mentions at its own sort.
-  const sortOf = new Map<string, string>();
-
-  for (const [sort, info] of language.spec.sorts) {
-    for (const token of info.vars) {
-      sortOf.set(token, sort);
-    }
-  }
-
-  const bound = new Map<string, string[]>();
-  const statements = [...hypotheses.keys(), closes(rootState)];
-
-  for (const token of new Set(statements.flatMap(tokens))) {
-    const sort = sortOf.get(token);
-
-    if (sort !== undefined) {
-      bound.set(sort, [...(bound.get(sort) ?? []), token]);
-    }
-  }
-
-  const binders = [...bound]
-    .map(([sort, names]) => `{${names.join(" ")}: ${sort}}`)
-    .join(" ");
-  const premises = [...hypotheses.keys()]
-    .map((statement) => `$ ${statement} $ > `)
-    .join("");
 
   return {
     endProblems,
     gaps,
-    goal: `theorem ${TREE_THEOREM} ${binders}: ${premises}$ ${closes(rootState)} $;`,
-    hypotheses: hypotheses.size,
+    goal: statements.join("\n"),
+    hypotheses,
     lines,
     problems,
-    proof: `${TREE_THEOREM}\n----\n${body.join("\n")}\n`,
+    proof: `${proofs.join("\n\n")}\n`,
   };
 }
 

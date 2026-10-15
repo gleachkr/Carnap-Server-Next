@@ -134,6 +134,19 @@ export function describeRowProblem(
         "{name} is already on this branch, and row {cited} needs a new name.",
         { cited: citedRow, name: problem.name },
       );
+    case "no-rule-named":
+      return words(
+        "Name the rule this step uses: type it in the margin, after the row it develops.",
+      );
+    case "step-wrong":
+      return other === undefined
+        ? words("The rule named does not give this from row {cited}.", {
+            cited: citedRow,
+          })
+        : words(
+            "The rule named does not give this from rows {cited} and {other}.",
+            { cited: citedRow, other: otherRow },
+          );
     default:
       return words("The branches of a split must all come from one step.");
   }
@@ -207,6 +220,14 @@ export function describeEndProblem(
     }
     case "end-not-leaf":
       return words("Only the end of a branch can be closed or marked open.");
+    case "closure-wrong":
+      return words("The rows this closure cites do not close the branch.");
+    case "open-not-offered":
+      return words("This exercise asks for every branch to close.");
+    case "open-unjudged":
+      return words(
+        "This system cannot say whether an open branch is complete.",
+      );
     default:
       return words("This branch has no rows.");
   }
@@ -222,11 +243,16 @@ export function describeTreeProblem(
   const at = problem.at;
 
   if (at.type === "tree") {
-    return at.problem.type === "root-missing"
-      ? words("The tree is missing a row of its root.")
-      : words("A tree may have at most {limit} rows.", {
+    switch (at.problem.type) {
+      case "root-missing":
+        return words("The tree is missing a row of its root.");
+      case "unverified":
+        return words("A step or a closure in the tree does not check.");
+      default:
+        return words("A tree may have at most {limit} rows.", {
           limit: String(at.problem.limit),
         });
+    }
   }
 
   const index = new TableauIndex(tree);
@@ -283,14 +309,28 @@ export function describeJudgement(
       : words("The tree is right.");
   }
 
+  // Only the engine could say, and its word is not to hand.
+  if (judgement.problem?.type === "unconfirmed") {
+    return "";
+  }
+
   if (!detail || judgement.problem === null) {
     return words("The tree is not right yet.");
   }
 
   const problem = judgement.problem;
 
-  return problem.type === "tree"
-    ? describeTreeProblem(problem.problem, tree, words, rowNumbers(tree))
+  if (problem.type === "tree") {
+    return describeTreeProblem(
+      problem.problem,
+      tree,
+      words,
+      rowNumbers(tree),
+    );
+  }
+
+  return problem.finish === "closed"
+    ? words("The tree is not finished: close every branch.")
     : words(
         "The tree is not finished: close every branch, or mark a complete open branch.",
       );

@@ -945,6 +945,13 @@ is exactly one conclusion.
 - `system` names the tree theory, and defaults to `forallx-ubc`. It must be
   a tree theory (below); a validity question also needs a way to deny a
   sentence.
+- `finish` says when a tree is done: `closed` (the default) when every
+  branch is closed; `one-open` when every branch is closed, or one branch is
+  marked open and complete (UBC §5.x); `complete` when every branch is
+  closed or marked open and complete. A branch can be marked open (`o`) only
+  when `finish` is not `closed`, so a question whose answer is a complete
+  open branch (a consistent set, an invalid argument) needs `one-open` or
+  `complete`.
 
 ### Writing a tree theory
 
@@ -1000,31 +1007,36 @@ and Delete reopens the branch.
 
 ### How a tree is checked
 
-Each step is checked against the rule for the row it cites: `A ∨ B` splits
-into `A` and `B`, `¬(A ∨ B)` stacks `¬A` and `¬B`, and so on. The rules for
-the binary connectives are derived from their truth tables, so a language
-that declares other connectives gets rules for them too. The rows of a
-branch may come in any order, and so may the branches of a split.
+The tree is checked by the Aufbau engine, as a proof is. Each step is an
+inference in the tree theory: the branch above it closes if the branches it
+writes do, by the rule the step names, from the rows it cites. Each closure
+is an inference too, by the theory's closure rule. Once the edits pause the
+editor compiles them all, and a step or closure the engine refuses is flagged
+on its row or its end (under full feedback). The compile's certificate goes
+with the answer, and the server verifies it against inferences it writes
+itself from the stored tree, so a grade never rests on the browser's word.
 
+For `forallx-ubc`, the rules are the book's (§5, §10, §12.7):
+
+- A rule that splits may have its branches in either order, and the rows a
+  step writes may come in any order. A universal (or a negated existential)
+  may take several instances in one step, up to five.
 - An existential (or a negated universal) takes an instance whose name is
-  new to its branch. A universal (or a negated existential) takes an
-  instance for any name, and may take several in one step.
-- **Identity** (UBC §12.7). A step may also cite two rows, an identity
-  `a=b` and any row above it on the branch (in either order, typed `3, 7`),
-  and write that row with every `a` made `b`, or every `b` made `a`. Its
-  margin reads `3, 7 =`, and it ticks neither row, which may be used again.
+  new to its branch; a universal (or a negated existential) any name.
+- **Identity** (UBC §12.7). A step may cite two rows, an identity `a=b` and
+  any row above it on the branch (in either order, typed `3, 7`), and write
+  that row with every `a` made `b`, or every `b` made `a`. Its margin reads
+  `3, 7 =`.
 - A closure cites two rows on its branch that are a sentence and its
   negation, or one row `a≠a`.
 - A branch marked `↑` must be open and complete: every row on it developed
-  on that branch, every universal instantiated for every name on the
-  branch (and at least once, if there are none), and every identity `a=b`
+  on that branch, every universal instantiated for every name on the branch
+  (and at least once, if there are none), and every identity `a=b`
   substituted, in one direction or the other, into every atomic and negated
   atomic sentence on the branch. A rewriting that says something is itself
-  (`b=b`, from rewriting `a=b` by itself) is never needed, as in the book's
-  own solutions.
-- The tree is done when every branch is closed, or when at least one branch
-  is marked `↑`, since one complete open branch settles the question
-  (UBC v2.4, §5.x). The other branches may be left unfinished.
+  (`b=b`) is never needed, as in the book's own solutions.
+
+A step with no rule named, or no row cited, is unfinished rather than wrong.
 
 Marks (`✓`, `✓a`, `\a,b`) are computed. The margin (`2 ∨`) is typed, as
 the book has the student write it: the row a step develops (`c`, or Alt-C
@@ -1037,10 +1049,12 @@ row added to the step leaves its margin blank, and a new step has its own. Rows 
 branches, and a step repeated on two branches shares its lines.
 
 Grading is all or nothing: every row and closure right, every `↑` on a
-complete open branch, and the tree done. Under
-full feedback the editor flags a wrong row as it is written, and Check names
-the first problem in tree order. Under terse feedback Check says only
-whether the tree is right. Trees are capped at 200 rows.
+complete open branch, and the tree done by `finish`. Under full feedback the
+editor flags a wrong step as soon as the engine has checked it, and Check
+names the first problem in tree order. Under terse feedback Check says only
+whether the tree is right. The review of a submitted tree draws it and says
+what can be seen without the engine (an unfinished tree, a misplaced end);
+the grade is the engine's. Trees are capped at 200 rows.
 
 ## Aufbau-proof directive
 

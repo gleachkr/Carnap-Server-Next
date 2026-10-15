@@ -27,11 +27,11 @@ import type { ResolvedTree, TreeJudgement } from "./grading";
 import {
   answerRules,
   isTruthTreePublicData,
+  judgeTree,
   resolveTruthTree,
   startingTree,
 } from "./grading";
 import type { TreeReport } from "./logic/check";
-import { checkTree } from "./logic/check";
 import reviewStyles from "./review.css" with { type: "text" };
 import shadowStyles from "./shadow.css" with { type: "text" };
 import { buildTruthTreeStrings } from "./strings";
@@ -62,12 +62,11 @@ export function treeHtml(
   resolved: ResolvedTree,
   words: TreeWords,
   rules: ReadonlyMap<string, string> = new Map(),
-  report: TreeReport = checkTree({
-    reader: resolved.reader,
-    root: resolved.root,
-    system: resolved.system,
-    tree,
-  }),
+  report: TreeReport = judgeTree(
+    resolved,
+    { nodes: tree.nodes, rules: Object.fromEntries(rules) },
+    { kind: "none" },
+  ).report,
 ): string {
   const layout = layoutTableau(tree);
   const annotations = treeAnnotations(

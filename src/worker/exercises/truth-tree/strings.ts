@@ -1,5 +1,6 @@
 import { buildCopySourceStrings } from "../../exercise-kit/copy-source-strings";
 import { buildExerciseHelpStrings } from "../../exercise-kit/help-strings";
+import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
 import { placeholders, type Translator } from "../../i18n/translator";
 import { buildFormulaParserStrings } from "../../logic/specs/strings";
 
@@ -26,6 +27,8 @@ export function buildTruthTreeStrings(i18n: Translator) {
     ...buildFormulaParserStrings(i18n),
     ...buildExerciseHelpStrings(i18n),
     ...buildCopySourceStrings(i18n),
+    // The engine's, since the tree is compiled as a proof is (gh #46).
+    ...buildProofEngineStrings(i18n),
 
     // ——— Chrome.
     "Truth tree": i18n.t("Truth tree"),
@@ -164,6 +167,34 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "The root's rows are given, and cannot be changed.",
     ),
     "Type row numbers, such as 3.": i18n.t("Type row numbers, such as 3."),
+    "Name the rule this step uses: type it in the margin, after the row it develops.":
+      i18n.t(
+        "Name the rule this step uses: type it in the margin, after the row it develops.",
+      ),
+    "The rule named does not give this from row {cited}.": i18n.t(
+      "The rule named does not give this from row {cited}.",
+      placeholders("cited"),
+    ),
+    "The rule named does not give this from rows {cited} and {other}.":
+      i18n.t(
+        "The rule named does not give this from rows {cited} and {other}.",
+        placeholders("cited", "other"),
+      ),
+    "The rows this closure cites do not close the branch.": i18n.t(
+      "The rows this closure cites do not close the branch.",
+    ),
+    "This exercise asks for every branch to close.": i18n.t(
+      "This exercise asks for every branch to close.",
+    ),
+    "This system cannot say whether an open branch is complete.": i18n.t(
+      "This system cannot say whether an open branch is complete.",
+    ),
+    "A step or a closure in the tree does not check.": i18n.t(
+      "A step or a closure in the tree does not check.",
+    ),
+    "The tree is not finished: close every branch.": i18n.t(
+      "The tree is not finished: close every branch.",
+    ),
     "This system has no rule called “{rule}”.": i18n.t(
       "This system has no rule called “{rule}”.",
       placeholders("rule"),
@@ -178,6 +209,14 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.":
       i18n.t(
         "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.",
+      ),
+    "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed.":
+      i18n.t(
+        "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed.",
+      ),
+    "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.":
+      i18n.t(
+        "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.",
       ),
     "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.":
       i18n.t(

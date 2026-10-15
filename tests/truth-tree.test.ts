@@ -12,7 +12,7 @@ import {
   TRUTH_TREE_SCHEMA_VERSION,
 } from "../src/worker/exercises/truth-tree/types";
 import { passthroughTranslator } from "../src/worker/i18n/translator";
-import { TreeBuilder } from "./helpers/truth-tree";
+import { certifyTree, TreeBuilder } from "./helpers/truth-tree";
 
 /**
  * The truth-tree type's worker half: the directive, the grader and the
@@ -60,6 +60,15 @@ function builderFor(item: ExerciseManifestItem): TreeBuilder {
   return new TreeBuilder(resolved.rootText);
 }
 
+/** A tree, certified as the browser would certify it. */
+async function certified(
+  item: ExerciseManifestItem,
+  answer: { readonly nodes: unknown; readonly rules?: unknown },
+): Promise<JsonValue> {
+  const mmb = await certifyTree(publicDataOf(item), answer);
+  return { ...answer, ...(mmb === undefined ? {} : { mmb }) } as JsonValue;
+}
+
 async function grade(
   item: ExerciseManifestItem,
   data: JsonValue,
@@ -80,7 +89,12 @@ async function grade(
   const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
     normalized.answer,
     item,
-    { now: new Date("2026-01-01T00:00:00Z") } as never,
+    {
+      ...(normalized.certificate === undefined
+        ? {}
+        : { certificate: normalized.certificate }),
+      now: new Date("2026-01-01T00:00:00Z"),
+    } as never,
   );
   const review = TRUTH_TREE_EXERCISE.reviewAnswer(normalized.answer, item, {
     audience: "student",
@@ -100,7 +114,7 @@ const VALID = directive(
   "Is this argument valid? Use a tree.\n\nP & Q :|-: P",
 );
 const CONSISTENT = directive(
-  "#ts",
+  '#ts finish="one-open"',
   "Is this set consistent?\n\n- P ∨ Q\n- ¬P",
 );
 
@@ -190,23 +204,51 @@ describe("the directive", () => {
 });
 
 describe("grading", () => {
-  test("a closed tree scores in full, and says what it shows", async () => {
+  test("a closed tree, certified, scores in full", async () => {
     const item = await declaration(VALID);
     const t = builderFor(item);
-    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"]);
+    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"], "&");
     t.close(t.rootNode, p as string, "r2");
 
-    const right = await grade(item, {
-      nodes: t.tree.nodes,
-    } as unknown as JsonValue);
+    const right = await grade(item, await certified(item, t.answer()));
 
     expect(right.status).toBe("correct");
     expect(right.score).toBe(3);
-    expect(right.summary).toBe(
-      "Right: the tree closes, so the argument is valid.",
-    );
+    // The review has the tree and not the certificate, so it says nothing
+    // of what only the engine could tell.
+    expect(right.summary).toBe("Truth tree");
     expect(right.html).toContain("<carnap-truth-tree");
     expect(right.html).toContain("×");
+  });
+
+  test("a closed tree without its certificate, or with another's, scores nothing", async () => {
+    const item = await declaration(VALID);
+    const t = builderFor(item);
+    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"], "&");
+    t.close(t.rootNode, p as string, "r2");
+    const other = builderFor(item);
+    const [q] = other.stack(other.rootNode, "r1", ["P", "Q"], "&");
+    other.close(other.rootNode, q as string, "r2");
+    other.stack(other.rootNode, "r1", ["P"], "&");
+    const mmb = await certifyTree(publicDataOf(item), other.answer());
+
+    expect(mmb).toBeDefined();
+    expect((await grade(item, t.answer() as never)).score).toBe(0);
+    expect((await grade(item, { ...t.answer(), mmb } as never)).score).toBe(
+      0,
+    );
+  });
+
+  test("a step naming the wrong rule does not certify", async () => {
+    const item = await declaration(VALID);
+    const t = builderFor(item);
+    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"], "∨");
+    t.close(t.rootNode, p as string, "r2");
+
+    expect(await certifyTree(publicDataOf(item), t.answer())).toBeUndefined();
+    expect(
+      (await grade(item, await certified(item, t.answer()))).status,
+    ).toBe("incorrect");
   });
 
   test("identity: a root may use it, and a substitution is graded", async () => {
@@ -217,19 +259,12 @@ describe("grading", () => {
 
     expect(t.rootTexts).toEqual(["Fa", "a=b", "¬Fb"]);
 
-    const [fb] = t.stack(t.rootNode, ["r1", "r2"], ["Fb"]);
+    const [fb] = t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
     t.close(t.rootNode, "r3", fb as string);
-    const dev = t.tree.nodes[0]?.rows.find((row) => row.id === fb)?.dev;
 
-    const graded = await grade(item, {
-      nodes: t.tree.nodes,
-      rules: { [dev ?? ""]: "=" },
-    } as unknown as JsonValue);
+    const graded = await grade(item, await certified(item, t.answer()));
 
     expect(graded.status).toBe("correct");
-    expect(graded.summary).toBe(
-      "Right: the tree closes, so the argument is valid.",
-    );
     // The margin is the step's citation and the rule it names.
     expect(graded.html).toContain(
       '<span class="tableau-margin-cites">1, 2</span> <span class="tableau-margin-rule">=</span>',
@@ -247,21 +282,21 @@ describe("grading", () => {
 
     expect(unfinished.score).toBe(0);
     expect(unfinished.summary).toBe(
-      "The tree is not finished: close every branch, or mark a complete open branch.",
+      "The tree is not finished: close every branch.",
     );
   });
 
-  test("a wrong row is named, with its number", async () => {
+  test("a step with no rule named is unfinished, not wrong", async () => {
     const item = await declaration(VALID);
     const t = builderFor(item);
-    t.split(t.rootNode, "r1", [["P"], ["Q"]]);
+    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"]);
+    t.close(t.rootNode, p as string, "r2");
 
-    const graded = await grade(item, {
-      nodes: t.tree.nodes,
-    } as unknown as JsonValue);
+    const graded = await grade(item, await certified(item, t.answer()));
 
+    expect(graded.score).toBe(0);
     expect(graded.summary).toBe(
-      "Row 3: The rule for row 1 does not split the branch.",
+      "Row 3: Name the rule this step uses: type it in the margin, after the row it develops.",
     );
   });
 
@@ -271,13 +306,11 @@ describe("grading", () => {
     const {
       nodes: [p, q],
       rows: [[pRow]],
-    } = t.split(t.rootNode, "r1", [["P"], ["Q"]]);
+    } = t.split(t.rootNode, "r1", [["P"], ["Q"]], "∨");
     t.close(p, "r2", pRow as string);
     t.open(q);
 
-    const graded = await grade(item, {
-      nodes: t.tree.nodes,
-    } as unknown as JsonValue);
+    const graded = await grade(item, await certified(item, t.answer()));
 
     expect(graded.status).toBe("correct");
   });

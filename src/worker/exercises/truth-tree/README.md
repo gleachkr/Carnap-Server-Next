@@ -40,12 +40,17 @@ is in
 - `logic/` — `system.ts`, `rules.ts`, `check.ts`, `formulas.ts` (the
   caching row reader, and display through the language's own printer, which
   is what writes `a₁` and `a≠b`), `labels.ts` (the names a mark lists).
-- `aufbau/` — the engine-checked successor to `logic/` (gh #46, in
-  progress): `theory.ts` reads a tree theory's roles (the contract is in
-  the authoring docs, "Writing a tree theory"), and `emit.ts` writes a tree
-  down as a derivation for `@aufbau/compiler`. The directive already takes
-  its calculus and root from the theory; the editor and the grader still use
-  `logic/` until the engine replaces it.
+- `aufbau/` — the engine's half (gh #46): `theory.ts` reads a tree theory's
+  roles (the contract is in the authoring docs, "Writing a tree theory"),
+  `rows.ts` reads rows at its row sort, `emit.ts` writes each step and
+  closure down as a lemma for `@aufbau/compiler`, and `judge.ts` makes the
+  report from the tree's structure and the engine's word on it. The browser
+  compiles the lemmas; the server writes the same lemmas from the stored tree
+  and verifies the browser's certificate against them, so a certificate for
+  any other tree does not verify.
+- `logic/` — the old UBC checker. It still marks rows (`✓`) and says whether
+  a branch marked open is complete, until the development criteria replace
+  it (#437), and stays for the differential test (#440).
 - `grading.ts` — guards, the declaration resolved back to formulas, and the
   judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the

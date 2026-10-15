@@ -34,6 +34,13 @@ export function truthTreeName(i18n: Translator): string {
  */
 export type TruthTreeTask = "validity" | "consistency";
 
+/**
+ * When a tree is done, by the directive's `finish=` (gh #46): every branch
+ * closed; or every branch closed or marked open and complete; or every branch
+ * closed, or one marked open and complete (UBC §5.x).
+ */
+export type TruthTreeFinish = "closed" | "complete" | "one-open";
+
 /** What a done tree shows, in its task's terms. */
 export type TruthTreeVerdict =
   | "valid"
@@ -47,8 +54,12 @@ export interface TruthTreePublicData {
   readonly system: string;
   /** The system's text, which the join fills in on every read. */
   readonly source?: string;
+  /** The same for the engine, without its `@syntax` annotations. */
+  readonly mm0?: string;
   /** The tree rules, by the id of a `TableauSystem` record. */
   readonly rules: string;
+  /** When the tree is done; `closed` where absent. */
+  readonly finish?: TruthTreeFinish;
   readonly task: TruthTreeTask;
   /**
    * The root, as engine text, in order: the premises and then the negated

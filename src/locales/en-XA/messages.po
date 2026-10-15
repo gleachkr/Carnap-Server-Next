@@ -518,6 +518,10 @@ msgstr ""
 msgid "A short-answer exercise requires answer or answers."
 msgstr ""
 
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "A step or a closure in the tree does not check."
+msgstr ""
+
 #: src/worker/application/submissions.ts
 msgid "A submission cannot be accepted for this attempt."
 msgstr ""
@@ -1429,6 +1433,14 @@ msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed."
 msgstr ""
 
 #: src/worker/exercise-kit/help-strings.ts
@@ -3196,6 +3208,10 @@ msgstr ""
 
 #: src/worker/application/auth.ts
 msgid "Name must be 200 characters or less."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Name the rule this step uses: type it in the margin, after the row it develops."
 msgstr ""
 
 #: src/worker/web/admin-lti.tsx
@@ -5098,6 +5114,10 @@ msgstr ""
 msgid "The fill attribute must be all, connectives, or main."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The finish attribute must be closed, complete, or one-open."
+msgstr ""
+
 #: src/worker/exercises/world/strings.ts
 msgid "The game"
 msgstr ""
@@ -5329,6 +5349,10 @@ msgid "The rows of one step must cite the same row."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "The rows this closure cites do not close the branch."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "The rule for row {cited} does not split the branch."
 msgstr ""
 
@@ -5338,6 +5362,14 @@ msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The rule for row {cited} splits the branch into {branches} branches."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "The rule named does not give this from row {cited}."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "The rule named does not give this from rows {cited} and {other}."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
@@ -5430,6 +5462,10 @@ msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The tree is not finished: close every branch, or mark a complete open branch."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "The tree is not finished: close every branch."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
@@ -5610,6 +5646,10 @@ msgstr ""
 
 #: src/worker/exercises/model/strings.ts
 msgid "This domain gives {field} too many arguments to fill in."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "This exercise asks for every branch to close."
 msgstr ""
 
 #: src/worker/web/ui-strings.ts
@@ -5810,6 +5850,10 @@ msgstr ""
 
 #: src/worker/application/manual-grading.ts
 msgid "This submission's exercise is no longer in the assignment, so there is nothing to grade it out of."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "This system cannot say whether an open branch is complete."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts

@@ -1,8 +1,10 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { JSDOM } from "jsdom";
-
+import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import { submissionNeedsReview } from "../src/worker/domain/assessment";
 import type { Env } from "../src/worker/env";
+import { withSystemText } from "../src/worker/exercise-kit/systems/join";
+import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import { REVIEW_SCRIPT } from "../src/worker/web/assignment-scripts";
 import { REVIEW_SCRIPT_ASSET } from "../src/worker/web/script-assets";
 import { utcTimestampText } from "../src/worker/web/timestamp-formats";
@@ -17,6 +19,7 @@ import {
   login,
   withStorage,
 } from "./helpers/http";
+import { certifyTree } from "./helpers/truth-tree";
 
 setDefaultTimeout(30_000);
 
@@ -3411,17 +3414,14 @@ describe("a truth tree on an assignment", () => {
       const instructor = await login(env, "tree-teacher@example.test");
       const student = await login(env, "tree-student@example.test");
       const courseId = await createCourse(env, instructor);
-      const revisionId = await createRevision(
-        env,
-        instructor,
-        `# Lesson
+      const lesson = `# Lesson
 
 ::::truth-tree{#tt points="2"}
 Use a tree.
 
 P & Q :|-: P
-::::`,
-      );
+::::`;
+      const revisionId = await createRevision(env, instructor, lesson);
 
       await enrollStudent(env, instructor, student, courseId);
 
@@ -3467,7 +3467,25 @@ P & Q :|-: P
             ],
           },
         ],
+        rules: { d1: "&" },
       };
+      // The certificate the browser would send: the tree's inferences,
+      // compiled against the lesson's theory.
+      const compiled = await compileCarnapMarkdown(lesson);
+      const item = compiled.ok ? compiled.artifact.manifest[0] : undefined;
+      const mmb =
+        compiled.ok && item !== undefined
+          ? await certifyTree(
+              withSystemText(
+                item.publicData,
+                compiled.artifact.systems,
+              ) as unknown as TruthTreePublicData,
+              tree,
+            )
+          : undefined;
+
+      expect(mmb).toBeDefined();
+
       const response = await submitAnswer(
         env,
         student,
@@ -3476,7 +3494,7 @@ P & Q :|-: P
         attemptId,
         {
           answer: {
-            data: tree,
+            data: { ...tree, mmb },
             kind: "truth-tree-answer@1",
             schemaVersion: 1,
           },

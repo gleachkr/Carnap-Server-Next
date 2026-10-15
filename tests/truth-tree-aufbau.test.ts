@@ -198,11 +198,8 @@ function where(errors: readonly TreeDiagnostic[]): string[] {
       case "step":
       case "citation":
         return `${subject.type} ${subject.rows.join(",")}`;
-      case "closure":
-      case "closure-citation":
-        return `${subject.type} ${subject.node}`;
       default:
-        return "gap";
+        return `${subject.type} ${subject.node}`;
     }
   });
 }
@@ -274,9 +271,9 @@ describe("a sentential tree", () => {
       chain({ cite3: "2", close: ["4", "5"], rule6: "∨" }),
     );
     expect(where(checked.errors)).toEqual([
-      "closure n1",
-      "step 6,7",
       "step 4,5",
+      "step 6,7",
+      "closure n1",
     ]);
   });
 
@@ -428,7 +425,7 @@ describe("identity", () => {
         ["5", "¬Fab", ["1", "3"], "="],
       ],
     });
-    expect(where(checked.errors)).toEqual(["step 5", "step 4"]);
+    expect(where(checked.errors)).toEqual(["step 4", "step 5"]);
   });
 });
 
@@ -557,6 +554,6 @@ describe("a signed tableau, from its own theory", () => {
       },
       SIGNED,
     );
-    expect(where(checked.errors)).toEqual(["step 4,5", "step 2,3"]);
+    expect(where(checked.errors)).toEqual(["step 2,3", "step 4,5"]);
   });
 });

@@ -319,6 +319,9 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "“{formula}” has free variables, and a tree's root must be sentences.",
         placeholders("formula"),
       ),
+    "The finish attribute must be closed, complete, or one-open.": i18n.t(
+      "The finish attribute must be closed, complete, or one-open.",
+    ),
     "The system “{name}” is not a tree theory: it declares no {roles}.":
       i18n.t(
         "The system “{name}” is not a tree theory: it declares no {roles}.",

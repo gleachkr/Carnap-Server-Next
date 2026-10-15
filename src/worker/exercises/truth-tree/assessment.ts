@@ -1,3 +1,4 @@
+import { verifyMmb } from "#proof-verifier";
 import type {
   AnswerEnvelope,
   AnswerNormalizationResult,
@@ -10,6 +11,7 @@ import type {
 } from "../../domain/content";
 import type { JsonValue } from "../../domain/json";
 import { diagnostic, isObject } from "../../exercise-kit/assessment";
+import { readCertificate } from "../../exercise-kit/proof/certificate";
 import type { ExerciseAssessment } from "../../exercise-kit/type";
 import { stringsResolver } from "../../i18n/translator";
 import {
@@ -17,6 +19,7 @@ import {
   isTruthTreePublicData,
   judgeTree,
   resolveTruthTree,
+  treeProofOf,
 } from "./grading";
 import { renderTruthTreeReview } from "./read-only-view";
 import { buildTruthTreeStrings } from "./strings";
@@ -28,7 +31,11 @@ import {
 } from "./types";
 import { describeJudgement } from "./verdict-text";
 
-const TRUTH_TREE_EVALUATOR_VERSION = "truth-tree-evaluator@1";
+/**
+ * `@2` since the engine checks a tree's steps (gh #46): the browser's
+ * certificate is verified against a goal written here from the stored tree.
+ */
+const TRUTH_TREE_EVALUATOR_VERSION = "truth-tree-evaluator@2";
 
 function treeAnswer(answer: NormalizedAnswer): TruthTreeAnswerData {
   return answer.data as unknown as TruthTreeAnswerData;
@@ -98,8 +105,25 @@ export const TRUTH_TREE_ASSESSMENT = {
     // A wrong row, a wrong closure or an unfinished tree is a valid wrong
     // answer, scored zero with the reason: only JSON of the wrong
     // shape is refused here. The tree is kept as it came, so review shows
-    // what was submitted.
+    // what was submitted. The certificate, the browser's compile of it, rides
+    // beside the answer to be verified and let go; a tree never compiled has
+    // none, and is graded without one.
     const data = envelope.data;
+    const certificate = readCertificate(data);
+
+    if (certificate === null) {
+      return {
+        diagnostics: [
+          diagnostic(
+            "malformed_answer_data",
+            "The tree's certificate is malformed or too large.",
+            ["data", "mmb"],
+          ),
+        ],
+        ok: false,
+        reason: "malformed",
+      };
+    }
 
     return {
       answer: {
@@ -109,6 +133,7 @@ export const TRUTH_TREE_ASSESSMENT = {
         kind: TRUTH_TREE_ANSWER_KIND,
         schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
       },
+      ...(certificate === undefined ? {} : { certificate }),
       ok: true,
     };
   },
@@ -116,7 +141,7 @@ export const TRUTH_TREE_ASSESSMENT = {
   async evaluate(
     answer: NormalizedAnswer,
     declaration: ExerciseManifestItem,
-    _context: EvaluationContext,
+    context: EvaluationContext,
   ): Promise<AutomaticEvaluation> {
     const base = {
       declarationHash: declaration.declarationHash,
@@ -142,7 +167,30 @@ export const TRUTH_TREE_ASSESSMENT = {
       return { ...base, awardedScore: 0, status: "error" };
     }
 
-    const judgement = judgeTree(resolved, treeAnswer(answer));
+    // The goal is written here, from the stored tree and the frozen theory,
+    // never taken from the browser; the certificate must prove exactly it.
+    const data = treeAnswer(answer);
+    const proof = treeProofOf(resolved, data);
+    const mm0 = declaration.publicData.mm0;
+    const mmb = context.certificate;
+    let verified = false;
+
+    if (mmb !== undefined && proof.goal !== null && mm0 !== undefined) {
+      const result = await verifyMmb(`${mm0}\n${proof.goal}\n`, mmb);
+
+      if (result.errored) {
+        return { ...base, awardedScore: 0, status: "error" };
+      }
+
+      verified = result.ok;
+    }
+
+    const judgement = judgeTree(
+      resolved,
+      data,
+      { kind: "verified", ok: verified },
+      proof,
+    );
 
     // All or nothing: a tree with one wrong row is not mostly right.
     return {
@@ -170,7 +218,9 @@ export const TRUTH_TREE_ASSESSMENT = {
     }
 
     const data = treeAnswer(answer);
-    const judgement = judgeTree(resolved, data);
+    // The certificate is not kept, so a review judges what it can without
+    // the engine, and says nothing of what only the engine could tell.
+    const judgement = judgeTree(resolved, data, { kind: "none" });
     const words = stringsResolver(buildTruthTreeStrings(i18n));
     // There is no answer key: the verdict is recomputed from the tree, so
     // sealing the evaluation alone would leave it on the page.
@@ -184,7 +234,7 @@ export const TRUTH_TREE_ASSESSMENT = {
     );
 
     return {
-      ...(reveal
+      ...(reveal && summary !== ""
         ? { details: [{ label: i18n.t("Result"), value: summary }] }
         : {}),
       elementHtml: renderTruthTreeReview(
@@ -197,7 +247,7 @@ export const TRUTH_TREE_ASSESSMENT = {
         },
         words,
       ),
-      summary: reveal ? summary : truthTreeName(i18n),
+      summary: reveal && summary !== "" ? summary : truthTreeName(i18n),
     };
   },
 } satisfies ExerciseAssessment;

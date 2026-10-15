@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 import { domDocument } from "../helpers/dom";
 
 /**
@@ -23,7 +23,15 @@ const loadCompiler = mock(
   }),
 );
 
+// The real package, put back after this file: `mock.module` is process-wide,
+// and a later file may want the real engine.
+const realCompiler = { ...(await import("@aufbau/compiler")) };
+
 mock.module("@aufbau/compiler", () => ({ loadCompiler }));
+
+afterAll(() => {
+  mock.module("@aufbau/compiler", () => realCompiler);
+});
 
 // After the mock is registered: the module under test reaches the package
 // through a dynamic `import()`, so registration only has to precede the *call*,

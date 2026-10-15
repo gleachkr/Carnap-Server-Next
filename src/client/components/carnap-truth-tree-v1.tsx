@@ -21,11 +21,14 @@
  * the typing, so the arrow keys move between rows again. The ring shows
  * when they do.
  *
- * The tree is checked on every edit by the same `checkTree` the grader runs,
- * so full feedback can flag a wrong row as it is written. Marks are computed;
- * the margin's citation and rule are typed. As with the model, there is no
- * answer key:
- * the Check is `judgeTree` over public data.
+ * The tree is written down as a derivation (`aufbau/emit.ts`) and compiled
+ * by the engine once the edits pause, as a proof is: full feedback flags a
+ * step or closure the engine refused on the row or end it is about, and the
+ * certificate the compile produced is what the server verifies at submit.
+ * What the engine does not see (the root, unreadable rows, where ends sit)
+ * is checked on every edit by the same `judgeTree` the grader runs. Marks
+ * are computed; the margin's citation and rule are typed. As with the model,
+ * there is no answer key: the Check is `judgeTree` over public data.
  */
 
 import { render } from "preact";
@@ -52,6 +55,9 @@ import { layoutTableau, rowAtLine } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
 import { treeAnnotations } from "../../worker/exercises/truth-tree/annotations";
+import type { TreeProof } from "../../worker/exercises/truth-tree/aufbau/emit";
+import { readTreeDiagnostics } from "../../worker/exercises/truth-tree/aufbau/emit";
+import type { TreeEvidence } from "../../worker/exercises/truth-tree/aufbau/judge";
 import { ruleSpelling } from "../../worker/exercises/truth-tree/aufbau/theory";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
 import {
@@ -62,12 +68,10 @@ import {
   resolveTruthTree,
   startingTree,
   startsFromRoot,
+  treeProofOf,
 } from "../../worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../../worker/exercises/truth-tree/logic/check";
-import {
-  checkTree,
-  closesAlone,
-} from "../../worker/exercises/truth-tree/logic/check";
+import { closesAlone } from "../../worker/exercises/truth-tree/logic/check";
 import type { TruthTreeStringId } from "../../worker/exercises/truth-tree/strings";
 import type {
   TruthTreeAnswerData,
@@ -80,7 +84,7 @@ import {
   describeRowProblem,
 } from "../../worker/exercises/truth-tree/verdict-text";
 import { TableauView } from "../tableau/view";
-import { CarnapExerciseElement, register } from "./base";
+import { register } from "./base";
 import islandStyles from "./carnap-truth-tree-v1.css" with { type: "text" };
 import {
   createHelpDialog,
@@ -89,6 +93,7 @@ import {
   openHelpDialog,
 } from "./help-dialog";
 import { mountProblemPopup } from "./problem-popup";
+import { ProofExerciseElement } from "./proof-element";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 
@@ -104,7 +109,16 @@ interface Derived {
   readonly tree: TableauDocument;
   readonly index: TableauIndex;
   readonly layout: TableauLayout;
-  report?: TreeReport | null;
+  /** The tree as a derivation, and its rules as they were when it was made. */
+  proof?: {
+    readonly rules: ReadonlyMap<string, string>;
+    readonly proof: TreeProof;
+  };
+  /** The report, and the evidence it was made with. */
+  report?: {
+    readonly evidence: TreeEvidence;
+    readonly report: TreeReport | null;
+  };
 }
 
 /**
@@ -227,7 +241,7 @@ function parseNumbers(text: string): number[] | null {
     : null;
 }
 
-class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
+class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   private data: TruthTreePublicData | null = null;
   private resolved: ResolvedTree | null = null;
   private mount: HTMLElement | null = null;
@@ -235,6 +249,8 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
 
   private tree: TableauDocument = { nodes: [] };
   private derived: Derived | null = null;
+  /** What the engine said of the tree as it stands; `none` until it has. */
+  private evidence: TreeEvidence = { kind: "none" };
   private rules: ReadonlyMap<string, string> = new Map();
   private drafts: Snapshot["drafts"] = { cites: new Map(), rule: new Map() };
   private past: Snapshot[] = [];
@@ -317,12 +333,22 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
         this.t(
           "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.",
         ),
-        this.t(
-          "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.",
-        ),
+        resolved.finish === "closed"
+          ? this.t(
+              "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed.",
+            )
+          : resolved.finish === "complete"
+            ? this.t(
+                "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.",
+              )
+            : this.t(
+                "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.",
+              ),
       ],
       keyboard: this.t("Keyboard"),
-      shortcuts: SHORTCUTS.map((shortcut) => ({
+      shortcuts: SHORTCUTS.filter(
+        (shortcut) => shortcut.icon !== "tree-open" || this.offersOpen,
+      ).map((shortcut) => ({
         action: this.t(shortcut.action),
         keys: shortcut.keys,
         ...(shortcut.icon === undefined ? {} : { icon: shortcut.icon }),
@@ -342,6 +368,8 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     );
 
     this.buildCheck();
+    this.gateSubmit((event) => this.gate(event));
+    this.scheduleCompile();
 
     // A click's blur is the reader moving elsewhere; see `strayBlur`. The
     // flag holds from the press to the click, whose focus change comes
@@ -365,7 +393,8 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     this.dataset.enhanced = "true";
   }
 
-  disconnectedCallback(): void {
+  override disconnectedCallback(): void {
+    super.disconnectedCallback();
     this.listeners.abort();
     if (this.mount !== null) {
       render(null, this.mount);
@@ -415,21 +444,23 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     return rows[rows.length - 1]?.id ?? null;
   }
 
-  /** Its Check grades the work in the browser. */
-  protected override get gradesLocally(): boolean {
-    return true;
+  /** Whether a branch may be marked open: not where every one is to close. */
+  private get offersOpen(): boolean {
+    return this.resolved !== null && this.resolved.finish !== "closed";
   }
 
-  protected getAnswer(): TruthTreeAnswerData {
+  protected getAnswer(): TruthTreeAnswerData & { readonly mmb?: string } {
     // Only the rules of developments still in the tree.
     const devs = new Set(
       this.tree.nodes.flatMap((node) => node.rows.map((row) => row.dev)),
     );
     const rules = [...this.rules].filter(([dev]) => devs.has(dev));
 
-    return rules.length === 0
-      ? { nodes: this.tree.nodes }
-      : { nodes: this.tree.nodes, rules: Object.fromEntries(rules) };
+    return {
+      ...(this.mmb === "" ? {} : { mmb: this.mmb }),
+      nodes: this.tree.nodes,
+      ...(rules.length === 0 ? {} : { rules: Object.fromEntries(rules) }),
+    };
   }
 
   // --- The check ---------------------------------------------------------
@@ -454,21 +485,85 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     return this.derive().layout;
   }
 
+  /** The tree as a derivation, made once per tree and rules. */
+  private proof(resolved: ResolvedTree): TreeProof {
+    const derived = this.derive();
+
+    if (derived.proof?.rules !== this.rules) {
+      derived.proof = {
+        proof: treeProofOf(resolved, this.getAnswer()),
+        rules: this.rules,
+      };
+    }
+
+    return derived.proof.proof;
+  }
+
+  private judgement(resolved: ResolvedTree) {
+    return judgeTree(
+      resolved,
+      this.getAnswer(),
+      this.evidence,
+      this.proof(resolved),
+    );
+  }
+
   private report(): TreeReport | null {
     const resolved = this.resolved;
     const derived = this.derive();
 
-    derived.report ??=
-      resolved === null
-        ? null
-        : checkTree({
-            reader: resolved.reader,
-            root: resolved.root,
-            system: resolved.system,
-            tree: this.tree,
-          });
+    if (derived.report?.evidence !== this.evidence) {
+      derived.report = {
+        evidence: this.evidence,
+        report: resolved === null ? null : this.judgement(resolved).report,
+      };
+    }
 
-    return derived.report;
+    return derived.report.report;
+  }
+
+  /**
+   * Compile the tree's derivation, and take what the engine says as the
+   * evidence the report is made with. A tree with nothing written below its
+   * root has nothing to compile.
+   */
+  protected async compile(): Promise<void> {
+    const resolved = this.resolved;
+    const mm0 = this.data?.mm0;
+
+    if (resolved === null || mm0 === undefined) {
+      return;
+    }
+
+    const tree = this.tree;
+    const rules = this.rules;
+    const proof = this.proof(resolved);
+
+    if (proof.goal === null || proof.proof === null) {
+      this.evidence = { certified: false, errors: [], kind: "compiled" };
+      this.rerender();
+      return;
+    }
+
+    const run = await this.runCompiler(
+      `${mm0}\n${proof.goal}\n`,
+      proof.proof,
+    );
+
+    if (run === null || this.tree !== tree || this.rules !== rules) {
+      return;
+    }
+
+    this.evidence =
+      run.kind === "verdict"
+        ? {
+            certified: run.verdict.certificate !== null,
+            errors: readTreeDiagnostics(run.verdict.problems, proof),
+            kind: "compiled",
+          }
+        : { kind: "none" };
+    this.syncAnswer();
+    this.rerender();
   }
 
   private buildCheck(): void {
@@ -493,14 +588,17 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     );
   }
 
-  private runCheck(): void {
+  private async runCheck(): Promise<void> {
     const resolved = this.resolved;
 
     if (resolved === null) {
       return;
     }
 
-    const judgement = judgeTree(resolved, this.getAnswer());
+    // The engine's word on the tree as it stands, first.
+    await this.settled();
+
+    const judgement = this.judgement(resolved);
 
     this.setCheckStatus(
       describeJudgement(judgement, this.tree, this.words, this.showsDetail),
@@ -542,9 +640,11 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
   }
 
   private edited(): void {
-    this.setCheckStatus("");
+    this.forgetVerdict();
+    this.evidence = { kind: "none" };
     this.setMark("idle");
     this.syncAnswer();
+    this.scheduleCompile();
     this.rerender();
   }
 
@@ -1078,16 +1178,19 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     }
 
     const picked = [...closing.picked, rowId];
+    // Until the theory can say which rows close a branch alone (#437), the
+    // old checker says, where it reads the rows.
+    const legacy = this.resolved?.legacy ?? null;
     const read =
-      this.resolved === null
+      legacy === null
         ? null
-        : this.resolved.reader.read(index.row(rowId)?.row.text ?? "");
+        : legacy.reader.read(index.row(rowId)?.row.text ?? "");
 
     if (
       picked.length === 1 &&
       read?.ok === true &&
-      this.resolved !== null &&
-      closesAlone(read.formula, this.resolved.system)
+      legacy !== null &&
+      closesAlone(read.formula, legacy.system)
     ) {
       this.closing = null;
       this.focusTree = true;
@@ -1118,6 +1221,11 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
   }
 
   private openBranch(): void {
+    // Where every branch is to close, a branch is not marked open.
+    if (!this.offersOpen) {
+      return;
+    }
+
     const leaf = this.leafAtCursor();
 
     if (leaf === null) {
@@ -1260,10 +1368,7 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     }
 
     this.tree = setRowText(this.tree, rowId, text);
-    this.setCheckStatus("");
-    this.setMark("idle");
-    this.syncAnswer();
-    this.rerender();
+    this.edited();
   };
 
   private readonly onTextKey = (
@@ -1912,7 +2017,7 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
           {button("Add row", "tree-add-row", "add-row")}
           <span class="proof-toolbar-sep" />
           {button("Close", "tree-close", "close")}
-          {button("Mark open", "tree-open", "open")}
+          {this.offersOpen ? button("Mark open", "tree-open", "open") : null}
           {button("Delete", "tree-delete", "delete")}
           <span class="proof-toolbar-sep" />
           <button

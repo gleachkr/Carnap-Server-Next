@@ -1,13 +1,21 @@
+import { readFileSync } from "node:fs";
+import type { LoadedCompiler } from "@aufbau/compiler";
+import { loadCompiler } from "@aufbau/compiler";
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { TableauDocument, TableauEnd } from "../../src/tableau/document";
 import { setEnd, splitNode, stackRows } from "../../src/tableau/edit";
 import type { Formula } from "../../src/worker/exercise-kit/formula";
 import { parseFormula } from "../../src/worker/exercise-kit/formula";
+import {
+  resolveTruthTree,
+  treeProofOf,
+} from "../../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../../src/worker/exercises/truth-tree/logic/check";
 import { checkTree } from "../../src/worker/exercises/truth-tree/logic/check";
 import { rowReader } from "../../src/worker/exercises/truth-tree/logic/formulas";
 import type { TableauSystem } from "../../src/worker/exercises/truth-tree/logic/system";
 import { FORALLX_UBC } from "../../src/worker/exercises/truth-tree/logic/system";
+import type { TruthTreePublicData } from "../../src/worker/exercises/truth-tree/types";
 import { languageById } from "../../src/worker/logic/specs";
 
 export const UBC = (() => {
@@ -65,6 +73,9 @@ export class TreeBuilder {
     this.root = rootTexts.map((_, at) => `r${at + 1}`);
   }
 
+  /** The rule each development names, by its `dev`, where one was given. */
+  readonly rules = new Map<string, string>();
+
   private mint = (): string => {
     this.next += 1;
     return `t${this.next}`;
@@ -78,8 +89,14 @@ export class TreeBuilder {
     node: string,
     cite: string | readonly string[] | null,
     texts: readonly string[],
+    rule?: string,
   ): string[] {
     const dev = this.mint();
+
+    if (rule !== undefined) {
+      this.rules.set(dev, rule);
+    }
+
     const made = stackRows(
       this.document,
       node,
@@ -104,11 +121,17 @@ export class TreeBuilder {
     node: string,
     cite: string | null,
     branches: readonly (readonly string[])[],
+    rule?: string,
   ): {
     readonly nodes: readonly [string, string, ...string[]];
     readonly rows: readonly [string[], string[], ...string[][]];
   } {
     const dev = this.mint();
+
+    if (rule !== undefined) {
+      this.rules.set(dev, rule);
+    }
+
     const made = splitNode(
       this.document,
       node,
@@ -131,6 +154,17 @@ export class TreeBuilder {
     return {
       nodes: made.nodes as unknown as readonly [string, string, ...string[]],
       rows: rows as unknown as [string[], string[], ...string[][]],
+    };
+  }
+
+  /** The tree as a submitted answer: the document and its rules. */
+  answer(): {
+    readonly nodes: TableauDocument["nodes"];
+    readonly rules: Readonly<Record<string, string>>;
+  } {
+    return {
+      nodes: this.document.nodes,
+      rules: Object.fromEntries(this.rules),
     };
   }
 
@@ -162,4 +196,46 @@ export class TreeBuilder {
       tree: this.document,
     });
   }
+}
+
+let compiler: Promise<LoadedCompiler> | null = null;
+
+/**
+ * A tree's certificate, as the browser compiles it: its derivation against the
+ * exercise's theory (`publicData` as the systems join gives it), base64.
+ * `undefined` where the compile does not certify every inference.
+ */
+export async function certifyTree(
+  publicData: TruthTreePublicData,
+  answer: { readonly nodes: unknown; readonly rules?: unknown },
+): Promise<string | undefined> {
+  compiler ??= loadCompiler({
+    wasmBytes: readFileSync(
+      new URL(
+        "../../node_modules/@aufbau/compiler/compiler.wasm",
+        import.meta.url,
+      ),
+    ),
+  });
+
+  const resolved = resolveTruthTree(publicData);
+  const proof =
+    resolved === null ? null : treeProofOf(resolved, answer as never);
+
+  if (
+    proof?.goal == null ||
+    proof.proof === null ||
+    publicData.mm0 === undefined
+  ) {
+    return undefined;
+  }
+
+  const result = (await compiler).compile(
+    `${publicData.mm0}\n${proof.goal}\n`,
+    proof.proof,
+  );
+
+  return result.ok && result.mmbBytes !== undefined
+    ? Buffer.from(result.mmbBytes).toString("base64")
+    : undefined;
 }

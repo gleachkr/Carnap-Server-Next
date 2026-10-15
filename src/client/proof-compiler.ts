@@ -92,6 +92,8 @@ export interface CompileDiagnostic {
    *  the axiom, not the alias the student wrote. */
   readonly rule?: string;
   readonly severity: "error" | "info" | "warning";
+  /** The label of the proof line it is about, where it is about one. */
+  readonly lineLabel?: string;
   /** UTF-8 byte offsets into the proof text the engine was handed. */
   readonly spanEnd?: number;
   readonly spanStart?: number;
@@ -239,6 +241,7 @@ export function readCompileResult(
       }
       const record = item as {
         readonly error?: unknown;
+        readonly lineLabel?: unknown;
         readonly message?: unknown;
         readonly rule?: unknown;
         readonly severity?: unknown;
@@ -270,6 +273,9 @@ export function readCompileResult(
           ? { rule: record.rule }
           : {}),
         severity,
+        ...(typeof record.lineLabel === "string"
+          ? { lineLabel: record.lineLabel }
+          : {}),
         ...(typeof record.spanEnd === "number"
           ? { spanEnd: record.spanEnd }
           : {}),

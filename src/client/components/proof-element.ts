@@ -268,6 +268,11 @@ export abstract class ProofExerciseElement<
     return { kind: "verdict", verdict };
   }
 
+  /** Run a pending compile now, and wait for it, if one is due. */
+  protected async settled(): Promise<void> {
+    await this.settleCompile();
+  }
+
   /** Run a pending compile now; the promise to wait on, or null if settled. */
   private settleCompile(): Promise<void> | null {
     if (this.debounceHandle !== null) {

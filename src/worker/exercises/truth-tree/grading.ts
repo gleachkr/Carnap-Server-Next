@@ -2,6 +2,10 @@
  * Stored truth-tree data turned back into something the checker can judge,
  * and the judgement itself: the tree's report, and what the tree shows.
  *
+ * The tree's steps and closures are the engine's to check (gh #46): the
+ * caller hands over what it has said, the browser's compile or the server's
+ * verification, as {@link TreeEvidence}. Everything else is judged here.
+ *
  * DOM-free and free of i18n, because the client element judges the same
  * public data for its live feedback and its Check.
  */
@@ -17,16 +21,25 @@ import type { Formula } from "../../exercise-kit/formula";
 import {
   firstOrderLanguageFor,
   parseEngineFormula,
-  sameFormula,
 } from "../../exercise-kit/formula";
+import { sentenceSort } from "../../logic/specs/roles";
+import type { TreeProof } from "./aufbau/emit";
+import { emitTreeProof } from "./aufbau/emit";
+import type { TreeEvidence } from "./aufbau/judge";
+import { judgeTreeProof } from "./aufbau/judge";
+import type { RowSortReader } from "./aufbau/rows";
+import { displayRow, rowSortReader } from "./aufbau/rows";
+import type { TreeTheory } from "./aufbau/theory";
+import { isTreeTheory, readTreeTheory } from "./aufbau/theory";
 import type { TreeProblem, TreeReport } from "./logic/check";
 import { checkTree } from "./logic/check";
 import type { RowReader } from "./logic/formulas";
-import { displayEngine, rowReader } from "./logic/formulas";
+import { rowReader } from "./logic/formulas";
 import type { TableauSystem } from "./logic/system";
 import { FORALLX_UBC } from "./logic/system";
 import type {
   TruthTreeAnswerData,
+  TruthTreeFinish,
   TruthTreePublicData,
   TruthTreeTask,
   TruthTreeVerdict,
@@ -57,12 +70,27 @@ const MAX_RULE_TEXT = 64;
 
 export interface ResolvedTree {
   readonly language: SurfaceLanguage;
-  readonly reader: RowReader;
-  readonly root: readonly Formula[];
+  readonly theory: TreeTheory;
+  /** Reads a row at the theory's row sort. */
+  readonly reader: RowSortReader;
+  /** The root, as engine text at the row sort, in order. */
+  readonly root: readonly string[];
   /** Each root row as a reader is shown it. */
   readonly rootText: readonly string[];
-  readonly system: TableauSystem;
   readonly task: TruthTreeTask;
+  readonly finish: TruthTreeFinish;
+  /** The most rows a tree may have before it is not read. */
+  readonly rowCap: number;
+  /**
+   * The old checker, where it can read the rows (they are sentences): what
+   * marks a row developed and says whether an open branch is complete, until
+   * the development criteria replace it (#437).
+   */
+  readonly legacy: {
+    readonly reader: RowReader;
+    readonly root: readonly Formula[];
+    readonly system: TableauSystem;
+  } | null;
 }
 
 function isStringArray(value: unknown): value is readonly string[] {
@@ -85,6 +113,10 @@ export function isTruthTreePublicData(
     typeof data.system === "string" &&
     typeof data.rules === "string" &&
     (data.task === "validity" || data.task === "consistency") &&
+    (data.finish === undefined ||
+      data.finish === "closed" ||
+      data.finish === "complete" ||
+      data.finish === "one-open") &&
     isStringArray(data.root) &&
     typeof data.premises === "number"
   );
@@ -226,23 +258,60 @@ function isRules(value: unknown, rows: number): boolean {
 }
 
 /**
- * The declaration's root and language, read back. `null` when the stored data
- * no longer resolves (a language that does not read, a root that will not
- * parse, rules that do not exist); none can happen for data this compiler
- * wrote.
+ * The declaration's root, language and tree theory, read back. `null` when
+ * the stored data no longer resolves (a language that does not read, one
+ * that is not a tree theory, a root that will not parse); none can happen for
+ * data this compiler wrote.
  */
 export function resolveTruthTree(
   publicData: TruthTreePublicData,
 ): ResolvedTree | null {
   const language = firstOrderLanguageFor(publicData);
+  const theory = language === null ? null : readTreeTheory(language);
+
+  if (language === null || theory === null || !isTreeTheory(theory)) {
+    return null;
+  }
+
+  const reader = rowSortReader(language, theory.rowSort);
+  const rootText: string[] = [];
+
+  for (const engine of publicData.root) {
+    const shown = displayRow(engine, language, theory.rowSort);
+
+    if (shown === null) {
+      return null;
+    }
+
+    rootText.push(shown);
+  }
+
+  return {
+    finish: publicData.finish ?? "closed",
+    language,
+    legacy: legacyChecker(publicData, language, theory),
+    reader,
+    root: publicData.root,
+    rootText,
+    rowCap: FORALLX_UBC.rowCap,
+    task: publicData.task,
+    theory,
+  };
+}
+
+/** The old checker's inputs, where its rows are sentences. */
+function legacyChecker(
+  publicData: TruthTreePublicData,
+  language: SurfaceLanguage,
+  theory: TreeTheory,
+): ResolvedTree["legacy"] {
   const system = tableauSystemById(publicData.rules);
 
-  if (language === null || system === null) {
+  if (system === null || theory.rowSort !== sentenceSort(language)) {
     return null;
   }
 
   const root: Formula[] = [];
-  const rootText: string[] = [];
 
   for (const engine of publicData.root) {
     const read = parseEngineFormula(engine, language);
@@ -252,17 +321,9 @@ export function resolveTruthTree(
     }
 
     root.push(read.formula);
-    rootText.push(displayEngine(engine, language) ?? engine);
   }
 
-  return {
-    language,
-    reader: rowReader(language),
-    root,
-    rootText,
-    system,
-    task: publicData.task,
-  };
+  return { reader: rowReader(language), root, system };
 }
 
 /** The tree the student starts from: the root, and nothing else. */
@@ -298,7 +359,7 @@ export function startsFromRoot(
     const text = rows[at]?.text;
     const read = text === undefined ? null : resolved.reader.read(text);
 
-    return read?.ok === true && sameFormula(read.formula, expected);
+    return read?.ok === true && read.engine === expected;
   });
 }
 
@@ -321,7 +382,9 @@ export function treeVerdict(
 /** Why a submitted tree is not right, first thing first. */
 export type TreeJudgementProblem =
   | { readonly type: "tree"; readonly problem: TreeProblem }
-  | { readonly type: "unfinished" };
+  | { readonly type: "unfinished"; readonly finish: TruthTreeFinish }
+  /** Finished as far as can be seen, and the engine's word is not to hand. */
+  | { readonly type: "unconfirmed" };
 
 export interface TreeJudgement {
   readonly ok: boolean;
@@ -331,28 +394,70 @@ export interface TreeJudgement {
   readonly problem: TreeJudgementProblem | null;
 }
 
+/** A tree written down as a derivation, for the engine to check. */
+export function treeProofOf(
+  resolved: ResolvedTree,
+  answer: TruthTreeAnswerData,
+): TreeProof {
+  return emitTreeProof(
+    { nodes: answer.nodes },
+    {
+      language: resolved.language,
+      reader: resolved.reader,
+      rules: answerRules(answer),
+      theory: resolved.theory,
+    },
+  );
+}
+
 /**
- * The whole verdict: every row and end right, and the tree done. All or
- * nothing.
+ * The whole verdict: every row and end right, the engine's confirmation of
+ * every step and closure, and the tree done. All or nothing.
  */
 export function judgeTree(
   resolved: ResolvedTree,
   answer: TruthTreeAnswerData,
+  evidence: TreeEvidence,
+  proof: TreeProof = treeProofOf(resolved, answer),
 ): TreeJudgement {
-  const report = checkTree({
-    reader: resolved.reader,
-    root: resolved.root,
-    system: resolved.system,
-    tree: { nodes: answer.nodes },
-  });
+  const tree = { nodes: answer.nodes };
+  const legacy = resolved.legacy;
+  const completeness =
+    legacy === null
+      ? null
+      : checkTree({
+          reader: legacy.reader,
+          root: legacy.root,
+          system: legacy.system,
+          tree,
+        });
+  const judge = (given: TreeEvidence) =>
+    judgeTreeProof({
+      completeness,
+      evidence: given,
+      finish: resolved.finish,
+      proof,
+      reader: resolved.reader,
+      root: resolved.root,
+      rowCap: resolved.rowCap,
+      tree,
+    });
+  const report = judge(evidence);
   const shows = treeVerdict(resolved.task, report);
   const first = report.problems[0];
+  // Without the engine's word, a tree it would finish is unconfirmed, not
+  // unfinished.
+  const unconfirmed =
+    evidence.kind === "none" &&
+    judge({ kind: "verified", ok: true }).finished;
   const problem: TreeJudgementProblem | null =
     first !== undefined
       ? { problem: first, type: "tree" }
-      : !report.finished || shows === null
-        ? { type: "unfinished" }
-        : null;
+      : report.finished && shows !== null
+        ? null
+        : unconfirmed
+          ? { type: "unconfirmed" }
+          : { finish: resolved.finish, type: "unfinished" };
 
   return { ok: problem === null, problem, report, shows };
 }

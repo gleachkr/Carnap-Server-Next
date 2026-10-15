@@ -12,7 +12,7 @@ the root true; a complete open branch describes something that does.
 
 ## Is it consistent?
 
-::::truth-tree{#tt-consistent points="3" title="Two disjunctions"}
+::::truth-tree{#tt-consistent points="3" title="Two disjunctions" finish="one-open"}
 Use a tree to decide whether this set is consistent. Write each step's rows
 yourself: **Stack** or **Split** at the end of a branch, type the sentence,
 press \`Alt-C\` to cite the row it develops, and Tab to name the rule (\`∨\`,

@@ -95,7 +95,14 @@ export type RowProblem =
   | { readonly type: "not-instance" }
   | { readonly type: "name-not-new"; readonly name: string }
   /** A split's branches came from different steps. */
-  | { readonly type: "split-mixed" };
+  | { readonly type: "split-mixed" }
+  /** The step names no rule (gh #46). */
+  | { readonly type: "no-rule-named" }
+  /**
+   * The engine refused the step: it is not what the rule it names gives from
+   * the rows it cites (gh #46). `rule` is the axiom the engine tried.
+   */
+  | { readonly type: "step-wrong"; readonly rule: string | null };
 
 /**
  * Whether a row's problem is with its citation, the margin's business,
@@ -123,7 +130,11 @@ export function isCitationProblem(problem: RowProblem): boolean {
  * wrong; the tree is still not done until they are filled.
  */
 export function isIncomplete(problem: RowProblem): boolean {
-  return problem.type === "empty" || problem.type === "uncited";
+  return (
+    problem.type === "empty" ||
+    problem.type === "uncited" ||
+    problem.type === "no-rule-named"
+  );
 }
 
 /** What is wrong with a branch's end, or with a node's shape. */
@@ -146,7 +157,13 @@ export type EndProblem =
   /** An end mark on a node with branches below it. */
   | { readonly type: "end-not-leaf" }
   /** A branch with no rows. */
-  | { readonly type: "empty-branch" };
+  | { readonly type: "empty-branch" }
+  /** The engine refused the closure: its rows do not close the branch. */
+  | { readonly type: "closure-wrong" }
+  /** Marked open, where the exercise asks every branch to close. */
+  | { readonly type: "open-not-offered" }
+  /** Marked open, and nothing can say whether it is complete. */
+  | { readonly type: "open-unjudged" };
 
 /** A row still to be developed on a branch, and for which names. */
 export interface Missing {
@@ -201,7 +218,9 @@ export interface TreeProblem {
 
 export type TreeLevelProblem =
   | { readonly type: "root-missing" }
-  | { readonly type: "too-many-rows"; readonly limit: number };
+  | { readonly type: "too-many-rows"; readonly limit: number }
+  /** The engine did not confirm the tree's steps and closures. */
+  | { readonly type: "unverified" };
 
 export interface TreeReport {
   readonly rows: ReadonlyMap<string, RowProblem>;

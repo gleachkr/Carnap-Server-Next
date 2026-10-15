@@ -98,12 +98,13 @@ describe("widget string maps", () => {
   }
 
   // The client's shared proof pipeline (`components/proof-element.ts`) widens
-  // each proof widget's `t` to the engine set, so a proof type's `strings.ts`
+  // each proof widget's `t` to the engine set (the truth tree's too, which
+  // compiles as a proof does), so a proof type's `strings.ts`
   // could drop the spread without a type error — and its widget would then
   // say "Could not load the proof engine." in English in every locale.
   for (const type of WITH_STRINGS) {
     const name = type.directiveName;
-    if (!name.startsWith("aufbau-proof")) {
+    if (!name.startsWith("aufbau-proof") && name !== "truth-tree") {
       continue;
     }
     test(`${name} carries the shared proof-engine set`, () => {

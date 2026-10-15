@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { loadCompiler } from "@aufbau/compiler";
 import { dom } from "../helpers/dom";
 import {
   compileExercise,
@@ -6,7 +8,9 @@ import {
   markState,
   mountExercise,
   statusText,
+  until,
 } from "./mount-exercise";
+import { mockProofCompiler } from "./proof-compiler-mock";
 
 /**
  * `<carnap-truth-tree>`'s side of the widget: that the island replaces the
@@ -14,6 +18,20 @@ import {
  * cursor and is announced, and that the answer the form carries is the
  * tree.
  */
+
+// The real engine behind the loader: the tree is compiled as a proof is, and
+// what the engine says of it is what these tests are about.
+const engine = await loadCompiler({
+  wasmBytes: new Uint8Array(
+    readFileSync(
+      new URL(
+        "../../node_modules/@aufbau/compiler/compiler.wasm",
+        import.meta.url,
+      ),
+    ),
+  ).buffer,
+});
+await mockProofCompiler((mm0, proof) => engine.compile(mm0, proof));
 
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`
 // resolves and `register` lands in the window the fixtures are built in.
@@ -149,6 +167,7 @@ describe("upgrading", () => {
       ),
     ];
 
+    // Every branch is to close, so no branch is marked open.
     expect(
       buttons.map((button) => button.getAttribute("aria-label")),
     ).toEqual([
@@ -156,11 +175,21 @@ describe("upgrading", () => {
       "Split",
       "Add row",
       "Close",
-      "Mark open",
       "Delete",
       "Undo",
       "Redo",
     ]);
+
+    const open = mountExercise(
+      await treeExercise('finish="one-open"', "P & Q :|-: P"),
+    );
+    expect(
+      [
+        ...open.root.querySelectorAll<HTMLButtonElement>(
+          "[role='toolbar'] button",
+        ),
+      ].map((button) => button.getAttribute("aria-label")),
+    ).toContain("Mark open");
     expect(buttons.every((button) => button.textContent === "")).toBe(true);
     expect(
       buttons.every((button) => button.querySelector("svg") !== null),
@@ -252,6 +281,7 @@ describe("type mode", () => {
     expect(announced(mounted)).toBe("New row 3.");
     write(mounted, "P", "1");
     expect(announced(mounted)).toBe("Row 3 now cites row 1.");
+    name(mounted, "&");
 
     press(cursor(mounted), "r");
     write(mounted, "Q", "1");
@@ -268,10 +298,15 @@ describe("type mode", () => {
     mounted.form
       .querySelector<HTMLButtonElement>(".truth-tree-check")
       ?.click();
+    await until(() => statusText(mounted) !== "", 3_000);
     expect(statusText(mounted)).toBe(
       "Right: the tree closes, so the argument is valid.",
     );
     expect(markState(mounted)).toBe("ok");
+    // The answer carries the engine's certificate, for the server to verify.
+    expect(
+      (JSON.parse(mounted.answerData.value) as { mmb?: string }).mmb,
+    ).toBeDefined();
     // The tree is the whole answer: there is no question to answer.
     expect(mounted.root.querySelector("input[type='radio']")).toBeNull();
   });
@@ -546,9 +581,13 @@ describe("type mode", () => {
 
     press(cursor(mounted), "t");
     write(mounted, "b ≠ b", "2, 3");
-    // Not what the identity writes from row 3, so flagged; a ≠ a closes alone
-    // all the same, at its first tick.
-    expect(row(mounted, "b ≠ b").hasAttribute("data-flagged")).toBe(true);
+    name(mounted, "=");
+    // Not what the identity writes from row 3, so the engine refuses it; a ≠ a
+    // closes alone all the same, at its first tick.
+    await until(
+      () => row(mounted, "b ≠ b").hasAttribute("data-flagged"),
+      3_000,
+    );
     press(cursor(mounted), "x");
     press(mounted.root.activeElement as Element, "Enter");
     expect(announced(mounted)).toBe("Branch closed on row 4");
@@ -561,11 +600,13 @@ describe("type mode", () => {
 
     press(cursor(mounted), "t");
     write(mounted, "A", "1");
+    // A stack where ∨ splits: the engine refuses the step, once it is named.
+    name(mounted, "∨");
 
-    expect(cursor(mounted).hasAttribute("data-flagged")).toBe(true);
+    await until(() => cursor(mounted).hasAttribute("data-flagged"), 3_000);
     expect(
       mounted.root.querySelector("[data-role='note']")?.textContent,
-    ).toBe("Row 2: The rule for row 1 splits the branch into 2 branches.");
+    ).toBe("Row 2: The rule named does not give this from row 1.");
   });
 
   test("a click types in a row, leaving it ends typing, and the margin cites", async () => {
@@ -684,10 +725,14 @@ describe("type mode", () => {
 
     // Put right, the margin reads, and the wrong shape is the sentence's.
     cite("1", "Enter");
+    name(mounted, "∨");
     expect(margin()?.textContent).toBe("1");
     expect(margin()?.hasAttribute("data-flagged")).toBe(false);
-    expect(cursor(mounted).hasAttribute("data-flagged")).toBe(true);
+    await until(() => cursor(mounted).hasAttribute("data-flagged"), 3_000);
 
+    // Undo takes back the rule named, and then the citation.
+    press(cursor(mounted), "z", { ctrlKey: true });
+    expect(margin()?.textContent).toBe("1");
     press(cursor(mounted), "z", { ctrlKey: true });
     expect(margin()?.textContent).toBe("9");
   });

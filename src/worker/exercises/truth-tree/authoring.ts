@@ -31,7 +31,11 @@ import {
   type TreeTheoryProblem,
 } from "./aufbau/theory";
 import { FORALLX_UBC } from "./logic/system";
-import type { TruthTreePublicData, TruthTreeTask } from "./types";
+import type {
+  TruthTreeFinish,
+  TruthTreePublicData,
+  TruthTreeTask,
+} from "./types";
 import {
   TRUTH_TREE_ANSWER_KIND,
   TRUTH_TREE_CAPABILITIES,
@@ -45,8 +49,42 @@ const LIST_ITEM = /^\s*-\s+(.+?)\s*$/;
 /** What `::::truth-tree{…}` accepts beyond the shared exercise set. */
 const TRUTH_TREE_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
+  "finish",
   "system",
 ] as const;
+
+const FINISHES: readonly TruthTreeFinish[] = [
+  "closed",
+  "complete",
+  "one-open",
+];
+
+/** When the tree is done: `closed` unless the author says otherwise. */
+function parseFinish(
+  block: DirectiveBlock,
+  diagnostics: CompilerDiagnostic[],
+): TruthTreeFinish {
+  const value = block.attrs.finish?.trim();
+
+  if (value === undefined) {
+    return "closed";
+  }
+
+  const finish = FINISHES.find((each) => each === value);
+
+  if (finish === undefined) {
+    diagnostics.push(
+      diagnostic(
+        block.line,
+        "truth_tree_finish",
+        "The finish attribute must be closed, complete, or one-open.",
+      ),
+    );
+    return "closed";
+  }
+
+  return finish;
+}
 
 /** The tree theory a tree is set in when the author names none. */
 const DEFAULT_TRUTH_TREE_SYSTEM = "forallx-ubc";
@@ -231,6 +269,7 @@ export async function compileTruthTree(
     diagnostics,
     { defaultId: DEFAULT_TRUTH_TREE_SYSTEM },
   );
+  const finish = parseFinish(block, diagnostics);
   const body = parseBody(block, diagnostics);
 
   if (id === null) {
@@ -398,6 +437,8 @@ export async function compileTruthTree(
   }
 
   const publicData: TruthTreePublicData = {
+    // Stored only where it is not the default.
+    ...(finish === "closed" ? {} : { finish }),
     premises: premises.length,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
       ...renderOptions,

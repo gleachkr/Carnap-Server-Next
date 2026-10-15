@@ -182,6 +182,9 @@ describe("readCompileResult", () => {
     expect(verdict.problems).toEqual([
       {
         error: "RefCountMismatch",
+        // The line it is about, as the engine labels it: what leads a truth
+        // tree's diagnostic back to its row.
+        lineLabel: "l4",
         message: "wrong number of references for rule application",
         // Not from the text: the engine's own field, for the rule's shape.
         rule: "and_intro",
