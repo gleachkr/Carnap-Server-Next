@@ -339,6 +339,20 @@ describe("grading", () => {
     expect((await grade(item, answer)).status).toBe("correct");
   });
 
+  test("a row written below the root with no citation is no assumption", async () => {
+    const item = await declaration(
+      directive("#tu", "Is this set consistent?\n\n- P"),
+    );
+    const t = builderFor(item);
+    const [row] = t.stack(t.rootNode, null, ["¬P"]);
+    t.close(t.rootNode, "r1", row as string);
+
+    const graded = await grade(item, await certified(item, t.answer()));
+
+    expect(graded.status).not.toBe("correct");
+    expect(graded.score).toBe(0);
+  });
+
   test("a tree whose root is not the exercise's scores nothing", async () => {
     const item = await declaration(VALID);
     const t = new TreeBuilder(["Q & P", "¬P"]);

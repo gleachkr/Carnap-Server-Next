@@ -129,6 +129,12 @@ export interface EmitOptions {
   readonly rules: ReadonlyMap<string, string>;
   /** The rows' reader, shared with whatever else reads them. */
   readonly reader?: RowSortReader;
+  /**
+   * How many of the root node's rows are the exercise's root. Every row
+   * after them is a step's, cited or not: a row the student wrote with no
+   * citation is an unfinished step, never another assumption.
+   */
+  readonly rootRows: number;
   /** The theory's development rules: where a step's instances are. */
   readonly development?: TreeDevelopment;
   /**
@@ -155,20 +161,6 @@ function groupAt(rows: readonly TableauRow[], start: number): TableauRow[] {
   }
 
   return group;
-}
-
-/** The leading rows of the root node: the declared root, citing nothing. */
-function rootLength(root: TableauNode): number {
-  let length = 0;
-
-  while (
-    length < root.rows.length &&
-    (root.rows[length] as TableauRow).cites.length === 0
-  ) {
-    length += 1;
-  }
-
-  return length;
 }
 
 /** Every token of engine text, for finding the names and variables in it. */
@@ -511,7 +503,7 @@ export function emitTreeProof(
     return nothing(0);
   }
 
-  const rootRows = root.rows.slice(0, rootLength(root));
+  const rootRows = root.rows.slice(0, options.rootRows);
   const rootState = readable(rootRows);
 
   if (rootState.length !== rootRows.length) {

@@ -383,6 +383,7 @@ export function treeProofOf(
       instances,
       language: resolved.language,
       reader: resolved.reader,
+      rootRows: resolved.root.length,
       rules: answerRules(answer),
       theory: resolved.theory,
     },

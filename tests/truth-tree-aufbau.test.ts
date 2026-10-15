@@ -156,8 +156,11 @@ interface Checked {
 
 async function check(root: Shape, system = UBC): Promise<Checked> {
   const { document, rules } = tree(root);
+  // The root is the root node's leading rows that cite nothing.
+  const cited = root.rows.findIndex(([, , cites]) => cites.length > 0);
   const proof = emitTreeProof(document, {
     language: system.language,
+    rootRows: cited < 0 ? root.rows.length : cited,
     rules,
     theory: system.theory,
   });
