@@ -268,6 +268,19 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * compile found; empty until it has run.
    */
   private instances: ReadonlyMap<string, string> = new Map();
+  /**
+   * The derivation whose certificate the answer still owes, for the tree and
+   * rules it was made from: the last compile found every step right and left
+   * the certificate to the submit (see `certify`). Null when none is owed.
+   */
+  private owed: {
+    readonly mm0: string;
+    readonly goal: string;
+    readonly proof: string;
+    readonly tree: TableauDocument;
+    readonly rules: ReadonlyMap<string, string>;
+    settling: Promise<void> | null;
+  } | null = null;
   private drafts: Snapshot["drafts"] = { cites: new Map(), rule: new Map() };
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];
@@ -583,6 +596,21 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const tree = this.tree;
     const rules = this.rules;
     const answer = { nodes: tree.nodes, rules: Object.fromEntries(rules) };
+    const rowCount = tree.nodes.reduce(
+      (sum, node) => sum + node.rows.length,
+      0,
+    );
+
+    this.owed = null;
+
+    // A tree past the row cap is refused unread, so the engine is not asked.
+    if (rowCount > resolved.rowCap) {
+      this.instances = new Map();
+      this.evidence = { certified: false, errors: [], kind: "compiled" };
+      this.rerender();
+      return;
+    }
+
     const slots = treeProofOf(resolved, answer, new Map()).slots;
     const asking = treeProofOf(resolved, answer, slots);
 
@@ -621,22 +649,26 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     );
     let certified = asked.verdict.certificate !== null;
 
+    // Every step held, so the derivation stating only the instances that did
+    // certifies too; it differs from the one asked only by the links that
+    // failed. Compiling it costs as much again, and only the certificate
+    // needs it, so it is owed until a submit asks for it (`certify`).
     if (
       stepErrors.length === 0 &&
       final.goal !== null &&
       final.proof !== null &&
       (final.goal !== asking.goal || final.proof !== asking.proof)
     ) {
-      const run = await this.runCompiler(
-        `${mm0}\n${final.goal}\n`,
-        final.proof,
-      );
-
-      if (run === null || stale()) {
-        return;
-      }
-
-      certified = run.kind === "verdict" && run.verdict.certificate !== null;
+      certified = true;
+      this.mmb = "";
+      this.owed = {
+        goal: final.goal,
+        mm0,
+        proof: final.proof,
+        rules,
+        settling: null,
+        tree,
+      };
     }
 
     this.evidence = { certified, errors: stepErrors, kind: "compiled" };
@@ -664,6 +696,57 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
       check,
       bar.querySelector<HTMLElement>('button[type="submit"]'),
     );
+  }
+
+  /**
+   * Compile the certificate the answer owes, for a submit to wait on; null
+   * when none is owed, or the tree has changed since it was (the edit's own
+   * compile settles first, and owes afresh). The same promise to every gate
+   * that asks while it runs.
+   */
+  protected override certify(): Promise<void> | null {
+    const owed = this.owed;
+
+    if (
+      owed === null ||
+      owed.tree !== this.tree ||
+      owed.rules !== this.rules
+    ) {
+      return null;
+    }
+
+    owed.settling ??= (async () => {
+      const run = await this.runCompiler(
+        `${owed.mm0}\n${owed.goal}\n`,
+        owed.proof,
+      );
+
+      if (this.owed !== owed) {
+        return;
+      }
+
+      this.owed = null;
+
+      if (run === null) {
+        return;
+      }
+
+      // It certifies whenever every step held; should it not, the evidence
+      // says so rather than let the submit go on a promise.
+      if (run.kind !== "verdict" || run.verdict.certificate === null) {
+        this.evidence = {
+          certified: false,
+          errors:
+            this.evidence.kind === "compiled" ? this.evidence.errors : [],
+          kind: "compiled",
+        };
+      }
+
+      this.syncAnswer();
+      this.rerender();
+    })();
+
+    return owed.settling;
   }
 
   private async runCheck(): Promise<void> {

@@ -9,6 +9,7 @@ import {
   markState,
   mountExercise,
   statusText,
+  submitForm,
   until,
 } from "./mount-exercise";
 import { mockProofCompiler } from "./proof-compiler-mock";
@@ -32,7 +33,9 @@ const engine = await loadCompiler({
     ),
   ).buffer,
 });
-await mockProofCompiler((mm0, proof) => engine.compile(mm0, proof));
+const compile = await mockProofCompiler((mm0, proof) =>
+  engine.compile(mm0, proof),
+);
 
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`
 // resolves and `register` lands in the window the fixtures are built in.
@@ -293,11 +296,66 @@ describe("upgrading", () => {
       [rab?.id ?? ""]: "a",
       [rbb?.id ?? ""]: "b",
     });
-    expect(answer.mmb).toBeDefined();
+    // The certificate states only the instances that held, a second compile
+    // that waits for a submit: typing pays for one compile, not two.
+    expect(answer.mmb).toBeUndefined();
     // What the engine made of the tree is not work the student has to save.
     expect(mounted.element.hasAttribute(UNSAVED_ANSWER_ATTRIBUTE)).toBe(
       false,
     );
+
+    // The page runtime's bubbling listener: a submit that is not cancelled
+    // would be fetched, never navigated.
+    const sent: string[] = [];
+    mounted.form.addEventListener("submit", (event) => {
+      if (!event.defaultPrevented) {
+        sent.push(mounted.answerData.value);
+        event.preventDefault();
+      }
+    });
+
+    expect(submitForm(mounted).defaultPrevented).toBe(true);
+    await until(() => sent.length > 0, 3_000);
+
+    const submitted = JSON.parse(sent[0] ?? "{}") as { mmb?: string };
+    expect(submitted.mmb).toBeDefined();
+  });
+
+  test("a tree past the row cap is refused without asking the engine", async () => {
+    const extra = Array.from({ length: 200 }, (_, at) => ({
+      cites: ["r1"],
+      dev: `d${at}`,
+      id: `x${at}`,
+      text: "P",
+    }));
+    const prior = {
+      nodes: [
+        {
+          id: "old-root",
+          parent: null,
+          rows: [{ cites: [], dev: "root", id: "r1", text: "P" }, ...extra],
+        },
+      ],
+      // Each step names a rule, so the tree is a derivation the engine
+      // could be asked about.
+      rules: Object.fromEntries(extra.map((each) => [each.dev, "∧"])),
+    };
+    const mounted = mountExercise(
+      await treeExercise(
+        'finish="one-open"',
+        "Is this set consistent?\n\n- P",
+      ),
+      { priorAnswer: prior },
+    );
+    const before = compile.mock.calls.length;
+
+    mounted.form
+      .querySelector<HTMLButtonElement>(".truth-tree-check")
+      ?.click();
+    await until(() => statusText(mounted) !== "", 3_000);
+
+    expect(statusText(mounted)).toContain("at most 200 rows");
+    expect(compile.mock.calls.length).toBe(before);
   });
 
   test("a prior answer on a root the exercise no longer gives is set aside", async () => {

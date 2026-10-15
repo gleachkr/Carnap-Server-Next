@@ -148,10 +148,10 @@ export abstract class ProofExerciseElement<
   }
 
   /**
-   * The submit gate. A compile still pending or running would leave this
-   * submission without its certificate — and, with `allow-sorry`, without
-   * knowing whether it may go at all — so it is settled first and the submit
-   * sent again. Then, outside an exam, a proof that stands only by admitting
+   * The submit gate. A compile still pending or running, or a certificate
+   * still owed ({@link certify}), would leave this submission without its
+   * certificate — and, with `allow-sorry`, without knowing whether it may go
+   * at all — so it is settled first and the submit sent again. Then, outside an exam, a proof that stands only by admitting
    * lines is held back and the reader told why: it would score nothing, and
    * the point of allowing `sorry!` was to let them see the rest check, not to
    * hand in the gaps. On an exam it goes as it stands, for nothing.
@@ -159,7 +159,7 @@ export abstract class ProofExerciseElement<
    * Registered by the subclass once its editor is up, through `gateSubmit`.
    */
   protected gate(event: Event): void {
-    const settling = this.settleCompile();
+    const settling = this.settleCompile() ?? this.certify();
     if (settling !== null) {
       this.holdSubmit(event, settling);
       return;
@@ -266,6 +266,16 @@ export abstract class ProofExerciseElement<
     this.mmb =
       verdict.certificate === null ? "" : bytesToBase64(verdict.certificate);
     return { kind: "verdict", verdict };
+  }
+
+  /**
+   * Make the certificate the answer still owes, if the last compile left one
+   * to be made at submit; the promise to wait on, or null if none is owed.
+   * A widget whose verdict comes from one compile and its certificate from
+   * another defers the second this way, so typing pays only for the first.
+   */
+  protected certify(): Promise<void> | null {
+    return null;
   }
 
   /** Run a pending compile now, and wait for it, if one is due. */

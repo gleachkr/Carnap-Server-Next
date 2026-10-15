@@ -58,9 +58,11 @@ is in
   branch is complete and what each row's mark is. A general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
-  browser compiles every candidate once to find which hold, then the ones
-  that do into the certificate; the answer carries them (`instances`), and
-  the server writes the same links.
+  browser compiles every candidate once to find which hold, and that compile
+  gives the verdict; the derivation stating only the ones that hold is
+  compiled for the certificate when the student submits, so typing pays for
+  one compile, not two. The answer carries them (`instances`), and the
+  server writes the same links. A tree past the row cap is not compiled.
 - `logic/` — the old UBC checker, kept for the differential test (#440),
   `tests/truth-tree-differential.test.ts`. It develops every root the book
   works a tree from (`tests/helpers/ubc-tree-roots.ts`, read from the
