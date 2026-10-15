@@ -204,7 +204,7 @@ export class TreeBuilder {
 
 let compiler: Promise<LoadedCompiler> | null = null;
 
-function engine(): Promise<LoadedCompiler> {
+export function engine(): Promise<LoadedCompiler> {
   compiler ??= loadCompiler({
     wasmBytes: readFileSync(
       new URL(

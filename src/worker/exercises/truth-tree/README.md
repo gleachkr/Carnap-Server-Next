@@ -47,7 +47,11 @@ is in
   report from the tree's structure and the engine's word on it. The browser
   compiles the theorems; the server writes the same theorems from the stored
   tree and verifies the browser's certificate against them, so a certificate
-  for any other tree does not verify. `criteria.ts` reads the theory's
+  for any other tree does not verify. A branch is a set, so the engine
+  takes a row already on it as written: the judge also refuses a step that
+  writes fewer rows than its rule does (`A ∧ B` developed as `A` alone, with
+  `B` above). A tree with no inference to state, its root alone, has
+  nothing to certify. `criteria.ts` reads the theory's
   development roles into a registry of criteria (`once`, `general`, `none`),
   `patterns.ts` matches a rule's focus against a row and fills in its
   templates, and `complete.ts` says from the verified steps whether an open
@@ -57,7 +61,15 @@ is in
   browser compiles every candidate once to find which hold, then the ones
   that do into the certificate; the answer carries them (`instances`), and
   the server writes the same links.
-- `logic/` — the old UBC checker, kept for the differential test (#440).
+- `logic/` — the old UBC checker, kept for the differential test (#440),
+  `tests/truth-tree-differential.test.ts`. It develops every root the book
+  works a tree from (`tests/helpers/ubc-tree-roots.ts`, read from the
+  book's LaTeX source) as UBC's procedure does, correctly and with one
+  injected fault of each kind, and judges each tree with both checkers as
+  the browser runs them. They must agree on the verdict, which developments
+  are wrong or unfinished, every end, what an open branch is missing and
+  every mark, bar the differences `KNOWN_DIFFERENCES` names and two tests
+  pin, so that each entry fails when it is fixed.
 - `grading.ts` — guards, the declaration resolved back to formulas, and the
   judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the
@@ -106,6 +118,13 @@ Verifying 5 MB takes about 50 ms in workerd, decoding included.
 
 ## Not yet
 
+- UBC's identity completion (§12.7): an open branch is complete only once
+  each identity is substituted into its literals. The generic checker does
+  not ask for it, so it accepts such a branch as complete, and its
+  verdict with it.
+- A substitution by an identity on a branch with a row that uses all three
+  variables (`∃x∃y∃z…`) is refused: the rule needs a fresh variable, and
+  the engine draws only from the language's own `x y z`. An upstream ask.
 - Reading an interpretation off a complete open branch, merging the names
   an identity on it equates (§12.7).
 - A `rules=` attribute, which arrives with a second system record.
