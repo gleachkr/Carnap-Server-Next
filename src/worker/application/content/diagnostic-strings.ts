@@ -314,9 +314,6 @@ export function buildDiagnosticStrings(i18n: Translator) {
     "Only the root's sentences may follow the first of them.": i18n.t(
       "Only the root's sentences may follow the first of them.",
     ),
-    "The develop attribute must be type or fill.": i18n.t(
-      "The develop attribute must be type or fill.",
-    ),
     "“{formula}” has free variables, and a tree's root must be sentences.":
       i18n.t(
         "“{formula}” has free variables, and a tree's root must be sentences.",

@@ -926,7 +926,7 @@ Is this argument valid? Use a tree to decide.
 (D & ¬R) ∨ Q, ¬Q ∨ R :|-: D ∨ R
 ::::
 
-::::truth-tree{#tt2 develop="fill" points="3"}
+::::truth-tree{#tt2 points="3"}
 Use a tree to decide whether this set is consistent.
 
 - ∀x(Fx ⊃ Gx)
@@ -944,15 +944,11 @@ is exactly one conclusion.
 
 - `system` names the language, and defaults to `forallx-ubc`. It must have
   a negation.
-- `develop="type"` (the default): the student writes every row. **Stack**
-  (`t`) adds a row at the end of the branch, **Split** (`s`) branches it in
-  two, and **Add row** (`r`) adds another row to the same step, as `≡`
-  needs. Whether a rule stacks or splits is part of what is being learned.
-- `develop="fill"`: **Develop** (`d`) writes the cited row's rule under
-  every open branch below it, asking only for an instance's name. On an
-  identity `a=b` it asks for the number of the row to rewrite, and, if that
-  row has both names, which one to replace. The exercise is then which row
-  to develop, which name to use, and where to close.
+
+The student writes every row. **Stack** (`t`) adds a row at the end of the
+branch, **Split** (`s`) branches it in two, and **Add row** (`r`) adds
+another row to the same step, as `≡` needs. Whether a rule stacks or splits
+is part of what is being learned.
 
 The toolbar's buttons act on the row at the cursor; the `(?)` in the action
 bar lists their keys. **Close** (`x`) asks for the rows the branch

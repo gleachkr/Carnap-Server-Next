@@ -200,8 +200,8 @@ Decide the argument with a tree.
 P ∨ Q, ¬P :|-: Q
 ::::
 
-::::truth-tree{#tf develop="fill" points="1"}
-Develop the rows with the tool.
+::::truth-tree{#tf points="1"}
+Decide whether these sentences are consistent.
 
 - ∃xFx
 - ∀x¬Fx

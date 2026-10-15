@@ -1,7 +1,7 @@
 /*
  * The truth-tree editor's own styles, appended to its shadow root once the
- * island mounts: the cursor, the inline inputs, and the prompt and note
- * lines. The tree itself is the tableau component's
+ * island mounts: the cursor, the inline inputs, and the closing prompt and
+ * note lines. The tree itself is the tableau component's
  * (`src/tableau/tableau.css`), already in the root.
  */
 
@@ -186,38 +186,11 @@
   width: 3.4ch;
 }
 
-.truth-tree-prompt input {
-  background: var(--_field-bg);
-  border: 0;
-  border-radius: 3px 3px 0 0;
-  box-shadow: inset 0 -2px 0 var(--_accent);
-  color: var(--_text);
-  font: inherit;
-  font-family: var(--_mono-font);
-  outline: none;
-  padding: 0.1rem 0.3rem;
-}
-
-.truth-tree-prompt input:focus {
-  outline: 2px solid var(--_accent);
-  outline-offset: 1px;
-}
-
 .truth-tree-prompt {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.truth-tree-prompt label {
-  align-items: center;
-  display: inline-flex;
-  gap: 0.5rem;
-}
-
-.truth-tree-prompt input {
-  width: 6rem;
 }
 
 .truth-tree-prompt p {

@@ -41,7 +41,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
       },
     ),
     "Add row": i18n.t("Add row"),
-    Develop: i18n.t("Develop"),
     Close: i18n.t("Close"),
     "Mark open": i18n.t("Mark open"),
     Delete: i18n.t("Delete"),
@@ -59,14 +58,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "Row {row} unmarked.": i18n.t("Row {row} unmarked.", placeholders("row")),
     "Closing put away.": i18n.t("Closing put away."),
     Cancel: i18n.t("Cancel"),
-    "Name for the instance": i18n.t("Name for the instance"),
-    "Row to rewrite by this identity": i18n.t(
-      "Row to rewrite by this identity",
-    ),
-    "Replace {from} with {to}": i18n.t(
-      "Replace {from} with {to}",
-      placeholders("from", "to"),
-    ),
     "Row {row}: {text}": i18n.t(
       "Row {row}: {text}",
       placeholders("row", "text"),
@@ -102,7 +93,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     ),
 
     "Tree actions": i18n.t("Tree actions"),
-    Done: i18n.t("Done"),
     "Sentence on row {row}": i18n.t(
       "Sentence on row {row}",
       placeholders("row"),
@@ -121,14 +111,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "Split below row {row}: two new branches.": i18n.t(
       "Split below row {row}: two new branches.",
       placeholders("row"),
-    ),
-    "Row {row} developed.": i18n.t(
-      "Row {row} developed.",
-      placeholders("row"),
-    ),
-    "Row {row} developed on {count} branches.": i18n.t(
-      "Row {row} developed on {count} branches.",
-      placeholders("count", "row"),
     ),
     "Branch reopened.": i18n.t("Branch reopened."),
     "Row deleted.": i18n.t("Row deleted."),
@@ -156,36 +138,7 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "The root's rows are given, and cannot be changed.": i18n.t(
       "The root's rows are given, and cannot be changed.",
     ),
-    "Row {row} does not read, so it cannot be developed.": i18n.t(
-      "Row {row} does not read, so it cannot be developed.",
-      placeholders("row"),
-    ),
-    "Row {row} has no rule to develop.": i18n.t(
-      "Row {row} has no rule to develop.",
-      placeholders("row"),
-    ),
-    "Row {cited} is not on an open branch through row {row}.": i18n.t(
-      "Row {cited} is not on an open branch through row {row}.",
-      placeholders("cited", "row"),
-    ),
-    "Substituting by row {row} into row {cited} writes nothing new on any open branch.":
-      i18n.t(
-        "Substituting by row {row} into row {cited} writes nothing new on any open branch.",
-        placeholders("cited", "row"),
-      ),
-    "Row {cited} rewritten by the identity on row {row}.": i18n.t(
-      "Row {cited} rewritten by the identity on row {row}.",
-      placeholders("cited", "row"),
-    ),
-    "Row {row} is already developed on every open branch below it.": i18n.t(
-      "Row {row} is already developed on every open branch below it.",
-      placeholders("row"),
-    ),
     "Type row numbers, such as 3.": i18n.t("Type row numbers, such as 3."),
-    "“{name}” is not a name in this language.": i18n.t(
-      "“{name}” is not a name in this language.",
-      placeholders("name"),
-    ),
 
     // ——— The (?) dialog.
     "Using the tree editor": i18n.t("Using the tree editor"),
@@ -196,10 +149,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin.":
       i18n.t(
         "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin.",
-      ),
-    "Choose a row to develop, and the rows its rule writes are added under every open branch below it.":
-      i18n.t(
-        "Choose a row to develop, and the rows its rule writes are added under every open branch below it.",
       ),
     "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.":
       i18n.t(
@@ -219,9 +168,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     ),
     "Split the branch in two": i18n.t("Split the branch in two"),
     "Add a row to this step": i18n.t("Add a row to this step"),
-    "Develop the row on every open branch below it": i18n.t(
-      "Develop the row on every open branch below it",
-    ),
     "Close the branch": i18n.t("Close the branch"),
     "Mark a row the branch closes on, once closing": i18n.t(
       "Mark a row the branch closes on, once closing",

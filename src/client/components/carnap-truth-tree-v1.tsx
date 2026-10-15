@@ -10,12 +10,10 @@
  *
  * Every action is one key (or one toolbar button, whose keys the `(?)`
  * dialog lists) on the row at the cursor,
- * and works on that row's branch. In `develop="type"` the student writes each
- * step: Stack or Split, then the rows' sentences, then the row they develop in
- * the margin. In `develop="fill"` Develop writes the rule's rows under every
- * open branch below the row, asking only for an instance's name (and, on an
- * identity, the row to rewrite with it). Closing a branch cites its two rows,
- * or its one row `a≠a`; ↑ marks one open and complete.
+ * and works on that row's branch. The student writes each step: Stack or
+ * Split, then the rows' sentences, then the row they develop in the margin.
+ * Closing a branch cites its two rows, or its one row `a≠a`; ↑ marks one open
+ * and complete.
  *
  * The mouse follows the proof tree's conventions: a click on a row types in
  * it, a click in its margin types its citation, and a click elsewhere ends
@@ -47,15 +45,6 @@ import type { TableauLayout } from "../../tableau/layout";
 import { layoutTableau, rowAtLine } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
-import type { Formula } from "../../worker/exercise-kit/formula";
-import {
-  languageNames,
-  namesIn,
-  parseTerm,
-  replaceName,
-  sameFormula,
-  substitute,
-} from "../../worker/exercise-kit/formula";
 import { treeAnnotations } from "../../worker/exercises/truth-tree/annotations";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
 import {
@@ -70,12 +59,7 @@ import type { TreeReport } from "../../worker/exercises/truth-tree/logic/check";
 import {
   checkTree,
   closesAlone,
-  nameIdentity,
 } from "../../worker/exercises/truth-tree/logic/check";
-import { displayFormula } from "../../worker/exercises/truth-tree/logic/formulas";
-import { displayName } from "../../worker/exercises/truth-tree/logic/labels";
-import type { Rule } from "../../worker/exercises/truth-tree/logic/rules";
-import { ruleFor } from "../../worker/exercises/truth-tree/logic/rules";
 import type { TruthTreeStringId } from "../../worker/exercises/truth-tree/strings";
 import type {
   TruthTreeAnswerData,
@@ -115,29 +99,6 @@ interface Derived {
   report?: TreeReport | null;
 }
 
-/** A question the editor is asking below the tree, and the answer so far. */
-type Prompt =
-  /** Fill mode: the name for a quantifier row's instance. */
-  | {
-      readonly type: "name";
-      readonly row: string;
-      readonly targets: readonly string[];
-      readonly draft: string;
-    }
-  /** Fill mode: the number of the row an identity row rewrites. */
-  | {
-      readonly type: "substitute";
-      readonly row: string;
-      readonly draft: string;
-    }
-  /** Fill mode: which of an identity's names to replace, when both occur. */
-  | {
-      readonly type: "direction";
-      readonly row: string;
-      readonly line: number;
-      readonly names: readonly [string, string];
-    };
-
 /**
  * Closing a branch: the rows marked so far as the sentence and its negation
  * it closes on, as the truth table's counterexample row is marked. Two
@@ -171,7 +132,7 @@ interface Shortcut {
   readonly keys: readonly string[];
 }
 
-const TYPE_SHORTCUTS: readonly Shortcut[] = [
+const SHORTCUTS: readonly Shortcut[] = [
   { action: "Move between rows", keys: ["←", "→", "↑", "↓"] },
   { action: "Write the row's sentence", keys: ["Enter"] },
   {
@@ -207,16 +168,6 @@ const TYPE_SHORTCUTS: readonly Shortcut[] = [
     keys: ["Delete"],
   },
   { action: "Undo or redo", icon: "undo", keys: ["Ctrl-Z", "Ctrl-Y"] },
-];
-
-const FILL_SHORTCUTS: readonly Shortcut[] = [
-  { action: "Move between rows", keys: ["←", "→", "↑", "↓"] },
-  {
-    action: "Develop the row on every open branch below it",
-    icon: "tree-develop",
-    keys: ["d"],
-  },
-  ...TYPE_SHORTCUTS.slice(7),
 ];
 
 /** Of some rows, the one furthest right in the layout. */
@@ -273,7 +224,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
    */
   private marginOf: string | null = null;
   private closing: Closing | null = null;
-  private prompt: Prompt | null = null;
   private announcement = "";
   /** A pointer is down, so a blur is a click elsewhere; see `strayBlur`. */
   private pointing = false;
@@ -326,27 +276,21 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     mountProblemPopup(root, body, this.listeners.signal);
     this.rerender();
 
-    const fill = data.develop === "fill";
-
     this.helpDialog = createHelpDialog({
       close: this.t("Close help"),
       intro: [
         this.t(
           "Move to a row with the arrow keys or by clicking it; each action works on the row or branch there.",
         ),
-        fill
-          ? this.t(
-              "Choose a row to develop, and the rows its rule writes are added under every open branch below it.",
-            )
-          : this.t(
-              "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin.",
-            ),
+        this.t(
+          "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop in the margin.",
+        ),
         this.t(
           "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.",
         ),
       ],
       keyboard: this.t("Keyboard"),
-      shortcuts: (fill ? FILL_SHORTCUTS : TYPE_SHORTCUTS).map((shortcut) => ({
+      shortcuts: SHORTCUTS.map((shortcut) => ({
         action: this.t(shortcut.action),
         keys: shortcut.keys,
         ...(shortcut.icon === undefined ? {} : { icon: shortcut.icon }),
@@ -541,10 +485,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     this.setMark("idle");
     this.syncAnswer();
     this.rerender();
-  }
-
-  private get fill(): boolean {
-    return this.data?.develop === "fill";
   }
 
   private number(rowId: string, layout = this.layout): string {
@@ -747,27 +687,21 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
 
   /** The actions that change the tree, or start to. */
   private command(action: TableauKeyAction): void {
-    const fill = this.fill;
-
-    // Any other action puts away a closing half marked, and any action at
-    // all an open prompt, whose targets were the tree's before the action.
+    // Any other action puts away a closing half marked.
     if (this.closing !== null && action !== "close") {
       this.closing = null;
     }
 
-    this.prompt = null;
-
     const commands: Partial<Record<TableauKeyAction, () => void>> = {
-      "add-row": () => fill || this.addRow(),
+      "add-row": () => this.addRow(),
       cite: () => this.startCiting(),
       close: () => this.closeBranch(),
       delete: () => this.deleteRow(),
-      develop: () => fill && this.develop(),
       edit: () => this.startEditing(),
       open: () => this.openBranch(),
       redo: () => this.redo(),
-      split: () => fill || this.split(),
-      stack: () => fill || this.stack(),
+      split: () => this.split(),
+      stack: () => this.stack(),
       undo: () => this.undo(),
     };
 
@@ -788,7 +722,7 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
 
     const row = this.cursorRowId();
 
-    if (row === null || this.fill) {
+    if (row === null) {
       return;
     }
 
@@ -808,7 +742,7 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
   private startCiting(): void {
     const row = this.cursorRowId();
 
-    if (row === null || this.fill) {
+    if (row === null) {
       return;
     }
 
@@ -989,7 +923,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     this.closing = { leaf, picked };
     this.editing = null;
     this.citing = null;
-    this.prompt = null;
     this.focusTree = true;
     this.announce(this.closingHint());
     this.rerender();
@@ -1206,372 +1139,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     this.citing = null;
     this.marginOf = null;
     this.closing = null;
-    this.prompt = null;
-  }
-
-  // --- Fill mode ----------------------------------------------------------
-
-  /** Develop the cursor's row on every open branch below it that lacks it. */
-  private develop(): void {
-    const resolved = this.resolved;
-    const row = this.cursor;
-    const index = this.index;
-    const location = row === null ? null : index.row(row);
-
-    if (resolved === null || row === null || location === null) {
-      return;
-    }
-
-    const number = this.number(row);
-    const read = resolved.reader.read(location.row.text);
-
-    if (!read.ok) {
-      this.refuse(
-        this.t("Row {row} does not read, so it cannot be developed.", {
-          row: number,
-        }),
-      );
-      return;
-    }
-
-    const rule = ruleFor(read.formula, resolved.system);
-
-    if (
-      rule.type === "none" &&
-      resolved.system.identity !== undefined &&
-      nameIdentity(read.formula) !== null
-    ) {
-      this.prompt = { draft: "", row, type: "substitute" };
-      this.rerender();
-      return;
-    }
-
-    if (rule.type === "none") {
-      this.refuse(
-        this.t("Row {row} has no rule to develop.", { row: number }),
-      );
-      return;
-    }
-
-    const general =
-      rule.type === "quantifier" && rule.rule.mark === "general";
-    const targets = index
-      .leaves(location.node.id)
-      .filter(
-        (leaf) =>
-          leaf.end === undefined &&
-          (general ||
-            !index
-              .branchRows(leaf.id)
-              .some(
-                (each) => each.cites.length === 1 && each.cites[0] === row,
-              )),
-      )
-      .map((leaf) => leaf.id);
-
-    if (targets.length === 0) {
-      this.refuse(
-        this.t(
-          "Row {row} is already developed on every open branch below it.",
-          {
-            row: number,
-          },
-        ),
-      );
-      return;
-    }
-
-    if (rule.type === "quantifier") {
-      this.prompt = {
-        draft: this.suggestName(rule, targets),
-        row,
-        targets,
-        type: "name",
-      };
-      this.rerender();
-      return;
-    }
-
-    this.writeDevelopment(row, targets, rule.branches);
-  }
-
-  /** The name to offer: new to every target branch, or one already there. */
-  private suggestName(
-    rule: Extract<Rule, { type: "quantifier" }>,
-    targets: readonly string[],
-  ): string {
-    const resolved = this.resolved;
-
-    if (resolved === null) {
-      return "";
-    }
-
-    const index = this.index;
-    const onBranches = new Set<string>();
-
-    for (const leaf of targets) {
-      for (const each of index.branchRows(leaf)) {
-        const read = resolved.reader.read(each.text);
-
-        if (read.ok) {
-          for (const name of namesIn(read.formula)) {
-            onBranches.add(name);
-          }
-        }
-      }
-    }
-
-    const names = languageNames(resolved.language);
-
-    if (rule.rule.instance === "any") {
-      const used = [...onBranches];
-      return used[0] ?? names[0] ?? "";
-    }
-
-    return names.find((name) => !onBranches.has(name)) ?? "";
-  }
-
-  private commitName(prompt: Extract<Prompt, { type: "name" }>): void {
-    const resolved = this.resolved;
-    const location = this.index.row(prompt.row);
-
-    if (resolved === null || location === null) {
-      return;
-    }
-
-    const name = prompt.draft.trim();
-    const term = parseTerm(name, resolved.language);
-    const read = resolved.reader.read(location.row.text);
-
-    if (!term.ok || term.term.type !== "constant" || !read.ok) {
-      this.refuse(
-        this.t("“{name}” is not a name in this language.", { name }),
-      );
-      return;
-    }
-
-    const rule = ruleFor(read.formula, resolved.system);
-
-    if (rule.type !== "quantifier") {
-      return;
-    }
-
-    const instance = substitute(rule.body, rule.variable, term.term);
-    const written: Formula =
-      rule.rule.yields === "negated-instance"
-        ? { operand: instance, type: "not" }
-        : instance;
-
-    this.prompt = null;
-    this.writeDevelopment(prompt.row, prompt.targets, [[written]]);
-  }
-
-  private commitSubstitute(
-    prompt: Extract<Prompt, { type: "substitute" }>,
-  ): void {
-    const numbers = parseNumbers(prompt.draft);
-    const line = numbers?.length === 1 ? numbers[0] : undefined;
-
-    if (line === undefined) {
-      this.refuse(this.t("Type row numbers, such as 3."));
-      return;
-    }
-
-    this.substituteInto(prompt.row, line, null);
-  }
-
-  /**
-   * Rewrite row `line` by the identity on `row`, on every open branch through
-   * both, replacing `from` (or, if `null`, whichever of the identity's names
-   * the row mentions, asking when it mentions both).
-   */
-  private substituteInto(row: string, line: number, from: string | null) {
-    const resolved = this.resolved;
-    const index = this.index;
-    const layout = this.layout;
-    const location = index.row(row);
-    const identity =
-      location === null ? null : resolved?.reader.read(location.row.text);
-    const names =
-      identity?.ok === true ? nameIdentity(identity.formula) : null;
-
-    if (resolved === null || location === null || names === null) {
-      return;
-    }
-
-    const number = this.number(row, layout);
-    const writes: {
-      leaf: string;
-      cites: string[];
-      formula: Formula;
-    }[] = [];
-    let found = false;
-
-    for (const leaf of index.leaves(location.node.id)) {
-      if (leaf.end !== undefined) {
-        continue;
-      }
-
-      const branch = index.branchRows(leaf.id);
-      const into = branch.find(
-        (each) => layout.rows.get(each.id)?.line === line,
-      );
-      const read =
-        into === undefined ? null : resolved.reader.read(into.text);
-
-      if (into === undefined || read?.ok !== true) {
-        continue;
-      }
-
-      found = true;
-      const mentioned = namesIn(read.formula);
-      const both =
-        names.left !== names.right &&
-        mentioned.includes(names.left) &&
-        mentioned.includes(names.right);
-
-      if (both && from === null) {
-        this.prompt = {
-          line,
-          names: [names.left, names.right],
-          row,
-          type: "direction",
-        };
-        this.rerender();
-        return;
-      }
-
-      const replaced =
-        from ??
-        (mentioned.includes(names.left)
-          ? names.left
-          : mentioned.includes(names.right)
-            ? names.right
-            : null);
-
-      if (replaced === null || !mentioned.includes(replaced)) {
-        continue;
-      }
-
-      const formula = replaceName(
-        read.formula,
-        replaced,
-        replaced === names.left ? names.right : names.left,
-      );
-      const there = branch.some((each) => {
-        const other = resolved.reader.read(each.text);
-        return other.ok && sameFormula(other.formula, formula);
-      });
-
-      if (!there) {
-        const cites = branch
-          .filter((each) => each.id === row || each.id === into.id)
-          .map((each) => each.id);
-        writes.push({ cites, formula, leaf: leaf.id });
-      }
-    }
-
-    this.prompt = null;
-
-    if (writes.length === 0) {
-      this.refuse(
-        found
-          ? this.t(
-              "Substituting by row {row} into row {cited} writes nothing new on any open branch.",
-              { cited: String(line), row: number },
-            )
-          : this.t(
-              "Row {cited} is not on an open branch through row {row}.",
-              {
-                cited: String(line),
-                row: number,
-              },
-            ),
-      );
-      return;
-    }
-
-    let tree = this.tree;
-    let first: string | null = null;
-
-    for (const write of writes) {
-      const made = stackRows(
-        tree,
-        write.leaf,
-        [
-          {
-            cites: write.cites,
-            dev: this.mint(),
-            text: displayFormula(write.formula, resolved.language),
-          },
-        ],
-        this.mint,
-      );
-
-      tree = made.document;
-      first ??= made.rows[0] ?? null;
-    }
-
-    this.remember();
-    this.tree = tree;
-    this.cursor = first ?? this.cursor;
-    this.focusTree = true;
-    this.announce(
-      this.t("Row {cited} rewritten by the identity on row {row}.", {
-        cited: String(line),
-        row: number,
-      }),
-    );
-    this.edited();
-  }
-
-  private writeDevelopment(
-    row: string,
-    targets: readonly string[],
-    branches: readonly (readonly Formula[])[],
-  ): void {
-    const resolved = this.resolved;
-
-    if (resolved === null) {
-      return;
-    }
-
-    let tree = this.tree;
-    let first: string | null = null;
-
-    for (const leaf of targets) {
-      const dev = this.mint();
-      const drafts = branches.map((formulas) =>
-        formulas.map((formula) => ({
-          cites: [row],
-          dev,
-          text: displayFormula(formula, resolved.language),
-        })),
-      );
-      const made =
-        drafts.length === 1
-          ? stackRows(tree, leaf, drafts[0] ?? [], this.mint)
-          : splitNode(tree, leaf, drafts, this.mint);
-
-      tree = made.document;
-      first ??= made.rows[0] ?? null;
-    }
-
-    const number = this.number(row);
-
-    this.remember();
-    this.tree = tree;
-    this.cursor = first ?? this.cursor;
-    this.focusTree = true;
-    this.announce(
-      targets.length === 1
-        ? this.t("Row {row} developed.", { row: number })
-        : this.t("Row {row} developed on {count} branches.", {
-            count: String(targets.length),
-            row: number,
-          }),
-    );
-    this.edited();
   }
 
   // --- Typing -------------------------------------------------------------
@@ -1653,7 +1220,7 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
       return;
     }
 
-    if (this.fill || this.isRootRow(rowId) || this.editing === rowId) {
+    if (this.isRootRow(rowId) || this.editing === rowId) {
       this.rerender();
       return;
     }
@@ -1919,22 +1486,14 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
 
     render(this.view(resolved, report, layout), mount);
     this.focusTree = false;
-
-    if (this.prompt !== null) {
-      mount.querySelector<HTMLInputElement>("[data-prompt-input]")?.focus();
-    }
   }
 
   /**
-   * The lines whose margin a click can cite from: in type mode, every line
-   * below the root that begins a step. Fill mode writes the citations itself.
+   * The lines whose margin a click can cite from: every line below the root
+   * that begins a step.
    */
   private citableLines(layout: TableauLayout): Set<number> {
     const lines = new Set<number>();
-
-    if (this.fill) {
-      return lines;
-    }
 
     for (const [line, rows] of layout.lineRows) {
       if (
@@ -2081,7 +1640,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
     report: TreeReport | null,
     layout: TableauLayout,
   ) {
-    const fill = this.fill;
     const annotations =
       report === null
         ? null
@@ -2122,13 +1680,9 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
           class="proof-toolbar truth-tree-toolbar"
           role="toolbar"
         >
-          {fill
-            ? button("Develop", "tree-develop", "develop")
-            : [
-                button("Stack", "tree-stack", "stack"),
-                button("Split", "tree-split", "split"),
-                button("Add row", "tree-add-row", "add-row"),
-              ]}
+          {button("Stack", "tree-stack", "stack")}
+          {button("Split", "tree-split", "split")}
+          {button("Add row", "tree-add-row", "add-row")}
           <span class="proof-toolbar-sep" />
           {button("Close", "tree-close", "close")}
           {button("Mark open", "tree-open", "open")}
@@ -2220,7 +1774,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
             </button>
           </div>
         )}
-        {this.prompt === null ? null : this.promptView(this.prompt)}
         {note === null ? null : (
           <p class="truth-tree-note" data-role="note">
             {note}
@@ -2229,113 +1782,6 @@ class CarnapTruthTree extends CarnapExerciseElement<TruthTreeStringId> {
         <p aria-live="polite" class="visually-hidden" data-role="announce">
           {this.announcement}
         </p>
-      </div>
-    );
-  }
-
-  private promptView(prompt: Prompt) {
-    const putAway = (): void => {
-      this.prompt = null;
-      this.focusTree = true;
-      this.rerender();
-    };
-
-    if (prompt.type === "direction") {
-      const [left, right] = prompt.names;
-      const language = this.resolved?.language;
-      const shown = (name: string): string =>
-        language === undefined ? name : displayName(name, language);
-      const choice = (from: string, to: string, first: boolean) => (
-        <button
-          data-prompt-input={first ? "" : undefined}
-          onClick={() => this.substituteInto(prompt.row, prompt.line, from)}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              event.preventDefault();
-              putAway();
-            }
-          }}
-          type="button"
-        >
-          {this.t("Replace {from} with {to}", {
-            from: shown(from),
-            to: shown(to),
-          })}
-        </button>
-      );
-
-      return (
-        <div class="truth-tree-prompt">
-          {choice(left, right, true)}
-          {choice(right, left, false)}
-          <button onClick={putAway} type="button">
-            {this.t("Cancel")}
-          </button>
-        </div>
-      );
-    }
-
-    const label =
-      prompt.type === "name"
-        ? this.t("Name for the instance")
-        : this.t("Row to rewrite by this identity");
-    const commit = (): void => {
-      const current = this.prompt;
-
-      if (current?.type === "name") {
-        this.commitName(current);
-      } else if (current?.type === "substitute") {
-        this.commitSubstitute(current);
-      }
-    };
-
-    return (
-      <div class="truth-tree-prompt">
-        <label>
-          <span>{label}</span>
-          <input
-            autocomplete="off"
-            data-prompt-input=""
-            inputMode={prompt.type === "substitute" ? "numeric" : undefined}
-            onBlur={(event) => {
-              // Taken away as if by Esc: as Esc, put the question away. Not
-              // when the question has become another (a row number, then
-              // which name to replace), whose render removes this input.
-              if (
-                this.prompt?.type === prompt.type &&
-                document.hasFocus() &&
-                this.strayBlur(event)
-              ) {
-                putAway();
-              }
-            }}
-            onInput={(event) => {
-              const current = this.prompt;
-
-              if (current !== null && current.type !== "direction") {
-                this.prompt = {
-                  ...current,
-                  draft: event.currentTarget.value,
-                };
-              }
-            }}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                commit();
-              } else if (event.key === "Escape") {
-                event.preventDefault();
-                putAway();
-              }
-            }}
-            spellcheck={false}
-            type="text"
-            value={prompt.draft}
-          />
-        </label>
-        <button onClick={commit} type="button">
-          {this.t("Done")}
-        </button>
       </div>
     );
   }

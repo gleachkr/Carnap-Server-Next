@@ -54,8 +54,8 @@ The editor is `src/client/components/carnap-truth-tree-v1.tsx`.
 `truth-tree-answer@1` is `{ nodes }`, the tableau document: each node a run
 of rows with its parent (`null` for the root) and an optional `end`,
 `{ type: "closed", cites }` or `{ type: "open" }`. A row is
-`{ id, text, cites, dev }`: its text as typed (fill mode stores what it
-wrote), the row ids it develops, and the development it belongs to. The root
+`{ id, text, cites, dev }`: its text as typed, the row ids it develops, and
+the development it belongs to. The root
 node's first rows must be the declared root. Ids are editing handles: the
 editor remints them when it restores a tree, and citations follow.
 

@@ -273,7 +273,7 @@ function sameMultiset(
 }
 
 /** The two names of an identity between names, `a=b`, or `null`. */
-export function nameIdentity(
+function nameIdentity(
   formula: Formula,
 ): { readonly left: string; readonly right: string } | null {
   return formula.type === "identity" &&

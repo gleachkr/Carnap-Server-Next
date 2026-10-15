@@ -34,12 +34,6 @@ export function truthTreeName(i18n: Translator): string {
  */
 export type TruthTreeTask = "validity" | "consistency";
 
-/**
- * Who writes the rows: the student (`type`), or the widget, once the student
- * has chosen the row to develop and any instance name (`fill`).
- */
-export type TruthTreeDevelop = "type" | "fill";
-
 /** What a done tree shows, in its task's terms. */
 export type TruthTreeVerdict =
   | "valid"
@@ -56,7 +50,6 @@ export interface TruthTreePublicData {
   /** The tree rules, by the id of a `TableauSystem` record. */
   readonly rules: string;
   readonly task: TruthTreeTask;
-  readonly develop: TruthTreeDevelop;
   /**
    * The root, as engine text, in order: the premises and then the negated
    * conclusion for a validity task, the set's members for a consistency task.
@@ -69,7 +62,7 @@ export interface TruthTreePublicData {
 /**
  * A submitted tree: the tableau document. The root node's first rows are the
  * root, as the exercise gives it, and every other row is as the student typed
- * it (or as fill mode wrote it). Citations name rows by id. The tree is the
+ * it. Citations name rows by id. The tree is the
  * whole answer: what it shows follows from it, so the student is not asked
  * to say.
  */

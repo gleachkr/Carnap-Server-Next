@@ -41,7 +41,6 @@ export type ToolbarIconName =
   | "tree-add-row"
   | "tree-close"
   | "tree-delete"
-  | "tree-develop"
   | "tree-open"
   | "tree-split"
   | "tree-stack"
@@ -94,12 +93,6 @@ export const TOOLBAR_ICON_PATHS: Readonly<
     "M2 15.5h5M13 15.5h5",
   ],
   "tree-add-row": ["M2.5 5.5h8", "M2.5 11.5h8", "M15.5 8.5v6M12.5 11.5h6"],
-  "tree-develop": [
-    "M6 3.5h8",
-    "M10 6v3.5M8 7.5l2 2 2-2",
-    "M3 13h5M12 13h5",
-    "M3 17h5M12 17h5",
-  ],
   "tree-close": ["M6 3.5h8", "M7 9l6 6M13 9l-6 6"],
   "tree-open": ["M6 3.5h8", "M10 17.5V8.5M6.5 12L10 8.5l3.5 3.5"],
   "tree-delete": ["M2.5 10h8", "M13.5 7.5l4.5 4.5M18 7.5l-4.5 4.5"],

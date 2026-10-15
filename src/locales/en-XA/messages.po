@@ -59,7 +59,6 @@ msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "“{name}” is not a name in this language."
 msgstr ""
 
@@ -1343,10 +1342,6 @@ msgstr ""
 msgid "Choose a block for {variable} on the board."
 msgstr ""
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Choose a row to develop, and the rows its rule writes are added under every open branch below it."
-msgstr ""
-
 #: src/worker/web/lti.tsx
 msgid "Choose an assignment"
 msgstr ""
@@ -2005,14 +2000,6 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Develop"
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Develop the row on every open branch below it"
-msgstr ""
-
 #: src/worker/application/content/registry.ts
 msgid "Directive {directiveName} is not supported."
 msgstr ""
@@ -2071,10 +2058,6 @@ msgstr ""
 
 #: src/worker/web/layout.tsx
 msgid "Donate to charity →"
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Done"
 msgstr ""
 
 #: src/worker/web/courses.tsx
@@ -3203,10 +3186,6 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Name for the instance"
-msgstr ""
-
 #: src/worker/exercises/world/strings.ts
 msgid "Name it"
 msgstr ""
@@ -4115,10 +4094,6 @@ msgstr ""
 msgid "Rename content item"
 msgstr ""
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Replace {from} with {to}"
-msgstr ""
-
 #: src/worker/web/admin.tsx
 msgid "Request"
 msgstr ""
@@ -4309,34 +4284,6 @@ msgid "Row {cited} is not above this row on its branch."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} is not on an open branch through row {row}."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} rewritten by the identity on row {row}."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} developed on {count} branches."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} developed."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} does not read, so it cannot be developed."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} has no rule to develop."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} is already developed on every open branch below it."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} marked."
 msgstr ""
 
@@ -4394,10 +4341,6 @@ msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row deleted."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row to rewrite by this identity"
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
@@ -4831,10 +4774,6 @@ msgstr ""
 msgid "Submitting…"
 msgstr ""
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Substituting by row {row} into row {cited} writes nothing new on any open branch."
-msgstr ""
-
 #: src/worker/web/donate.tsx
 msgid "Support"
 msgstr ""
@@ -5081,10 +5020,6 @@ msgstr ""
 
 #: src/worker/application/errors.ts
 msgid "The course was not found."
-msgstr ""
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "The develop attribute must be type or fill."
 msgstr ""
 
 #: src/worker/exercises/model/strings.ts

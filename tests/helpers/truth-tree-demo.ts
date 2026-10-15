@@ -1,6 +1,6 @@
 /**
  * A lesson of truth trees in *forall x: UBC*'s language and rules: one of
- * each question, each develop mode, a first-order tree, and identity.
+ * each question, a first-order tree, and identity.
  * `bun run scripts/seed-demo.ts truth-tree` seeds it onto a local dev server.
  */
 export const TRUTH_TREE_DEMO_SOURCE = `# Truth trees
@@ -31,12 +31,11 @@ premises and the negation of the conclusion.
 P ⊃ Q, Q ⊃ R :|-: P ⊃ R
 ::::
 
-## A tree that writes its own rows
+## A first-order tree
 
-::::truth-tree{#tt-fill develop="fill" points="3" title="Everything and something"}
-Here the tree writes each rule's rows for you: choose a row and press
-**Develop**. Deciding which row to develop, which name to use, and
-where a branch closes is the whole of the exercise.
+::::truth-tree{#tt-quantifiers points="3" title="Everything and something"}
+An existential sentence takes a name new to its branch, and a universal one
+takes any name, as many times as the branch needs.
 
 ∀x(Fx ⊃ Gx), ∃xFx :|-: ∃xGx
 ::::

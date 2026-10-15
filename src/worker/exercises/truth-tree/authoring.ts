@@ -27,11 +27,7 @@ import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import { roleIndex } from "../../logic/specs/roles";
 import { engineText } from "./logic/formulas";
 import { FORALLX_UBC } from "./logic/system";
-import type {
-  TruthTreeDevelop,
-  TruthTreePublicData,
-  TruthTreeTask,
-} from "./types";
+import type { TruthTreePublicData, TruthTreeTask } from "./types";
 import {
   TRUTH_TREE_ANSWER_KIND,
   TRUTH_TREE_CAPABILITIES,
@@ -45,7 +41,6 @@ const LIST_ITEM = /^\s*-\s+(.+?)\s*$/;
 /** What `::::truth-tree{…}` accepts beyond the shared exercise set. */
 const TRUTH_TREE_ATTRIBUTES = [
   ...COMMON_EXERCISE_ATTRIBUTES,
-  "develop",
   "system",
 ] as const;
 
@@ -127,26 +122,6 @@ export function truthTreeDataBodyLines(
   return data;
 }
 
-function parseDevelop(
-  value: string | undefined,
-  line: number,
-  diagnostics: CompilerDiagnostic[],
-): TruthTreeDevelop {
-  if (value === undefined || value === "type" || value === "fill") {
-    return value ?? "type";
-  }
-
-  diagnostics.push(
-    diagnostic(
-      line,
-      "unsupported_truth_tree_develop",
-      "The develop attribute must be type or fill.",
-    ),
-  );
-
-  return "type";
-}
-
 /** Parse one root sentence; `null` after reporting why not. */
 function readSentence(
   source: string,
@@ -201,7 +176,6 @@ export async function compileTruthTree(
   const title = block.attrs.title?.trim();
   const exam = parseExamAttribute(block.attrs.exam, block.line, diagnostics);
   const feedback = reconcileFeedback(block, undefined, diagnostics);
-  const develop = parseDevelop(block.attrs.develop, block.line, diagnostics);
   const { language, system } = parseSystemAttribute(
     block,
     resolveSystem,
@@ -370,7 +344,6 @@ export async function compileTruthTree(
   }
 
   const publicData: TruthTreePublicData = {
-    develop,
     premises: premises.length,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
       ...renderOptions,

@@ -59,7 +59,6 @@ msgid "“{name}” is a free variable; every formula must be a sentence."
 msgstr "“{name}” is a free variable; every formula must be a sentence."
 
 #: src/worker/application/content/diagnostic-strings.ts
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "“{name}” is not a name in this language."
 msgstr "“{name}” is not a name in this language."
 
@@ -1343,10 +1342,6 @@ msgstr "Checking"
 msgid "Choose a block for {variable} on the board."
 msgstr "Choose a block for {variable} on the board."
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Choose a row to develop, and the rows its rule writes are added under every open branch below it."
-msgstr "Choose a row to develop, and the rows its rule writes are added under every open branch below it."
-
 #: src/worker/web/lti.tsx
 msgid "Choose an assignment"
 msgstr "Choose an assignment"
@@ -2005,14 +2000,6 @@ msgstr "Detail"
 msgid "Details"
 msgstr "Details"
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Develop"
-msgstr "Develop"
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Develop the row on every open branch below it"
-msgstr "Develop the row on every open branch below it"
-
 #: src/worker/application/content/registry.ts
 msgid "Directive {directiveName} is not supported."
 msgstr "Directive {directiveName} is not supported."
@@ -2072,10 +2059,6 @@ msgstr "Domain"
 #: src/worker/web/layout.tsx
 msgid "Donate to charity →"
 msgstr "Donate to charity →"
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Done"
-msgstr "Done"
 
 #: src/worker/web/courses.tsx
 msgid "Download CSV"
@@ -3203,10 +3186,6 @@ msgstr "Multiple-select exercises must have at least one correct option."
 msgid "Name"
 msgstr "Name"
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Name for the instance"
-msgstr "Name for the instance"
-
 #: src/worker/exercises/world/strings.ts
 msgid "Name it"
 msgstr "Name it"
@@ -4115,10 +4094,6 @@ msgstr "Rename {name}"
 msgid "Rename content item"
 msgstr "Rename content item"
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Replace {from} with {to}"
-msgstr "Replace {from} with {to}"
-
 #: src/worker/web/admin.tsx
 msgid "Request"
 msgstr "Request"
@@ -4309,34 +4284,6 @@ msgid "Row {cited} is not above this row on its branch."
 msgstr "Row {cited} is not above this row on its branch."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} is not on an open branch through row {row}."
-msgstr "Row {cited} is not on an open branch through row {row}."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} rewritten by the identity on row {row}."
-msgstr "Row {cited} rewritten by the identity on row {row}."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} developed on {count} branches."
-msgstr "Row {row} developed on {count} branches."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} developed."
-msgstr "Row {row} developed."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} does not read, so it cannot be developed."
-msgstr "Row {row} does not read, so it cannot be developed."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} has no rule to develop."
-msgstr "Row {row} has no rule to develop."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} is already developed on every open branch below it."
-msgstr "Row {row} is already developed on every open branch below it."
-
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} marked."
 msgstr "Row {row} marked."
 
@@ -4395,10 +4342,6 @@ msgstr "Row {row}: {text}, not yet cited"
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row deleted."
 msgstr "Row deleted."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row to rewrite by this identity"
-msgstr "Row to rewrite by this identity"
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Rows {first} and {second} are a sentence and its negation, so this branch closes."
@@ -4831,10 +4774,6 @@ msgstr "Submitted work visible at"
 msgid "Submitting…"
 msgstr "Submitting…"
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Substituting by row {row} into row {cited} writes nothing new on any open branch."
-msgstr "Substituting by row {row} into row {cited} writes nothing new on any open branch."
-
 #: src/worker/web/donate.tsx
 msgid "Support"
 msgstr "Support"
@@ -5082,10 +5021,6 @@ msgstr "The course membership was not found."
 #: src/worker/application/errors.ts
 msgid "The course was not found."
 msgstr "The course was not found."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "The develop attribute must be type or fill."
-msgstr "The develop attribute must be type or fill."
 
 #: src/worker/exercises/model/strings.ts
 msgid "The domain cannot be empty."

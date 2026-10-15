@@ -112,7 +112,6 @@ describe("the directive", () => {
     expect(item.kind).toBe("truth-tree@1");
     expect(data.task).toBe("validity");
     expect(data.premises).toBe(1);
-    expect(data.develop).toBe("type");
     expect(data.system).toBe("forallx-ubc");
     expect(resolved?.rootText).toEqual(["P & Q", "¬P"]);
     expect(data.promptHtml).toContain("Is this argument valid?");
@@ -133,14 +132,6 @@ describe("the directive", () => {
     expect(resolveTruthTree(data)?.rootText).toEqual(["¬(P ∨ ¬P)"]);
   });
 
-  test("develop=fill is carried", async () => {
-    const data = publicDataOf(
-      await declaration(directive('#t develop="fill"', "- P")),
-    );
-
-    expect(data.develop).toBe("fill");
-  });
-
   test("what an author can get wrong", async () => {
     expect(await compileCodes(directive("#t", "Just prose."))).toContain(
       "truth_tree_no_root",
@@ -157,9 +148,10 @@ describe("the directive", () => {
     expect(await compileCodes(directive("#t", "- P & Q ⊃ R"))).toContain(
       "invalid_formula",
     );
+    // Fill mode is gone, and its attribute with it.
     expect(
-      await compileCodes(directive('#t develop="auto"', "- P")),
-    ).toContain("unsupported_truth_tree_develop");
+      await compileCodes(directive('#t develop="fill"', "- P")),
+    ).toContain("unknown_attribute");
     expect(
       await compileCodes(directive("#t", "- P\n\nmore prose")),
     ).toContain("invalid_truth_tree_body");

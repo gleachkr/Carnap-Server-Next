@@ -83,7 +83,6 @@ export function isTruthTreePublicData(
     typeof data.system === "string" &&
     typeof data.rules === "string" &&
     (data.task === "validity" || data.task === "consistency") &&
-    (data.develop === "type" || data.develop === "fill") &&
     isStringArray(data.root) &&
     typeof data.premises === "number"
   );

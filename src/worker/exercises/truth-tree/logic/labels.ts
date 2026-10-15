@@ -59,7 +59,7 @@ export function ruleLabel(name: RuleName, language: SurfaceLanguage): string {
 }
 
 /** A name as the language shows it: `a₁` for the identifier `a1`. */
-export function displayName(name: string, language: SurfaceLanguage): string {
+function displayName(name: string, language: SurfaceLanguage): string {
   const sort = individualSorts(language)[0];
 
   if (sort === undefined) {

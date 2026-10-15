@@ -11,8 +11,8 @@ import {
 /**
  * `<carnap-truth-tree>`'s side of the widget: that the island replaces the
  * inert root with a live tree, that each action works on the branch at the
- * cursor and is announced, that fill mode writes a rule's rows itself, and
- * that the answer the form carries is the tree and the verdict chosen.
+ * cursor and is announced, and that the answer the form carries is the
+ * tree.
  */
 
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`
@@ -676,109 +676,5 @@ describe("type mode", () => {
 
     press(cursor(mounted), "z", { ctrlKey: true });
     expect(answerOf(mounted).nodes).toHaveLength(3);
-  });
-});
-
-describe("fill mode", () => {
-  test("Develop writes the rule's rows, asking only for a name", async () => {
-    const mounted = mountExercise(
-      await treeExercise('develop="fill"', "∀x(Fx ⊃ Gx), ∃xFx :|-: ∃xGx"),
-    );
-
-    press(row(mounted, "∃xFx"), "d");
-    const name = mounted.root.querySelector<HTMLInputElement>(
-      "[data-prompt-input]",
-    );
-    // The first name new to the branch.
-    expect(name?.value).toBe("a");
-    press(name as Element, "Enter");
-    expect(row(mounted, "Fa").getAttribute("aria-label")).toBe(
-      "Row 4: Fa, from row 2, ∃",
-    );
-
-    press(row(mounted, "∀x(Fx ⊃ Gx)"), "d");
-    press(
-      mounted.root.querySelector("[data-prompt-input]") as Element,
-      "Enter",
-    );
-    press(row(mounted, "Fa ⊃ Ga"), "d");
-
-    expect(announced(mounted)).toBe("Row 5 developed.");
-    expect(answerOf(mounted).nodes).toHaveLength(3);
-    // No typing in fill mode.
-    press(row(mounted, "¬Fa"), "Enter");
-    expect(mounted.root.querySelector(".tableau-input")).toBeNull();
-  });
-
-  test("Develop on an identity asks for the row to rewrite, and which way", async () => {
-    const mounted = mountExercise(
-      await treeExercise('develop="fill"', "- ∀x a = x\n- ∃x x ≠ a"),
-    );
-    const prompt = () =>
-      mounted.root.querySelector<HTMLInputElement>("[data-prompt-input]");
-
-    press(rows(mounted)[1] as HTMLElement, "d");
-    press(prompt() as Element, "Enter");
-    press(rows(mounted)[0] as HTMLElement, "d");
-    fill(prompt(), "b");
-    press(prompt() as Element, "Enter");
-
-    press(row(mounted, "a=b"), "d");
-    expect(
-      mounted.root.querySelector(".truth-tree-prompt label span")
-        ?.textContent,
-    ).toBe("Row to rewrite by this identity");
-    fill(prompt(), "3");
-    press(prompt() as Element, "Enter");
-
-    // b ≠ a has both names, so the direction is asked.
-    const choices = [
-      ...mounted.root.querySelectorAll<HTMLButtonElement>(
-        ".truth-tree-prompt button",
-      ),
-    ].map((button) => button.textContent);
-    expect(choices).toEqual([
-      "Replace a with b",
-      "Replace b with a",
-      "Cancel",
-    ]);
-    prompt()?.click();
-    expect(announced(mounted)).toBe(
-      "Row 3 rewritten by the identity on row 4.",
-    );
-    expect(row(mounted, "b≠b").getAttribute("aria-label")).toBe(
-      "Row 5: b≠b, from rows 3 and 4, =",
-    );
-
-    press(row(mounted, "b≠b"), "x");
-    press(mounted.root.activeElement as Element, "Enter");
-    expect(announced(mounted)).toBe("Branch closed on row 5");
-    mounted.form
-      .querySelector<HTMLButtonElement>(".truth-tree-check")
-      ?.click();
-    expect(statusText(mounted)).toBe(
-      "Right: the tree closes, so the set is inconsistent.",
-    );
-  });
-
-  test("any action puts away an open prompt, whose targets it may have changed", async () => {
-    const mounted = mountExercise(
-      await treeExercise('develop="fill"', "∃xFx :|-: P"),
-    );
-
-    press(row(mounted, "∃xFx"), "d");
-    expect(mounted.root.querySelector("[data-prompt-input]")).not.toBeNull();
-
-    press(cursor(mounted), "o");
-    expect(mounted.root.querySelector("[data-prompt-input]")).toBeNull();
-  });
-
-  test("a literal has nothing to develop", async () => {
-    const mounted = mountExercise(
-      await treeExercise('develop="fill"', "- P"),
-    );
-
-    press(row(mounted, "P"), "d");
-    expect(announced(mounted)).toBe("Row 1 has no rule to develop.");
   });
 });

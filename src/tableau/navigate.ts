@@ -101,7 +101,6 @@ export type TableauKeyAction =
   | "stack"
   | "split"
   | "add-row"
-  | "develop"
   | "close"
   | "open"
   | "delete"
@@ -131,7 +130,6 @@ const PLAIN: Readonly<Record<string, TableauKeyAction>> = {
   F2: "edit",
   Home: "first",
   c: "cite",
-  d: "develop",
   o: "open",
   r: "add-row",
   s: "split",

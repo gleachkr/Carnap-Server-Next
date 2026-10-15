@@ -80,8 +80,8 @@ export function displayEngine(
 }
 
 /**
- * A formula the checker built (a root's negated conclusion, a row the widget
- * writes) as engine text, or `null` if the language cannot say it.
+ * A formula the checker built (a root's negated conclusion) as engine text,
+ * or `null` if the language cannot say it.
  *
  * Written out with the kit's printer and read back, since only a parse knows
  * the language's engine spelling. That printer brackets every binary
@@ -93,18 +93,6 @@ export function engineText(
 ): string | null {
   const read = parseFormula(formulaToString(formula, language), language);
   return read.ok ? read.engine : null;
-}
-
-/** A formula as a reader is shown it. */
-export function displayFormula(
-  formula: Formula,
-  language: SurfaceLanguage,
-): string {
-  const engine = engineText(formula, language);
-  return (
-    (engine === null ? null : displayEngine(engine, language)) ??
-    formulaToString(formula, language)
-  );
 }
 
 /** Whether a formula says anything with identity. */
