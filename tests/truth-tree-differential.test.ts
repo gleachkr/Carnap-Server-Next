@@ -43,7 +43,27 @@ const EDGE_ROOTS: readonly { from: string; root: readonly string[] }[] = [
   { from: "edge: a closed root", root: ["P", "¬P"] },
 ];
 
-async function exercise(
+const exercises = new Map<
+  string,
+  Promise<{ resolved: ResolvedTree; mm0: string }>
+>();
+
+/** The consistency exercise on a root, compiled once per root. */
+function exercise(
+  root: readonly string[],
+): Promise<{ resolved: ResolvedTree; mm0: string }> {
+  const key = JSON.stringify(root);
+  let found = exercises.get(key);
+
+  if (found === undefined) {
+    found = compileExercise(root);
+    exercises.set(key, found);
+  }
+
+  return found;
+}
+
+async function compileExercise(
   root: readonly string[],
 ): Promise<{ resolved: ResolvedTree; mm0: string }> {
   const result = await compileCarnapMarkdown(

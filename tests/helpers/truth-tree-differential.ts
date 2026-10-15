@@ -95,13 +95,19 @@ export interface GenerateOptions {
   readonly unended?: boolean;
   /** The most rows on a branch; past it the branch is left unended. */
   readonly branchCap?: number;
+  /**
+   * The most rows in the tree; past it every branch still growing is left
+   * unended. It is kept under the system's row cap, past which both
+   * checkers refuse a tree unread and so agree without checking anything.
+   */
+  readonly treeCap?: number;
 }
 
 export interface GeneratedTree {
   readonly builder: TreeBuilder;
   /** Whether the fault was injected (or there was none to inject). */
   readonly faulted: boolean;
-  /** Whether some branch hit the cap. */
+  /** Whether some branch hit a cap. */
   readonly capped: boolean;
   /** How many steps were written: fault positions range over these. */
   readonly steps: number;
@@ -226,6 +232,9 @@ export function generate(
 ): GeneratedTree {
   const builder = new TreeBuilder(root);
   const cap = options.branchCap ?? 24;
+  const treeCap = options.treeCap ?? 120;
+  const treeRows = (): number =>
+    builder.tree.nodes.reduce((sum, node) => sum + node.rows.length, 0);
   const fault = options.fault;
   let steps = 0;
   let faulted = fault === undefined;
@@ -254,7 +263,7 @@ export function generate(
       }
     };
 
-    if (rows.length > cap) {
+    if (rows.length > cap || treeRows() > treeCap) {
       capped = true;
       return;
     }
@@ -851,17 +860,8 @@ export const KNOWN_DIFFERENCES = {
    * has no criterion for that yet, so it accepts such a branch as complete,
    * and with it a tree's verdict (gh #46, design: "identity completion").
    */
-  "identity-completion": (all: readonly Difference[]) => {
-    const explained = all.filter(identityCompletion);
-    return explained.length === 0
-      ? []
-      : [
-          ...explained,
-          ...all.filter(
-            (each) => each.field === "verdict" && each.old === "has problems",
-          ),
-        ];
-  },
+  "identity-completion": (all: readonly Difference[]) =>
+    all.filter(identityCompletion),
   /**
    * An identity's substitution on a branch where some row uses every
    * variable the language has (`∃x∃y∃z…`): the rule abstracts over a fresh
@@ -896,5 +896,11 @@ export function unexplained(all: readonly Difference[]): Difference[] {
   const explained = new Set(
     Object.values(KNOWN_DIFFERENCES).flatMap((known) => known(all)),
   );
-  return all.filter((each) => !explained.has(each));
+  const rest = all.filter((each) => !explained.has(each));
+
+  // The verdict follows from the rest: where every other difference is a
+  // known one, so is the verdict's.
+  return rest.every((each) => each.field === "verdict") && explained.size > 0
+    ? []
+    : rest;
 }
