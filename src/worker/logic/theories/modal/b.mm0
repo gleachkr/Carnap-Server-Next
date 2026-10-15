@@ -1,0 +1,8 @@
+
+-- ## B (`more-rules`): R is symmetric, so σ.n sees σ.
+--| @syntax alias B□ B[]
+axiom tb_ax_b_box (ga: ctx) (si: pfx) (n: idx) (ph: wff):
+  $ closes ga ; si 𝕋 ph $ > $ focus ga at (si . n 𝕋 □ ph) $;
+--| @syntax alias B◇ B<>
+axiom tb_ax_b_dia (ga: ctx) (si: pfx) (n: idx) (ph: wff):
+  $ closes ga ; si 𝔽 ph $ > $ focus ga at (si . n 𝔽 ◇ ph) $;

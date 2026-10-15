@@ -438,6 +438,7 @@ notation sb_t {x: var} (te: tm x) (ue: tm x): tm =
 term sb_s {x: var} (te: tm x) (sq: seq x): seq;
 notation sb_s {x: var} (te: tm x) (sq: seq x): seq =
   ($subst$:41) x ($/$:0) te sq;
+--| @syntax role tree.substitution
 term sb_f {x: var} (te: tm x) (ph: wff x): wff;
 notation sb_f {x: var} (te: tm x) (ph: wff x): wff =
   (${$:41) x ($/$:0) te ($}$:0) ph;
@@ -720,7 +721,7 @@ axiom tb_nn (ga: ctx) (ph: wff): $ closes ga ; ph $ > $ focus ga at (¬ ¬ ph) $
 -- general rules (∀, ¬∃) are developed when instantiated for every name on
 -- the branch, and once, with a new name, on a branch that has none
 -- (`nonempty`). The rules that name an instance say which binder holds it,
--- for the margin's ✓a and \a,b. The identity rules ask nothing yet.
+-- for the margin's ✓a and \a,b. The identity rule develops a pair, as below.
 --
 -- ## The quantifier rules (§10)
 -- A universal takes any name; an existential a name new to the branch, which
@@ -820,7 +821,10 @@ axiom tb_nex1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
 
 -- ## Identity (§12.7)
 -- From `a = b` and a row, the row with every `a` made `b` (`ph` may not
--- mention `a`), or every `b` made `a`.
+-- mention `a`), or every `b` made `a`. An open branch is complete once each
+-- identity is substituted one way round into every atomic and negated atomic
+-- row on it (`pairs`, `literals`); `sb_f`'s role lets the checker read the
+-- substitution.
 --| @view {x: var} {a b: name} (ga: ctx x a b) (ph: wff x b) (ps ch: wff): $ closes ga ; ch $ > $ focus ga at (a = b ; ps) $
 --| @abstract ph ps ch x a b
 --| @fresh x
@@ -831,5 +835,7 @@ axiom tb_id_ab {x: var} {a b: name} (ga: ctx x a b) (ph: wff x b):
 --| @fresh x
 --| @fallback tb_id_ab
 --| @syntax alias =
+--| @syntax role tree.development.pairs
+--| @syntax role tree.development.literals
 axiom tb_id_ba {x: var} {a b: name} (ga: ctx x a b) (ph: wff x a):
   $ closes ga ; {x / a} ph $ > $ focus ga at (a = b ; {x / b} ph) $;

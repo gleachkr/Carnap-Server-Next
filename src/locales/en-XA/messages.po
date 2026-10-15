@@ -5361,6 +5361,10 @@ msgid "The rule “{rule}” develops more than one row, and its development kin
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” does not develop two rows, and its development kind is for a rule on a pair of rows."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The rule “{rule}” gives its development kind the wrong arguments: it is written {expected}."
 msgstr ""
 

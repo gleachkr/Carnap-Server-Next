@@ -116,6 +116,7 @@ describe("language specs", () => {
       "≜",
       "⟚",
     ];
+    const OLP_MODAL_NOTATIONS = ["_", "≜", "⟚", "closes", "focus", "at"];
     const engineOnly: Readonly<Record<string, readonly string[]>> = {
       "carnap-prop": [],
       "forallx-calgary": PROOF_THEORY_NOTATIONS,
@@ -129,6 +130,21 @@ describe("language specs", () => {
         "focus",
         "at",
       ],
+      // K's, and the equations a prefix is a list by.
+      "open-logic-intuitionistic": [...OLP_MODAL_NOTATIONS, "≐", "⇔", "≗"],
+      // The tree plumbing only: K has no substitution and no equations
+      // beyond the branch's and the judgement's. The logics past K are K's
+      // file with rules after it.
+      "open-logic-modal-b": OLP_MODAL_NOTATIONS,
+      "open-logic-modal-d": OLP_MODAL_NOTATIONS,
+      "open-logic-modal-k": OLP_MODAL_NOTATIONS,
+      "open-logic-modal-k4": OLP_MODAL_NOTATIONS,
+      "open-logic-modal-s4": OLP_MODAL_NOTATIONS,
+      "open-logic-modal-s5": OLP_MODAL_NOTATIONS,
+      "open-logic-modal-t": OLP_MODAL_NOTATIONS,
+      // And the root's prefix `1`, which is not a delimiter so that `12` is
+      // one prefix, not `1` then `2`.
+      "open-logic-simple-s5": ["1", ...OLP_MODAL_NOTATIONS],
       // UBC's, with the signed-formula equation `⇔` among them.
       "open-logic-tableaux": [
         "_",

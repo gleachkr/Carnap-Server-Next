@@ -194,9 +194,9 @@ describe("the generic checker agrees with the UBC checker", () => {
   }
 });
 
-describe("the known differences are still there", () => {
-  // When the generic checker asks for identity completion, this fails: take
-  // the entry out of KNOWN_DIFFERENCES with it.
+describe("identity completion (UBC §12.7)", () => {
+  // An open branch owes each identity substituted into every literal on it:
+  // the generic checker asks for it as the UBC one does (`pairs`).
   test("an identity left unsubstituted on an open branch", async () => {
     const outcome = await compare(
       ["Fa", "¬ Fb", "a=b"],
@@ -205,8 +205,6 @@ describe("the known differences are still there", () => {
       new Set(),
     );
 
-    expect(outcome?.differences.map(describeDifference)).toContain(
-      'end n0: old "open-incomplete r3=", generic null',
-    );
+    expect(outcome?.differences.map(describeDifference)).toEqual([]);
   });
 });

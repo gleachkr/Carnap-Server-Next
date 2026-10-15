@@ -152,11 +152,15 @@ export function describeRowProblem(
   }
 }
 
-/** What is wrong with a branch's end, said of that branch. */
+/**
+ * What is wrong with a branch's end, said of that branch. `name` spells an
+ * instance a row still needs, which arrives as engine text.
+ */
 export function describeEndProblem(
   problem: EndProblem,
   words: TreeWords,
   number: RowNumber,
+  name: (engine: string) => string = (engine) => engine,
 ): string {
   switch (problem.type) {
     case "closure-uncited":
@@ -215,7 +219,7 @@ export function describeEndProblem(
         ? words("Row {row} still needs an instance on this branch.", { row })
         : words(
             "Row {row} still needs an instance for {names} on this branch.",
-            { names: missing.names.join(", "), row },
+            { names: missing.names.map(name).join(", "), row },
           );
     }
     case "end-not-leaf":

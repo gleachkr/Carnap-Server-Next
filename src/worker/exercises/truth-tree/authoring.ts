@@ -1,3 +1,5 @@
+import type { SurfaceLanguage, Term } from "@aufbau/syntax";
+import { printTerm, walkTerm } from "@aufbau/syntax";
 import {
   type CompilerDiagnostic,
   diagnostic,
@@ -16,13 +18,13 @@ import {
   validateExerciseId,
 } from "../../exercise-kit/authoring";
 import {
-  freeVariables,
   isArgumentLine,
-  parseFormula,
   splitArgumentLine,
 } from "../../exercise-kit/formula";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
+import { formulaParseErrors } from "../../logic/specs/diagnostics";
+import { sentenceSort } from "../../logic/specs/roles";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
 import {
@@ -166,15 +168,22 @@ export function truthTreeDataBodyLines(
   return data;
 }
 
-/** Parse one root sentence, as engine text; `null` after reporting why not. */
+/**
+ * Parse one root sentence, as engine text; `null` after reporting why not.
+ *
+ * Read as the tree theory's language reads it, not as a formula an evaluator
+ * can interpret: a tree's rules are the theory's, so whatever the language
+ * parses can be a root (`□A`, which has no truth function).
+ */
 function readSentence(
   source: string,
   line: number,
-  language: Parameters<typeof parseFormula>[1],
+  language: SurfaceLanguage,
   diagnostics: CompilerDiagnostic[],
 ): string | null {
   const trimmed = source.trim();
-  const parsed = parseFormula(trimmed, language);
+  const sort = sentenceSort(language);
+  const parsed = language.parse(trimmed, sort === undefined ? {} : { sort });
 
   if (!parsed.ok) {
     diagnostics.push(
@@ -184,7 +193,9 @@ function readSentence(
         "Could not parse formula “{formula}”: {detail}",
         {
           params: {
-            detail: parsed.errors[0] ?? { message: "syntax error" },
+            detail: formulaParseErrors(parsed.diagnostics)[0] ?? {
+              message: "syntax error",
+            },
             formula: trimmed,
           },
         },
@@ -193,7 +204,7 @@ function readSentence(
     return null;
   }
 
-  if (freeVariables(parsed.formula).length > 0) {
+  if (hasFreeVariable(language, parsed.term)) {
     diagnostics.push(
       diagnostic(
         line,
@@ -205,7 +216,38 @@ function readSentence(
     return null;
   }
 
-  return parsed.engine;
+  return printTerm(language, parsed.term, "engine");
+}
+
+/**
+ * Whether a variable of a sort some term binds (a quantifier's `x`) occurs
+ * free. Names are variables to the engine too, but no term binds their sort.
+ */
+function hasFreeVariable(language: SurfaceLanguage, term: Term): boolean {
+  const bindable = new Set<string>();
+
+  for (const info of language.spec.terms.values()) {
+    for (const binder of info.binders) {
+      if (binder.binds && "sort" in binder.type) {
+        bindable.add(binder.type.sort);
+      }
+    }
+  }
+
+  let free = false;
+
+  walkTerm(term, (node, bound) => {
+    if (
+      node.kind === "variable" &&
+      !node.binder &&
+      bindable.has(node.sort) &&
+      !bound.has(node.name)
+    ) {
+      free = true;
+    }
+  });
+
+  return free;
 }
 
 /** Each thing a theory lacks to be a tree theory, as an author reads it. */
@@ -330,6 +372,18 @@ function reportDevelopment(
             line,
             "truth_tree_development",
             "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row.",
+            {
+              params: { rule },
+            },
+          ),
+        );
+        break;
+      case "pair-focus":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” does not develop two rows, and its development kind is for a rule on a pair of rows.",
             {
               params: { rule },
             },

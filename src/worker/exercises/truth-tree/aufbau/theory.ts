@@ -25,7 +25,15 @@ import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
  * - `tree.closure` — the rule a closed branch's × cites by;
  * - `tree.assert` and `tree.deny` — how the root says a sentence is true, and
  *   is not (a Smullyan `T φ` and `F φ`). Where a row is a sentence, a sentence
- *   asserts itself, and the language's negation denies it.
+ *   asserts itself, and the language's negation denies it;
+ * - `tree.root` — where the root says it, for a calculus whose rows are
+ *   somewhere as well as signed (a prefixed tableau's `1`): a term with no
+ *   arguments, filling an assert or deny term's argument of its sort;
+ * - `tree.completeness.contents` — on any term, that the theory calls an open
+ *   branch complete by what is on it, not by what was done to it: a row is
+ *   developed once its rule's conclusions are on the branch, however they got
+ *   there (the Open Logic Project's definition). Without it a row is developed
+ *   by a step that cites it, as UBC checks rows off.
  *
  * A row is read at the one sort with a coercion into the branch sort.
  */
@@ -48,6 +56,10 @@ export interface TreeTheory {
    * in which case it cannot test an argument.
    */
   readonly deny: string | null;
+  /** The term the root's rows are at, if they are at anything (`tree.root`). */
+  readonly root: string | null;
+  /** Whether completeness is by the branch's contents (`tree.completeness.contents`). */
+  readonly byContents: boolean;
 }
 
 /** The roles a tree theory is read by. */
@@ -121,12 +133,14 @@ export function readTreeTheory(
 
   return {
     assert,
+    byContents: roles.termFor("tree.completeness.contents") !== null,
     closes: closes as string,
     closure: closure as string,
     deny,
     empty: emptyBranch(language, roles.termFor("context-join")),
     focus: focus as string,
     join: join as string,
+    root: roles.termFor("tree.root"),
     rowSort: rowSort as string,
     unfocus: unfocus as string,
   };
@@ -177,8 +191,9 @@ export function isTreeTheory(
 
 /**
  * A root row as engine text at the row sort: the sentence (engine text)
- * asserted, or denied. Null if the theory cannot say it — it has no denial —
- * or the result does not read.
+ * asserted, or denied, at the theory's root where its rows are somewhere.
+ * Null if the theory cannot say it — it has no denial, or no root of a sort
+ * its assert or deny term asks for — or the result does not read.
  */
 export function rootRow(
   language: SurfaceLanguage,
@@ -192,7 +207,13 @@ export function rootRow(
     return null;
   }
 
-  const text = term === null ? sentence : `${term} (${sentence})`;
+  const text =
+    term === null ? sentence : applied(language, theory, term, sentence);
+
+  if (text === null) {
+    return null;
+  }
+
   const parsed = language.parse(text, {
     lints: false,
     mode: "engine",
@@ -212,6 +233,38 @@ export function rootRow(
 
     throw error;
   }
+}
+
+/**
+ * An assert or deny term applied: the sentence at its sentence-sort argument,
+ * the theory's root at any other. Null if it has an argument neither fills.
+ */
+function applied(
+  language: SurfaceLanguage,
+  theory: TreeTheory,
+  term: string,
+  sentence: string,
+): string | null {
+  const sentences = sentenceSort(language);
+  const rootSort =
+    theory.root === null
+      ? null
+      : (language.spec.terms.get(theory.root)?.returnSort ?? null);
+  const args = (language.spec.terms.get(term)?.binders ?? []).map(
+    (binder) => {
+      const sort = "sort" in binder.type ? binder.type.sort : null;
+
+      if (sort === sentences) {
+        return `(${sentence})`;
+      }
+
+      return sort !== null && sort === rootSort ? `(${theory.root})` : null;
+    },
+  );
+
+  return args.some((arg) => arg === null)
+    ? null
+    : `${term} ${args.join(" ")}`;
 }
 
 /**

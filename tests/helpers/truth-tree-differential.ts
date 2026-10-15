@@ -809,59 +809,11 @@ export function differences(
   return found;
 }
 
-/** A missing list without its identities' substitutions (`row=`). */
-function withoutSubstitutions(missing: string): string {
-  return missing
-    .split(" ")
-    .filter((each) => each !== "" && !each.endsWith("="))
-    .join(" ");
-}
-
-/**
- * Whether a difference is only UBC §12.7's identity completion, which the
- * generic checker does not ask for yet: the old checker's value, with the
- * substitutions it misses taken out, is the generic one's.
- */
-function identityCompletion(difference: Difference): boolean {
-  const old = difference.old ?? "";
-
-  if (difference.field === "end" && old.startsWith("open-incomplete ")) {
-    const rest = withoutSubstitutions(old.slice("open-incomplete ".length));
-    return (
-      (rest === "" ? null : `open-incomplete ${rest}`) === difference.generic
-    );
-  }
-
-  if (difference.field === "unended") {
-    const read = old.match(/^(\w+); missing (.*); closes (.*)$/);
-
-    if (read === null) {
-      return false;
-    }
-
-    const rest = withoutSubstitutions(read[2] as string);
-    const complete = rest === "" && read[3] === "-" ? "complete" : read[1];
-    return (
-      `${complete}; missing ${rest}; closes ${read[3]}` === difference.generic
-    );
-  }
-
-  return false;
-}
-
 /**
  * The differences the generic checker is known to have, by name, each with
  * why it is not (yet) a fault. Anything else is.
  */
 export const KNOWN_DIFFERENCES = {
-  /**
-   * An open branch is complete under UBC only once each identity is
-   * substituted into every literal on it, one way round. The generic checker
-   * has no criterion for that yet, so it accepts such a branch as complete,
-   * and with it a tree's verdict (gh #46, design: "identity completion").
-   */
-  "identity-completion": (all: readonly Difference[]) =>
-    all.filter(identityCompletion),
   /**
    * A row a step cites by another row's rule: the old checker marks it as
    * developed (with no names, for a general row), the generic one marks rows

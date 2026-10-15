@@ -1,0 +1,304 @@
+import { describe, expect, test } from "bun:test";
+import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
+import type { ExerciseManifestItem } from "../src/worker/domain/content";
+import { withSystemText } from "../src/worker/exercise-kit/systems/join";
+import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
+import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
+import {
+  judgeTree,
+  resolveTruthTree,
+} from "../src/worker/exercises/truth-tree/grading";
+import type {
+  RowMark,
+  TreeReport,
+} from "../src/worker/exercises/truth-tree/logic/check";
+import { markText } from "../src/worker/exercises/truth-tree/logic/labels";
+import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
+import {
+  TRUTH_TREE_ANSWER_KIND,
+  TRUTH_TREE_SCHEMA_VERSION,
+} from "../src/worker/exercises/truth-tree/types";
+import type { CertifiedAnswer } from "./helpers/truth-tree";
+import { certifyAnswer, engine, TreeBuilder } from "./helpers/truth-tree";
+import { judgeAsBrowser } from "./helpers/truth-tree-differential";
+
+/**
+ * The Open Logic Project's prefixed tableaux for K
+ * (`open-logic-modal-k.mm0`), through the truth-tree exercise as the browser
+ * judges it: a row is a prefix and a signed formula, `1.1 𝕋 A`, typed
+ * `1.1 T: A`, and margins name the book's rules (`□𝕋`, typed `[]T`).
+ */
+
+async function exercise(
+  root: string,
+  finish = "closed",
+): Promise<{
+  item: ExerciseManifestItem;
+  resolved: ResolvedTree;
+  mm0: string;
+}> {
+  const result = await compileCarnapMarkdown(
+    `::::truth-tree{#t system="open-logic-modal-k" finish="${finish}"}\nShow it.\n\n${root}\n::::`,
+  );
+
+  if (!result.ok) {
+    throw new Error(
+      result.diagnostics
+        .map((d) => `${d.code}: ${JSON.stringify(d)}`)
+        .join("\n"),
+    );
+  }
+
+  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
+  const publicData = withSystemText(
+    raw.publicData,
+    result.artifact.systems,
+  ) as unknown as TruthTreePublicData;
+  const resolved = resolveTruthTree(publicData);
+
+  if (resolved === null || publicData.mm0 === undefined) {
+    throw new Error("the exercise does not resolve");
+  }
+
+  return {
+    item: { ...raw, publicData: publicData as never },
+    mm0: publicData.mm0,
+    resolved,
+  };
+}
+
+async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
+  const { mm0, resolved } = await exercise(root);
+  return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
+}
+
+/** Each problem as `row|end id: type`, in tree order. */
+function problems(report: TreeReport): string[] {
+  return report.problems.map(({ at }) =>
+    at.type === "tree"
+      ? `tree: ${at.problem.type}`
+      : `${at.type} ${at.id}: ${at.problem.type}`,
+  );
+}
+
+describe("open-logic-modal-k", () => {
+  test("an argument's root is at prefix 1", async () => {
+    const { resolved } = await exercise("□A :|-: ◇A");
+
+    expect(resolved.root).toEqual(["((1) 𝕋 (□ A))", "((1) 𝔽 (◇ A))"]);
+  });
+
+  // proofs-in-K.tex, its first tableau.
+  test("the book's tableau for (□A ∧ □B) → □(A ∧ B)", async () => {
+    const tree = new TreeBuilder(["1 F: (□A ∧ □B) → □(A ∧ B)"]);
+    const [and, box] = tree.stack(
+      "n0",
+      "r1",
+      ["1 T: □A ∧ □B", "1 F: □(A ∧ B)"],
+      "→F",
+    );
+    const [a, b] = tree.stack(
+      "n0",
+      and as string,
+      ["1 T: □A", "1 T: □B"],
+      "∧T",
+    );
+    const [ab] = tree.stack("n0", box as string, ["1.1 F: A ∧ B"], "□F");
+    const { nodes, rows } = tree.split(
+      "n0",
+      ab as string,
+      [["1.1 F: A"], ["1.1 F: B"]],
+      "∧F",
+    );
+    const [ta] = tree.stack(nodes[0], a as string, ["1.1 T: A"], "□T");
+    tree.close(nodes[0], ta as string, rows[0][0] as string);
+    const [tb] = tree.stack(nodes[1], b as string, ["1.1 𝕋 B"], "[]T");
+    tree.close(nodes[1], tb as string, rows[1][0] as string);
+    const report = await judge(":|-: (□A ∧ □B) → □(A ∧ B)", tree);
+
+    expect(problems(report)).toEqual([]);
+    expect(report.closed).toBe(true);
+  }, 60_000);
+
+  // rules-for-K.tex: why □𝕋 wants a prefix already used.
+  test("□𝕋 to a prefix not yet on the branch is refused", async () => {
+    const tree = new TreeBuilder(["1 T: □A", "1 F: ◇A"]);
+    const [ta] = tree.stack("n0", "r1", ["1.1 T: A"], "□T");
+    const [fa] = tree.stack("n0", "r2", ["1.1 F: A"], "◇F");
+    tree.close("n0", ta as string, fa as string);
+    const report = await judge("□A :|-: ◇A", tree);
+
+    expect(problems(report)).toEqual([`row ${ta}: step-wrong`]);
+  }, 60_000);
+
+  test("□𝔽 to a prefix already used is refused", async () => {
+    const tree = new TreeBuilder(["1 T: ◇B", "1 F: □A"]);
+    tree.stack("n0", "r1", ["1.1 T: B"], "◇T");
+    const [fa] = tree.stack("n0", "r2", ["1.1 F: A"], "□F");
+    const report = await judge("◇B :|-: □A", tree);
+
+    expect(problems(report)).toContain(`row ${fa}: step-wrong`);
+  }, 60_000);
+
+  test("a branch closes on one formula at one prefix", async () => {
+    const tree = new TreeBuilder(["1 T: ◇A", "1 T: ◇¬A"]);
+    const [a] = tree.stack("n0", "r1", ["1.1 T: A"], "◇T");
+    const [na] = tree.stack("n0", "r2", ["1.2 T: ¬A"], "◇T");
+    const [fa] = tree.stack("n0", na as string, ["1.2 F: A"], "¬T");
+    tree.close("n0", a as string, fa as string);
+    const report = await judge("- ◇A\n- ◇¬A", tree);
+
+    expect(problems(report)).toContain("end n0: closure-wrong");
+  }, 60_000);
+});
+
+/** The grade the server gives a certified answer. */
+async function grade(
+  item: ExerciseManifestItem,
+  data: CertifiedAnswer,
+): Promise<string> {
+  const normalized = TRUTH_TREE_EXERCISE.normalizeAnswer(
+    {
+      data: data as never,
+      kind: TRUTH_TREE_ANSWER_KIND,
+      schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+    },
+    item,
+  );
+
+  if (!normalized.ok) {
+    throw new Error(`answer refused: ${normalized.reason}`);
+  }
+
+  const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
+    normalized.answer,
+    item,
+    {
+      ...(normalized.certificate === undefined
+        ? {}
+        : { certificate: normalized.certificate }),
+      now: new Date("2026-01-01T00:00:00Z"),
+    } as never,
+  );
+
+  return evaluation.status;
+}
+
+// countermodels.tex, its first tableau: □(p ∨ q) → (□p ∨ □q) fails in K.
+function countermodel(resolved: ResolvedTree, both: boolean) {
+  const tree = new TreeBuilder(resolved.rootText);
+  const [box, or] = tree.stack(
+    tree.rootNode,
+    "r1",
+    ["1 T: □(p ∨ q)", "1 F: □p ∨ □q"],
+    "→F",
+  );
+  const [fp, fq] = tree.stack(
+    tree.rootNode,
+    or as string,
+    ["1 F: □p", "1 F: □q"],
+    "∨F",
+  );
+  const [p11] = tree.stack(tree.rootNode, fp as string, ["1.1 F: p"], "□F");
+  const [q12] = tree.stack(tree.rootNode, fq as string, ["1.2 F: q"], "□F");
+  const [or11] = tree.stack(
+    tree.rootNode,
+    box as string,
+    ["1.1 T: p ∨ q"],
+    "□T",
+  );
+  const left = tree.split(
+    tree.rootNode,
+    or11 as string,
+    [["1.1 T: p"], ["1.1 T: q"]],
+    "∨T",
+  );
+  tree.close(left.nodes[0], left.rows[0][0] as string, p11 as string);
+
+  if (!both) {
+    tree.open(left.nodes[1]);
+    return { box: box as string, open: left.nodes[1], tree };
+  }
+
+  const [or12] = tree.stack(
+    left.nodes[1],
+    box as string,
+    ["1.2 T: p ∨ q"],
+    "□T",
+  );
+  const right = tree.split(
+    left.nodes[1],
+    or12 as string,
+    [["1.2 T: p"], ["1.2 T: q"]],
+    "∨T",
+  );
+  tree.open(right.nodes[0]);
+  tree.close(right.nodes[1], right.rows[1][0] as string, q12 as string);
+  return { box: box as string, open: right.nodes[0], tree };
+}
+
+describe("an open branch in K", () => {
+  test("is complete with □𝕋 at every prefix it uses", async () => {
+    const { item, resolved } = await exercise(
+      ":|-: □(p ∨ q) → (□p ∨ □q)",
+      "one-open",
+    );
+    const { box, tree } = countermodel(resolved, true);
+    const answer = await certifyAnswer(
+      item.publicData as unknown as TruthTreePublicData,
+      tree.answer(),
+    );
+    const judged = judgeTree(resolved, answer as never, {
+      kind: "verified",
+      ok: true,
+    }).report;
+
+    expect(problems(judged)).toEqual([]);
+    const mark = judged.marks.get(box);
+
+    // The instances are the prefixes the row went to, as the book lists them.
+    expect(mark).toEqual({
+      names: ["((1) . wa)", "((1) . wb)"],
+      type: "general",
+    });
+    expect(markText(mark as RowMark, resolved.language)).toBe("\\1.1,1.2");
+    expect(await grade(item, answer)).toBe("correct");
+  }, 60_000);
+
+  test("is incomplete while □𝕋 skips a prefix it uses", async () => {
+    const { item, resolved } = await exercise(
+      ":|-: □(p ∨ q) → (□p ∨ □q)",
+      "one-open",
+    );
+    const { box, open, tree } = countermodel(resolved, false);
+    const answer = await certifyAnswer(
+      item.publicData as unknown as TruthTreePublicData,
+      tree.answer(),
+    );
+    const judged = judgeTree(resolved, answer as never, {
+      kind: "verified",
+      ok: true,
+    }).report;
+
+    expect(judged.ends.get(open)).toEqual({
+      missing: [{ names: ["((1) . wb)"], row: box }],
+      type: "open-incomplete",
+    });
+    expect(await grade(item, answer)).toBe("incorrect");
+  }, 60_000);
+
+  test("owes □𝕋 nothing at a prefix its world does not see", async () => {
+    const { item, resolved } = await exercise("- ◇◇p\n- □q", "one-open");
+    const tree = new TreeBuilder(resolved.rootText);
+    const [dp] = tree.stack(tree.rootNode, "r1", ["1.1 T: ◇p"], "◇T");
+    tree.stack(tree.rootNode, dp as string, ["1.1.1 T: p"], "◇T");
+    tree.stack(tree.rootNode, "r2", ["1.1 T: q"], "□T");
+    tree.open(tree.rootNode);
+    const answer = await certifyAnswer(
+      item.publicData as unknown as TruthTreePublicData,
+      tree.answer(),
+    );
+
+    expect(await grade(item, answer)).toBe("correct");
+  }, 60_000);
+});

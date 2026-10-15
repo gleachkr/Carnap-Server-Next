@@ -371,6 +371,11 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The rule “{rule}” develops more than one row, and its development kind is for a rule on one row.",
         placeholders("rule"),
       ),
+    "The rule “{rule}” does not develop two rows, and its development kind is for a rule on a pair of rows.":
+      i18n.t(
+        "The rule “{rule}” does not develop two rows, and its development kind is for a rule on a pair of rows.",
+        placeholders("rule"),
+      ),
     "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it.":
       i18n.t(
         "The rule “{rule}” names “{binder}” as its instance, but no one row it writes mentions it.",

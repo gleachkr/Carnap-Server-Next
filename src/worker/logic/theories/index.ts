@@ -60,6 +60,18 @@ import forallxCalgary from "./forallx-calgary.mm0" with { type: "text" };
 import forallxMagnus from "./forallx-magnus.mm0" with { type: "text" };
 import forallxUbc from "./forallx-ubc.mm0" with { type: "text" };
 import gentzenLk from "./gentzen-lk.mm0" with { type: "text" };
+import modal4 from "./modal/4.mm0" with { type: "text" };
+import modal4r from "./modal/4r.mm0" with { type: "text" };
+import modalB from "./modal/b.mm0" with { type: "text" };
+import modalD from "./modal/d.mm0" with { type: "text" };
+import modalT from "./modal/t.mm0" with { type: "text" };
+import openLogicIntuitionistic from "./open-logic-intuitionistic.mm0" with {
+  type: "text",
+};
+import openLogicModalK from "./open-logic-modal-k.mm0" with { type: "text" };
+import openLogicSimpleS5 from "./open-logic-simple-s5.mm0" with {
+  type: "text",
+};
 import openLogicTableaux from "./open-logic-tableaux.mm0" with {
   type: "text",
 };
@@ -87,6 +99,24 @@ function withDerivedRules(base: string, derived: string): string {
 }
 
 /**
+ * The normal modal logics past K: the Open Logic Project's K tableaux with
+ * the rules for each one's accessibility relation after them (`more-rules`,
+ * its table of logics), by file name, one fragment per rule pair from
+ * `modal/`. As with `derived/`, a fragment names what the K file declares and
+ * is not served alone; a logic is one file at its address, K's header first.
+ * Each is its own system so that K, and every logic short of S5, still
+ * refuses the rules it lacks.
+ */
+export const MODAL_LOGICS: Readonly<Record<string, readonly string[]>> = {
+  "open-logic-modal-b.mm0": [modalT, modalB],
+  "open-logic-modal-d.mm0": [modalD],
+  "open-logic-modal-k4.mm0": [modal4],
+  "open-logic-modal-s4.mm0": [modalT, modal4],
+  "open-logic-modal-s5.mm0": [modalT, modal4, modal4r],
+  "open-logic-modal-t.mm0": [modalT],
+};
+
+/**
  * Every theory that ships, by the file name its URL ends with. Keyed with the
  * extension because that is what both the route parameter and the tail of an
  * authored `src=` hand back — one string to compare, no stem to reconstruct.
@@ -105,6 +135,15 @@ export const THEORY_SOURCES: Readonly<Record<string, string>> = {
   ),
   "forallx-ubc.mm0": forallxUbc,
   "gentzen-lk.mm0": gentzenLk,
+  "open-logic-intuitionistic.mm0": openLogicIntuitionistic,
+  "open-logic-modal-k.mm0": openLogicModalK,
+  ...Object.fromEntries(
+    Object.entries(MODAL_LOGICS).map(([name, fragments]) => [
+      name,
+      [openLogicModalK, ...fragments].join("\n"),
+    ]),
+  ),
+  "open-logic-simple-s5.mm0": openLogicSimpleS5,
   "open-logic-tableaux.mm0": openLogicTableaux,
 };
 

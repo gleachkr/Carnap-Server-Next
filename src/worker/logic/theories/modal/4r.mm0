@@ -1,0 +1,9 @@
+
+-- ## 4r (`more-rules`): R is euclidean, so what is necessary at σ.n is
+-- necessary at σ, which σ.n sees by symmetry.
+--| @syntax alias 4r□ 4r[]
+axiom tb_ax_4r_box (ga: ctx) (si: pfx) (n: idx) (ph: wff):
+  $ closes ga ; si 𝕋 □ ph $ > $ focus ga at (si . n 𝕋 □ ph) $;
+--| @syntax alias 4r◇ 4r<>
+axiom tb_ax_4r_dia (ga: ctx) (si: pfx) (n: idx) (ph: wff):
+  $ closes ga ; si 𝔽 ◇ ph $ > $ focus ga at (si . n 𝔽 ◇ ph) $;

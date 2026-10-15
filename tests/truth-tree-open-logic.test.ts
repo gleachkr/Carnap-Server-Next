@@ -18,9 +18,10 @@ import { judgeAsBrowser } from "./helpers/truth-tree-differential";
 
 async function exercise(
   root: string,
+  finish = "closed",
 ): Promise<{ resolved: ResolvedTree; mm0: string }> {
   const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-tableaux"}\nShow it.\n\n${root}\n::::`,
+    `::::truth-tree{#t system="open-logic-tableaux" finish="${finish}"}\nShow it.\n\n${root}\n::::`,
   );
 
   if (!result.ok) {
@@ -222,5 +223,37 @@ describe("open-logic-tableaux", () => {
     const report = await judge("s = t, A(t) :|-: A(s)", tree);
 
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
+  }, 60_000);
+});
+
+// The chapter defines no complete open branch; the theory judges one by its
+// contents, as the modal chapters do, and sees a quantifier rule's instance
+// through the substitution it is written by (`tree.substitution`).
+describe("an open branch, by its contents", () => {
+  async function open(...members: string[]): Promise<TreeReport> {
+    const { mm0, resolved } = await exercise(
+      members.map((each) => `- ${each}`).join("\n"),
+      "one-open",
+    );
+    const tree = new TreeBuilder(resolved.rootText);
+    tree.open(tree.rootNode);
+
+    return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
+  }
+
+  test("owes a ∀𝕋 instance not on it", async () => {
+    const report = await open("∀x A(x)", "B(a)");
+
+    expect(report.ends.get("n0")).toEqual({
+      missing: [{ names: ["a"], row: "r1" }],
+      type: "open-incomplete",
+    });
+  }, 60_000);
+
+  test("owes none already on it, however it got there", async () => {
+    const report = await open("∀x A(x)", "A(a)");
+
+    expect(problems(report)).toEqual([]);
+    expect(report.ends.get("n0")).toBeUndefined();
   }, 60_000);
 });

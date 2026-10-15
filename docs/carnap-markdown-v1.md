@@ -968,6 +968,8 @@ says what that means through `@syntax role` annotations:
 | `tree.closure` | an axiom | what a closed branch's `×` cites by |
 | `context-join` | a term | the branch join, as for a sequent's context |
 | `tree.assert`, `tree.deny` | terms | how the root says a sentence is true, and is not |
+| `tree.root` | a term | where the root says it, for rows that are somewhere (a prefixed tableau's `1`) |
+| `tree.completeness.contents` | a term | an open branch is complete by what is on it (see [When a row is developed](#when-a-row-is-developed)) |
 
 - A **row** is read at the one sort with a coercion into the branch sort:
   the sentence sort for UBC, a signed-sentence sort for a Smullyan tableau.
@@ -986,6 +988,25 @@ says what that means through `@syntax role` annotations:
 - A rule that cites no row, such as Cut, focuses on the empty branch: the
   unit its join's `@acui` annotation names (`focus Γ at _`). A step by it is
   written with no citation; any other step left uncited is unfinished.
+- A rule may ask for a row on the branch that the student does not cite, a
+  **side row**, by naming it in the conclusion's branch:
+  `focus (Γ ; σ.n 𝔽 B) at (σ 𝕋 □A)` is `□𝕋`, which wants its prefix `σ.n`
+  already used, and the side row witnesses that it is. A rule with side rows
+  and a `general` criterion is owed one instance for each way they match the
+  branch: `□𝕋` at every prefix `σ.n` the branch uses.
+- A term may be a **list**: a constructor declared associative with a unit
+  and nothing more (`@acui assoc _ unit _`), with a `@relation` on its sort
+  and `@congr` rules down to the branch, so that the engine can apply its
+  laws inside a row. `open-logic-intuitionistic`'s prefixes are lists, so
+  `σ . ρ` in a rule, with `ρ` a list that may be empty, is `σ` and every
+  prefix that extends it: its `→𝕋` goes to `σ . ρ`, witnessed by a side row
+  there. Carnap matches a rule's patterns the same way, a metavariable of the
+  list's sort standing for any run of members, and a bound one (`{n: pfx}`)
+  for one variable.
+- A rule that wants something new to the branch takes it as a binder the
+  branch may not mention (`{a: name}`, `{n: idx}`), so the engine's
+  dependency check is the condition. `open-logic-modal-k.mm0` names each
+  prefix's last step by a variable of its own for this reason.
 - **Give the judgements notations.** A language with letter delimiters
   splits a bare multi-letter term name such as `cl` into letters, so
   `forallx-ubc` writes them `closes Γ` and `focus Γ at Δ`.
@@ -1007,13 +1028,33 @@ student's name resolves to (the aliased axiom; the role covers its
 | `tree.development.once.<binder>` | the same, and the mark lists the instance at `<binder>` (`✓a` for `∃`) |
 | `tree.development.general.<binder>` | there is a step with the instance at `<binder>` for every term of that sort on the branch (`\a,b`) |
 | `tree.development.nonempty` | with `general`: one step even when the branch has no terms |
+| `tree.development.pairs` | for a rule on two rows, set off by the first (an identity `a=b`): one statement of the rule has its conclusions on the branch for every row there the second matches, by a step or not |
+| `tree.development.literals` | with `pairs`: only atomic and negated atomic rows pair |
 | `tree.development.none` | never needed |
 
 - A rule with no role is `once` if it develops one row, and asks nothing if
-  it develops several (a closure, an identity step).
+  it develops several (a closure, an identity step without `pairs`).
+- `pairs` is UBC's identity completion (§12.7). "One statement" is one axiom
+  of the `@fallback` chain, so an identity is substituted one way round,
+  every `a` made `b` (`tb_id_ab`) or every `b` made `a` (`tb_id_ba`), for all
+  the rows it pairs with. A conclusion `b = b` (by the `identity` role) is
+  waived, as the book's solutions leave it out. An open branch that still
+  owes one says the identity still needs substituting.
+- By default a row is developed by a step, as UBC checks rows off: a
+  conjunction whose conjuncts arrived some other way is still owed its step.
+  A theory with `tree.completeness.contents` on any term (the Open Logic
+  Project's, on `closes`) is the book's other way: a row is developed once
+  its rule's conclusions are on the branch, by a step or not, and a
+  `general` row is owed only the instances whose conclusions are missing.
+  This is matched as the focus is.
 - A rule applies to a row its focus pattern matches: `∀ x ph` matches any
-  universal. The match is syntactic, so a focus that needs the theory to
-  compute (a substitution) matches nothing.
+  universal. The match is syntactic, but for two things the theory can say
+  it computes: a list (`@acui assoc _ unit _`, above) and its substitution,
+  the term carrying `@syntax role tree.substitution` (`{x / te} ph`, three
+  arguments: the bound variable, the term, the body). `{x / te} ph` with
+  `ph` known matches `ph` with one term at every `x`; with `te` known and
+  `ph` not, as in an identity's `{x / a} ph`, `ph` is the row with every
+  `a` made `x`. Anything else the theory would compute matches nothing.
 - Only steps the engine accepted count. A step's instance is found by the
   engine too: the editor asks it which term each row was written with, and
   the certificate proves the answer, so the server checks it as it checks
@@ -1067,8 +1108,9 @@ For `forallx-ubc`, the rules are the book's (§5, §10, §12.7):
   negation, or one row `a≠a`.
 - A branch marked `↑` must be open and complete: every row on it developed
   on that branch, and every universal instantiated for every name on the
-  branch (and at least once, if there are none). An identity is not yet
-  required to be substituted into the branch's literals, as the book asks.
+  branch (and at least once, if there are none), and every identity
+  substituted one way round into every atomic and negated atomic row on
+  it, bar a rewriting that says something is itself (`b=b`).
 
 For `open-logic-tableaux`, the rules are the Open Logic Project's signed
 tableaux (*Sets, Logic, Computation*, "Tableaux"):
@@ -1088,9 +1130,87 @@ tableaux (*Sets, Logic, Computation*, "Tableaux"):
   its `t₁` made `t₂`, in that direction only.
 - **Cut** cites no row and splits the branch into `𝕋 A` and `𝔽 A`.
 - A closure cites `𝕋 A` and `𝔽 A`.
+- The chapter defines no complete open branch (its tableaux only prove), so a
+  branch marked `↑` is judged as the modal chapters judge one, by its
+  contents: each rule's conclusions are on the branch, by a step or not, and
+  `∀𝕋` and `∃𝔽` are owed an instance at each term on it, `𝕋 A(a)` counting
+  as `∀𝕋`'s at `a` however it got there.
 - The language is the book's: atoms `A`, `A(a)`, `C(x, b)`, function terms
   `f(a)`, constants `a`–`e`, `s`, `t` (subscripted too, `s₁`, typed `s1`),
   variables `u`–`z`, and every binary formula bracketed, bar the outermost.
+
+For `open-logic-modal-k`, the rules are the Open Logic Project's prefixed
+tableaux for the modal logic K (*Boxes and Diamonds*, "Modal Tableaux"):
+
+- A row is a prefix and a signed formula, prefix first: `1.1 𝕋 A`, typed
+  `1.1 T: A`. A prefix names a world: `1`, and `σ.n` for a world `σ` sees.
+  The root's rows are at `1`. Prefixes run up to four steps wide and three
+  deep below `1` (`1.4.4.4`).
+- The propositional rules are `open-logic-tableaux`'s, each at its row's
+  prefix. A closure cites `σ 𝕋 A` and `σ 𝔽 A`, at one prefix.
+- `□𝔽` and `◇𝕋` (typed `[]F`, `<>T`) go to a prefix `σ.n` new to the
+  branch; `□𝕋` and `◇𝔽` (`[]T`, `<>F`) to one already on it. Each cites the
+  one row it develops.
+- A branch marked `↑` is complete when, besides the propositional rows,
+  each `□𝔽` and `◇𝕋` row has a conclusion at some new prefix, and each `□𝕋`
+  and `◇𝔽` row one at every prefix `σ.n` on the branch, as the book defines
+  it: a conclusion already on the branch needs no step. Its mark lists the
+  prefixes its steps went to (`\1.1,1.2`).
+- The language: sentence letters `A`–`Z` and `p`, `q`, `r`, `s`; `¬ ∧ ∨ →
+  ↔ ⊥ ⊤`, with `□` and `◇` (typed `[]` and `<>`); every binary formula
+  bracketed, bar the outermost.
+
+The logics past K are K with the rules for their accessibility relation
+(`more-rules`), one built-in each, so that a logic refuses the rules it
+lacks:
+
+| ID | Logic | Rules added to K |
+| --- | --- | --- |
+| `open-logic-modal-t` | T, reflexive | `T□` `T◇` |
+| `open-logic-modal-d` | D, serial | `D□` `D◇` |
+| `open-logic-modal-k4` | K4, transitive | `4□` `4◇` |
+| `open-logic-modal-b` | B, reflexive and symmetric | `T□` `T◇` `B□` `B◇` |
+| `open-logic-modal-s4` | S4, reflexive and transitive | `T□` `T◇` `4□` `4◇` |
+| `open-logic-modal-s5` | S5, reflexive, transitive and euclidean | `T□` `T◇` `4□` `4◇` `4r□` `4r◇` |
+
+- `T□` writes `σ 𝕋 A` from `σ 𝕋 □A`; `D□` writes `σ 𝕋 ◇A`; `B□` writes `σ
+  𝕋 A` from `σ.n 𝕋 □A`; `4□` writes `σ.n 𝕋 □A` at a `σ.n` already used;
+  `4r□` writes `σ 𝕋 □A` from `σ.n 𝕋 □A`. Each `◇` rule is the same on `𝔽 ◇`.
+- ASCII spellings: `T[]`, `T<>`, `D[]`, `4[]`, `4r<>`, and so on.
+- A combination the table does not have (the book's exercises use KT5,
+  KDB4) is K's file with the rules appended in an `aufbau-mm0` block.
+
+For `open-logic-simple-s5`, the rules are the book's simplified tableaux for
+S5 (`simple-S5`), where every world sees every world:
+
+- A prefix is a positive integer, `1` up to `20`: `2 𝕋 A`, typed `2 T: A`.
+  The root's rows are at `1`.
+- The language and the propositional rules are `open-logic-modal-k`'s.
+- `□𝔽` and `◇𝕋` go to a prefix `m` new to the branch; `□𝕋` and `◇𝔽` to one
+  already on it, the row's own among them. A complete branch is as in K,
+  over every prefix on the branch (`\1,2`).
+
+For `open-logic-intuitionistic`, the rules are the Open Logic Project's
+prefixed tableaux for intuitionistic propositional logic (*Boxes and
+Diamonds*, "Tableaux" in the intuitionistic part):
+
+- Rows and prefixes are `open-logic-modal-k`'s: `1.1 𝕋 A`, typed `1.1 T: A`,
+  the root's rows at `1`. A prefix names a world, and the worlds accessible
+  from `σ` are `σ` and every prefix that extends it, the book's `σ.*`.
+- The language: sentence letters as in K, `⊥`, `¬`, `∧`, `∨` and `→`; `↔`,
+  the book's abbreviation, is not read.
+- `∧` and `∨` are K's rules. `¬𝔽` and `→𝔽` go to a prefix `σ.n` new to the
+  branch; `¬𝕋` and `→𝕋` to any prefix on the branch that is `σ` or extends
+  it. Each cites the one row it develops.
+- A closure cites `σ 𝕋 A` and `τ 𝔽 A` with `τ` equal to `σ` or extending
+  it, never the other way round, so `𝔽 A` at `1` and `𝕋 A` at `1.1` do not
+  close (the excluded middle fails); or `σ 𝕋 ⊥` alone.
+- A branch marked `↑` is complete when each `¬𝔽` and `→𝔽` row has its
+  conclusion at some new prefix and each `¬𝕋` and `→𝕋` row has it at every
+  prefix on the branch that is its own or extends it (`\1,1.1`). The book
+  uses these tableaux for proofs only and defines no complete branch, and
+  some branches never complete: on the left branch of `(C → D) → B ⊢ B`
+  each new prefix owes a `→𝕋` step that asks for another.
 
 A step with no rule named, or no row cited, is unfinished rather than wrong.
 
@@ -1201,7 +1321,7 @@ Use `src` to load a built-in into a named block:
 :::
 ```
 
-The eight built-in IDs are:
+The seventeen built-in IDs are:
 
 - `forallx-calgary`: Calgary natural deduction, first-order syntax,
   basic rules.
@@ -1212,6 +1332,15 @@ The eight built-in IDs are:
   (see [Writing a tree theory](#writing-a-tree-theory)).
 - `open-logic-tableaux`: the Open Logic Project's first-order language, and
   its signed tableau rules.
+- `open-logic-modal-k`: the Open Logic Project's propositional modal
+  language, and its prefixed tableau rules for K.
+- `open-logic-modal-t`, `open-logic-modal-d`, `open-logic-modal-k4`,
+  `open-logic-modal-b`, `open-logic-modal-s4`, `open-logic-modal-s5`: the
+  same, with the rules for T, D, K4, B, S4 and S5.
+- `open-logic-simple-s5`: the same language, and the simplified tableau
+  rules for S5, with whole-number prefixes.
+- `open-logic-intuitionistic`: the Open Logic Project's intuitionistic
+  propositional language, and its prefixed tableau rules.
 - `gentzen-lk`: classical multi-conclusion sequent calculus, suitable for
   proof trees. It has no student-language annotations.
 - `carnap-prop`: the default propositional signature, without proof rules.

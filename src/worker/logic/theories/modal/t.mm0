@@ -1,0 +1,8 @@
+
+-- ## T (`more-rules`): R is reflexive, so σ sees itself.
+--| @syntax alias T□ T[]
+axiom tb_ax_t_box (ga: ctx) (si: pfx) (ph: wff):
+  $ closes ga ; si 𝕋 ph $ > $ focus ga at (si 𝕋 □ ph) $;
+--| @syntax alias T◇ T<>
+axiom tb_ax_t_dia (ga: ctx) (si: pfx) (ph: wff):
+  $ closes ga ; si 𝔽 ph $ > $ focus ga at (si 𝔽 ◇ ph) $;

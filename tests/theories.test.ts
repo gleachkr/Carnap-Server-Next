@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { createApp } from "../src/worker/app";
 import {
   BUILT_IN_THEORY_PATHS,
+  MODAL_LOGICS,
   THEORY_ROUTE_PREFIX,
   THEORY_SOURCES,
   theoryByPath,
@@ -34,8 +35,34 @@ describe("built-in theories", () => {
     expect(files).toEqual(
       Object.keys(THEORY_SOURCES)
         .filter((name) => !name.endsWith("-plus.mm0"))
+        .filter((name) => MODAL_LOGICS[name] === undefined)
         .sort(),
     );
+  });
+
+  test("every modal logic past K is K's file and `modal/` fragments, each fragment used", async () => {
+    const fragments = await Promise.all(
+      (await readdir(resolve(THEORIES_DIR, "modal")))
+        .filter((name) => name.endsWith(".mm0"))
+        .map((name) =>
+          readFile(resolve(THEORIES_DIR, "modal", name), "utf8"),
+        ),
+    );
+    const base = await readFile(
+      resolve(THEORIES_DIR, "open-logic-modal-k.mm0"),
+      "utf8",
+    );
+    const used = Object.values(MODAL_LOGICS).flat();
+
+    expect(fragments.length).toBeGreaterThan(0);
+
+    for (const fragment of fragments) {
+      expect(used).toContain(fragment);
+    }
+
+    for (const [name, rules] of Object.entries(MODAL_LOGICS)) {
+      expect(THEORY_SOURCES[name], name).toBe([base, ...rules].join("\n"));
+    }
   });
 
   test("every `-plus` registration is a file and its `derived/` fragment, and nothing else", async () => {

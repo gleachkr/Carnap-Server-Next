@@ -4,9 +4,11 @@ Students decide whether an argument is valid, or a set of sentences
 consistent, with a truth tree (a semantic tableau), under the rules of the
 theory `system=` names: *forall x: UBC* (Ichikawa and Jenkins, after
 Magnus), identity included, by default, or the Open Logic Project's signed
-tableaux (`open-logic-tableaux`, rows `𝕋 A` and `𝔽 A`). The
-authoring contract
-is in
+tableaux (`open-logic-tableaux`, rows `𝕋 A` and `𝔽 A`), prefixed tableaux
+for K and the logics past it (`open-logic-modal-k` through
+`open-logic-modal-s5`, rows `1.1 𝕋 A`), simplified tableaux for S5
+(`open-logic-simple-s5`, rows `2 𝕋 A`), and prefixed tableaux for
+intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
 [`docs/carnap-markdown-v1.md`](../../../../docs/carnap-markdown-v1.md#truth-tree-directive).
 
 ## Three layers
@@ -60,7 +62,21 @@ is in
   development roles into a registry of criteria (`once`, `general`, `none`),
   `patterns.ts` matches a rule's focus against a row and fills in its
   templates, and `complete.ts` says from the verified steps whether an open
-  branch is complete and what each row's mark is. A general step's
+  branch is complete and what each row's mark is. A theory with
+  `tree.completeness.contents` (the Open Logic Project's) also counts a row
+  developed when its rule's conclusions are on the branch already, matched
+  as the focus is; without it S5's `4r□` would owe a row back to a prefix
+  that has it, and each copy would owe the same again. A rule may name side
+  rows in its branch, a witness on the branch the student does not cite
+  (`□𝕋` wants its prefix used); a general criterion over such a rule is
+  owed the instances its side rows find, not every term of the sort, and an
+  instance that means nothing alone (a prefix's last step) is shown as the
+  row's argument it is in (`1.1`). `patterns.ts` also matches modulo a list,
+  a constructor the theory declares associative with a unit and nothing
+  more (`@acui assoc _ unit _`): a metavariable of its sort stands for any
+  run of members, so intuitionistic `→𝕋`'s side row at `σ . ρ` finds `σ` and
+  every prefix that extends it, and terms are compared, and instances
+  proposed, as lists. A general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
   browser compiles every candidate once to find which hold, and that compile
@@ -75,8 +91,9 @@ is in
   injected fault of each kind, and judges each tree with both checkers as
   the browser runs them. They must agree on the verdict, which developments
   are wrong or unfinished, every end, what an open branch is missing and
-  every mark, bar the differences `KNOWN_DIFFERENCES` names. A test pins
-  identity completion, so that it fails, and the entry with it, once fixed.
+  every mark, bar the differences `KNOWN_DIFFERENCES` names. Identity
+  completion is the theory's (`tree.development.pairs`), and a test holds
+  the two checkers to agreeing on a branch that skips a substitution.
 - `grading.ts` — guards, the declaration resolved back to formulas, and the
   judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the
@@ -125,10 +142,6 @@ Verifying 5 MB takes about 50 ms in workerd, decoding included.
 
 ## Not yet
 
-- UBC's identity completion (§12.7): an open branch is complete only once
-  each identity is substituted into its literals. The generic checker does
-  not ask for it, so it accepts such a branch as complete, and its
-  verdict with it.
 - Reading an interpretation off a complete open branch, merging the names
   an identity on it equates (§12.7).
 - A `rules=` attribute, which arrives with a second system record.

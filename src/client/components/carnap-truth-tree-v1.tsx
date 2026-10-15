@@ -79,6 +79,7 @@ import {
   treeProofOf,
 } from "../../worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../../worker/exercises/truth-tree/logic/check";
+import { displayName } from "../../worker/exercises/truth-tree/logic/labels";
 import type { TruthTreeStringId } from "../../worker/exercises/truth-tree/strings";
 import type {
   TruthTreeAnswerData,
@@ -2021,8 +2022,15 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
       );
     }
 
+    const language = this.resolved?.language;
+    const name = (engine: string): string =>
+      language === undefined ? engine : displayName(engine, language);
+
     for (const [nodeId, problem] of report.ends) {
-      notes.set(nodeId, describeEndProblem(problem, this.words, number));
+      notes.set(
+        nodeId,
+        describeEndProblem(problem, this.words, number, name),
+      );
     }
 
     return notes;

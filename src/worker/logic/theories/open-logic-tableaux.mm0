@@ -292,13 +292,16 @@ infixl join: $;$ prec 5;
 term hyp (ph: sfm): ctx;
 coercion hyp: sfm > ctx;
 
--- Substitution, pushed through the syntax so an instance computes.
+-- Substitution, pushed through the syntax so an instance computes. Its
+-- role lets the checker see an instance on the branch as a rule's
+-- conclusion, as it sees a propositional rule's (by contents).
 term sb_t {x: var} (te: tm x) (ue: tm x): tm;
 notation sb_t {x: var} (te: tm x) (ue: tm x): tm =
   ($tsub$:41) x ($/$:0) te ue;
 term sb_s {x: var} (te: tm x) (sq: seq x): seq;
 notation sb_s {x: var} (te: tm x) (sq: seq x): seq =
   ($subst$:41) x ($/$:0) te sq;
+--| @syntax role tree.substitution
 term sb_f {x: var} (te: tm x) (ph: wff x): wff;
 notation sb_f {x: var} (te: tm x) (ph: wff x): wff =
   (${$:41) x ($/$:0) te ($}$:0) ph;
@@ -532,8 +535,12 @@ axiom sb_t_g {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (g sq)) ≐ g (subs
 axiom sb_t_h {x: var} (te: tm x) (sq: seq x): $ (tsub x / te (h sq)) ≐ h (subst x / te sq) $;
 
 -- ## The tree judgements, read by role (see `forallx-ubc`)
+--
+-- An open branch is complete when each rule's conclusions are on it, however
+-- they got there (`completeness`), not when each row has been checked off.
 
 --| @syntax role tree.closes
+--| @syntax role tree.completeness.contents
 term cl (ga: ctx): judgement;
 prefix cl: $closes$ prec 3;
 --| @congr

@@ -1,0 +1,8 @@
+
+-- ## D (`more-rules`): R is serial, so σ sees some world.
+--| @syntax alias D□ D[]
+axiom tb_ax_d_box (ga: ctx) (si: pfx) (ph: wff):
+  $ closes ga ; si 𝕋 ◇ ph $ > $ focus ga at (si 𝕋 □ ph) $;
+--| @syntax alias D◇ D<>
+axiom tb_ax_d_dia (ga: ctx) (si: pfx) (ph: wff):
+  $ closes ga ; si 𝔽 □ ph $ > $ focus ga at (si 𝔽 ◇ ph) $;

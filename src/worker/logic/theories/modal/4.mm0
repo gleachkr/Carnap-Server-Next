@@ -1,0 +1,18 @@
+
+-- ## 4 (`more-rules`): R is transitive, so what is necessary at σ is
+-- necessary at every σ.n it sees. `σ.n` is used, witnessed by a side row as
+-- `□𝕋`'s is.
+axiom tb_ax_4_box_t (ga: ctx) (si: pfx) (n: idx) (ph ps: wff):
+  $ closes ga ; si . n 𝕋 ps ; si . n 𝕋 □ ph $ > $ focus (ga ; si . n 𝕋 ps) at (si 𝕋 □ ph) $;
+--| @fallback tb_ax_4_box_t
+--| @syntax role tree.development.general.n
+--| @syntax alias 4□ 4[]
+axiom tb_ax_4_box_f (ga: ctx) (si: pfx) (n: idx) (ph ps: wff):
+  $ closes ga ; si . n 𝔽 ps ; si . n 𝕋 □ ph $ > $ focus (ga ; si . n 𝔽 ps) at (si 𝕋 □ ph) $;
+axiom tb_ax_4_dia_t (ga: ctx) (si: pfx) (n: idx) (ph ps: wff):
+  $ closes ga ; si . n 𝕋 ps ; si . n 𝔽 ◇ ph $ > $ focus (ga ; si . n 𝕋 ps) at (si 𝔽 ◇ ph) $;
+--| @fallback tb_ax_4_dia_t
+--| @syntax role tree.development.general.n
+--| @syntax alias 4◇ 4<>
+axiom tb_ax_4_dia_f (ga: ctx) (si: pfx) (n: idx) (ph ps: wff):
+  $ closes ga ; si . n 𝔽 ps ; si . n 𝔽 ◇ ph $ > $ focus (ga ; si . n 𝔽 ps) at (si 𝔽 ◇ ph) $;

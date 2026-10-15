@@ -8,10 +8,14 @@
  * asks is a {@link DevelopmentCriterion} in {@link CRITERIA}: a new kind is
  * one entry there, not a change to the judge.
  *
- * The evidence is the student's own verified steps, never a check of whether
- * a rule would still add something: the books are stricter than that in
- * places (a conjunction is not developed because its conjuncts arrived some
- * other way) and more lenient in others.
+ * The evidence is the student's own verified steps: the books are stricter
+ * than a check of whether a rule would still add something in places (UBC's
+ * conjunction is not developed because its conjuncts arrived some other way)
+ * and more lenient in others. A theory that says otherwise
+ * (`tree.completeness.contents`, `./theory.ts`) counts a row developed once
+ * its rule's conclusions are on the branch, step or no step, as the Open
+ * Logic Project defines a complete branch. It can only waive a step, never
+ * ask for one.
  *
  * A rule a step can name is a chain: the axiom the student's name resolves
  * to and every axiom it falls back on (`@fallback`), which state the same
@@ -25,8 +29,8 @@
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { roleIndex } from "../../../logic/specs/roles";
 import type { Missing } from "../logic/check";
-import type { Bindings } from "./patterns";
-import { matchTerm, occursFree } from "./patterns";
+import type { Bindings, Metas } from "./patterns";
+import { matchTerm, occursFree, statementReader, termKey } from "./patterns";
 import type { TreeTheory } from "./theory";
 
 /** The namespace a development role is in: `tree.development.general.te`. */
@@ -36,10 +40,16 @@ const DEVELOPMENT = "tree.development.";
 export interface RulePatterns {
   /** The rows the rule develops, at the row sort; one for most rules. */
   readonly focus: readonly Term[];
+  /**
+   * Rows the rule asks the branch to hold beside the ones it develops, which
+   * the student does not cite: a witness, as `□𝕋`'s row at the prefix it goes
+   * to witnesses that the prefix is used. Usually none.
+   */
+  readonly side: readonly Term[];
   /** The rows each premise writes onto its branch, beyond the branch. */
   readonly written: readonly (readonly Term[])[];
   /** The statement's binders: its metavariables. */
-  readonly metas: ReadonlySet<string>;
+  readonly metas: Metas;
   readonly binders: AssertStatement["binders"];
 }
 
@@ -47,11 +57,24 @@ export interface RulePatterns {
 export interface InstanceSlot {
   readonly binder: string;
   readonly sort: string;
-  /** The premise row that mentions the binder: `{x / te} ph`. */
-  readonly template: Term;
   /**
-   * The metavariables of the template that may mention a bound variable, and
-   * which: where none does, the instance is vacuous (`∀x Fa`).
+   * The rows the rule writes that mention the binder: `{x / te} ph`. Most
+   * rules write one; a branching rule writes its instance on every branch,
+   * as `→𝕋` writes `τ 𝔽 A` on one and `τ 𝕋 B` on the other, and a rule may
+   * write it more than once on a branch, as `→𝔽` writes `σ.n 𝕋 A` and
+   * `σ.n 𝔽 B`.
+   */
+  readonly templates: readonly Term[];
+  /**
+   * What shows an instance: the binder itself, or, where its sort coerces
+   * into no other (the step `n` of a prefix `σ.n`, which means nothing
+   * alone), the argument of the template's row it is in (`σ.n`, or a whole
+   * prefix `m` where the binder is one).
+   */
+  readonly shown: Term;
+  /**
+   * The metavariables of the templates that may mention a bound variable,
+   * and which: where none does, the instance is vacuous (`∀x Fa`).
    */
   readonly dependents: readonly {
     readonly meta: string;
@@ -77,8 +100,29 @@ export interface ObligationInput {
   readonly steps: readonly DevelopingStep[];
   /** The closed terms of a sort on the branch, by engine text. */
   readonly terms: (sort: string) => readonly string[];
+  /**
+   * For a rule with side rows, the instances they find on the branch, by
+   * engine text: the ones it must be used for (`□𝕋` at every prefix the
+   * branch uses), in place of every term of the instance's sort. Null for a
+   * rule without.
+   */
+  readonly witnessed: readonly string[] | null;
+  /**
+   * Where the theory judges by contents, each way the rule's conclusions are
+   * on the branch already: the instance that way fixes, by engine text, or
+   * null for a rule that counts none. Empty where it judges by steps.
+   */
+  readonly concluded: readonly (string | null)[];
+  /**
+   * For a rule on a pair of rows, set off by the row (`./complete.ts`
+   * `paired`): whether some statement of it has its conclusions on the branch
+   * for every row it pairs the row with. Null for a rule on one row.
+   */
+  readonly paired: boolean | null;
   /** Whether the row's instances are vacuous (`∀x Fa`); false without one. */
   readonly vacuous: boolean;
+  /** An instance as a reader is shown it, by engine text (`InstanceSlot.shown`). */
+  readonly shown: (instance: string) => string;
 }
 
 /** One kind of development criterion, as a role names it. */
@@ -112,6 +156,7 @@ export type CriterionProblem =
   | { readonly type: "bad-arguments"; readonly expected: string }
   | { readonly type: "unknown-binder"; readonly binder: string }
   | { readonly type: "single-row-focus" }
+  | { readonly type: "pair-focus" }
   | { readonly type: "no-template"; readonly binder: string }
   | { readonly type: "unknown-flag"; readonly flag: string };
 
@@ -119,7 +164,8 @@ const KINDS: readonly DevelopmentCriterion[] = [
   {
     kind: "once",
     mark: "resolved",
-    missing: ({ row, steps }) => (steps.length > 0 ? null : { row }),
+    missing: ({ concluded, row, steps }) =>
+      steps.length > 0 || concluded.length > 0 ? null : { row },
     read: (args, flags, rule) => {
       if (args.length > 1) {
         return { expected: "once[.binder]", type: "bad-arguments" };
@@ -131,25 +177,38 @@ const KINDS: readonly DevelopmentCriterion[] = [
   {
     kind: "general",
     mark: "general",
-    missing: ({ row, rule, steps, terms, vacuous }) => {
+    missing: ({
+      concluded,
+      row,
+      rule,
+      shown,
+      steps,
+      terms,
+      vacuous,
+      witnessed,
+    }) => {
       const slot = rule.instance;
+      const used = steps.length > 0 || concluded.length > 0;
 
       if (vacuous || slot === null) {
-        return steps.length > 0 ? null : { names: [], row };
+        return used ? null : { names: [], row };
       }
 
-      const all = terms(slot.sort);
+      const all = witnessed ?? terms(slot.sort);
 
       if (all.length === 0) {
-        return rule.flags.has("nonempty") && steps.length === 0
+        return rule.flags.has("nonempty") && !used
           ? { names: [], row }
           : null;
       }
 
-      const seen = new Set(steps.flatMap((step) => step.instances));
+      const seen = new Set([
+        ...steps.flatMap((step) => step.instances),
+        ...concluded,
+      ]);
       const needed = all.filter((term) => !seen.has(term));
 
-      return needed.length === 0 ? null : { names: needed, row };
+      return needed.length === 0 ? null : { names: needed.map(shown), row };
     },
     read: (args, flags, rule) => {
       if (args.length !== 1) {
@@ -160,6 +219,30 @@ const KINDS: readonly DevelopmentCriterion[] = [
         singleRow(rule) ??
         instanceOf(args[0] as string, flags, ["nonempty"], rule)
       );
+    },
+  },
+  {
+    // A rule on a pair of rows, set off by the first: the identity rule on
+    // `a = b` and a row with `a` in it. The row is developed once one
+    // statement of the rule has its conclusions on the branch for every row
+    // there it pairs with, whether a step wrote them or not, since a step
+    // cites the pair and the other row is not the row's to cite. One
+    // statement for all: UBC's identity is substituted one way round, every
+    // `a` made `b` or every `b` made `a`. Flag `literals`: only atomic and
+    // negated atomic rows pair. The missing entry is worded as an identity's
+    // substitution, the one rule written so.
+    kind: "pairs",
+    mark: null,
+    missing: ({ paired, row }) =>
+      paired === false ? { row, substitution: true } : null,
+    read: (args, flags, rule) => {
+      if (args.length > 0) {
+        return { expected: "pairs", type: "bad-arguments" };
+      }
+
+      return rule.focus.length === 2
+        ? instanceOf(null, flags, ["literals"])
+        : { type: "pair-focus" };
     },
   },
   {
@@ -212,6 +295,11 @@ export interface DevelopmentRule {
   readonly chain: ReadonlySet<string>;
   readonly patterns: RulePatterns;
   /**
+   * The chain's axioms as patterns, in order: one rule stated more than one
+   * way, as `□𝕋` is for a witness of either sign.
+   */
+  readonly variants: readonly RulePatterns[];
+  /**
    * How many rows each axiom of the chain writes on each branch, sorted: a
    * step must write one of these. The engine cannot tell, because a branch
    * is a set and a row already on it is not written again (`A ∧ B` with `B`
@@ -243,6 +331,8 @@ export interface TreeDevelopment {
   readonly relation: JudgementRelation | null;
   /** Whether any rule carries a development role. */
   readonly annotated: boolean;
+  /** Whether a row is developed by its conclusions being on the branch. */
+  readonly byContents: boolean;
   readonly problems: readonly {
     readonly rule: string;
     readonly problem: CriterionProblem | { readonly type: "no-relation" };
@@ -365,7 +455,7 @@ function readDevelopment(
       } else if (reading.instance === null) {
         criterion = chosen;
       } else {
-        instance = instanceSlot(patterns, reading.instance);
+        instance = instanceSlot(language, patterns, reading.instance);
 
         if (instance === null) {
           fail({ binder: reading.instance, type: "no-template" });
@@ -376,6 +466,10 @@ function readDevelopment(
     }
 
     const chain = chainOf(name);
+    const variants = chain.flatMap((axiom) => {
+      const each = patternsOf(axiom);
+      return each === null ? [] : [each];
+    });
     const rule: DevelopmentRule = {
       chain: new Set(chain),
       criterion,
@@ -383,10 +477,8 @@ function readDevelopment(
       instance,
       name,
       patterns,
-      shapes: chain.flatMap((axiom) => {
-        const each = patternsOf(axiom);
-        return each === null ? [] : [rowShape(each.written)];
-      }),
+      shapes: variants.map((each) => rowShape(each.written)),
+      variants,
     };
 
     rules.push(rule);
@@ -396,6 +488,10 @@ function readDevelopment(
     }
   }
 
+  const closure = closureChain.flatMap((name) => {
+    const patterns = patternsOf(name);
+    return patterns === null ? [] : [patterns];
+  });
   const relation = judgementRelation(language, theory);
 
   if (relation === null) {
@@ -409,10 +505,8 @@ function readDevelopment(
   return {
     annotated,
     byAxiom,
-    closure: closureChain.flatMap((name) => {
-      const patterns = patternsOf(name);
-      return patterns === null ? [] : [patterns];
-    }),
+    byContents: theory.byContents,
+    closure,
     problems,
     relation,
     rules: relation === null ? rules.map(withoutInstance) : rules,
@@ -432,43 +526,22 @@ function withoutInstance(rule: DevelopmentRule): DevelopmentRule {
 }
 
 /**
- * A rule statement read as patterns: `focus ga at (Δ)` for its conclusion,
- * `closes (ga ; rows)` for each premise. Null for a rule whose conclusion is
- * not a focused branch, or whose rows are not plain rows.
+ * A rule statement read as patterns: `focus (ga ; side) at (Δ)` for its
+ * conclusion, `closes (ga ; side ; rows)` for each premise. Null for a rule
+ * whose conclusion is not a focused branch, or whose rows are not plain rows.
  */
 export function rulePatterns(
   language: SurfaceLanguage,
   theory: TreeTheory,
   statement: AssertStatement,
 ): RulePatterns | null {
-  const scope = new Map<string, string>();
-
-  for (const binder of statement.binders) {
-    if ("sort" in binder.type) {
-      scope.set(binder.name, binder.type.sort);
-    }
-  }
-
   const judgement = language.spec.terms.get(theory.closes)?.returnSort;
 
   if (judgement === undefined) {
     return null;
   }
 
-  const parse = (text: string): Term | null => {
-    try {
-      const read = language.parse(text.trim(), {
-        lints: false,
-        mode: "engine",
-        scope,
-        sort: judgement,
-      });
-      return read.ok ? read.term : null;
-    } catch {
-      return null;
-    }
-  };
-
+  const parse = statementReader(language, statement, judgement);
   const conclusion = parse(statement.conclusion.text);
 
   if (
@@ -479,13 +552,18 @@ export function rulePatterns(
     return null;
   }
 
-  const [branch, cited] = conclusion.args as [Term, Term];
+  const [focused, cited] = conclusion.args as [Term, Term];
+  const branch = branchVariable(language, focused);
   // A rule that cites no row, as Cut does, focuses on the empty branch.
   const focus = rowsOf(language, theory, cited, null);
+  const side =
+    branch === null ? null : rowsOf(language, theory, focused, branch);
 
-  if (focus === null) {
+  if (focus === null || side === null) {
     return null;
   }
+
+  const sideKeys = new Set(side.map((row) => termKey(language, row)));
 
   const written: Term[][] = [];
 
@@ -510,15 +588,41 @@ export function rulePatterns(
       return null;
     }
 
-    written.push(rows);
+    // The side rows are on the branch below too; they are not written.
+    written.push(rows.filter((row) => !sideKeys.has(termKey(language, row))));
   }
 
   return {
     binders: statement.binders,
     focus,
-    metas: new Set(scope.keys()),
+    metas: new Map(
+      statement.binders
+        .filter((binder) => "sort" in binder.type)
+        .map((binder) => [binder.name, binder.binds]),
+    ),
+    side,
     written,
   };
+}
+
+/**
+ * The branch metavariable of a rule's focused branch: the one variable in
+ * `ga` or `ga ; side`. Null if there is not exactly one.
+ */
+function branchVariable(language: SurfaceLanguage, term: Term): Term | null {
+  const join = roleIndex(language).termFor("context-join");
+  const found: Term[] = [];
+  const walk = (node: Term): void => {
+    if (node.kind === "variable") {
+      found.push(node);
+    } else if (node.term === join) {
+      node.args.forEach(walk);
+    }
+  };
+
+  walk(term);
+
+  return found.length === 1 ? (found[0] as Term) : null;
 }
 
 /**
@@ -588,21 +692,24 @@ function rowsOf(
 }
 
 /**
- * Where a rule writes its instance: the one row of its one premise that
- * mentions the binder. Null if there is not exactly one.
+ * Where a rule writes its instance: the rows of its premises that mention the
+ * binder. Null if a premise writes none.
  */
 function instanceSlot(
+  language: SurfaceLanguage,
   patterns: RulePatterns,
   binder: string,
 ): InstanceSlot | null {
-  const [premise, ...others] = patterns.written;
-  const rows = (premise ?? []).filter((row) => mentions(row, binder));
-  const template = rows[0];
+  const premises = patterns.written.map((rows) =>
+    rows.filter((row) => mentions(row, binder)),
+  );
+  const templates = premises.flat();
+  const template = templates[0];
   const declared = patterns.binders.find((each) => each.name === binder);
 
   if (
-    others.length > 0 ||
-    rows.length !== 1 ||
+    premises.length === 0 ||
+    premises.some((rows) => rows.length === 0) ||
     template === undefined ||
     declared === undefined ||
     !("sort" in declared.type)
@@ -614,14 +721,80 @@ function instanceSlot(
     patterns.binders.filter((each) => each.binds).map((each) => each.name),
   );
   const dependents = patterns.binders.flatMap((each) =>
-    "sort" in each.type && mentions(template, each.name)
+    "sort" in each.type && templates.some((row) => mentions(row, each.name))
       ? each.type.dependencies
           .filter((on) => bound.has(on))
           .map((on) => ({ meta: each.name, on }))
       : [],
   );
 
-  return { binder, dependents, sort: declared.type.sort, template };
+  const sort = declared.type.sort;
+  const alone = language.spec.coercions.some(
+    (coercion) => coercion.from === sort,
+  );
+  const variable = occurrence(template, binder);
+
+  if (variable === null) {
+    return null;
+  }
+
+  const argument =
+    template.kind === "app"
+      ? template.args.find((each) => mentions(each, binder))
+      : undefined;
+
+  return {
+    binder,
+    dependents,
+    shown: alone ? variable : (argument ?? variable),
+    sort,
+    templates,
+  };
+}
+
+/**
+ * The template a written row is an instance of: the one whose shape it has,
+ * its instance left open; the first where none does, as a row written by a
+ * substitution (`{x / te} ph`) matches none in a theory that does not name
+ * its substitution.
+ */
+export function templateFor(
+  language: SurfaceLanguage,
+  rule: DevelopmentRule,
+  slot: InstanceSlot,
+  bindings: Bindings,
+  row: Term,
+): Term {
+  const [first] = slot.templates;
+
+  if (slot.templates.length === 1) {
+    return first as Term;
+  }
+
+  return (
+    slot.templates.find(
+      (template) =>
+        matchTerm(language, template, row, rule.patterns.metas, bindings) !==
+        null,
+    ) ?? (first as Term)
+  );
+}
+
+/** The first occurrence of a variable in a term. */
+function occurrence(term: Term, name: string): Term | null {
+  if (term.kind === "variable") {
+    return term.name === name ? term : null;
+  }
+
+  for (const argument of term.args) {
+    const found = occurrence(argument, name);
+
+    if (found !== null) {
+      return found;
+    }
+  }
+
+  return null;
 }
 
 /** Whether a term mentions a variable anywhere. */
@@ -631,18 +804,105 @@ function mentions(term: Term, name: string): boolean {
     : term.args.some((argument) => mentions(argument, name));
 }
 
-/** Whether a row a rule matched gives vacuous instances: `∀x Fa`. */
+/**
+ * Whether a row a rule matched gives vacuous instances: `∀x Fa`. Never for a
+ * template that has the instance itself, not by a substitution (`σ.n 𝕋 A`):
+ * each instance is its own row.
+ */
 export function isVacuous(slot: InstanceSlot, bindings: Bindings): boolean {
-  return slot.dependents.every(({ meta, on }) => {
-    const value = bindings.get(meta);
-    const variable = bindings.get(on);
+  return (
+    slot.dependents.length > 0 &&
+    slot.dependents.every(({ meta, on }) => {
+      const value = bindings.get(meta);
+      const variable = bindings.get(on);
 
-    return (
-      value === undefined ||
-      variable?.kind !== "variable" ||
-      !occursFree(value, variable.name)
-    );
-  });
+      return (
+        value === undefined ||
+        variable?.kind !== "variable" ||
+        !occursFree(value, variable.name)
+      );
+    })
+  );
+}
+
+/** Patterns to match against rows: side rows, or a premise's rows. */
+export interface PatternGroup {
+  readonly patterns: readonly Term[];
+  readonly rows: readonly Term[];
+}
+
+/**
+ * Each way a statement of a rule matches: its focus the rows `focus`, in some
+ * order, and each group's patterns some of the group's rows, with what that
+ * bound.
+ */
+export function* ruleMatches(
+  language: SurfaceLanguage,
+  patterns: RulePatterns,
+  focus: readonly Term[],
+  groups: readonly PatternGroup[],
+): Generator<Bindings> {
+  if (patterns.focus.length !== focus.length) {
+    return;
+  }
+
+  const wanted = groups.flatMap((group) =>
+    group.patterns.map((pattern) => ({ pattern, rows: group.rows })),
+  );
+  const extend = function* (
+    bindings: Bindings | null,
+    at: number,
+  ): Generator<Bindings> {
+    const next = wanted[at];
+
+    if (bindings === null) {
+      return;
+    }
+
+    if (next === undefined) {
+      yield bindings;
+      return;
+    }
+
+    for (const row of next.rows) {
+      yield* extend(
+        matchTerm(language, next.pattern, row, patterns.metas, bindings),
+        at + 1,
+      );
+    }
+  };
+
+  for (const order of permutations(focus)) {
+    let bindings: Bindings | null = new Map();
+
+    for (const [at, pattern] of patterns.focus.entries()) {
+      bindings =
+        bindings === null
+          ? null
+          : matchTerm(
+              language,
+              pattern,
+              order[at] as Term,
+              patterns.metas,
+              bindings,
+            );
+    }
+
+    yield* extend(bindings, 0);
+  }
+}
+
+/** Every order of some terms; one order for one term or none. */
+function permutations(terms: readonly Term[]): readonly (readonly Term[])[] {
+  if (terms.length <= 1) {
+    return [terms];
+  }
+
+  return terms.flatMap((term, at) =>
+    permutations([...terms.slice(0, at), ...terms.slice(at + 1)]).map(
+      (rest) => [term, ...rest],
+    ),
+  );
 }
 
 /** The bindings of a single-row rule's focus against a row; null if none. */

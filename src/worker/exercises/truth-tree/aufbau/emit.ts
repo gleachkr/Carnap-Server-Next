@@ -47,7 +47,7 @@ import type {
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
 import type { TreeDevelopment } from "./criteria";
-import { matchFocus } from "./criteria";
+import { matchFocus, templateFor } from "./criteria";
 import { closedSubterms, instantiate, termKey } from "./patterns";
 import { type RowSortReader, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
@@ -328,7 +328,7 @@ export function emitTreeProof(
           ? termKey(
               language,
               instantiate(
-                slot.template,
+                templateFor(language, developing, slot, bindings, read.term),
                 new Map([...bindings, [slot.binder, term.term]]),
               ),
             )

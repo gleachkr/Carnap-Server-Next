@@ -121,7 +121,10 @@ describe("UBC's development roles", () => {
     expect(kind("tb_all3")).toBe("general");
     expect(kind("tb_nex1")).toBe("general");
     expect(kind("tb_ex")).toBe("once");
-    expect(kind("tb_id_ba")).toBe("none");
+    expect(kind("tb_id_ba")).toBe("pairs");
+    expect(development.byAxiom.get("tb_id_ba")?.flags).toEqual(
+      new Set(["literals"]),
+    );
     expect(development.byAxiom.get("tb_all1")?.instance?.binder).toBe("te");
     expect(development.byAxiom.get("tb_ex")?.instance?.binder).toBe("a");
     expect(development.closure).toHaveLength(2);
@@ -252,6 +255,58 @@ describe("a row used once", () => {
       type: "open-incomplete",
     });
     expect(await grade(item, await certify(item, t))).toBe("incorrect");
+  });
+});
+
+// UBC §12.7: an open branch is complete once each identity is substituted
+// one way round into every atomic and negated atomic row on it (`pairs`).
+describe("an identity on an open branch", () => {
+  test("owes its substitution into each literal, one way round", async () => {
+    const { item, resolved } = await consistency("a=b", "Fa", "¬Gb");
+    const bare = new TreeBuilder(resolved.rootText);
+    bare.open(bare.rootNode);
+
+    // Each literal is the other way round already (`Fa` with every b made a
+    // is `Fa`), but one way must do for all: Fb, or ¬Ga.
+    expect(report(resolved, bare.answer()).ends.get(bare.rootNode)).toEqual({
+      missing: [{ row: "r1", substitution: true }],
+      type: "open-incomplete",
+    });
+
+    const t = new TreeBuilder(resolved.rootText);
+    t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
+    t.open(t.rootNode);
+    const answer = await certify(item, t);
+
+    expect(report(resolved, answer).ends.get(t.rootNode)).toBeUndefined();
+    // A substitution develops neither row it cites.
+    expect(report(resolved, answer).marks.get("r1")).toBeUndefined();
+    expect(await grade(item, answer)).toBe("correct");
+  });
+
+  test("is not owed into a row that is not a literal", async () => {
+    const { item, resolved } = await consistency("a=b", "Fa → Ga");
+    const t = new TreeBuilder(resolved.rootText);
+    const {
+      nodes: [left, right],
+      rows: [[nfa], [ga]],
+    } = t.split(t.rootNode, "r2", [["¬Fa"], ["Ga"]], "→");
+    t.stack(left, ["r1", nfa as string], ["¬Fb"], "=");
+    t.stack(right, ["r1", ga as string], ["Gb"], "=");
+    t.open(left);
+    const answer = await certify(item, t);
+
+    // `Fa → Ga` with every a made b is owed nowhere.
+    expect(report(resolved, answer).problems).toEqual([]);
+    expect(report(resolved, answer).ends.get(left)).toBeUndefined();
+  });
+
+  test("owes nothing a self-identity would be", async () => {
+    const { resolved } = await consistency("a=b", "b=a");
+    const t = new TreeBuilder(resolved.rootText);
+    t.open(t.rootNode);
+
+    expect(report(resolved, t.answer()).ends.get(t.rootNode)).toBeUndefined();
   });
 });
 

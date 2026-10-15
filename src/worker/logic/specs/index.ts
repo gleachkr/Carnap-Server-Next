@@ -47,6 +47,15 @@ const LANGUAGE_IDS: readonly string[] = [
   "forallx-calgary",
   "forallx-magnus",
   "forallx-ubc",
+  "open-logic-intuitionistic",
+  "open-logic-modal-b",
+  "open-logic-modal-d",
+  "open-logic-modal-k",
+  "open-logic-modal-k4",
+  "open-logic-modal-s4",
+  "open-logic-modal-s5",
+  "open-logic-modal-t",
+  "open-logic-simple-s5",
   "open-logic-tableaux",
 ];
 

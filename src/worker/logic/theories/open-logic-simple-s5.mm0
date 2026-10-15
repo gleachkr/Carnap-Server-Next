@@ -1,0 +1,282 @@
+-- Open Logic Project, simplified signed tableaux for S5: the language a
+-- student writes a tree in, and the book's rules.
+--
+-- Served at `/theories/open-logic-simple-s5.mm0` and registered as the
+-- language id `open-logic-simple-s5`, which is what a `system=` names.
+--
+-- The reference is the Open Logic Project's source,
+-- github.com/OpenLogicProject/OpenLogic, master 1e960be (2026-08-14), CC BY
+-- 4.0: `normal-modal-logic/tableaux/simple-S5`. Its prefixed tableaux for S5
+-- proper, with `σ.n` prefixes, are `open-logic-modal-s5`.
+--
+-- ## The language
+--
+-- `open-logic-modal-k`'s, word for word, as are the rows, the tree system and
+-- the propositional rules below; only the prefixes and the modal rules
+-- differ. `tests/truth-tree-open-logic-simple-s5.test.ts` holds the two
+-- files to that.
+--
+-- ## Prefixes
+--
+-- In S5 every world sees every world, so a prefix need not say which world
+-- sees it: a prefix is a positive integer, `1` for the root's world. A row is
+-- `2 𝕋 A`, typed `2 T: A`. Each prefix after `1` is a variable (`2` is `w2`
+-- to the engine), so a prefix is new to a branch exactly when its variable
+-- is, the eigenvariable condition. The table runs to 20.
+--
+-- ## Rule names
+--
+-- As in `open-logic-modal-k`: the operator, then the sign, `□𝕋`, `◇𝔽`, each an
+-- `@syntax alias` with ASCII forms after it (`[]T`, `<>F`).
+
+--| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
+--| @syntax delimiter $ p q r s $
+--| @syntax delimiter $ ( ) $
+--| @syntax delimiter $ - ~ ¬ /\ ^ & ∧ \/ | ∨ $
+--| @syntax delimiter $ -> => → <-> <=> ↔ $
+--| @syntax delimiter $ [] □ <> ◇ !? _|_ ⊥ ⊤ $
+--| @syntax delimiter $ T: F: 𝕋 𝔽 $
+--| @syntax elab $ 2 $ => $ w2 $
+--| @syntax elab $ 3 $ => $ w3 $
+--| @syntax elab $ 4 $ => $ w4 $
+--| @syntax elab $ 5 $ => $ w5 $
+--| @syntax elab $ 6 $ => $ w6 $
+--| @syntax elab $ 7 $ => $ w7 $
+--| @syntax elab $ 8 $ => $ w8 $
+--| @syntax elab $ 9 $ => $ w9 $
+--| @syntax elab $ 10 $ => $ w10 $
+--| @syntax elab $ 11 $ => $ w11 $
+--| @syntax elab $ 12 $ => $ w12 $
+--| @syntax elab $ 13 $ => $ w13 $
+--| @syntax elab $ 14 $ => $ w14 $
+--| @syntax elab $ 15 $ => $ w15 $
+--| @syntax elab $ 16 $ => $ w16 $
+--| @syntax elab $ 17 $ => $ w17 $
+--| @syntax elab $ 18 $ => $ w18 $
+--| @syntax elab $ 19 $ => $ w19 $
+--| @syntax elab $ 20 $ => $ w20 $
+--| @syntax brackets ( )
+--| @syntax lint parenthesize-binary-only
+--| @syntax display drop-outer-parens
+delimiter $ ( ) ; $;
+
+--| @syntax role sentence
+provable sort wff;
+
+-- The sentence letters.
+term A: wff; term B: wff; term C: wff; term D: wff; term E: wff;
+term F: wff; term G: wff; term H: wff; term I: wff; term J: wff;
+term K: wff; term L: wff; term M: wff; term N: wff; term O: wff;
+term P: wff; term Q: wff; term R: wff; term S: wff; term T: wff;
+term U: wff; term V: wff; term W: wff; term X: wff; term Y: wff;
+term Z: wff;
+term p: wff; term q: wff; term r: wff; term s: wff;
+
+--| @syntax role negation
+term not (ph: wff): wff;
+prefix not: $-$ prec 40;
+prefix not: $~$ prec 40;
+prefix not: $¬$ prec 40;
+
+--| @syntax role conjunction
+--| @syntax forbid chain mix nest
+term and (ph ps: wff): wff;
+infixr and: $/\$ prec 30;
+infixr and: $^$ prec 30;
+infixr and: $&$ prec 30;
+infixr and: $∧$ prec 30;
+
+--| @syntax role disjunction
+--| @syntax forbid chain mix nest
+term or (ph ps: wff): wff;
+infixr or: $\/$ prec 30;
+infixr or: $|$ prec 30;
+infixr or: $∨$ prec 30;
+
+--| @syntax role conditional
+--| @syntax forbid chain mix nest
+term imp (ph ps: wff): wff;
+infixr imp: $->$ prec 20;
+infixr imp: $=>$ prec 20;
+infixr imp: $→$ prec 20;
+
+--| @syntax role biconditional
+--| @syntax forbid chain mix nest
+term iff (ph ps: wff): wff;
+infixr iff: $<->$ prec 20;
+infixr iff: $<=>$ prec 20;
+infixr iff: $↔$ prec 20;
+
+--| @syntax role necessity
+term box (ph: wff): wff;
+prefix box: $[]$ prec 40;
+prefix box: $□$ prec 40;
+
+--| @syntax role possibility
+term dia (ph: wff): wff;
+prefix dia: $<>$ prec 40;
+prefix dia: $◇$ prec 40;
+
+--| @syntax role falsum
+term bot: wff;
+notation bot: wff = ($!?$:max);
+notation bot: wff = ($_|_$:max);
+notation bot: wff = ($⊥$:max);
+
+--| @syntax role verum
+term top: wff;
+notation top: wff = ($⊤$:max);
+
+-- ## Prefixes
+--
+-- `1`, the root's world, and the variables `w2` to `w20`, which the surface
+-- spells `2` to `20`.
+--| @vars w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20
+sort pfx;
+--| @syntax role tree.root
+term one: pfx;
+notation one: pfx = ($1$:max);
+
+-- ## Prefixed signed formulas
+--
+-- The sign sits between the prefix and the formula, binding looser than every
+-- connective, so `1 𝕋 A ∧ B` signs the conjunction, and tighter than the
+-- branch join `;`.
+sort pfm;
+--| @syntax role tree.assert
+term ptt (si: pfx) (ph: wff): pfm;
+infixl ptt: $T:$ prec 6;
+infixl ptt: $𝕋$ prec 6;
+--| @syntax role tree.deny
+term pff (si: pfx) (ph: wff): pfm;
+infixl pff: $F:$ prec 6;
+infixl pff: $𝔽$ prec 6;
+
+-- ===== The tree system =====
+--
+-- As in `forallx-ubc`, which explains it: a tree is a derivation of
+-- `closes Γ` from the bottom up, a branch is an ACUI context of rows, and a
+-- step is `focus Γ at Δ` (the branch Γ closes by a step on its rows Δ) and
+-- `unfocus`. The rules keep the row they develop.
+
+provable sort judgement;
+sort ctx;
+
+term emp: ctx;
+notation emp: ctx = ($_$:max);
+--| @syntax role context-join
+--| @acui ctx_assoc ctx_comm emp ctx_idem
+term join (ga de: ctx): ctx;
+infixl join: $;$ prec 5;
+term hyp (ph: pfm): ctx;
+coercion hyp: pfm > ctx;
+
+term ctx_eq (ga de: ctx): judgement;
+infixl ctx_eq: $≜$ prec 1;
+term jeq (jj kk: judgement): judgement;
+infixl jeq: $⟚$ prec 1;
+
+--| @relation ctx ctx_eq ctx_refl ctx_trans ctx_sym _
+axiom ctx_refl (ga: ctx): $ ctx_eq ga ga $;
+axiom ctx_trans (ga de si: ctx): $ ctx_eq ga de $ > $ ctx_eq de si $ > $ ctx_eq ga si $;
+axiom ctx_sym (ga de: ctx): $ ctx_eq ga de $ > $ ctx_eq de ga $;
+axiom ctx_assoc (ga de si: ctx): $ ctx_eq ((ga ; de) ; si) (ga ; (de ; si)) $;
+axiom ctx_comm (ga de: ctx): $ ctx_eq (ga ; de) (de ; ga) $;
+axiom ctx_idem (ga: ctx): $ ctx_eq (ga ; ga) ga $;
+axiom ctx_unit (ga: ctx): $ ctx_eq (_ ; ga) ga $;
+--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
+axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
+axiom jeq_trans (jj kk ll: judgement): $ jj ⟚ kk $ > $ kk ⟚ ll $ > $ jj ⟚ ll $;
+axiom jeq_sym (jj kk: judgement): $ jj ⟚ kk $ > $ kk ⟚ jj $;
+axiom jeq_mp (jj kk: judgement): $ jj ⟚ kk $ > $ jj $ > $ kk $;
+
+--| @congr
+axiom join_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ ctx_eq (ga ; si) (de ; ta) $;
+
+-- ## The tree judgements, read by role (see `forallx-ubc`)
+--
+-- An open branch is complete when each rule's conclusions are on it, however
+-- they got there (`completeness`), not when each row has been checked off.
+
+--| @syntax role tree.closes
+--| @syntax role tree.completeness.contents
+term cl (ga: ctx): judgement;
+prefix cl: $closes$ prec 3;
+--| @congr
+axiom cl_congr (ga de: ctx): $ ctx_eq ga de $ > $ (closes ga) ⟚ (closes de) $;
+--| @syntax role tree.focus
+term fc (ga de: ctx): judgement;
+notation fc (ga de: ctx): judgement = ($focus$:3) ga ($at$:0) de;
+--| @congr
+axiom fc_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ (focus ga at si) ⟚ (focus de at ta) $;
+
+--| @syntax role tree.unfocus
+axiom unfocus (ga de: ctx): $ focus ga at de $ > $ closes ga ; de $;
+
+-- ## Closure: a branch with σ 𝕋 A and σ 𝔽 A on it, at one prefix.
+--| @syntax role tree.closure
+--| @syntax alias ×
+axiom tb_close (ga: ctx) (si: pfx) (ph: wff): $ focus ga at (si 𝕋 ph ; si 𝔽 ph) $;
+
+-- ## The propositional rules, each at its row's prefix
+--| @syntax alias ¬𝕋 ¬T ~T -T
+axiom tb_t_not (ga: ctx) (si: pfx) (ph: wff): $ closes ga ; si 𝔽 ph $ > $ focus ga at (si 𝕋 ¬ ph) $;
+--| @syntax alias ¬𝔽 ¬F ~F -F
+axiom tb_f_not (ga: ctx) (si: pfx) (ph: wff): $ closes ga ; si 𝕋 ph $ > $ focus ga at (si 𝔽 ¬ ph) $;
+--| @syntax alias ∧𝕋 ∧T &T ^T /\T
+axiom tb_t_and (ga: ctx) (si: pfx) (ph ps: wff): $ closes ga ; si 𝕋 ph ; si 𝕋 ps $ > $ focus ga at (si 𝕋 ph ∧ ps) $;
+axiom tb_f_and_l (ga: ctx) (si: pfx) (ph ps: wff):
+  $ closes ga ; si 𝔽 ph $ > $ closes ga ; si 𝔽 ps $ > $ focus ga at (si 𝔽 ph ∧ ps) $;
+--| @fallback tb_f_and_l
+--| @syntax alias ∧𝔽 ∧F &F ^F /\F
+axiom tb_f_and_r (ga: ctx) (si: pfx) (ph ps: wff):
+  $ closes ga ; si 𝔽 ps $ > $ closes ga ; si 𝔽 ph $ > $ focus ga at (si 𝔽 ph ∧ ps) $;
+axiom tb_t_or_l (ga: ctx) (si: pfx) (ph ps: wff):
+  $ closes ga ; si 𝕋 ph $ > $ closes ga ; si 𝕋 ps $ > $ focus ga at (si 𝕋 ph ∨ ps) $;
+--| @fallback tb_t_or_l
+--| @syntax alias ∨𝕋 ∨T \/T |T
+axiom tb_t_or_r (ga: ctx) (si: pfx) (ph ps: wff):
+  $ closes ga ; si 𝕋 ps $ > $ closes ga ; si 𝕋 ph $ > $ focus ga at (si 𝕋 ph ∨ ps) $;
+--| @syntax alias ∨𝔽 ∨F \/F |F
+axiom tb_f_or (ga: ctx) (si: pfx) (ph ps: wff): $ closes ga ; si 𝔽 ph ; si 𝔽 ps $ > $ focus ga at (si 𝔽 ph ∨ ps) $;
+axiom tb_t_imp_l (ga: ctx) (si: pfx) (ph ps: wff):
+  $ closes ga ; si 𝔽 ph $ > $ closes ga ; si 𝕋 ps $ > $ focus ga at (si 𝕋 ph → ps) $;
+--| @fallback tb_t_imp_l
+--| @syntax alias →𝕋 →T ->T =>T
+axiom tb_t_imp_r (ga: ctx) (si: pfx) (ph ps: wff):
+  $ closes ga ; si 𝕋 ps $ > $ closes ga ; si 𝔽 ph $ > $ focus ga at (si 𝕋 ph → ps) $;
+--| @syntax alias →𝔽 →F ->F =>F
+axiom tb_f_imp (ga: ctx) (si: pfx) (ph ps: wff): $ closes ga ; si 𝕋 ph ; si 𝔽 ps $ > $ focus ga at (si 𝔽 ph → ps) $;
+
+-- ## The modal rules (`simple-S5`)
+--
+-- `□𝔽` and `◇𝕋` go to a prefix `m` new to the branch: `m` is a binder, and
+-- the branch `ga` may not mention it. A complete branch has one such
+-- conclusion (`completeness`).
+--| @syntax role tree.development.once.m
+--| @syntax alias □𝔽 □F []F
+axiom tb_f_box (ga: ctx) (si: pfx) {m: pfx} (ph: wff):
+  $ closes ga ; m 𝔽 ph $ > $ focus ga at (si 𝔽 □ ph) $;
+--| @syntax role tree.development.once.m
+--| @syntax alias ◇𝕋 ◇T <>T
+axiom tb_t_dia (ga: ctx) (si: pfx) {m: pfx} (ph: wff):
+  $ closes ga ; m 𝕋 ph $ > $ focus ga at (si 𝕋 ◇ ph) $;
+-- `□𝕋` and `◇𝔽` go to a prefix `m` used on the branch, `σ` itself among
+-- them. As in `open-logic-modal-k`, the rule names a second row of the
+-- branch, at `m`, as the witness that it is used, with either sign, so each
+-- rule is two axioms, the second its `@fallback`; a complete branch has the
+-- conclusion at every prefix the branch uses.
+axiom tb_t_box_t (ga: ctx) (si m: pfx) (ph ps: wff):
+  $ closes ga ; m 𝕋 ps ; m 𝕋 ph $ > $ focus (ga ; m 𝕋 ps) at (si 𝕋 □ ph) $;
+--| @fallback tb_t_box_t
+--| @syntax role tree.development.general.m
+--| @syntax alias □𝕋 □T []T
+axiom tb_t_box_f (ga: ctx) (si m: pfx) (ph ps: wff):
+  $ closes ga ; m 𝔽 ps ; m 𝕋 ph $ > $ focus (ga ; m 𝔽 ps) at (si 𝕋 □ ph) $;
+axiom tb_f_dia_t (ga: ctx) (si m: pfx) (ph ps: wff):
+  $ closes ga ; m 𝕋 ps ; m 𝔽 ph $ > $ focus (ga ; m 𝕋 ps) at (si 𝔽 ◇ ph) $;
+--| @fallback tb_f_dia_t
+--| @syntax role tree.development.general.m
+--| @syntax alias ◇𝔽 ◇F <>F
+axiom tb_f_dia_f (ga: ctx) (si m: pfx) (ph ps: wff):
+  $ closes ga ; m 𝔽 ps ; m 𝔽 ph $ > $ focus (ga ; m 𝔽 ps) at (si 𝔽 ◇ ph) $;
