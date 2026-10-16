@@ -95,7 +95,9 @@ export type EmitProblem =
   | { readonly type: "cites-differ" }
   | { readonly type: "cite-unknown" }
   | { readonly type: "unreadable" }
-  | { readonly type: "split-mixed" };
+  | { readonly type: "split-mixed" }
+  /** A split one of whose branches has no rows. */
+  | { readonly type: "empty-branch" };
 
 export interface TreeProof {
   /** The theorems, to append to the theory. Null if there are none. */
@@ -120,6 +122,33 @@ export interface TreeProof {
   readonly slots: ReadonlyMap<string, readonly string[]>;
   /** The instances each row's link theorems state, by row. */
   readonly linked: ReadonlyMap<string, readonly string[]>;
+  /**
+   * Why the tree was too big to write down, if it was: past the row cap, or
+   * its theorems past the text cap. Nothing is stated of such a tree.
+   */
+  readonly oversize: Oversize | null;
+}
+
+/** Which cap a tree is past. */
+export type Oversize =
+  | { readonly cap: "rows"; readonly limit: number }
+  | { readonly cap: "text" };
+
+/** A tree too big to write down: nothing stated, nothing to report on. */
+function tooBig(oversize: Oversize): TreeProof {
+  return {
+    endProblems: new Map(),
+    gaps: 0,
+    goal: null,
+    hypotheses: 0,
+    linked: new Map(),
+    lines: new Map(),
+    oversize,
+    problems: new Map(),
+    proof: null,
+    slots: new Map(),
+    steps: new Map(),
+  };
 }
 
 /** A step written down: the rule it names, what it cites and writes. */
@@ -152,6 +181,15 @@ export interface EmitOptions {
    * row's own candidates are stated.
    */
   readonly instances?: ReadonlyMap<string, readonly string[]>;
+  /** The most rows a tree may have to be written down. */
+  readonly rowCap?: number;
+  /**
+   * The most text its theorems may state. Each step restates its branch, so
+   * the text grows with rows times the branch they are on, not with the
+   * tree's own size: a long branch of long rows states tens of megabytes,
+   * and the engine reads every byte, in the browser and on the server.
+   */
+  readonly textCap?: number;
 }
 
 /** The run of rows from `start` that one development wrote. */
@@ -198,6 +236,13 @@ export function emitTreeProof(
   let counter = 0;
   let gaps = 0;
   let hypotheses = 0;
+  let stated = 0;
+  const textCap = options.textCap ?? Number.POSITIVE_INFINITY;
+  const record = (statement: string, proof: string): void => {
+    statements.push(statement);
+    proofs.push(proof);
+    stated += statement.length;
+  };
 
   for (const [sort, info] of language.spec.sorts) {
     for (const token of info.vars) {
@@ -264,12 +309,10 @@ export function emitTreeProof(
     const premises = children.map((child) => closes(child));
     const conclusion = closes(state);
 
-    statements.push(
+    record(
       `theorem ${name}${binders([...premises, conclusion])}: ${premises
         .map((premise) => `$ ${premise} $ > `)
         .join("")}$ ${conclusion} $;`,
-    );
-    proofs.push(
       [
         name,
         "----",
@@ -328,6 +371,10 @@ export function emitTreeProof(
       slots.set(row.id, candidates);
 
       for (const instance of asked) {
+        if (stated > textCap) {
+          return;
+        }
+
         const term = language.parse(instance, {
           lints: false,
           mode: "engine",
@@ -353,10 +400,8 @@ export function emitTreeProof(
         const premise = closes([read.engine]);
         const conclusion = closes([written]);
 
-        statements.push(
+        record(
           `theorem ${name}${binders([premise, conclusion])}: $ ${premise} $ > $ ${conclusion} $;`,
-        );
-        proofs.push(
           [
             name,
             "----",
@@ -380,7 +425,7 @@ export function emitTreeProof(
   ): void => {
     const rows = groups.flat();
     const ids = rows.map((row) => row.id);
-    const first = rows[0] as TableauRow;
+    const first = rows[0];
     const fail = (problem: EmitProblem): void => {
       for (const id of ids) {
         problems.set(id, problem);
@@ -388,6 +433,11 @@ export function emitTreeProof(
 
       gaps += 1;
     };
+
+    if (first === undefined || groups.some((group) => group.length === 0)) {
+      fail({ type: "empty-branch" });
+      return;
+    }
 
     if (groups.some((group) => group[0]?.dev !== first.dev)) {
       fail({ type: "split-mixed" });
@@ -474,6 +524,10 @@ export function emitTreeProof(
     start: number,
     state: readonly string[],
   ): void => {
+    if (stated > textCap) {
+      return;
+    }
+
     if (start < node.rows.length) {
       const group = groupAt(node.rows, start);
       const below = [...state, ...readable(group)];
@@ -508,11 +562,20 @@ export function emitTreeProof(
     hypotheses: count,
     linked,
     lines,
+    oversize: null,
     problems,
     proof: null,
     slots,
     steps,
   });
+  const rows = document.nodes.reduce(
+    (sum, node) => sum + node.rows.length,
+    0,
+  );
+
+  if (options.rowCap !== undefined && rows > options.rowCap) {
+    return tooBig({ cap: "rows", limit: options.rowCap });
+  }
 
   if (root === null) {
     return nothing(0);
@@ -527,6 +590,10 @@ export function emitTreeProof(
 
   walk(root, rootRows.length, rootState);
 
+  if (stated > textCap) {
+    return tooBig({ cap: "text" });
+  }
+
   if (statements.length === 0) {
     return nothing(hypotheses);
   }
@@ -538,6 +605,7 @@ export function emitTreeProof(
     hypotheses,
     linked,
     lines,
+    oversize: null,
     problems,
     proof: `${proofs.join("\n\n")}\n`,
     slots,

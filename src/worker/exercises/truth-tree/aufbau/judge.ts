@@ -8,7 +8,7 @@
  * says only whether it holds). What the engine does not see is checked here,
  * at the theory's row sort and so for any calculus: the root is the one the
  * exercise gives, every row reads, every end is on a leaf, no branch is
- * empty, and the tree is not past the row cap. A step left unwritten (no rule
+ * empty, and the tree is not past the caps. A step left unwritten (no rule
  * named, no row cited) is unfinished, not wrong.
  *
  * When a tree is done is the exercise's `finish=`. A branch marked open is
@@ -69,7 +69,6 @@ export interface JudgeInput {
   readonly proof: TreeProof;
   readonly evidence: TreeEvidence;
   readonly finish: TruthTreeFinish;
-  readonly rowCap: number;
   /** The theory's development rules, for completeness and marks. */
   readonly development: TreeDevelopment;
 }
@@ -90,7 +89,9 @@ function emitted(problem: EmitProblem, cite: string): RowProblem | null {
       return { cite, type: "cite-not-above" };
     case "split-mixed":
       return { type: "split-mixed" };
-    default:
+    // Reported on the rows that do not read, and on the empty branch.
+    case "unreadable":
+    case "empty-branch":
       return null;
   }
 }
@@ -112,10 +113,9 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
       endProblems.set(nodeId, problem);
     }
   };
-  const rowCount = order.reduce((sum, node) => sum + node.rows.length, 0);
-
-  // A tree past the cap is not read: every row costs a parse.
-  if (rowCount > input.rowCap) {
+  // A tree past the caps is not read, and was not written down: every row
+  // costs a parse, and every step restates its branch for the engine.
+  if (proof.oversize !== null) {
     return {
       branches: new Map(),
       closed: false,
@@ -126,7 +126,10 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
       problems: [
         {
           at: {
-            problem: { limit: input.rowCap, type: "too-many-rows" },
+            problem:
+              proof.oversize.cap === "rows"
+                ? { limit: proof.oversize.limit, type: "too-many-rows" }
+                : { type: "too-large" },
             type: "tree",
           },
         },
@@ -294,13 +297,13 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     if (node.end !== undefined && index.children(node.id).length > 0) {
       flagEnd(node.id, { type: "end-not-leaf" });
     }
+
+    if (node.rows.length === 0 && node.parent !== null) {
+      flagEnd(node.id, { type: "empty-branch" });
+    }
   }
 
   for (const leaf of leaves) {
-    if (leaf.rows.length === 0 && leaf.parent !== null) {
-      flagEnd(leaf.id, { type: "empty-branch" });
-    }
-
     const open = leaf.end === undefined || leaf.end.type === "open";
     const state = judged && open ? completeness.branch(leaf) : null;
 

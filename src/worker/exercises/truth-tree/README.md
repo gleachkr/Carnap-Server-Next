@@ -112,10 +112,15 @@ it.
 A bad tree is a valid wrong answer, scored zero with the first problem;
 only JSON that is not a tree is refused. "Not a tree" includes nodes that do
 not form one (the root first, each node after its parent, no node or row id
-used twice), and a tree too big to be an attempt (1000 nodes or rows, a row
-of 1000 characters, 128 KiB in all). A tree past `TREE_ROW_CAP` (200
+used twice, each development one run of rows, or the first run of each
+branch of one split), rules or instances keyed by a development or row the
+tree does not have, and a tree too big to be an attempt (1000 nodes or rows,
+a row of 1000 characters, 128 KiB in all). A tree past `TREE_ROW_CAP` (200
 rows) is answered "too many rows" without being read, since each row costs
-a parse. A prior answer whose root is not the declaration's (a correction
+a parse; one whose theorems would state more than `TREE_TEXT_CAP` (4
+million characters) is answered "too large to check" without being
+compiled, since each step restates its branch: 190 rows of long sentences
+on one branch would state 35 MB. A prior answer whose root is not the declaration's (a correction
 changed it) is set aside when the element restores, as the root cannot be
 edited.
 

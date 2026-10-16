@@ -333,6 +333,10 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "A tree may have at most {limit} rows.",
       placeholders("limit"),
     ),
+    "The tree is too large to check: its branches hold too much text.":
+      i18n.t(
+        "The tree is too large to check: its branches hold too much text.",
+      ),
 
     // ——— Verdicts.
     "The tree is not finished: close every branch, or mark a complete open branch.":

@@ -5468,6 +5468,10 @@ msgstr ""
 msgid "The tree is right."
 msgstr ""
 
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "The tree is too large to check: its branches hold too much text."
+msgstr ""
+
 #: src/worker/web/admin.tsx
 msgid "The user"
 msgstr ""

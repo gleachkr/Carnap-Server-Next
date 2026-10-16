@@ -29,6 +29,14 @@ export const TRUTH_TREE_CAPABILITIES: ExerciseCapabilities = {
  */
 export const TREE_ROW_CAP = 200;
 
+/**
+ * The most text a tree's theorems may state, in characters, before it is not
+ * read. Each step restates its branch, so the text grows with the rows times
+ * the length of the branch they are on: 100 short rows on one branch state
+ * about 1.3 MB, and the engine takes seconds to compile 5 MB in the browser.
+ */
+export const TREE_TEXT_CAP = 4_000_000;
+
 /** The generic group name for an untitled exercise of this type. */
 export function truthTreeName(i18n: Translator): string {
   return i18n.t("Truth tree");

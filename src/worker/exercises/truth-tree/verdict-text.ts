@@ -178,10 +178,14 @@ export function describeTreeProblem(
         return words("The tree is missing a row of its root.");
       case "unverified":
         return words("A step or a closure in the tree does not check.");
-      default:
+      case "too-many-rows":
         return words("A tree may have at most {limit} rows.", {
           limit: String(at.problem.limit),
         });
+      case "too-large":
+        return words(
+          "The tree is too large to check: its branches hold too much text.",
+        );
     }
   }
 

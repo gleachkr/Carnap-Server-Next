@@ -6,7 +6,10 @@ import type { JsonValue } from "../src/worker/domain/json";
 import { MAX_CERTIFICATE_BASE64_LENGTH } from "../src/worker/exercise-kit/proof/certificate";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
-import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
+import {
+  resolveTruthTree,
+  treeProofOf,
+} from "../src/worker/exercises/truth-tree/grading";
 import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import {
   TRUTH_TREE_ANSWER_KIND,
@@ -424,7 +427,12 @@ describe("grading", () => {
 
   test("nodes that are not one tree are refused, and so is a tree too big to read", async () => {
     const item = await declaration(VALID);
-    const row = (id: string) => ({ cites: [], dev: "d", id, text: "P" });
+    const row = (id: string, dev = `d${id}`) => ({
+      cites: [],
+      dev,
+      id,
+      text: "P",
+    });
     const refuses = (nodes: unknown[]) =>
       !TRUTH_TREE_EXERCISE.normalizeAnswer(
         {
@@ -483,12 +491,120 @@ describe("grading", () => {
       ]),
     ).toBe(true);
 
+    // One development written in two places would be two steps under one
+    // id: a second run in the same node, or a run below the first.
+    expect(
+      refuses([
+        {
+          id: "r",
+          parent: null,
+          rows: [row("a", "d"), row("b", "e"), row("c", "d")],
+        },
+      ]),
+    ).toBe(true);
+    expect(
+      refuses([
+        { id: "r", parent: null, rows: [row("a", "d")] },
+        { id: "n", parent: "r", rows: [row("b", "d")] },
+        { id: "m", parent: "r", rows: [row("c", "d")] },
+      ]),
+    ).toBe(true);
     expect(
       refuses([
         { id: "r", parent: null, rows: [row("a")] },
-        { id: "n", parent: "r", rows: [row("b")] },
+        { id: "n", parent: "r", rows: [row("b", "s"), row("c", "s")] },
+        { id: "m", parent: "r", rows: [row("d", "s")] },
+        { id: "k", parent: "n", rows: [row("e", "s")] },
+      ]),
+    ).toBe(true);
+
+    // A split's branches share its development.
+    expect(
+      refuses([
+        { id: "r", parent: null, rows: [row("a")] },
+        { id: "n", parent: "r", rows: [row("b", "s"), row("c", "s")] },
+        { id: "m", parent: "r", rows: [row("d", "s"), row("e")] },
       ]),
     ).toBe(false);
+  });
+
+  test("rules and instances name only developments and rows the tree has", async () => {
+    const item = await declaration(VALID);
+    const t = builderFor(item);
+    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"], "&");
+    const accepts = (extra: Record<string, unknown>) =>
+      TRUTH_TREE_EXERCISE.normalizeAnswer(
+        {
+          data: { ...t.answer(), ...extra } as unknown as JsonValue,
+          kind: TRUTH_TREE_ANSWER_KIND,
+          schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+        },
+        item,
+      ).ok;
+
+    expect(accepts({})).toBe(true);
+    expect(accepts({ instances: { [p as string]: "a" } })).toBe(true);
+    expect(accepts({ instances: { nowhere: "a" } })).toBe(false);
+    expect(accepts({ rules: { ...t.answer().rules, nowhere: "&" } })).toBe(
+      false,
+    );
+    expect(
+      accepts({ rules: { ...t.answer().rules, ["x".repeat(5000)]: "&" } }),
+    ).toBe(false);
+  });
+
+  test("a split with an empty branch is reported, not a crash", async () => {
+    const item = await declaration(CONSISTENT);
+    const t = builderFor(item);
+    const {
+      nodes: [, q],
+    } = t.split(t.rootNode, "r1", [["P"], ["Q"]], "∨");
+    const nodes = t.tree.nodes.map((node) =>
+      node.id === q ? { ...node, rows: [] } : node,
+    );
+
+    const graded = await grade(item, { nodes } as unknown as JsonValue);
+
+    expect(graded.status).toBe("incorrect");
+    expect(graded.summary).toContain("This branch has no rows.");
+  });
+
+  test("an empty node with nodes below it is reported too", async () => {
+    const item = await declaration(CONSISTENT);
+    const t = builderFor(item);
+    const {
+      nodes: [p],
+    } = t.split(t.rootNode, "r1", [["P"], ["Q"]], "∨");
+    t.split(p, "r2", [["¬P"], ["¬P"]], "∨");
+    const nodes = t.tree.nodes.map((node) =>
+      node.id === p ? { ...node, rows: [] } : node,
+    );
+
+    const graded = await grade(item, { nodes } as unknown as JsonValue);
+
+    expect(graded.status).toBe("incorrect");
+    expect(graded.summary).toContain("This branch has no rows.");
+  });
+
+  test("a declaration whose theory text is not text is an error, not a crash", async () => {
+    const item = await declaration(VALID);
+    const broken = {
+      ...item,
+      publicData: { ...publicDataOf(item), mm0: 5 } as unknown as JsonValue,
+    } as ExerciseManifestItem;
+    const t = builderFor(item);
+
+    const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
+      {
+        data: t.answer() as unknown as JsonValue,
+        kind: TRUTH_TREE_ANSWER_KIND,
+        schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+      },
+      broken,
+      { now: new Date("2026-01-01T00:00:00Z") } as never,
+    );
+
+    expect(evaluation.status).toBe("error");
   });
 
   test("a tree past the row cap is answered without being read", async () => {
@@ -506,6 +622,47 @@ describe("grading", () => {
 
     expect(graded.score).toBe(0);
     expect(graded.summary).toContain("200");
+  });
+
+  test("a tree far past the row cap is not written down at all", async () => {
+    const item = await declaration(VALID);
+    const resolved = resolveTruthTree(publicDataOf(item));
+    const t = builderFor(item);
+    let cite = "r1";
+
+    // Every row cited and named, so each would be a step restating its
+    // branch: some 60 MB of theorems, were they written.
+    for (let at = 0; at < 990; at += 1) {
+      [cite] = t.stack(t.rootNode, cite, ["P & Q & P & Q"], "&") as [string];
+    }
+
+    const proof = treeProofOf(resolved as never, t.answer());
+
+    expect(proof.oversize).toEqual({ cap: "rows", limit: 200 });
+    expect(proof.goal).toBeNull();
+    expect((await grade(item, t.answer() as never)).summary).toContain("200");
+  });
+
+  test("a tree under the row cap whose theorems are too long is not checked", async () => {
+    const item = await declaration(VALID);
+    const resolved = resolveTruthTree(publicDataOf(item));
+    const t = builderFor(item);
+    const long = Array.from({ length: 150 }, () => "P").join(" & ");
+
+    // 150 rows of 600 characters on one branch: under the row cap and the
+    // JSON cap, and some 13 MB of theorems.
+    for (let at = 0; at < 150; at += 1) {
+      t.stack(t.rootNode, "r1", [long], "&");
+    }
+
+    const proof = treeProofOf(resolved as never, t.answer());
+    const graded = await grade(item, t.answer() as never);
+
+    expect(proof.oversize).toEqual({ cap: "text" });
+    expect(graded.score).toBe(0);
+    expect(graded.summary).toBe(
+      "The tree is too large to check: its branches hold too much text.",
+    );
   });
 
   test("terse feedback gives only the verdict in review", async () => {

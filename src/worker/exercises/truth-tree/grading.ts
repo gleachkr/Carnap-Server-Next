@@ -36,14 +36,15 @@ import type {
   TruthTreeTask,
   TruthTreeVerdict,
 } from "./types";
-import { TREE_ROW_CAP } from "./types";
+import { TREE_ROW_CAP, TREE_TEXT_CAP } from "./types";
 
 /**
  * The most a submitted tree may carry before it is not a tree at all: rows,
- * nodes, characters in a row, and characters in all. No tree past
- * `TREE_ROW_CAP` (200) is judged, so these only bound the work of refusing
- * one; a row longer than any sentence a student would type is not a
- * row. A 200-row tree of long sentences is some 40,000 characters.
+ * nodes, characters in a row, and characters in all. They bound reading the
+ * JSON; what bounds the engine's work is the row and text caps
+ * (`TREE_ROW_CAP`, `TREE_TEXT_CAP`), past which a tree is answered without
+ * being written down. A row longer than any sentence a student would type is
+ * not a row. A 200-row tree of long sentences is some 40,000 characters.
  */
 const MAX_SUBMITTED_ROWS = 1000;
 const MAX_SUBMITTED_NODES = 1000;
@@ -95,7 +96,9 @@ export function isTruthTreePublicData(
       data.finish === "complete" ||
       data.finish === "one-open") &&
     isStringArray(data.root) &&
-    typeof data.premises === "number"
+    typeof data.premises === "number" &&
+    (data.source === undefined || typeof data.source === "string") &&
+    (data.mm0 === undefined || typeof data.mm0 === "string")
   );
 }
 
@@ -145,14 +148,21 @@ function isNode(value: unknown): value is TableauNode {
 
 /**
  * Whether the nodes form one tree, as the editor writes it: the root first,
- * every other node after its parent, and no id, of a node or a row, used
- * twice. The checker keys everything by id, and walks the tree from the root
- * down, so a repeated id or a cycle would have it judge a tree other than the
- * one stored, or never finish.
+ * every other node after its parent, no id, of a node or a row, used twice,
+ * and each development one run of rows. The checker keys everything by id,
+ * and walks the tree from the root down, so a repeated id or a cycle would
+ * have it judge a tree other than the one stored, or never finish.
+ *
+ * A development's rows are one run in one node, or, for a split, the first
+ * run of each branch it opens: the nodes sharing one parent. Anywhere else a
+ * second run would be a second step under the first one's id, and its rule.
  */
 function isOneTree(nodes: readonly TableauNode[]): boolean {
   const nodeIds = new Set<string>();
   const rowIds = new Set<string>();
+  // Each development's parent node, if it opens the branches below one, or
+  // null if it is a run that no other may share.
+  const runs = new Map<string, string | null>();
 
   for (const [at, node] of nodes.entries()) {
     const placed =
@@ -166,12 +176,27 @@ function isOneTree(nodes: readonly TableauNode[]): boolean {
 
     nodeIds.add(node.id);
 
-    for (const row of node.rows) {
+    for (const [index, row] of node.rows.entries()) {
       if (rowIds.has(row.id)) {
         return false;
       }
 
       rowIds.add(row.id);
+
+      if (index > 0 && node.rows[index - 1]?.dev === row.dev) {
+        continue;
+      }
+
+      const opens = index === 0 ? node.parent : null;
+
+      if (
+        runs.has(row.dev) &&
+        (opens === null || runs.get(row.dev) !== opens)
+      ) {
+        return false;
+      }
+
+      runs.set(row.dev, opens);
     }
   }
 
@@ -201,16 +226,24 @@ export function isTruthTreeAnswerData(
   }
 
   const nodes = data.nodes as TableauNode[];
-  const rows = nodes.reduce((sum, node) => sum + node.rows.length, 0);
+  const rows = nodes.flatMap((node) => node.rows);
 
   return (
-    rows <= MAX_SUBMITTED_ROWS &&
+    rows.length <= MAX_SUBMITTED_ROWS &&
     JSON.stringify(nodes).length <= MAX_SUBMITTED_LENGTH &&
     isOneTree(nodes) &&
     (data.rules === undefined ||
-      isEntries(data.rules, rows, MAX_RULE_TEXT)) &&
+      isEntries(
+        data.rules,
+        new Set(rows.map((row) => row.dev)),
+        MAX_RULE_TEXT,
+      )) &&
     (data.instances === undefined ||
-      isEntries(data.instances, rows, MAX_INSTANCE_TEXT))
+      isEntries(
+        data.instances,
+        new Set(rows.map((row) => row.id)),
+        MAX_INSTANCE_TEXT,
+      ))
   );
 }
 
@@ -233,19 +266,23 @@ export function answerInstances(
   );
 }
 
-/** Rules by development, or instances by row: at most one per row, short. */
-function isEntries(value: unknown, rows: number, longest: number): boolean {
+/**
+ * Rules by development, or instances by row: each keyed by a development or
+ * row the tree has, and short. The editor sends no others, so the keys are
+ * bounded by the tree's own size cap.
+ */
+function isEntries(
+  value: unknown,
+  keys: ReadonlySet<string>,
+  longest: number,
+): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return false;
   }
 
-  const entries = Object.entries(value);
-
-  return (
-    entries.length <= rows &&
-    entries.every(
-      ([, entry]) => typeof entry === "string" && entry.length <= longest,
-    )
+  return Object.entries(value).every(
+    ([key, entry]) =>
+      keys.has(key) && typeof entry === "string" && entry.length <= longest,
   );
 }
 
@@ -373,7 +410,9 @@ export function treeProofOf(
       language: resolved.language,
       reader: resolved.reader,
       rootRows: resolved.root.length,
+      rowCap: resolved.rowCap,
       rules: answerRules(answer),
+      textCap: TREE_TEXT_CAP,
       theory: resolved.theory,
     },
   );
@@ -398,7 +437,6 @@ export function judgeTree(
       proof,
       reader: resolved.reader,
       root: resolved.root,
-      rowCap: resolved.rowCap,
       tree,
     });
   const report = judge(evidence);

@@ -137,6 +137,8 @@ export interface TreeProblem {
 export type TreeLevelProblem =
   | { readonly type: "root-missing" }
   | { readonly type: "too-many-rows"; readonly limit: number }
+  /** Its theorems would state more than the text cap: too long to check. */
+  | { readonly type: "too-large" }
   /** The engine did not confirm the tree's steps and closures. */
   | { readonly type: "unverified" };
 

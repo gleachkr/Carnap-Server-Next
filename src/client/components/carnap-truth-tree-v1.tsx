@@ -597,24 +597,14 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const tree = this.tree;
     const rules = this.rules;
     const answer = { nodes: tree.nodes, rules: Object.fromEntries(rules) };
-    const rowCount = tree.nodes.reduce(
-      (sum, node) => sum + node.rows.length,
-      0,
-    );
 
     this.owed = null;
-
-    // A tree past the row cap is refused unread, so the engine is not asked.
-    if (rowCount > resolved.rowCap) {
-      this.instances = new Map();
-      this.evidence = { certified: false, errors: [], kind: "compiled" };
-      this.rerender();
-      return;
-    }
 
     const slots = treeProofOf(resolved, answer, new Map()).slots;
     const asking = treeProofOf(resolved, answer, slots);
 
+    // Nothing to state, or a tree past the caps, refused unread: the engine
+    // is not asked.
     if (asking.goal === null || asking.proof === null) {
       this.instances = new Map();
       this.evidence = { certified: false, errors: [], kind: "compiled" };
