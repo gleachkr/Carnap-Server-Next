@@ -964,7 +964,7 @@ says what that means through `@syntax role` annotations:
 | --- | --- | --- |
 | `tree.closes` | a term | "this branch closes"; its argument's sort is the branch sort |
 | `tree.focus` | a term | "this branch closes by a step on these rows", both arguments branches |
-| `tree.unfocus` | an axiom | from `focus Γ at Δ` to `closes Γ ; Δ` |
+| `tree.unfocus` | an axiom | from `focus (Γ ; Δ) at Δ` to `closes (Γ ; Δ)` |
 | `tree.closure` | an axiom | what a closed branch's `×` cites by |
 | `context-join` | a term | the branch join, as for a sequent's context |
 | `tree.assert`, `tree.deny` | terms | how the root says a sentence is true, and is not |
@@ -980,9 +980,13 @@ says what that means through `@syntax role` annotations:
   The student types the rule's `@syntax alias`, the book's margin label. A
   rule that splits is two axioms, one per order of its branches, with the
   alias on the second and a `@fallback` onto the first.
-- The branch join should be `@acui`, with idempotence, so that a row written
-  twice is written once, and the rules should keep the row they develop, so
-  that a branch may still close on it.
+- The branch join should be `@acui` without idempotence (`@acui assoc comm
+  unit _`), so that a branch is a multiset and a step writes exactly the
+  rows its rule does: under an idempotent join a row already on the branch
+  would count as written, whether the rule writes it or not. `tree.unfocus`
+  then says that the cited rows are on the branch, as `focus (Γ ; Δ) at Δ`.
+  The rules should keep the row they develop, so that a branch may still
+  close on it.
 - A rule may take several instances in one step through variants chained by
   `@fallback`, as `forallx-ubc`'s `∀` does for up to five.
 - A rule that cites no row, such as Cut, focuses on the empty branch: the
@@ -1055,13 +1059,6 @@ student's name resolves to (the aliased axiom; the role covers its
   `ph` known matches `ph` with one term at every `x`; with `te` known and
   `ph` not, as in an identity's `{x / a} ph`, `ph` is the row with every
   `a` made `x`. Anything else the theory would compute matches nothing.
-- A step's rows must be, one for one, what some statement of its rule
-  writes, matched the same way. The engine cannot tell, since a branch is a
-  set and a row already on it is written either way (`A ∧ B` developed as
-  `A, A` with `B` above). Where the match cannot pin a row down, the row is
-  the engine's alone: a row built from the body of a substitution in the
-  rule's focus (`=𝕋`, which rewrites some occurrences, not all), and, in a
-  theory that names no substitution, a row in an instance's place.
 - Only steps the engine accepted count. A step's instance is found by the
   engine too: the editor asks it which term each row was written with, and
   the certificate proves the answer, so the server checks it as it checks

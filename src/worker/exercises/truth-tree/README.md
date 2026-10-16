@@ -39,14 +39,13 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   which focuses on the join's unit, the empty branch. The browser
   compiles the theorems; the server writes the same theorems from the stored
   tree and verifies the browser's certificate against them, so a certificate
-  for any other tree does not verify. A branch is a set, so the engine
-  takes a row already on it as written: the judge also refuses a step whose
-  rows are not, one for one, what its rule writes, by the rule's patterns
-  (`A ∧ B` developed as `A` alone, or as `A, A`, with `B` above; `∀x Fx`
-  developed as `Fa, Ga` with `Ga` above). A row the patterns cannot pin
-  down is left to the engine: one that depends on the body of a substitution
-  the cited row is matched through (`=𝕋`), or an instance's row in a theory
-  that does not name its substitution. A tree with no inference to state,
+  for any other tree does not verify. A branch is a multiset (the join is
+  `@acui` without idempotence), so a step's rows must be, one for one, what
+  its rule writes: a row already on the branch neither stands in for one
+  the step leaves out nor hides one it should not write (`A ∧ B` developed
+  as `A` alone, or as `A, A`, with `B` above; `∀x Fx` developed as `Fa, Ga`
+  with `Ga` above). A rule that writes one row twice must be written so:
+  `A ∧ A` develops as `A, A`. A tree with no inference to state,
   its root alone, has nothing to certify. `criteria.ts` reads the theory's
   development roles into a registry of criteria (`once`, `general`, `pairs`,
   `none`), `patterns.ts` matches a rule's focus against a row and fills in

@@ -226,7 +226,7 @@ infixl pff: $𝔽$ prec 6;
 -- ===== The tree system =====
 --
 -- As in `forallx-ubc`, which explains it: a tree is a derivation of
--- `closes Γ` from the bottom up, a branch is an ACUI context of rows, and a
+-- `closes Γ` from the bottom up, a branch is an ACU context of rows, and a
 -- step is `focus Γ at Δ` (the branch Γ closes by a step on its rows Δ) and
 -- `unfocus`. The rules keep the row they develop.
 
@@ -236,7 +236,7 @@ sort ctx;
 term emp: ctx;
 notation emp: ctx = ($_$:max);
 --| @syntax role context-join
---| @acui ctx_assoc ctx_comm emp ctx_idem
+--| @acui ctx_assoc ctx_comm emp _
 term join (ga de: ctx): ctx;
 infixl join: $;$ prec 5;
 term hyp (ph: pfm): ctx;
@@ -253,7 +253,6 @@ axiom ctx_trans (ga de si: ctx): $ ctx_eq ga de $ > $ ctx_eq de si $ > $ ctx_eq 
 axiom ctx_sym (ga de: ctx): $ ctx_eq ga de $ > $ ctx_eq de ga $;
 axiom ctx_assoc (ga de si: ctx): $ ctx_eq ((ga ; de) ; si) (ga ; (de ; si)) $;
 axiom ctx_comm (ga de: ctx): $ ctx_eq (ga ; de) (de ; ga) $;
-axiom ctx_idem (ga: ctx): $ ctx_eq (ga ; ga) ga $;
 axiom ctx_unit (ga: ctx): $ ctx_eq (_ ; ga) ga $;
 --| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
 axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
@@ -282,7 +281,7 @@ notation fc (ga de: ctx): judgement = ($focus$:3) ga ($at$:0) de;
 axiom fc_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ (focus ga at si) ⟚ (focus de at ta) $;
 
 --| @syntax role tree.unfocus
-axiom unfocus (ga de: ctx): $ focus ga at de $ > $ closes ga ; de $;
+axiom unfocus (ga de: ctx): $ focus (ga ; de) at de $ > $ closes (ga ; de) $;
 
 -- ## Prefixes as lists
 --

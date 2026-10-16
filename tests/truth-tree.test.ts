@@ -240,7 +240,7 @@ describe("grading", () => {
     const other = builderFor(item);
     const [q] = other.stack(other.rootNode, "r1", ["P", "Q"], "&");
     other.close(other.rootNode, q as string, "r2");
-    other.stack(other.rootNode, "r1", ["P"], "&");
+    other.stack(other.rootNode, "r1", ["P", "Q"], "&");
     const mmb = await certifyTree(publicDataOf(item), other.answer());
 
     expect(mmb).toBeDefined();

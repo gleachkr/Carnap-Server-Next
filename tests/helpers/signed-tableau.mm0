@@ -38,11 +38,11 @@ prefix tt: $T$ prec 10;
 term ff (ph: wff): sf;
 prefix ff: $F$ prec 10;
 
--- A branch is a set of signed rows.
+-- A branch is a multiset of signed rows.
 term emp: ctx;
 notation emp: ctx = ($_$:max);
 --| @syntax role context-join
---| @acui ctx_assoc ctx_comm emp ctx_idem
+--| @acui ctx_assoc ctx_comm emp _
 term join (ga de: ctx): ctx;
 infixl join: $;$ prec 5;
 term hyp (sg: sf): ctx;
@@ -58,7 +58,6 @@ axiom ctx_trans (ga de si: ctx): $ ga ≜ de $ > $ de ≜ si $ > $ ga ≜ si $;
 axiom ctx_sym (ga de: ctx): $ ga ≜ de $ > $ de ≜ ga $;
 axiom ctx_assoc (ga de si: ctx): $ ((ga ; de) ; si) ≜ (ga ; (de ; si)) $;
 axiom ctx_comm (ga de: ctx): $ (ga ; de) ≜ (de ; ga) $;
-axiom ctx_idem (ga: ctx): $ (ga ; ga) ≜ ga $;
 axiom ctx_unit (ga: ctx): $ (_ ; ga) ≜ ga $;
 --| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
 axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
@@ -79,7 +78,7 @@ notation fc (ga de: ctx): judgement = ($focus$:3) ga ($at$:0) de;
 --| @congr
 axiom fc_congr (ga de si ta: ctx): $ ga ≜ de $ > $ si ≜ ta $ > $ (focus ga at si) ⟚ (focus de at ta) $;
 --| @syntax role tree.unfocus
-axiom unfocus (ga de: ctx): $ focus ga at de $ > $ closes ga ; de $;
+axiom unfocus (ga de: ctx): $ focus (ga ; de) at de $ > $ closes (ga ; de) $;
 
 --| @syntax role tree.closure
 --| @syntax alias ×

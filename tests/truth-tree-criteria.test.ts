@@ -16,7 +16,12 @@ import {
   TRUTH_TREE_SCHEMA_VERSION,
 } from "../src/worker/exercises/truth-tree/types";
 import type { CertifiedAnswer } from "./helpers/truth-tree";
-import { certifyAnswer, TreeBuilder } from "./helpers/truth-tree";
+import {
+  certifyAnswer,
+  engine,
+  judgeAsBrowser,
+  TreeBuilder,
+} from "./helpers/truth-tree";
 
 /**
  * Completeness by the theory's development criteria (gh #46): what UBC's
@@ -227,8 +232,8 @@ describe("a general row", () => {
 });
 
 describe("a step writes what its rule does", () => {
-  // A branch is a set to the engine, so a row already on it is written
-  // whether or not the rule writes it; the theory's patterns tell.
+  // A branch is a multiset to the engine, so a row already on it neither
+  // stands in for a row the rule writes nor hides one it does not.
   async function wrongRows(
     members: string[],
     cite: string,
@@ -242,9 +247,16 @@ describe("a step writes what its rule does", () => {
     t.close(t.rootNode, written[closeOn[0]] as string, closeOn[1]);
     const answer = await certify(item, t);
 
+    const mm0 = (item.publicData as unknown as TruthTreePublicData).mm0;
+
     return {
       graded: await grade(item, answer),
-      rows: report(resolved, answer).rows,
+      rows: judgeAsBrowser(
+        await engine(),
+        resolved,
+        mm0 as string,
+        t.answer(),
+      ).rows,
       written,
     };
   }
@@ -300,6 +312,20 @@ describe("a step writes what its rule does", () => {
           "r3",
         ])
       ).graded,
+    ).toBe("correct");
+  });
+
+  test("a step whose rule writes one row twice must write it twice", async () => {
+    const once = await wrongRows(["A & A", "¬A"], "r1", ["A"], "&", [
+      0,
+      "r2",
+    ]);
+
+    expect(once.rows.get(once.written[0] as string)?.type).toBe("step-wrong");
+    expect(once.graded).toBe("incorrect");
+    expect(
+      (await wrongRows(["A & A", "¬A"], "r1", ["A", "A"], "&", [0, "r2"]))
+        .graded,
     ).toBe("correct");
   });
 });

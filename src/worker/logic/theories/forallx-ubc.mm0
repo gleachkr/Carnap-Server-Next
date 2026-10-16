@@ -401,9 +401,11 @@ infixl ideq: $=$ prec 50;
 -- the tree proves. The truth-tree exercise writes the derivation
 -- (`exercises/truth-tree/aufbau/emit.ts`); the engine checks it.
 --
--- A branch is a context: unordered, and idempotent, so writing a row twice is
--- writing it once. A step is two lines, after Rudolf (Carnap's old tree
--- widget, which checked trees as sequents):
+-- A branch is a context: unordered, but not idempotent, so a row written
+-- twice is on the branch twice. That keeps a step exact: the rows it writes
+-- are the rows its rule writes, and one already on the branch cannot stand in
+-- for one missing, or hide one extra. A step is two lines, after Rudolf
+-- (Carnap's old tree widget, which checked trees as sequents):
 --
 --   focus Γ at Δ — the branch Γ closes, by a step on its rows Δ
 --   closes Γ     — by `unfocus`, which also checks that Δ is on Γ
@@ -425,7 +427,7 @@ sort ctx;
 term emp: ctx;
 notation emp: ctx = ($_$:max);
 --| @syntax role context-join
---| @acui ctx_assoc ctx_comm emp ctx_idem
+--| @acui ctx_assoc ctx_comm emp _
 term join (ga de: ctx): ctx;
 infixl join: $;$ prec 5;
 term hyp (ph: wff): ctx;
@@ -473,7 +475,6 @@ axiom ctx_trans (ga de si: ctx): $ ctx_eq ga de $ > $ ctx_eq de si $ > $ ctx_eq 
 axiom ctx_sym (ga de: ctx): $ ctx_eq ga de $ > $ ctx_eq de ga $;
 axiom ctx_assoc (ga de si: ctx): $ ctx_eq ((ga ; de) ; si) (ga ; (de ; si)) $;
 axiom ctx_comm (ga de: ctx): $ ctx_eq (ga ; de) (de ; ga) $;
-axiom ctx_idem (ga: ctx): $ ctx_eq (ga ; ga) ga $;
 axiom ctx_unit (ga: ctx): $ ctx_eq (_ ; ga) ga $;
 --| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp
 axiom jeq_refl (jj: judgement): $ jj ⟚ jj $;
@@ -667,7 +668,7 @@ notation fc (ga de: ctx): judgement = ($focus$:3) ga ($at$:0) de;
 axiom fc_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ (focus ga at si) ⟚ (focus de at ta) $;
 
 --| @syntax role tree.unfocus
-axiom unfocus (ga de: ctx): $ focus ga at de $ > $ closes ga ; de $;
+axiom unfocus (ga de: ctx): $ focus (ga ; de) at de $ > $ closes (ga ; de) $;
 
 -- ## Closure (×): a sentence and its negation, or a single row a ≠ a.
 axiom tb_close_neq (ga: ctx) (te: tm): $ focus ga at (¬ te = te) $;

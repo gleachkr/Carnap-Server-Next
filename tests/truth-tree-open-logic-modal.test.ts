@@ -197,6 +197,27 @@ describe("open-logic-modal-k", () => {
     expect(problems(report)).toEqual([`row ${ta}: step-wrong`]);
   }, 60_000);
 
+  // The witness `1.1 𝕋 B` is on the branch already, so a set would take a
+  // second copy of it as nothing written.
+  test("□𝕋 may not write its witness again", async () => {
+    const step = async (rows: string[]) => {
+      const tree = new TreeBuilder(["1 T: □A", "1 T: ◇B"]);
+      tree.stack("n0", "r2", ["1.1 T: B"], "◇T");
+      const written = tree.stack("n0", "r1", rows, "□T");
+      const wrong = problems(await judge("□A, ◇B :|-: □A", tree)).filter(
+        (problem) => problem.endsWith("step-wrong"),
+      );
+
+      return { written, wrong };
+    };
+    const twice = await step(["1.1 T: A", "1.1 T: B"]);
+
+    expect(twice.wrong).toEqual(
+      twice.written.map((row) => `row ${row}: step-wrong`),
+    );
+    expect((await step(["1.1 T: A"])).wrong).toEqual([]);
+  }, 60_000);
+
   test("□𝔽 to a prefix already used is refused", async () => {
     const tree = new TreeBuilder(["1 T: ◇B", "1 F: □A"]);
     tree.stack("n0", "r1", ["1.1 T: B"], "◇T");
