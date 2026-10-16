@@ -34,7 +34,12 @@ import { statementReader } from "./patterns";
  *   branch complete by what is on it, not by what was done to it: a row is
  *   developed once its rule's conclusions are on the branch, however they got
  *   there (the Open Logic Project's definition). Without it a row is developed
- *   by a step that cites it, as UBC checks rows off.
+ *   by a step that cites it, as UBC checks rows off;
+ * - `tree.mark` and `tree.mark.instance` — a check mark, which a rule writes
+ *   on the branch beside its rows and the student never types: `✓ ρ` for the
+ *   row ρ the step cites, and `✓ ρ ψ` beside each row ψ a step writes from ρ,
+ *   for a rule a row owes once per instance. Each is a term of the branch
+ *   sort, so a mark is on a branch exactly where a step put it there.
  *
  * A row is read at the one sort with a coercion into the branch sort.
  */
@@ -68,6 +73,10 @@ export interface TreeTheory {
   readonly root: string | null;
   /** Whether completeness is by the branch's contents (`tree.completeness.contents`). */
   readonly byContents: boolean;
+  /** The check mark a step writes for the row it cites (`tree.mark`). */
+  readonly mark: string | null;
+  /** The mark a step writes beside each instance it writes (`tree.mark.instance`). */
+  readonly markInstance: string | null;
 }
 
 /** The roles a tree theory is read by. */
@@ -93,6 +102,8 @@ export const TREE_ROLES: ReadonlySet<string> = new Set([
   "tree.root",
   "tree.completeness.contents",
   "tree.substitution",
+  "tree.mark",
+  "tree.mark.instance",
 ]);
 
 /** What a theory is missing to be a tree theory. */
@@ -164,6 +175,8 @@ export function readTreeTheory(
     empty: emptyBranch(language, roles.termFor("context-join")),
     focus: focus as string,
     join: join as string,
+    mark: roles.termFor("tree.mark"),
+    markInstance: roles.termFor("tree.mark.instance"),
     root: roles.termFor("tree.root"),
     rowSort: rowSort as string,
     unfocus: unfocus as string,

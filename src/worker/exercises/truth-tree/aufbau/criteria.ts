@@ -56,6 +56,11 @@ export interface RulePatterns {
   readonly side: readonly Term[];
   /** The rows each premise writes onto its branch, beyond the branch. */
   readonly written: readonly (readonly Term[])[];
+  /**
+   * The check marks each premise writes beside them (`tree.mark`,
+   * `tree.mark.instance`), which are not rows: no student types one.
+   */
+  readonly marks: readonly (readonly Term[])[];
   /** The statement's binders: its metavariables. */
   readonly metas: Metas;
   readonly binders: AssertStatement["binders"];
@@ -650,6 +655,7 @@ export function rulePatterns(
   const sideKeys = new Set(side.map((row) => termKey(language, row)));
 
   const written: Term[][] = [];
+  const marks: Term[][] = [];
 
   for (const hypothesis of statement.hypotheses) {
     if ("sort" in hypothesis) {
@@ -666,7 +672,14 @@ export function rulePatterns(
       return null;
     }
 
-    const rows = rowsOf(language, theory, premise.args[0] as Term, branch);
+    const marked: Term[] = [];
+    const rows = rowsOf(
+      language,
+      theory,
+      premise.args[0] as Term,
+      branch,
+      marked,
+    );
 
     if (rows === null) {
       return null;
@@ -674,11 +687,13 @@ export function rulePatterns(
 
     // The side rows are on the branch below too; they are not written.
     written.push(rows.filter((row) => !sideKeys.has(termKey(language, row))));
+    marks.push(marked);
   }
 
   return {
     binders: statement.binders,
     focus,
+    marks,
     metas: new Map(
       statement.binders
         .filter((binder) => "sort" in binder.type)
@@ -720,6 +735,7 @@ function rowsOf(
   theory: TreeTheory,
   term: Term,
   branch: Term | null,
+  marks?: Term[],
 ): Term[] | null {
   const joinTerm = language.spec.terms.get(theory.closes)?.binders[0];
   const branchSort =
@@ -755,6 +771,15 @@ function rowsOf(
       branch.kind === "variable" &&
       node.name === branch.name
     ) {
+      return true;
+    }
+
+    if (
+      marks !== undefined &&
+      node.kind === "app" &&
+      (node.term === theory.mark || node.term === theory.markInstance)
+    ) {
+      marks.push(node);
       return true;
     }
 

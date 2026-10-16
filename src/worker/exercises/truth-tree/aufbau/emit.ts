@@ -55,8 +55,8 @@ import type {
   TableauRow,
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
-import type { TreeDevelopment } from "./criteria";
-import { matchFocus, templateFor } from "./criteria";
+import type { RulePatterns, TreeDevelopment } from "./criteria";
+import { matchFocus, rulePatterns, templateFor } from "./criteria";
 import { closedSubterms, instantiate, termKey } from "./patterns";
 import { type RowSortReader, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
@@ -273,6 +273,62 @@ export function emitTreeProof(
     options.development?.byAxiom.get(axiom)?.patterns.focus.length === 0;
   const closes = (rows: readonly string[]): string =>
     `${theory.closes} (${branch(rows)})`;
+  const patternsByAxiom = new Map<string, RulePatterns | null>();
+  const patternsOf = (axiom: string): RulePatterns | null => {
+    if (!patternsByAxiom.has(axiom)) {
+      const statement = language.spec.statements.find(
+        (each) =>
+          (each.kind === "axiom" || each.kind === "theorem") &&
+          each.name === axiom,
+      );
+      patternsByAxiom.set(
+        axiom,
+        statement?.kind === "axiom" || statement?.kind === "theorem"
+          ? rulePatterns(language, theory, statement)
+          : null,
+      );
+    }
+
+    return patternsByAxiom.get(axiom) ?? null;
+  };
+
+  /**
+   * The check marks a development writes beside its rows, which the student
+   * does not type: the mark of the row it cites, if its rule writes one
+   * (`tree.mark`), and beside each row, if its rule marks instances
+   * (`tree.mark.instance`). The engine checks them against the rule as it
+   * checks the rows, so a mark written wrong fails the step.
+   */
+  const marksFor = (group: readonly TableauRow[]): string[] => {
+    const first = group[0];
+    const cited =
+      first?.cites.length === 1 ? (first.cites[0] as string) : null;
+    const patterns =
+      first === undefined
+        ? null
+        : patternsOf(resolve(options.rules.get(first.dev)?.trim() ?? ""));
+    const terms = new Set(
+      (patterns?.marks ?? [])
+        .flat()
+        .flatMap((mark) => (mark.kind === "app" ? [mark.term] : [])),
+    );
+    const cite = cited === null ? null : engineOfId(cited);
+
+    if (cite === null || terms.size === 0) {
+      return [];
+    }
+
+    return [
+      ...(theory.mark !== null && terms.has(theory.mark)
+        ? [`${theory.mark} (${cite})`]
+        : []),
+      ...(theory.markInstance !== null && terms.has(theory.markInstance)
+        ? readable(group).map(
+            (row) => `${theory.markInstance} (${cite}) (${row})`,
+          )
+        : []),
+    ];
+  };
 
   /** The binders of a theorem: what its statements mention, by sort. */
   const binders = (texts: readonly string[]): string => {
@@ -549,7 +605,7 @@ export function emitTreeProof(
 
     if (start < node.rows.length) {
       const group = groupAt(node.rows, start);
-      const below = [...state, ...readable(group)];
+      const below = [...state, ...readable(group), ...marksFor(group)];
 
       step(state, [group], [below]);
       walk(node, start + group.length, below);
@@ -564,7 +620,11 @@ export function emitTreeProof(
     }
 
     const groups = children.map((child) => groupAt(child.rows, 0));
-    const states = groups.map((group) => [...state, ...readable(group)]);
+    const states = groups.map((group) => [
+      ...state,
+      ...readable(group),
+      ...marksFor(group),
+    ]);
 
     step(state, groups, states);
 
