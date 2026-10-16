@@ -266,13 +266,19 @@ describe("the key map", () => {
       ...extra,
     });
 
-  test("Alt-C cites, by its physical key, and Tab is left to the page", () => {
+  test("Alt-C cites, by its letter or, where Alt types none, its physical key, and Tab is left to the page", () => {
     expect(press("c")).toBe("cite");
     expect(press("c", { altKey: true, code: "KeyC" })).toBe("cite");
     // A Mac's Option-C writes ç.
     expect(press("ç", { altKey: true, code: "KeyC" })).toBe("cite");
     expect(press("x", { altKey: true, code: "KeyX" })).toBeNull();
     expect(press("Tab")).toBeNull();
+  });
+
+  test("Alt-J names the rule on a layout whose J is QWERTY's C", () => {
+    // Dvorak types j on the key QWERTY calls C, and c on QWERTY's I.
+    expect(press("j", { altKey: true, code: "KeyC" })).toBe("rule");
+    expect(press("c", { altKey: true, code: "KeyI" })).toBe("cite");
   });
 });
 

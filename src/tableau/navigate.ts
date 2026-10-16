@@ -159,14 +159,21 @@ export function keyAction(press: KeyPress): TableauKeyAction | null {
   // Alt-C cites, and Alt-J names the rule, from inside a row's input too,
   // where a plain c or j is typing. Tab is left alone, to leave the tree as
   // it leaves anything.
+  //
+  // The letter the layout types decides, so Alt-J is J on Dvorak too, where
+  // J is the key QWERTY calls C. The physical key stands in only where Alt
+  // types no plain letter, as on a Mac, where Alt-C types ç.
   if (press.altKey && !command && !press.shiftKey) {
-    const key = press.key.toLowerCase();
+    const typed = press.key.toLowerCase();
+    const key = /^[a-z]$/u.test(typed)
+      ? typed
+      : press.code === "KeyC"
+        ? "c"
+        : press.code === "KeyJ"
+          ? "j"
+          : null;
 
-    if (press.code === "KeyC" || key === "c") {
-      return "cite";
-    }
-
-    return press.code === "KeyJ" || key === "j" ? "rule" : null;
+    return key === "c" ? "cite" : key === "j" ? "rule" : null;
   }
 
   if (press.altKey || command) {
