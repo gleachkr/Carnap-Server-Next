@@ -5317,6 +5317,10 @@ msgid "The rows this closure cites do not close the branch."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” concludes a focused branch, but Carnap cannot read its premises as rows written on the branch, so no row is ever owed a step by it."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule."
 msgstr ""
 
@@ -5444,8 +5448,16 @@ msgstr ""
 msgid "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system gives “{rule}” the role “{role}”, which Carnap does not know."
+msgstr ""
+
 #: src/worker/exercises/world/strings.ts
 msgid "The table lists every block and can do everything the board does."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The term “{rule}” has the role tree.substitution, but is not a substitution: it needs three arguments, a bound variable, a body of its own sort, and the term put for the variable."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts

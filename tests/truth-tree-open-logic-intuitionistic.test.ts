@@ -497,6 +497,50 @@ describe("an open branch in intuitionistic logic", () => {
     });
   }, 60_000);
 
+  // `σ . ρ` against `1 . wa` is tried with σ empty first; with the 𝔽 row
+  // matched first, the 𝕋 row then needs σ to be `1`, and has it.
+  test("closes with the closure's rows written the other way round", async () => {
+    const source = (
+      theorySourceByFileName("open-logic-intuitionistic.mm0") ?? ""
+    ).replace(
+      "$ focus ga at (si 𝕋 ph ; si . rh 𝔽 ph) $",
+      "$ focus ga at (si . rh 𝔽 ph ; si 𝕋 ph) $",
+    );
+    expect(source).toContain("(si . rh 𝔽 ph ; si 𝕋 ph)");
+    const result = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="swapped"}\n${source}\n:::\n\n::::truth-tree{#t system="swapped" finish="one-open"}\nShow it.\n\nA :|-: B → A\n::::`,
+    );
+
+    if (!result.ok) {
+      throw new Error(result.diagnostics.map((d) => d.code).join("\n"));
+    }
+
+    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
+    const publicData = withSystemText(
+      raw.publicData,
+      result.artifact.systems,
+    ) as unknown as TruthTreePublicData;
+    const resolved = resolveTruthTree(publicData) as ResolvedTree;
+    const tree = new TreeBuilder(resolved.rootText);
+    const [, fa] = tree.stack(
+      tree.rootNode,
+      "r2",
+      ["1.1 T: B", "1.1 F: A"],
+      "→F",
+    );
+    tree.open(tree.rootNode);
+    const answer = await certifyAnswer(publicData, tree.answer());
+    const { report } = judgeTree(resolved, answer as never, {
+      kind: "verified",
+      ok: true,
+    });
+
+    expect(report.ends.get(tree.rootNode)).toEqual({
+      rows: ["r1", fa as string],
+      type: "open-contradiction",
+    });
+  }, 60_000);
+
   // The excluded middle's branch: 𝔽 A at 1 and 𝕋 A at 1.1 do not close it,
   // so it is a countermodel, A true at 1.1 and not at 1.
   test("with 𝔽 A at 1 and 𝕋 A at 1.1 is not closable", async () => {

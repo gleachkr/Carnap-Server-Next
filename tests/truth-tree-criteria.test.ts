@@ -5,6 +5,7 @@ import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
 import { readTreeDevelopment } from "../src/worker/exercises/truth-tree/aufbau/criteria";
+import { matchTerm } from "../src/worker/exercises/truth-tree/aufbau/patterns";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
 import {
   judgeTree,
@@ -15,6 +16,8 @@ import {
   TRUTH_TREE_ANSWER_KIND,
   TRUTH_TREE_SCHEMA_VERSION,
 } from "../src/worker/exercises/truth-tree/types";
+import { languageById } from "../src/worker/logic/specs";
+import { theorySourceByFileName } from "../src/worker/logic/theories";
 import type { CertifiedAnswer } from "./helpers/truth-tree";
 import {
   certifyAnswer,
@@ -346,6 +349,40 @@ describe("a row used once", () => {
     expect(await grade(item, answer)).toBe("correct");
   });
 
+  // Without a modus ponens the engine confirms no instance, and the rule is
+  // used without one; its steps still check its rows off.
+  test("is checked off where the theory confirms no instance", async () => {
+    const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "").replace(
+      "--| @relation judgement jeq jeq_refl jeq_trans jeq_sym jeq_mp",
+      "--| @relation judgement jeq jeq_refl jeq_trans jeq_sym _",
+    );
+    expect(ubc).toContain("jeq_sym _");
+    const result = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="plain"}\n${ubc}\n:::\n\n::::truth-tree{#t system="plain"}\nIs this set consistent?\n\n- ∃x Fx\n- ∀x ¬Fx\n::::`,
+    );
+
+    if (!result.ok) {
+      throw new Error(result.diagnostics.map((d) => d.code).join(", "));
+    }
+
+    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
+    const publicData = withSystemText(
+      raw.publicData,
+      result.artifact.systems,
+    ) as unknown as TruthTreePublicData;
+    const resolved = resolveTruthTree(publicData) as ResolvedTree;
+    const t = new TreeBuilder(resolved.rootText);
+    const [fa] = t.stack(t.rootNode, "r1", ["Fa"], "∃");
+    const [nfa] = t.stack(t.rootNode, "r2", ["¬Fa"], "∀");
+    t.close(t.rootNode, fa as string, nfa as string);
+
+    expect(
+      report(resolved, await certifyAnswer(publicData, t.answer())).marks.get(
+        "r1",
+      ),
+    ).toEqual({ names: [], type: "resolved" });
+  });
+
   test("on a split, needs developing on the branch marked open", async () => {
     const { item, resolved } = await consistency("P ∨ Q", "R & S");
     const t = new TreeBuilder(resolved.rootText);
@@ -438,6 +475,50 @@ describe("closure, as the theory says it", () => {
   });
 });
 
+describe("a list in a pattern", () => {
+  // A member of a list that is neither its constructor nor its unit (`1`, or
+  // `t2s a` in a `seq`) is one member: matched as itself, not as a list again.
+  test.each([
+    ["open-logic-tableaux", "wff", "A (te , a)", "A (b , a)"],
+    ["open-logic-intuitionistic", "pfx", "1", "1"],
+  ])("%s matches %s %s against %s", (id, sort, pattern, term) => {
+    const language = languageById(id);
+
+    if (language === null) {
+      throw new Error(`no language ${id}`);
+    }
+
+    const scope = new Map([
+      ["te", "tm"],
+      ["a", "name"],
+      ["b", "name"],
+    ]);
+    const read = (text: string) => {
+      const parsed = language.parse(text, {
+        lints: false,
+        mode: "engine",
+        scope,
+        sort,
+      });
+
+      if (!parsed.ok) {
+        throw new Error(`${text} does not read`);
+      }
+
+      return parsed.term;
+    };
+
+    expect(
+      matchTerm(
+        language,
+        read(pattern),
+        read(term),
+        new Map([["te", false]]),
+      ),
+    ).not.toBeNull();
+  });
+});
+
 describe("another calculus's roles", () => {
   const signed = readFileSync(
     new URL("./helpers/signed-tableau.mm0", import.meta.url),
@@ -467,6 +548,97 @@ describe("another calculus's roles", () => {
     expect(await codes(lesson(misspelt, "one-open"))).toEqual([
       ["truth_tree_development", "t_and"],
     ]);
+  });
+
+  describe("nothing an author writes is passed over in silence", () => {
+    const annotated = signed.replace(
+      "--| @syntax alias T∧",
+      "--| @syntax role tree.development.once\n--| @syntax alias T∧",
+    );
+    const said = async (theory: string) =>
+      (
+        await compileCarnapMarkdown(lesson(theory, "one-open"))
+      ).diagnostics.map((each) => [
+        each.code,
+        each.params?.rule,
+        each.params?.kind ?? null,
+      ]);
+
+    test("a misspelt kind of one word is an unknown kind, not a flag", async () => {
+      const misspelt = signed.replace(
+        "--| @syntax alias T∧",
+        "--| @syntax role tree.development.onse\n--| @syntax alias T∧",
+      );
+
+      expect(await said(misspelt)).toEqual([
+        ["truth_tree_development", "t_and", "onse"],
+      ]);
+    });
+
+    test("a role on the axiom a rule falls back on is the rule's", async () => {
+      const fallenBackOn = annotated.replace(
+        "axiom f_and_l",
+        "--| @syntax role tree.development.none.ph\naxiom f_and_l",
+      );
+
+      expect(await said(fallenBackOn)).toEqual([
+        ["truth_tree_development", "f_and_r", null],
+      ]);
+    });
+
+    test("a tree role Carnap does not know", async () => {
+      const misspelt = annotated.replace(
+        "--| @syntax role tree.closes",
+        "--| @syntax role tree.closes\n--| @syntax role tree.completness.contents",
+      );
+
+      expect(await said(misspelt)).toEqual([
+        ["truth_tree_development", "cl", null],
+      ]);
+    });
+
+    test("a step whose premises are not rows on its branch", async () => {
+      const odd = `${annotated}\n--| @syntax alias T¬¬\naxiom t_odd (ga: ctx) (ph: wff): $ ga ≜ ga $ > $ focus ga at T (¬ ¬ ph) $;\n`;
+
+      expect(await said(odd)).toEqual([
+        ["truth_tree_development", "t_odd", null],
+      ]);
+    });
+
+    test("a variant without the instance's binder", async () => {
+      const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "")
+        .replace(
+          "--| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ps ; ch $ > $ focus ga at (∀ x ph) $\n--| @recover te ps ph x\n--| @recover ue ch ph x",
+          "--| @view {x: var} (ga: ctx x) (se ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ps ; ch $ > $ focus ga at (∀ x ph) $\n--| @recover se ps ph x\n--| @recover ue ch ph x",
+        )
+        .replace(
+          "axiom tb_all2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):\n  $ closes ga ; {x / te} ph ; {x / ue} ph $",
+          "axiom tb_all2 {x: var} (ga: ctx x) (se ue: tm) (ph: wff x):\n  $ closes ga ; {x / se} ph ; {x / ue} ph $",
+        );
+      expect(ubc).toContain("axiom tb_all2 {x: var} (ga: ctx x) (se ue: tm)");
+      const result = await compileCarnapMarkdown(
+        `:::aufbau-mm0{name="renamed"}\n${ubc}\n:::\n\n::::truth-tree{#t system="renamed" finish="one-open"}\nIs this set consistent?\n\n- ∀x Fx\n::::`,
+      );
+
+      expect(
+        result.diagnostics.map((each) => [
+          each.code,
+          each.params?.rule,
+          each.params?.binder,
+        ]),
+      ).toEqual([["truth_tree_development", "tb_all2", "te"]]);
+    });
+
+    test("a substitution that is not one", async () => {
+      const wrong = annotated.replace(
+        "--| @syntax role conjunction",
+        "--| @syntax role conjunction\n--| @syntax role tree.substitution",
+      );
+
+      expect(await said(wrong)).toEqual([
+        ["truth_tree_development", "and", null],
+      ]);
+    });
   });
 
   test("a signed tableau's open branch is judged by its own rules", async () => {

@@ -71,6 +71,22 @@ export type TreeRole =
   | "tree.assert"
   | "context-join";
 
+/**
+ * Every `tree.` role Carnap reads, but the development ones
+ * (`./criteria.ts`): a theory naming another has misspelt one.
+ */
+export const TREE_ROLES: ReadonlySet<string> = new Set([
+  "tree.closes",
+  "tree.focus",
+  "tree.unfocus",
+  "tree.closure",
+  "tree.assert",
+  "tree.deny",
+  "tree.root",
+  "tree.completeness.contents",
+  "tree.substitution",
+]);
+
 /** What a theory is missing to be a tree theory. */
 export type TreeTheoryProblem =
   | { readonly type: "missing-role"; readonly role: TreeRole }

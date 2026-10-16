@@ -426,6 +426,42 @@ function reportDevelopment(
           ),
         );
         break;
+      case "unreadable":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” concludes a focused branch, but Carnap cannot read its premises as rows written on the branch, so no row is ever owed a step by it.",
+            {
+              params: { rule },
+            },
+          ),
+        );
+        break;
+      case "unknown-role":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The system gives “{rule}” the role “{role}”, which Carnap does not know.",
+            {
+              params: { rule, role: problem.role },
+            },
+          ),
+        );
+        break;
+      case "bad-substitution":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The term “{rule}” has the role tree.substitution, but is not a substitution: it needs three arguments, a bound variable, a body of its own sort, and the term put for the variable.",
+            {
+              params: { rule },
+            },
+          ),
+        );
+        break;
     }
   }
 }

@@ -6,6 +6,7 @@ import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
 import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
 import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
+import { theorySourceByFileName } from "../src/worker/logic/theories";
 import { engine, judgeAsBrowser, TreeBuilder } from "./helpers/truth-tree";
 
 /**
@@ -262,6 +263,43 @@ describe("an open branch, by its contents", () => {
       missing: [{ names: ["a"], row: "r1" }],
       type: "open-incomplete",
     });
+  }, 60_000);
+
+  // Not the book's: `=𝕋` asks nothing of an open branch here. A theory that
+  // has it pair rows, as UBC's identity does, is owed no `𝕋 b = b`.
+  test("is owed no self-identity by a rule on pairs", async () => {
+    const source = (
+      theorySourceByFileName("open-logic-tableaux.mm0") ?? ""
+    ).replace(
+      "--| @syntax alias =𝕋 =T",
+      "--| @syntax alias =𝕋 =T\n--| @syntax role tree.development.pairs",
+    );
+    expect(source).toContain("tree.development.pairs");
+    const result = await compileCarnapMarkdown(
+      `:::aufbau-mm0{name="paired"}\n${source}\n:::\n\n::::truth-tree{#t system="paired" finish="one-open"}\nShow it.\n\n- a = b\n- a = a\n::::`,
+    );
+
+    if (!result.ok) {
+      throw new Error(result.diagnostics.map((d) => d.code).join(", "));
+    }
+
+    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
+    const publicData = withSystemText(
+      raw.publicData,
+      result.artifact.systems,
+    ) as unknown as TruthTreePublicData;
+    const resolved = resolveTruthTree(publicData) as ResolvedTree;
+    const tree = new TreeBuilder(resolved.rootText);
+    tree.open(tree.rootNode);
+    const report = judgeAsBrowser(
+      await engine(),
+      resolved,
+      publicData.mm0 as string,
+      tree.answer(),
+    );
+
+    expect(problems(report)).toEqual([]);
+    expect(report.ends.get("n0")).toBeUndefined();
   }, 60_000);
 
   test("owes none already on it, however it got there", async () => {

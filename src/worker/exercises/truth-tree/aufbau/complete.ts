@@ -33,7 +33,7 @@ import {
   closedSubterms,
   conclude,
   instantiate,
-  matchTerm,
+  matchAll,
   termKey,
 } from "./patterns";
 import type { RowSortReader } from "./rows";
@@ -481,36 +481,29 @@ function paired(
 
   for (const patterns of rule.variants) {
     const [first, second] = patterns.focus;
-    const start =
-      first === undefined || second === undefined
-        ? null
-        : matchTerm(language, first, row.term, patterns.metas);
 
-    if (start === null || second === undefined) {
+    if (first === undefined || second === undefined) {
       continue;
     }
 
-    applies = true;
+    for (const start of matchAll(language, first, row.term, patterns.metas)) {
+      applies = true;
 
-    const done = partners.every((partner) => {
-      const bindings = matchTerm(
-        language,
-        second,
-        partner.term,
-        patterns.metas,
-        start,
+      const done = partners.every((partner) =>
+        [
+          ...matchAll(language, second, partner.term, patterns.metas, start),
+        ].every((bindings) =>
+          patterns.written.some((premise) =>
+            premise.every((each) =>
+              holds(conclude(language, each, bindings)),
+            ),
+          ),
+        ),
       );
 
-      return (
-        bindings === null ||
-        patterns.written.some((premise) =>
-          premise.every((each) => holds(conclude(language, each, bindings))),
-        )
-      );
-    });
-
-    if (done) {
-      return true;
+      if (done) {
+        return true;
+      }
     }
   }
 
@@ -559,14 +552,24 @@ function isLiteral(language: SurfaceLanguage, row: Term): boolean {
   );
 }
 
-/** Whether a row is a sentence `t = t`, by the identity role. */
+/**
+ * Whether a row says `t = t`, by the identity role: the sentence itself, or
+ * a row asserting it (`𝕋 t = t`, by `tree.assert`). Denied, it closes the
+ * branch instead.
+ */
 function isSelfIdentity(language: SurfaceLanguage, row: Term): boolean {
-  const [left, right] = row.kind === "app" ? row.args : [];
+  const roles = roleIndex(language);
+  const sentence =
+    row.sort === sentenceSort(language)
+      ? row
+      : row.kind === "app" && row.term === roles.termFor("tree.assert")
+        ? sentenceIn(language, row)
+        : null;
+  const [left, right] = sentence?.kind === "app" ? sentence.args : [];
 
   return (
-    row.sort === sentenceSort(language) &&
-    row.kind === "app" &&
-    roleIndex(language).roleOf(row.term) === "identity" &&
+    sentence?.kind === "app" &&
+    roles.roleOf(sentence.term) === "identity" &&
     left !== undefined &&
     right !== undefined &&
     termKey(language, left) === termKey(language, right)

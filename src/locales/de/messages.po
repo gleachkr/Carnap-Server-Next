@@ -5317,6 +5317,10 @@ msgid "The rows this closure cites do not close the branch."
 msgstr "Die Zeilen, die dieser Abschluss zitiert, schließen den Ast nicht."
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” concludes a focused branch, but Carnap cannot read its premises as rows written on the branch, so no row is ever owed a step by it."
+msgstr "Die Regel „{rule}“ schließt auf einen fokussierten Ast, aber Carnap kann ihre Prämissen nicht als Zeilen lesen, die auf den Ast geschrieben werden; deshalb ist ihr nie eine Zeile einen Schritt schuldig."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule."
 msgstr "Die Regel „{rule}“ zählt Instanzen; dafür braucht ihre Urteilssorte eine @relation, die eine Modus-ponens-Regel nennt."
 
@@ -5444,9 +5448,17 @@ msgstr "Das System „{name}“ ist keine Baumtheorie: Es deklariert kein {roles
 msgid "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed."
 msgstr "Das System „{name}“ sagt nicht, wann eine Zeile entwickelt ist, daher kann kein Ast darin als vollständig gezeigt werden: Geben Sie seinen Regeln tree.development-Rollen oder lassen Sie finish auf closed."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system gives “{rule}” the role “{role}”, which Carnap does not know."
+msgstr "Das System gibt „{rule}“ die Rolle „{role}“, die Carnap nicht kennt."
+
 #: src/worker/exercises/world/strings.ts
 msgid "The table lists every block and can do everything the board does."
 msgstr "Die Tabelle führt jeden Block auf und kann alles, was das Brett kann."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The term “{rule}” has the role tree.substitution, but is not a substitution: it needs three arguments, a bound variable, a body of its own sort, and the term put for the variable."
+msgstr "Der Term „{rule}“ hat die Rolle tree.substitution, ist aber keine Substitution: Er braucht drei Argumente, eine gebundene Variable, einen Rumpf seiner eigenen Sorte und den Term, der für die Variable eingesetzt wird."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The tree is missing a row of its root."

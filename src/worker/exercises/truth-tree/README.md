@@ -64,7 +64,9 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   more (`@acui assoc _ unit _`): a metavariable of its sort stands for any
   run of members, so intuitionistic `→𝕋`'s side row at `σ . ρ` finds `σ` and
   every prefix that extends it, and terms are compared, and instances
-  proposed, as lists. With `tree.substitution` on its substitution term,
+  proposed, as lists. A list can match more than one way, so `matchAll`
+  gives every way, and a rule's rows are matched together (`ruleMatches`):
+  a closure written `σ . ρ 𝔽 A ; σ 𝕋 A` finds `σ` from either row. With `tree.substitution` on its substitution term,
   `patterns.ts` matches `{x / te} ph` as the substitution it denotes, which
   is what lets UBC's identity rule (`tree.development.pairs`) be owed one
   rewriting of each literal on its branch. A general step's

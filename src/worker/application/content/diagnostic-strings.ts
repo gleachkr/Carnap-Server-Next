@@ -391,6 +391,21 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The rule “{rule}” counts instances, which needs an @relation on its judgement sort that names a modus ponens rule.",
         placeholders("rule"),
       ),
+    "The rule “{rule}” concludes a focused branch, but Carnap cannot read its premises as rows written on the branch, so no row is ever owed a step by it.":
+      i18n.t(
+        "The rule “{rule}” concludes a focused branch, but Carnap cannot read its premises as rows written on the branch, so no row is ever owed a step by it.",
+        placeholders("rule"),
+      ),
+    "The system gives “{rule}” the role “{role}”, which Carnap does not know.":
+      i18n.t(
+        "The system gives “{rule}” the role “{role}”, which Carnap does not know.",
+        placeholders("rule", "role"),
+      ),
+    "The term “{rule}” has the role tree.substitution, but is not a substitution: it needs three arguments, a bound variable, a body of its own sort, and the term put for the variable.":
+      i18n.t(
+        "The term “{rule}” has the role tree.substitution, but is not a substitution: it needs three arguments, a bound variable, a body of its own sort, and the term put for the variable.",
+        placeholders("rule"),
+      ),
     "Write the root as one argument line or as a list of sentences, not both.":
       i18n.t(
         "Write the root as one argument line or as a list of sentences, not both.",

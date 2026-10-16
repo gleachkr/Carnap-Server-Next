@@ -90,17 +90,24 @@ function listsOf(language: SurfaceLanguage): ReadonlyMap<string, List> {
   return lists;
 }
 
+/** Whether a term is built by the list itself: its constructor, or its unit. */
+function isListed(list: List, term: Term): boolean {
+  return (
+    term.kind === "app" &&
+    (term.term === list.term ||
+      (term.term === list.unit && term.args.length === 0))
+  );
+}
+
 /** A list's members, in order, its unit left out: one member for any other term. */
 function members(list: List, term: Term): Term[] {
-  if (term.kind === "app" && term.term === list.term) {
-    return term.args.flatMap((argument) => members(list, argument));
+  if (!isListed(list, term)) {
+    return [term];
   }
 
-  return term.kind === "app" &&
-    term.term === list.unit &&
-    term.args.length === 0
-    ? []
-    : [term];
+  return term.kind === "app" && term.term === list.term
+    ? term.args.flatMap((argument) => members(list, argument))
+    : [];
 }
 
 /** A list of `members`, nested to the left as the parser reads it: `1 . wa . waa`. */
@@ -138,11 +145,7 @@ function normal(language: SurfaceLanguage, term: Term): Term {
 
     const list = lists.get(node.sort);
 
-    if (
-      list !== undefined &&
-      (node.term === list.term ||
-        (node.term === list.unit && node.args.length === 0))
-    ) {
+    if (list !== undefined && isListed(list, node)) {
       return listOf(list, node.sort, members(list, node).map(walk));
     }
 
@@ -156,7 +159,7 @@ function normal(language: SurfaceLanguage, term: Term): Term {
  * The theory's substitution constructor, `{x / te} ph`: which argument is the
  * bound variable, which the term put for it, and which the body.
  */
-interface Substitution {
+export interface Substitution {
   readonly term: string;
   readonly hole: number;
   readonly value: number;
@@ -170,7 +173,9 @@ const substitutionCache = new WeakMap<SurfaceLanguage, Substitution | null>();
  * one a bound variable, one of the sort it builds (the body), and the term.
  * Null where the theory names none, or one of another shape.
  */
-function substitutionOf(language: SurfaceLanguage): Substitution | null {
+export function substitutionOf(
+  language: SurfaceLanguage,
+): Substitution | null {
   if (substitutionCache.has(language)) {
     return substitutionCache.get(language) ?? null;
   }
@@ -564,8 +569,8 @@ export function termKey(
 /**
  * Match `pattern` against `term`, extending `bindings`; null where they do
  * not match. A metavariable bound twice must stand for the same term both
- * times (`¬ te = te`). A list pattern matches the first way it can, each
- * run as short as it can be.
+ * times (`¬ te = te`). Where a list lets them match more than one way, the
+ * first of {@link matchAll}'s.
  */
 export function matchTerm(
   language: SurfaceLanguage,
@@ -574,23 +579,48 @@ export function matchTerm(
   metas: Metas,
   bindings: Bindings = new Map(),
 ): Bindings | null {
+  for (const found of matchAll(language, pattern, term, metas, bindings)) {
+    return found;
+  }
+
+  return null;
+}
+
+/**
+ * Every way `pattern` matches `term`, extending `bindings`. Only a list
+ * gives more than one: `σ . ρ` against `1 . wa` is `σ` the unit and `ρ` the
+ * whole, `σ` `1` and `ρ` `wa`, and `σ` the whole, so a pattern after it that
+ * needs `σ` to be `1` can have it. Each run is tried shortest first.
+ */
+export function* matchAll(
+  language: SurfaceLanguage,
+  pattern: Term,
+  term: Term,
+  metas: Metas,
+  bindings: Bindings = new Map(),
+): Generator<Bindings> {
   if (pattern.kind === "variable" && metas.has(pattern.name)) {
     if (
       pattern.sort !== term.sort ||
       (metas.get(pattern.name) === true && term.kind !== "variable")
     ) {
-      return null;
+      return;
     }
 
     const bound = bindings.get(pattern.name);
 
     if (bound === undefined) {
-      return new Map([...bindings, [pattern.name, term]]);
+      yield new Map([...bindings, [pattern.name, term]]);
+      return;
     }
 
     const key = termKey(language, bound);
 
-    return key !== null && key === termKey(language, term) ? bindings : null;
+    if (key !== null && key === termKey(language, term)) {
+      yield bindings;
+    }
+
+    return;
   }
 
   const substitution =
@@ -607,15 +637,25 @@ export function matchTerm(
     );
 
     if (matched !== undefined) {
-      return matched;
+      if (matched !== null) {
+        yield matched;
+      }
+
+      return;
     }
   }
 
   const list =
     pattern.kind === "app" ? listsOf(language).get(pattern.sort) : undefined;
 
-  if (list !== undefined && term.sort === pattern.sort) {
-    return matchList(
+  // A member that is neither (`t2s a` in a `seq`) is matched as itself below:
+  // as a list it is one member, and matching that is this same question.
+  if (
+    list !== undefined &&
+    term.sort === pattern.sort &&
+    (isListed(list, pattern) || isListed(list, term))
+  ) {
+    yield* matchList(
       language,
       list,
       pattern.sort,
@@ -624,40 +664,55 @@ export function matchTerm(
       metas,
       bindings,
     );
+    return;
   }
 
   if (pattern.kind === "variable" || term.kind === "variable") {
-    return pattern.kind === "variable" &&
+    if (
+      pattern.kind === "variable" &&
       term.kind === "variable" &&
       pattern.name === term.name
-      ? bindings
-      : null;
+    ) {
+      yield bindings;
+    }
+
+    return;
   }
 
   if (
     pattern.term !== term.term ||
     pattern.args.length !== term.args.length
   ) {
-    return null;
+    return;
   }
 
-  let result: Bindings | null = bindings;
+  yield* matchEach(language, pattern.args, term.args, metas, bindings);
+}
 
-  for (const [at, argument] of pattern.args.entries()) {
-    result = matchTerm(
-      language,
-      argument,
-      term.args[at] as Term,
-      metas,
-      result,
-    );
+/** Patterns against terms, one for one, every way all of them match. */
+function* matchEach(
+  language: SurfaceLanguage,
+  patterns: readonly Term[],
+  terms: readonly Term[],
+  metas: Metas,
+  bindings: Bindings,
+): Generator<Bindings> {
+  const [pattern, ...rest] = patterns;
 
-    if (result === null) {
-      return null;
-    }
+  if (pattern === undefined) {
+    yield bindings;
+    return;
   }
 
-  return result;
+  for (const found of matchAll(
+    language,
+    pattern,
+    terms[0] as Term,
+    metas,
+    bindings,
+  )) {
+    yield* matchEach(language, rest, terms.slice(1), metas, found);
+  }
 }
 
 /**
@@ -665,7 +720,7 @@ export function matchTerm(
  * own sort, not bound, takes a run of members, none included; anything else
  * takes one member.
  */
-function matchList(
+function* matchList(
   language: SurfaceLanguage,
   list: List,
   sort: string,
@@ -673,21 +728,21 @@ function matchList(
   terms: readonly Term[],
   metas: Metas,
   bindings: Bindings,
-): Bindings | null {
+): Generator<Bindings> {
   const key = (term: Term): string | null => termKey(language, term);
-  const from = (
+  const from = function* (
     at: number,
     taken: number,
-    sofar: Bindings | null,
-  ): Bindings | null => {
+    sofar: Bindings,
+  ): Generator<Bindings> {
     const pattern = patterns[at];
 
-    if (sofar === null) {
-      return null;
-    }
-
     if (pattern === undefined) {
-      return taken === terms.length ? sofar : null;
+      if (taken === terms.length) {
+        yield sofar;
+      }
+
+      return;
     }
 
     const run =
@@ -698,13 +753,15 @@ function matchList(
     if (!run || pattern.kind !== "variable") {
       const next = terms[taken];
 
-      return next === undefined
-        ? null
-        : from(
-            at + 1,
-            taken + 1,
-            matchTerm(language, pattern, next, metas, sofar),
-          );
+      if (next === undefined) {
+        return;
+      }
+
+      for (const found of matchAll(language, pattern, next, metas, sofar)) {
+        yield* from(at + 1, taken + 1, found);
+      }
+
+      return;
     }
 
     const bound = sofar.get(pattern.name);
@@ -717,11 +774,15 @@ function matchList(
           key(member) === key(terms[taken + offset] as Term),
       );
 
-      return agrees ? from(at + 1, taken + owed.length, sofar) : null;
+      if (agrees) {
+        yield* from(at + 1, taken + owed.length, sofar);
+      }
+
+      return;
     }
 
     for (let end = taken; end <= terms.length; end += 1) {
-      const found = from(
+      yield* from(
         at + 1,
         end,
         new Map([
@@ -729,16 +790,10 @@ function matchList(
           [pattern.name, listOf(list, sort, terms.slice(taken, end))],
         ]),
       );
-
-      if (found !== null) {
-        return found;
-      }
     }
-
-    return null;
   };
 
-  return from(0, 0, bindings);
+  yield* from(0, 0, bindings);
 }
 
 /** `template` with each bound metavariable replaced by what it stands for. */

@@ -30,8 +30,16 @@ import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { roleIndex } from "../../../logic/specs/roles";
 import type { Missing } from "../report";
 import type { Bindings, Metas } from "./patterns";
-import { matchTerm, occursFree, statementReader, termKey } from "./patterns";
+import {
+  matchAll,
+  matchTerm,
+  occursFree,
+  statementReader,
+  substitutionOf,
+  termKey,
+} from "./patterns";
 import type { TreeTheory } from "./theory";
+import { TREE_ROLES } from "./theory";
 
 /** The namespace a development role is in: `tree.development.general.te`. */
 const DEVELOPMENT = "tree.development.";
@@ -128,6 +136,8 @@ export interface ObligationInput {
 /** One kind of development criterion, as a role names it. */
 export interface DevelopmentCriterion {
   readonly kind: string;
+  /** The one-word flags it takes (`tree.development.nonempty`). */
+  readonly flags: readonly string[];
   /**
    * The role's arguments and the rule's flags read against the rule, or what
    * is wrong with them. `instance` is the binder whose instance each written
@@ -162,6 +172,7 @@ export type CriterionProblem =
 
 const KINDS: readonly DevelopmentCriterion[] = [
   {
+    flags: [],
     kind: "once",
     mark: "resolved",
     missing: ({ concluded, row, steps }) =>
@@ -171,10 +182,11 @@ const KINDS: readonly DevelopmentCriterion[] = [
         return { expected: "once[.binder]", type: "bad-arguments" };
       }
 
-      return singleRow(rule) ?? instanceOf(args[0] ?? null, flags, [], rule);
+      return singleRow(rule) ?? instanceOf(args[0] ?? null, flags, rule);
     },
   },
   {
+    flags: ["nonempty"],
     kind: "general",
     mark: "general",
     missing: ({
@@ -215,10 +227,7 @@ const KINDS: readonly DevelopmentCriterion[] = [
         return { expected: "general.binder", type: "bad-arguments" };
       }
 
-      return (
-        singleRow(rule) ??
-        instanceOf(args[0] as string, flags, ["nonempty"], rule)
-      );
+      return singleRow(rule) ?? instanceOf(args[0] as string, flags, rule);
     },
   },
   {
@@ -231,6 +240,7 @@ const KINDS: readonly DevelopmentCriterion[] = [
     // `a` made `b` or every `b` made `a`. Flag `literals`: only atomic and
     // negated atomic rows pair. The missing entry is worded as an identity's
     // substitution, the one rule written so.
+    flags: ["literals"],
     kind: "pairs",
     mark: null,
     missing: ({ paired, row }) =>
@@ -241,18 +251,19 @@ const KINDS: readonly DevelopmentCriterion[] = [
       }
 
       return rule.focus.length === 2
-        ? instanceOf(null, flags, ["literals"])
+        ? instanceOf(null, flags)
         : { type: "pair-focus" };
     },
   },
   {
+    flags: [],
     kind: "none",
     mark: null,
     missing: () => null,
     read: (args, flags) =>
       args.length > 0
         ? { expected: "none", type: "bad-arguments" }
-        : instanceOf(null, flags, []),
+        : instanceOf(null, flags),
   },
 ];
 
@@ -265,21 +276,19 @@ function singleRow(rule: RulePatterns): CriterionProblem | null {
   return rule.focus.length === 1 ? null : { type: "single-row-focus" };
 }
 
+/** Every flag some criterion takes. */
+const FLAGS: ReadonlySet<string> = new Set(
+  KINDS.flatMap((each) => each.flags),
+);
+
 /** A criterion's reading: its instance binder, checked, and its flags. */
 function instanceOf(
   binder: string | null,
   flags: ReadonlySet<string>,
-  allowed: readonly string[],
   rule?: RulePatterns,
 ):
   | { readonly instance: string | null; readonly flags: ReadonlySet<string> }
   | CriterionProblem {
-  for (const flag of flags) {
-    if (!allowed.includes(flag)) {
-      return { flag, type: "unknown-flag" };
-    }
-  }
-
   if (binder !== null && rule !== undefined && !rule.metas.has(binder)) {
     return { binder, type: "unknown-binder" };
   }
@@ -327,10 +336,23 @@ export interface TreeDevelopment {
   /** Whether a row is developed by its conclusions being on the branch. */
   readonly byContents: boolean;
   readonly problems: readonly {
+    /** The rule, or for a role on a term, the term. */
     readonly rule: string;
-    readonly problem: CriterionProblem | { readonly type: "no-relation" };
+    readonly problem: DevelopmentProblem;
   }[];
 }
+
+/** What is wrong with a theory's development, beyond one rule's roles. */
+export type DevelopmentProblem =
+  | CriterionProblem
+  /** A rule counts instances, and the judgement sort has no modus ponens. */
+  | { readonly type: "no-relation" }
+  /** A step's rule whose rows the patterns cannot read: never owed. */
+  | { readonly type: "unreadable" }
+  /** A `tree.` role Carnap does not know, as a misspelt one is. */
+  | { readonly type: "unknown-role"; readonly role: string }
+  /** The `tree.substitution` term is not `{x / te} ph`-shaped. */
+  | { readonly type: "bad-substitution" };
 
 const cache = new WeakMap<SurfaceLanguage, TreeDevelopment>();
 
@@ -388,12 +410,11 @@ function readDevelopment(
   };
 
   const rules: DevelopmentRule[] = [];
-  const byAxiom = new Map<string, DevelopmentRule>();
   const problems: TreeDevelopment["problems"][number][] = [];
   const closureChain = chainOf(theory.closure);
   let annotated = false;
 
-  for (const [name, info] of spec.rules) {
+  for (const name of spec.rules.keys()) {
     if (
       fallenBackOn.has(name) ||
       closureChain.includes(name) ||
@@ -403,24 +424,40 @@ function readDevelopment(
     }
 
     const patterns = patternsOf(name);
+    const statement = statements.get(name);
 
     if (patterns === null) {
-      continue; // not a step: its conclusion is not a focused branch
+      // Not a step, unless it concludes a focused branch: then a student
+      // can name it, and nothing here can say when a row is owed it.
+      if (statement !== undefined && isStep(language, theory, statement)) {
+        problems.push({ problem: { type: "unreadable" }, rule: name });
+      }
+
+      continue;
     }
 
-    const roles = info.roles
+    const chain = chainOf(name);
+    const variants = chain.flatMap((axiom) => {
+      const each = patternsOf(axiom);
+      return each === null ? [] : [[axiom, each] as const];
+    });
+    // The roles of every axiom the rule falls back on are the rule's too, so
+    // a role means the same wherever in the chain it is written.
+    const roles = [
+      ...new Set(
+        chain.flatMap((axiom) => spec.rules.get(axiom)?.roles ?? []),
+      ),
+    ]
       .filter((role) => role.startsWith(DEVELOPMENT))
       .map((role) => role.slice(DEVELOPMENT.length).split("."));
     // A kind with its arguments, or a one-word flag; anything else is a
     // kind the registry does not have.
     const kinds = roles.filter(([kind]) => CRITERIA.has(kind ?? ""));
     const others = roles.filter(([kind]) => !CRITERIA.has(kind ?? ""));
-    const unknown = others.find((parts) => parts.length > 1);
-    const flags = new Set(
-      others
-        .filter((parts) => parts.length === 1)
-        .map(([flag]) => flag ?? ""),
+    const unknown = others.find(
+      (parts) => parts.length > 1 || !FLAGS.has(parts[0] ?? ""),
     );
+    const flags = new Set(others.map(([flag]) => flag ?? ""));
     const fail = (problem: CriterionProblem): void => {
       problems.push({ problem, rule: name });
     };
@@ -441,28 +478,37 @@ function readDevelopment(
         patterns.focus.length === 1 ? "once" : "none",
       ];
       const chosen = CRITERIA.get(kind ?? "") as DevelopmentCriterion;
-      const reading = chosen.read(args, flags, patterns);
+      const stray = [...flags].find((flag) => !chosen.flags.includes(flag));
+      const reading: ReturnType<DevelopmentCriterion["read"]> =
+        stray === undefined
+          ? chosen.read(args, flags, patterns)
+          : { flag: stray, type: "unknown-flag" };
 
       if ("type" in reading) {
         fail(reading);
       } else if (reading.instance === null) {
         criterion = chosen;
       } else {
-        instance = instanceSlot(language, patterns, reading.instance);
+        const binder = reading.instance;
+        // Each statement's instance is found under the binder's name, so
+        // every one must have it.
+        const without = variants.find(([, each]) => !each.metas.has(binder));
+        instance = instanceSlot(language, patterns, binder);
 
-        if (instance === null) {
-          fail({ binder: reading.instance, type: "no-template" });
+        if (without !== undefined) {
+          instance = null;
+          problems.push({
+            problem: { binder, type: "unknown-binder" },
+            rule: without[0],
+          });
+        } else if (instance === null) {
+          fail({ binder, type: "no-template" });
         } else {
           criterion = chosen;
         }
       }
     }
 
-    const chain = chainOf(name);
-    const variants = chain.flatMap((axiom) => {
-      const each = patternsOf(axiom);
-      return each === null ? [] : [each];
-    });
     const rule: DevelopmentRule = {
       chain: new Set(chain),
       criterion,
@@ -470,14 +516,10 @@ function readDevelopment(
       instance,
       name,
       patterns,
-      variants,
+      variants: variants.map(([, each]) => each),
     };
 
     rules.push(rule);
-
-    for (const axiom of rule.chain) {
-      byAxiom.set(axiom, rule);
-    }
   }
 
   const closure = closureChain.flatMap((name) => {
@@ -485,6 +527,20 @@ function readDevelopment(
     return patterns === null ? [] : [patterns];
   });
   const relation = judgementRelation(language, theory);
+  const substitution = roleIndex(language).termFor("tree.substitution");
+
+  if (substitution !== null && substitutionOf(language) === null) {
+    problems.push({
+      problem: { type: "bad-substitution" },
+      rule: substitution,
+    });
+  }
+
+  for (const [owner, role] of treeRoles(language)) {
+    if (!role.startsWith(DEVELOPMENT) && !TREE_ROLES.has(role)) {
+      problems.push({ problem: { role, type: "unknown-role" }, rule: owner });
+    }
+  }
 
   if (relation === null) {
     for (const rule of rules) {
@@ -494,6 +550,13 @@ function readDevelopment(
     }
   }
 
+  // The rules as they are used, so that a rule looked up by its axiom is
+  // the very one in `rules`.
+  const used = relation === null ? rules.map(withoutInstance) : rules;
+  const byAxiom = new Map(
+    used.flatMap((rule) => [...rule.chain].map((axiom) => [axiom, rule])),
+  );
+
   return {
     annotated,
     byAxiom,
@@ -501,13 +564,49 @@ function readDevelopment(
     closure,
     problems,
     relation,
-    rules: relation === null ? rules.map(withoutInstance) : rules,
+    rules: used,
   };
 }
 
 /** A rule whose instances cannot be confirmed asks only that it be used. */
 function withoutInstance(rule: DevelopmentRule): DevelopmentRule {
   return rule.instance === null ? rule : { ...rule, instance: null };
+}
+
+/** Every `tree.` role in a theory, with the term or rule that carries it. */
+function treeRoles(language: SurfaceLanguage): [string, string][] {
+  const found: [string, string][] = [];
+
+  for (const table of [language.spec.terms, language.spec.rules]) {
+    for (const [name, info] of table) {
+      for (const role of info.roles) {
+        if (role.startsWith("tree.")) {
+          found.push([name, role]);
+        }
+      }
+    }
+  }
+
+  return found;
+}
+
+/** Whether a statement concludes a focused branch: a step's rule. */
+function isStep(
+  language: SurfaceLanguage,
+  theory: TreeTheory,
+  statement: AssertStatement,
+): boolean {
+  const judgement = language.spec.terms.get(theory.closes)?.returnSort;
+  const conclusion =
+    judgement === undefined
+      ? null
+      : statementReader(
+          language,
+          statement,
+          judgement,
+        )(statement.conclusion.text);
+
+  return conclusion?.kind === "app" && conclusion.term === theory.focus;
 }
 
 /**
@@ -835,14 +934,10 @@ export function* ruleMatches(
     group.patterns.map((pattern) => ({ pattern, rows: group.rows })),
   );
   const extend = function* (
-    bindings: Bindings | null,
+    bindings: Bindings,
     at: number,
   ): Generator<Bindings> {
     const next = wanted[at];
-
-    if (bindings === null) {
-      return;
-    }
 
     if (next === undefined) {
       yield bindings;
@@ -850,30 +945,42 @@ export function* ruleMatches(
     }
 
     for (const row of next.rows) {
-      yield* extend(
-        matchTerm(language, next.pattern, row, patterns.metas, bindings),
-        at + 1,
-      );
+      for (const found of matchAll(
+        language,
+        next.pattern,
+        row,
+        patterns.metas,
+        bindings,
+      )) {
+        yield* extend(found, at + 1);
+      }
+    }
+  };
+  const focused = function* (
+    order: readonly Term[],
+    at: number,
+    bindings: Bindings,
+  ): Generator<Bindings> {
+    const pattern = patterns.focus[at];
+
+    if (pattern === undefined) {
+      yield* extend(bindings, 0);
+      return;
+    }
+
+    for (const found of matchAll(
+      language,
+      pattern,
+      order[at] as Term,
+      patterns.metas,
+      bindings,
+    )) {
+      yield* focused(order, at + 1, found);
     }
   };
 
   for (const order of permutations(focus)) {
-    let bindings: Bindings | null = new Map();
-
-    for (const [at, pattern] of patterns.focus.entries()) {
-      bindings =
-        bindings === null
-          ? null
-          : matchTerm(
-              language,
-              pattern,
-              order[at] as Term,
-              patterns.metas,
-              bindings,
-            );
-    }
-
-    yield* extend(bindings, 0);
+    yield* focused(order, 0, new Map());
   }
 }
 

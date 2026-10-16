@@ -1023,8 +1023,8 @@ list of what it lacks. `forallx-ubc.mm0` is the worked example.
 A tree with `finish` other than `closed` lets a branch be marked open, and an
 open branch must be complete: every row on it developed. Which rows count,
 and when, is the book's, so the theory says it, with roles on the rule a
-student's name resolves to (the aliased axiom; the role covers its
-`@fallback` chain):
+student's name resolves to: on the aliased axiom or any axiom it falls back
+on, each role covering the whole `@fallback` chain:
 
 | Role | A row the rule applies to is developed on a branch when |
 | --- | --- |
@@ -1068,8 +1068,13 @@ student's name resolves to (the aliased axiom; the role covers its
   two of its rows.
 
 A theory with no development roles at all cannot be used with `finish`
-other than `closed`, and a role that does not read (an unknown kind, a
-binder the rule does not have) is reported when the lesson compiles.
+other than `closed`. When the lesson compiles, Carnap reports whatever it
+would otherwise pass over: a role that does not read (an unknown kind or
+flag, a binder the rule or one of its `@fallback` statements does not
+have), a `tree.` role it does not know (a misspelt
+`tree.completeness.contents`), a `tree.substitution` term without its three
+arguments, and a rule concluding `focus` whose premises are not rows written
+on the branch, which no row could ever be owed.
 
 The student writes every row. **Stack** (`t`) adds a row at the end of the
 branch, **Split** (`s`) branches it in two, and **Add row** (`r`) adds
