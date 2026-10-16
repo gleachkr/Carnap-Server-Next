@@ -125,6 +125,34 @@ describe("open-logic-intuitionistic", () => {
     }
   });
 
+  // A step `1` deep in a prefix once read as the root's first world, so
+  // `1.1.1.1` shared its last step with `1.1` and was never new.
+  test("→𝔽 three times reaches a new prefix each time", async () => {
+    const tree = new TreeBuilder(["1 F: B → (C → (D → (E → E)))"]);
+    const [, one] = tree.stack(
+      "n0",
+      "r1",
+      ["1.1 T: B", "1.1 F: C → (D → (E → E))"],
+      "->F",
+    );
+    const [, two] = tree.stack(
+      "n0",
+      one as string,
+      ["1.1.1 T: C", "1.1.1 F: D → (E → E)"],
+      "->F",
+    );
+    tree.stack(
+      "n0",
+      two as string,
+      ["1.1.1.1 T: D", "1.1.1.1 F: E → E"],
+      "->F",
+    );
+
+    expect(
+      problems(await judge(":|-: B → (C → (D → (E → E)))", tree)),
+    ).toEqual([]);
+  }, 60_000);
+
   test("an argument's root is at prefix 1", async () => {
     const { resolved } = await exercise("A → B :|-: ¬A ∨ B");
 

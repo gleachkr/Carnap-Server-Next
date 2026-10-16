@@ -3,6 +3,7 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
+import { displayRow } from "../src/worker/exercises/truth-tree/aufbau/rows";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
 import {
   judgeTree,
@@ -91,6 +92,67 @@ describe("open-logic-modal-k", () => {
 
     expect(resolved.root).toEqual(["((1) 𝕋 (□ A))", "((1) 𝔽 (◇ A))"]);
   });
+
+  // The prefix table, four steps wide and three deep below 1: each prefix
+  // its own world, read with its own last step and printed back as typed.
+  test("reads every prefix in the table as its own world, and prints it back", async () => {
+    const { resolved } = await exercise("- A");
+    const letters = "abcd";
+    const paths: number[][] = [];
+
+    for (let a = 1; a <= 4; a += 1) {
+      paths.push([a]);
+
+      for (let b = 1; b <= 4; b += 1) {
+        paths.push([a, b]);
+
+        for (let c = 1; c <= 4; c += 1) {
+          paths.push([a, b, c]);
+        }
+      }
+    }
+
+    for (const path of paths) {
+      const prefix = `1.${path.join(".")}`;
+      const read = resolved.reader.read(`${prefix} T: A`);
+      const steps = path.map(
+        (_, at) =>
+          `w${path
+            .slice(0, at + 1)
+            .map((step) => letters[step - 1])
+            .join("")}`,
+      );
+
+      expect(read.ok ? read.engine.replace(/[()]/gu, "") : prefix).toBe(
+        `1 . ${steps.join(" . ")} 𝕋 A`,
+      );
+      const shown = read.ok
+        ? displayRow(read.engine, resolved.language, resolved.theory.rowSort)
+        : null;
+
+      // Printed as typed, and read back as the same world.
+      expect(shown?.replace(/\s/gu, "")).toBe(`${prefix}𝕋A`);
+      const again = shown === null ? null : resolved.reader.read(shown);
+
+      expect(
+        again?.ok === true && read.ok && again.engine === read.engine,
+      ).toBe(true);
+    }
+
+    expect(paths).toHaveLength(84);
+    expect(resolved.reader.read("1.1.1.1.1 T: A").ok).toBe(false);
+  });
+
+  // A step `1` deep in a prefix once read as the root's first world, so
+  // `1.1.1.1` shared its last step with `1.1` and was never new.
+  test("□𝔽 three times reaches a new prefix each time", async () => {
+    const tree = new TreeBuilder(["1 F: [][][]A"]);
+    const [one] = tree.stack("n0", "r1", ["1.1 F: [][]A"], "[]F");
+    const [two] = tree.stack("n0", one as string, ["1.1.1 F: []A"], "[]F");
+    tree.stack("n0", two as string, ["1.1.1.1 F: A"], "[]F");
+
+    expect(problems(await judge(":|-: □□□A", tree))).toEqual([]);
+  }, 60_000);
 
   // proofs-in-K.tex, its first tableau.
   test("the book's tableau for (□A ∧ □B) → □(A ∧ B)", async () => {
