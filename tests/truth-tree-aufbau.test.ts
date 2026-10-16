@@ -152,6 +152,9 @@ interface Checked {
   readonly gaps: number;
   readonly errors: readonly TreeDiagnostic[];
   readonly milliseconds: number;
+  /** The proof text, and its certificate's size in bytes (0 if none). */
+  readonly proof: string;
+  readonly mmbBytes: number;
 }
 
 async function check(root: Shape, system = UBC): Promise<Checked> {
@@ -183,7 +186,9 @@ async function check(root: Shape, system = UBC): Promise<Checked> {
     gaps: proof.gaps,
     hypotheses: proof.hypotheses,
     milliseconds,
+    mmbBytes: result.ok ? (result.mmbBytes?.length ?? 0) : 0,
     ok: result.ok === true,
+    proof: proof.proof,
     verified,
   };
 }
@@ -503,6 +508,36 @@ describe("size", () => {
       `  ${row} rows: compile ${checked.milliseconds.toFixed(0)} ms`,
     );
     expect(checked.milliseconds).toBeLessThan(1000);
+  });
+});
+
+describe("a step's certificate", () => {
+  // `unfocus` is given the branch less the cited rows: left to find it, the
+  // engine's proof re-sorts the whole branch, so a step citing an early row
+  // of a long branch whose rows have mixed heads, as any tree's do, costs
+  // the branch's square (design/aufbau-issues-2026-10-17, section 1).
+  test("grows with the step, not with the branch's order", async () => {
+    const names = "abcdefghijklm".split("");
+    const middle: Row[] = names.flatMap((name, i) =>
+      ["F", "G", "H"].map(
+        (p, j): Row => [`m${3 * i + j}`, `${p}${name}`, []],
+      ),
+    );
+    const checked = await check({
+      closed: ["p", "np"],
+      rows: [
+        ["c", "P & Q", []],
+        ...middle,
+        ["np", "¬P", []],
+        ["p", "P", ["c"], "&"],
+        ["q", "Q", ["c"], "&"],
+      ],
+    });
+
+    expect(where(checked.errors)).toEqual([]);
+    expect(checked.verified).toBe(true);
+    expect(checked.mmbBytes).toBeLessThan(60_000);
+    expect(checked.proof).toContain("by unfocus (ga := $");
   });
 });
 

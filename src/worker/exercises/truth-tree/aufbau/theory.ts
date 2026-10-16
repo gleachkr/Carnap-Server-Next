@@ -13,6 +13,7 @@
 import type { AppTerm, SurfaceLanguage } from "@aufbau/syntax";
 import { printTerm, UnprintableTermError } from "@aufbau/syntax";
 import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
+import { statementReader } from "./patterns";
 
 /**
  * A tree calculus's plumbing:
@@ -41,6 +42,13 @@ export interface TreeTheory {
   readonly closes: string;
   readonly focus: string;
   readonly unfocus: string;
+  /**
+   * The binder of `tree.unfocus` that stands for the branch less its cited
+   * rows, where the axiom splits the branch so (`focus (ga ; de) at de`):
+   * `ga`. Null where it does not, as under an idempotent join, whose
+   * `unfocus` takes the whole branch (`focus ga at de > closes ga ; de`).
+   */
+  readonly unfocusRest: string | null;
   readonly closure: string;
   readonly join: string;
   /**
@@ -159,7 +167,76 @@ export function readTreeTheory(
     root: roles.termFor("tree.root"),
     rowSort: rowSort as string,
     unfocus: unfocus as string,
+    unfocusRest: restOf(
+      language,
+      unfocus as string,
+      closes as string,
+      focus as string,
+      roles.termFor("context-join"),
+    ),
   };
+}
+
+/**
+ * The binder `ga` of an `unfocus` whose one hypothesis is `focus (ga ; de)
+ * at de`, either way round the join; null for any other shape.
+ */
+function restOf(
+  language: SurfaceLanguage,
+  unfocus: string,
+  closes: string,
+  focus: string,
+  join: string | null,
+): string | null {
+  const statement = language.spec.statements.find(
+    (each) =>
+      (each.kind === "axiom" || each.kind === "theorem") &&
+      each.name === unfocus,
+  );
+  const judgement = language.spec.terms.get(closes)?.returnSort;
+  const [hypothesis, ...more] =
+    statement?.kind === "axiom" || statement?.kind === "theorem"
+      ? statement.hypotheses
+      : [];
+
+  if (
+    statement === undefined ||
+    (statement.kind !== "axiom" && statement.kind !== "theorem") ||
+    judgement === undefined ||
+    hypothesis === undefined ||
+    "sort" in hypothesis ||
+    more.length > 0
+  ) {
+    return null;
+  }
+
+  const read = statementReader(
+    language,
+    statement,
+    judgement,
+  )(hypothesis.text);
+  const [branch, cited] =
+    read?.kind === "app" && read.term === focus ? read.args : [];
+
+  if (
+    branch?.kind !== "app" ||
+    branch.term !== join ||
+    cited?.kind !== "variable"
+  ) {
+    return null;
+  }
+
+  const [left, right] = branch.args;
+
+  if (left?.kind !== "variable" || right?.kind !== "variable") {
+    return null;
+  }
+
+  return right.name === cited.name
+    ? left.name
+    : left.name === cited.name
+      ? right.name
+      : null;
 }
 
 /**
