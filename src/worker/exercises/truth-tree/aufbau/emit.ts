@@ -18,14 +18,23 @@
  * - an open leaf, and a step that cannot be written down (no rule, an
  *   unreadable row), is no theorem at all.
  *
- * One theorem per inference rather than one for the tree, because a
- * certificate proves the statements it is checked against and nothing about
- * how. One theorem, "the root closes", would be proved as well by any other
- * tree with that root; one per inference is proved only by the inferences
- * this tree makes. The server writes the same theorems from the stored tree,
- * so a certificate that verifies says that every step, closure and instance
- * written is right, and the tree's shape (which branches are closed, which
- * steps are missing) says the rest.
+ * One theorem per inference rather than one for the tree, so that the
+ * engine's errors land on the line of the step at fault, and so that a
+ * branch left open is a theorem's missing premise rather than a hole in one
+ * proof. The server writes the same theorems from the stored tree, and the
+ * tree's shape (which branches are closed, which steps are missing) says the
+ * rest.
+ *
+ * **What a certificate proves.** A certificate proves the statements it is
+ * checked against and nothing about how. A step's statement is only "the
+ * branch above closes if the branches it writes do"; the rule, the cited
+ * rows and the focus are in the proof text, which the browser writes and the
+ * server never sees. So a certificate made by hand can prove a step's
+ * theorem without its rule wherever the branch above closes anyway, and the
+ * step is credited though wrong. This is accepted: proving that branch
+ * closes takes a closed tableau for it, which earns the same credit
+ * honestly, and nothing the theory does not prove is ever certified. A
+ * certificate from the editor proves each theorem as its proof text says.
  *
  * **Nothing here knows a calculus.** The theory names its plumbing by role
  * (`./theory.ts`), and a step is written the same way in any of them:
