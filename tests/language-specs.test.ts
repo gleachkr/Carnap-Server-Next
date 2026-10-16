@@ -121,14 +121,17 @@ describe("language specs", () => {
       "carnap-prop": [],
       "forallx-calgary": PROOF_THEORY_NOTATIONS,
       "forallx-magnus": PROOF_THEORY_NOTATIONS,
-      // The same layer, with `_` declared first, and the tree judgements:
-      // a student never types a judgement, so none is a delimiter.
+      // The same layer, with `_` declared first, the tree judgements and the
+      // check marks: a student types neither, so none is a delimiter.
       "forallx-ubc": [
         "_",
         ...PROOF_THEORY_NOTATIONS.filter((token) => token !== "_"),
         "closes",
         "focus",
         "at",
+        "✓",
+        "✓ᵢ",
+        "↦",
       ],
       // K's, and the equations a prefix is a list by.
       "open-logic-intuitionistic": [...OLP_MODAL_NOTATIONS, "≐", "⇔", "≗"],

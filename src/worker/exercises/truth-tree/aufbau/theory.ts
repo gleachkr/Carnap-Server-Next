@@ -37,9 +37,9 @@ import { statementReader } from "./patterns";
  *   by a step that cites it, as UBC checks rows off;
  * - `tree.mark` and `tree.mark.instance` — a check mark, which a rule writes
  *   on the branch beside its rows and the student never types: `✓ ρ` for the
- *   row ρ the step cites, and `✓ ρ ψ` beside each row ψ a step writes from ρ,
- *   for a rule a row owes once per instance. Each is a term of the branch
- *   sort, so a mark is on a branch exactly where a step put it there.
+ *   row ρ the step cites, and `✓ᵢ ρ ↦ ψ` beside each row ψ a step writes
+ *   from ρ, for a rule a row owes once per instance. Each is a term of the
+ *   branch sort, so a mark is on a branch exactly where a step put it there.
  *
  * A row is read at the one sort with a coercion into the branch sort.
  */

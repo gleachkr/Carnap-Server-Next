@@ -970,6 +970,8 @@ says what that means through `@syntax role` annotations:
 | `tree.assert`, `tree.deny` | terms | how the root says a sentence is true, and is not |
 | `tree.root` | a term | where the root says it, for rows that are somewhere (a prefixed tableau's `1`) |
 | `tree.completeness.contents` | a term | an open branch is complete by what is on it (see [When a row is developed](#when-a-row-is-developed)) |
+| `tree.mark` | a term | a check mark a rule writes for the row it develops (`✓ ρ`) |
+| `tree.mark.instance` | a term | a check mark a rule writes beside each instance it writes (`✓ᵢ ρ ↦ ψ`) |
 
 - A **row** is read at the one sort with a coercion into the branch sort:
   the sentence sort for UBC, a signed-sentence sort for a Smullyan tableau.
@@ -1011,9 +1013,20 @@ says what that means through `@syntax role` annotations:
   branch may not mention (`{a: name}`, `{n: idx}`), so the engine's
   dependency check is the condition. `open-logic-modal-k.mm0` names each
   prefix's last step by a variable of its own for this reason.
+- A rule on one row may write **check marks** on the branches it opens, as
+  the book ticks a row off. `tree.mark` is a term of the branch sort taking
+  a row, written `✓ ρ` with ρ the rule's focus; `tree.mark.instance` takes
+  two rows, written `✓ᵢ ρ ↦ ψ` beside each row ψ the rule writes, for a rule
+  a row owes once per instance (UBC's `∀` and `¬∃`). The student never
+  types a mark: Carnap writes the ones a rule's branches name, and the
+  engine checks them as it checks the rows. A mark is known by its role, so
+  a term without one beside a rule's rows is a premise that is not a row
+  (reported, below). Each needs a `@congr` rule, like any other branch
+  term. `forallx-ubc` marks every rule but identity.
 - **Give the judgements notations.** A language with letter delimiters
   splits a bare multi-letter term name such as `cl` into letters, so
-  `forallx-ubc` writes them `closes Γ` and `focus Γ at Δ`.
+  `forallx-ubc` writes them `closes Γ` and `focus Γ at Δ`, and its marks
+  `✓` and `✓ᵢ`.
 
 A theory missing any of this is refused when the lesson compiles, with the
 list of what it lacks. `forallx-ubc.mm0` is the worked example.

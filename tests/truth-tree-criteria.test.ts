@@ -606,15 +606,16 @@ describe("another calculus's roles", () => {
     });
 
     test("a variant without the instance's binder", async () => {
-      const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "")
-        .replace(
-          "--| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ps ; ch $ > $ focus ga at (∀ x ph) $\n--| @recover te ps ph x\n--| @recover ue ch ph x",
-          "--| @view {x: var} (ga: ctx x) (se ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ps ; ch $ > $ focus ga at (∀ x ph) $\n--| @recover se ps ph x\n--| @recover ue ch ph x",
-        )
-        .replace(
-          "axiom tb_all2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):\n  $ closes ga ; {x / te} ph ; {x / ue} ph $",
-          "axiom tb_all2 {x: var} (ga: ctx x) (se ue: tm) (ph: wff x):\n  $ closes ga ; {x / se} ph ; {x / ue} ph $",
-        );
+      // tb_all2's view and axiom, with its first instance's binder renamed.
+      const source = theorySourceByFileName("forallx-ubc.mm0") ?? "";
+      const from = source.indexOf(
+        "--| @view {x: var} (ga: ctx x) (te ue: tm)",
+      );
+      const to = source.indexOf(";\n", source.indexOf("axiom tb_all2", from));
+      const ubc =
+        source.slice(0, from) +
+        source.slice(from, to).replaceAll(/\bte\b/gu, "se") +
+        source.slice(to);
       expect(ubc).toContain("axiom tb_all2 {x: var} (ga: ctx x) (se ue: tm)");
       const result = await compileCarnapMarkdown(
         `:::aufbau-mm0{name="renamed"}\n${ubc}\n:::\n\n::::truth-tree{#t system="renamed" finish="one-open"}\nIs this set consistent?\n\n- ∀x Fx\n::::`,
@@ -627,6 +628,21 @@ describe("another calculus's roles", () => {
           each.params?.binder,
         ]),
       ).toEqual([["truth_tree_development", "tb_all2", "te"]]);
+    });
+
+    test("a mark without its role is not a row", async () => {
+      const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "").replace(
+        "--| @syntax role tree.mark\n",
+        "",
+      );
+      expect(ubc).not.toContain("role tree.mark\n");
+      const result = await compileCarnapMarkdown(
+        `:::aufbau-mm0{name="unmarked"}\n${ubc}\n:::\n\n::::truth-tree{#t system="unmarked" finish="one-open"}\nIs this set consistent?\n\n- ∀x Fx\n::::`,
+      );
+
+      expect(
+        result.diagnostics.map((each) => [each.code, each.params?.rule]),
+      ).toContainEqual(["truth_tree_development", "tb_and"]);
     });
 
     test("a substitution that is not one", async () => {

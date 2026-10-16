@@ -654,6 +654,8 @@ axiom sb_t_irrel {x: var} (te: tm x) (ue: tm): $ (tsub x / te ue) ≐ ue $;
 --   tree.unfocus  the axiom from a focused step back to the branch, which
 --                 checks the cited rows are on it
 --   tree.closure  the rule a closed branch's × cites by
+--   tree.mark, tree.mark.instance
+--                 the check marks the rules write (below)
 -- The branch is joined by the `context-join` term, as a sequent's context is.
 
 --| @syntax role tree.closes
@@ -677,45 +679,64 @@ axiom tb_close_neq (ga: ctx) (te: tm): $ focus ga at (¬ te = te) $;
 --| @syntax alias ×
 axiom tb_close (ga: ctx) (ph: wff): $ focus ga at (ph ; ¬ ph) $;
 
+-- ## Check marks (§5.3, §10.2)
+-- The book ticks a row off when a rule is used on it, and a row a general rule
+-- owes once per name is ticked per name (the margin's \a,b). Here the rule
+-- writes the tick: each rule used once on a row writes `✓ ρ` on every branch
+-- it opens, ρ the row it develops, and ∀ and ¬∃ write `✓ᵢ ρ ↦ ψ` beside each
+-- instance ψ. A student never types a mark; Carnap writes the ones the rule
+-- asks for (roles `tree.mark`, `tree.mark.instance`), so a mark is on a branch
+-- exactly where a step on its row is above it.
+--| @syntax role tree.mark
+term chk (ph: wff): ctx;
+prefix chk: $✓$ prec max;
+--| @syntax role tree.mark.instance
+term chki (ph ps: wff): ctx;
+notation chki (ph ps: wff): ctx = ($✓ᵢ$:max) ph ($↦$:0) ps;
+--| @congr
+axiom chk_congr (ph ps: wff): $ ph ⟺ ps $ > $ ctx_eq (chk ph) (chk ps) $;
+--| @congr
+axiom chki_congr (ph ps ch th: wff): $ ph ⟺ ps $ > $ ch ⟺ th $ > $ ctx_eq (chki ph ch) (chki ps th) $;
+
 -- ## The sentential rules (§5)
 --| @syntax alias & ∧ ^ /\
-axiom tb_and (ga: ctx) (ph ps: wff): $ closes ga ; ph ; ps $ > $ focus ga at (ph ∧ ps) $;
+axiom tb_and (ga: ctx) (ph ps: wff): $ closes ga ; chk (ph ∧ ps) ; ph ; ps $ > $ focus ga at (ph ∧ ps) $;
 axiom tb_nand_l (ga: ctx) (ph ps: wff):
-  $ closes ga ; ¬ ph $ > $ closes ga ; ¬ ps $ > $ focus ga at (¬ (ph ∧ ps)) $;
+  $ closes ga ; chk (¬ (ph ∧ ps)) ; ¬ ph $ > $ closes ga ; chk (¬ (ph ∧ ps)) ; ¬ ps $ > $ focus ga at (¬ (ph ∧ ps)) $;
 --| @fallback tb_nand_l
 --| @syntax alias ¬& ¬∧ ~& -& ~∧ -∧
 axiom tb_nand_r (ga: ctx) (ph ps: wff):
-  $ closes ga ; ¬ ps $ > $ closes ga ; ¬ ph $ > $ focus ga at (¬ (ph ∧ ps)) $;
+  $ closes ga ; chk (¬ (ph ∧ ps)) ; ¬ ps $ > $ closes ga ; chk (¬ (ph ∧ ps)) ; ¬ ph $ > $ focus ga at (¬ (ph ∧ ps)) $;
 axiom tb_or_l (ga: ctx) (ph ps: wff):
-  $ closes ga ; ph $ > $ closes ga ; ps $ > $ focus ga at (ph ∨ ps) $;
+  $ closes ga ; chk (ph ∨ ps) ; ph $ > $ closes ga ; chk (ph ∨ ps) ; ps $ > $ focus ga at (ph ∨ ps) $;
 --| @fallback tb_or_l
 --| @syntax alias ∨ \/ |
 axiom tb_or_r (ga: ctx) (ph ps: wff):
-  $ closes ga ; ps $ > $ closes ga ; ph $ > $ focus ga at (ph ∨ ps) $;
+  $ closes ga ; chk (ph ∨ ps) ; ps $ > $ closes ga ; chk (ph ∨ ps) ; ph $ > $ focus ga at (ph ∨ ps) $;
 --| @syntax alias ¬∨ ~∨ -∨ ¬\/ ~\/ -\/
-axiom tb_nor (ga: ctx) (ph ps: wff): $ closes ga ; ¬ ph ; ¬ ps $ > $ focus ga at (¬ (ph ∨ ps)) $;
+axiom tb_nor (ga: ctx) (ph ps: wff): $ closes ga ; chk (¬ (ph ∨ ps)) ; ¬ ph ; ¬ ps $ > $ focus ga at (¬ (ph ∨ ps)) $;
 axiom tb_imp_l (ga: ctx) (ph ps: wff):
-  $ closes ga ; ¬ ph $ > $ closes ga ; ps $ > $ focus ga at (ph → ps) $;
+  $ closes ga ; chk (ph → ps) ; ¬ ph $ > $ closes ga ; chk (ph → ps) ; ps $ > $ focus ga at (ph → ps) $;
 --| @fallback tb_imp_l
 --| @syntax alias ⊃ → -> >
 axiom tb_imp_r (ga: ctx) (ph ps: wff):
-  $ closes ga ; ps $ > $ closes ga ; ¬ ph $ > $ focus ga at (ph → ps) $;
+  $ closes ga ; chk (ph → ps) ; ps $ > $ closes ga ; chk (ph → ps) ; ¬ ph $ > $ focus ga at (ph → ps) $;
 --| @syntax alias ¬⊃ ~⊃ -⊃ ¬→ ~→ ~-> -->
-axiom tb_nimp (ga: ctx) (ph ps: wff): $ closes ga ; ph ; ¬ ps $ > $ focus ga at (¬ (ph → ps)) $;
+axiom tb_nimp (ga: ctx) (ph ps: wff): $ closes ga ; chk (¬ (ph → ps)) ; ph ; ¬ ps $ > $ focus ga at (¬ (ph → ps)) $;
 axiom tb_iff_l (ga: ctx) (ph ps: wff):
-  $ closes ga ; ph ; ps $ > $ closes ga ; ¬ ph ; ¬ ps $ > $ focus ga at (ph ↔ ps) $;
+  $ closes ga ; chk (ph ↔ ps) ; ph ; ps $ > $ closes ga ; chk (ph ↔ ps) ; ¬ ph ; ¬ ps $ > $ focus ga at (ph ↔ ps) $;
 --| @fallback tb_iff_l
 --| @syntax alias ≡ ↔ <->
 axiom tb_iff_r (ga: ctx) (ph ps: wff):
-  $ closes ga ; ¬ ph ; ¬ ps $ > $ closes ga ; ph ; ps $ > $ focus ga at (ph ↔ ps) $;
+  $ closes ga ; chk (ph ↔ ps) ; ¬ ph ; ¬ ps $ > $ closes ga ; chk (ph ↔ ps) ; ph ; ps $ > $ focus ga at (ph ↔ ps) $;
 axiom tb_niff_l (ga: ctx) (ph ps: wff):
-  $ closes ga ; ph ; ¬ ps $ > $ closes ga ; ¬ ph ; ps $ > $ focus ga at (¬ (ph ↔ ps)) $;
+  $ closes ga ; chk (¬ (ph ↔ ps)) ; ph ; ¬ ps $ > $ closes ga ; chk (¬ (ph ↔ ps)) ; ¬ ph ; ps $ > $ focus ga at (¬ (ph ↔ ps)) $;
 --| @fallback tb_niff_l
 --| @syntax alias ¬≡ ~≡ -≡ ¬↔ ~<->
 axiom tb_niff_r (ga: ctx) (ph ps: wff):
-  $ closes ga ; ¬ ph ; ps $ > $ closes ga ; ph ; ¬ ps $ > $ focus ga at (¬ (ph ↔ ps)) $;
+  $ closes ga ; chk (¬ (ph ↔ ps)) ; ¬ ph ; ps $ > $ closes ga ; chk (¬ (ph ↔ ps)) ; ph ; ¬ ps $ > $ focus ga at (¬ (ph ↔ ps)) $;
 --| @syntax alias ¬¬ ~~ --
-axiom tb_nn (ga: ctx) (ph: wff): $ closes ga ; ph $ > $ focus ga at (¬ ¬ ph) $;
+axiom tb_nn (ga: ctx) (ph: wff): $ closes ga ; chk (¬ ¬ ph) ; ph $ > $ focus ga at (¬ ¬ ph) $;
 
 -- ## When a row is developed (§5.3, §10.2)
 -- A rule with no development role is used once on a row it applies to; the
@@ -733,92 +754,92 @@ axiom tb_nn (ga: ctx) (ph: wff): $ closes ga ; ph $ > $ focus ga at (¬ ¬ ph) $
 -- one `@recover` per instance, chained by `@fallback`: the alias is on the
 -- one-instance axiom, declared last, so the common case is tried first and a
 -- longer step falls through to the variant with its count.
---| @view {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x) (ps ch th et ka: wff): $ closes ga ; ps ; ch ; th ; et ; ka $ > $ focus ga at (∀ x ph) $
+--| @view {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x) (ps ch th et ka: wff): $ closes ga ; chki (∀ x ph) (ps) ; ps ; chki (∀ x ph) (ch) ; ch ; chki (∀ x ph) (th) ; th ; chki (∀ x ph) (et) ; et ; chki (∀ x ph) (ka) ; ka $ > $ focus ga at (∀ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @recover ve th ph x
 --| @recover we et ph x
 --| @recover ze ka ph x
 axiom tb_all5 {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x):
-  $ closes ga ; {x / te} ph ; {x / ue} ph ; {x / ve} ph ; {x / we} ph ; {x / ze} ph $ > $ focus ga at (∀ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x) (ps ch th et: wff): $ closes ga ; ps ; ch ; th ; et $ > $ focus ga at (∀ x ph) $
+  $ closes ga ; chki (∀ x ph) ({x / te} ph) ; {x / te} ph ; chki (∀ x ph) ({x / ue} ph) ; {x / ue} ph ; chki (∀ x ph) ({x / ve} ph) ; {x / ve} ph ; chki (∀ x ph) ({x / we} ph) ; {x / we} ph ; chki (∀ x ph) ({x / ze} ph) ; {x / ze} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x) (ps ch th et: wff): $ closes ga ; chki (∀ x ph) (ps) ; ps ; chki (∀ x ph) (ch) ; ch ; chki (∀ x ph) (th) ; th ; chki (∀ x ph) (et) ; et $ > $ focus ga at (∀ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @recover ve th ph x
 --| @recover we et ph x
 --| @fallback tb_all5
 axiom tb_all4 {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x):
-  $ closes ga ; {x / te} ph ; {x / ue} ph ; {x / ve} ph ; {x / we} ph $ > $ focus ga at (∀ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x) (ps ch th: wff): $ closes ga ; ps ; ch ; th $ > $ focus ga at (∀ x ph) $
+  $ closes ga ; chki (∀ x ph) ({x / te} ph) ; {x / te} ph ; chki (∀ x ph) ({x / ue} ph) ; {x / ue} ph ; chki (∀ x ph) ({x / ve} ph) ; {x / ve} ph ; chki (∀ x ph) ({x / we} ph) ; {x / we} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x) (ps ch th: wff): $ closes ga ; chki (∀ x ph) (ps) ; ps ; chki (∀ x ph) (ch) ; ch ; chki (∀ x ph) (th) ; th $ > $ focus ga at (∀ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @recover ve th ph x
 --| @fallback tb_all4
 axiom tb_all3 {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x):
-  $ closes ga ; {x / te} ph ; {x / ue} ph ; {x / ve} ph $ > $ focus ga at (∀ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ps ; ch $ > $ focus ga at (∀ x ph) $
+  $ closes ga ; chki (∀ x ph) ({x / te} ph) ; {x / te} ph ; chki (∀ x ph) ({x / ue} ph) ; {x / ue} ph ; chki (∀ x ph) ({x / ve} ph) ; {x / ve} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; chki (∀ x ph) (ps) ; ps ; chki (∀ x ph) (ch) ; ch $ > $ focus ga at (∀ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @fallback tb_all3
 axiom tb_all2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):
-  $ closes ga ; {x / te} ph ; {x / ue} ph $ > $ focus ga at (∀ x ph) $;
---| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; ps $ > $ focus ga at (∀ x ph) $
+  $ closes ga ; chki (∀ x ph) ({x / te} ph) ; {x / te} ph ; chki (∀ x ph) ({x / ue} ph) ; {x / ue} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; chki (∀ x ph) (ps) ; ps $ > $ focus ga at (∀ x ph) $
 --| @recover te ps ph x
 --| @fallback tb_all2
 --| @syntax role tree.development.general.te
 --| @syntax role tree.development.nonempty
 --| @syntax alias ∀ @
 axiom tb_all1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
-  $ closes ga ; {x / te} ph $ > $ focus ga at (∀ x ph) $;
---| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; ¬ ps $ > $ focus ga at (¬ ∀ x ph) $
+  $ closes ga ; chki (∀ x ph) ({x / te} ph) ; {x / te} ph $ > $ focus ga at (∀ x ph) $;
+--| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; chk (¬ ∀ x ph) ; ¬ ps $ > $ focus ga at (¬ ∀ x ph) $
 --| @recover a ps ph x
 --| @syntax role tree.development.once.a
 --| @syntax alias ¬∀ ~∀ -∀ ¬@ ~@ -@
 axiom tb_nall {x: var} {a: name} (ga: ctx x) (ph: wff x):
-  $ closes ga ; ¬ {x / a} ph $ > $ focus ga at (¬ ∀ x ph) $;
---| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; ps $ > $ focus ga at (∃ x ph) $
+  $ closes ga ; chk (¬ ∀ x ph) ; ¬ {x / a} ph $ > $ focus ga at (¬ ∀ x ph) $;
+--| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; chk (∃ x ph) ; ps $ > $ focus ga at (∃ x ph) $
 --| @recover a ps ph x
 --| @syntax role tree.development.once.a
 --| @syntax alias ∃ 3
 axiom tb_ex {x: var} {a: name} (ga: ctx x) (ph: wff x):
-  $ closes ga ; {x / a} ph $ > $ focus ga at (∃ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x) (ps ch th et ka: wff): $ closes ga ; ¬ ps ; ¬ ch ; ¬ th ; ¬ et ; ¬ ka $ > $ focus ga at (¬ ∃ x ph) $
+  $ closes ga ; chk (∃ x ph) ; {x / a} ph $ > $ focus ga at (∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x) (ps ch th et ka: wff): $ closes ga ; chki (¬ ∃ x ph) (¬ ps) ; ¬ ps ; chki (¬ ∃ x ph) (¬ ch) ; ¬ ch ; chki (¬ ∃ x ph) (¬ th) ; ¬ th ; chki (¬ ∃ x ph) (¬ et) ; ¬ et ; chki (¬ ∃ x ph) (¬ ka) ; ¬ ka $ > $ focus ga at (¬ ∃ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @recover ve th ph x
 --| @recover we et ph x
 --| @recover ze ka ph x
 axiom tb_nex5 {x: var} (ga: ctx x) (te ue ve we ze: tm) (ph: wff x):
-  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph ; ¬ {x / ve} ph ; ¬ {x / we} ph ; ¬ {x / ze} ph $ > $ focus ga at (¬ ∃ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x) (ps ch th et: wff): $ closes ga ; ¬ ps ; ¬ ch ; ¬ th ; ¬ et $ > $ focus ga at (¬ ∃ x ph) $
+  $ closes ga ; chki (¬ ∃ x ph) (¬ {x / te} ph) ; ¬ {x / te} ph ; chki (¬ ∃ x ph) (¬ {x / ue} ph) ; ¬ {x / ue} ph ; chki (¬ ∃ x ph) (¬ {x / ve} ph) ; ¬ {x / ve} ph ; chki (¬ ∃ x ph) (¬ {x / we} ph) ; ¬ {x / we} ph ; chki (¬ ∃ x ph) (¬ {x / ze} ph) ; ¬ {x / ze} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x) (ps ch th et: wff): $ closes ga ; chki (¬ ∃ x ph) (¬ ps) ; ¬ ps ; chki (¬ ∃ x ph) (¬ ch) ; ¬ ch ; chki (¬ ∃ x ph) (¬ th) ; ¬ th ; chki (¬ ∃ x ph) (¬ et) ; ¬ et $ > $ focus ga at (¬ ∃ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @recover ve th ph x
 --| @recover we et ph x
 --| @fallback tb_nex5
 axiom tb_nex4 {x: var} (ga: ctx x) (te ue ve we: tm) (ph: wff x):
-  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph ; ¬ {x / ve} ph ; ¬ {x / we} ph $ > $ focus ga at (¬ ∃ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x) (ps ch th: wff): $ closes ga ; ¬ ps ; ¬ ch ; ¬ th $ > $ focus ga at (¬ ∃ x ph) $
+  $ closes ga ; chki (¬ ∃ x ph) (¬ {x / te} ph) ; ¬ {x / te} ph ; chki (¬ ∃ x ph) (¬ {x / ue} ph) ; ¬ {x / ue} ph ; chki (¬ ∃ x ph) (¬ {x / ve} ph) ; ¬ {x / ve} ph ; chki (¬ ∃ x ph) (¬ {x / we} ph) ; ¬ {x / we} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x) (ps ch th: wff): $ closes ga ; chki (¬ ∃ x ph) (¬ ps) ; ¬ ps ; chki (¬ ∃ x ph) (¬ ch) ; ¬ ch ; chki (¬ ∃ x ph) (¬ th) ; ¬ th $ > $ focus ga at (¬ ∃ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @recover ve th ph x
 --| @fallback tb_nex4
 axiom tb_nex3 {x: var} (ga: ctx x) (te ue ve: tm) (ph: wff x):
-  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph ; ¬ {x / ve} ph $ > $ focus ga at (¬ ∃ x ph) $;
---| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; ¬ ps ; ¬ ch $ > $ focus ga at (¬ ∃ x ph) $
+  $ closes ga ; chki (¬ ∃ x ph) (¬ {x / te} ph) ; ¬ {x / te} ph ; chki (¬ ∃ x ph) (¬ {x / ue} ph) ; ¬ {x / ue} ph ; chki (¬ ∃ x ph) (¬ {x / ve} ph) ; ¬ {x / ve} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te ue: tm) (ph: wff x) (ps ch: wff): $ closes ga ; chki (¬ ∃ x ph) (¬ ps) ; ¬ ps ; chki (¬ ∃ x ph) (¬ ch) ; ¬ ch $ > $ focus ga at (¬ ∃ x ph) $
 --| @recover te ps ph x
 --| @recover ue ch ph x
 --| @fallback tb_nex3
 axiom tb_nex2 {x: var} (ga: ctx x) (te ue: tm) (ph: wff x):
-  $ closes ga ; ¬ {x / te} ph ; ¬ {x / ue} ph $ > $ focus ga at (¬ ∃ x ph) $;
---| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; ¬ ps $ > $ focus ga at (¬ ∃ x ph) $
+  $ closes ga ; chki (¬ ∃ x ph) (¬ {x / te} ph) ; ¬ {x / te} ph ; chki (¬ ∃ x ph) (¬ {x / ue} ph) ; ¬ {x / ue} ph $ > $ focus ga at (¬ ∃ x ph) $;
+--| @view {x: var} (ga: ctx x) (te: tm) (ph: wff x) (ps: wff): $ closes ga ; chki (¬ ∃ x ph) (¬ ps) ; ¬ ps $ > $ focus ga at (¬ ∃ x ph) $
 --| @recover te ps ph x
 --| @fallback tb_nex2
 --| @syntax role tree.development.general.te
 --| @syntax role tree.development.nonempty
 --| @syntax alias ¬∃ ~∃ -∃ ¬3 ~3 -3
 axiom tb_nex1 {x: var} (ga: ctx x) (te: tm) (ph: wff x):
-  $ closes ga ; ¬ {x / te} ph $ > $ focus ga at (¬ ∃ x ph) $;
+  $ closes ga ; chki (¬ ∃ x ph) (¬ {x / te} ph) ; ¬ {x / te} ph $ > $ focus ga at (¬ ∃ x ph) $;
 
 -- ## Identity (§12.7)
 -- From `a = b` and a row, the row with every `a` made `b` (`ph` may not

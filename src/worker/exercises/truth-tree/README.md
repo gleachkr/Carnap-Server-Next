@@ -69,7 +69,13 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   a closure written `σ . ρ 𝔽 A ; σ 𝕋 A` finds `σ` from either row. With `tree.substitution` on its substitution term,
   `patterns.ts` matches `{x / te} ph` as the substitution it denotes, which
   is what lets UBC's identity rule (`tree.development.pairs`) be owed one
-  rewriting of each literal on its branch. A general step's
+  rewriting of each literal on its branch. A rule may write check marks
+  on its branches (`tree.mark`, `tree.mark.instance`, UBC's `✓ ρ` and
+  `✓ᵢ ρ ↦ ψ`): the pattern reader sets them aside as not rows
+  (`RulePatterns.marks`), and the emitter writes the ones a step's rule
+  names beside its rows, so the engine checks them as it checks the rows.
+  Nothing reads them back yet; `complete.ts` still judges completeness from
+  the verified steps. A general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
   browser compiles every candidate once to find which hold, and that compile

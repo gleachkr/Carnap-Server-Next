@@ -541,6 +541,53 @@ describe("a step's certificate", () => {
   });
 });
 
+describe("check marks", () => {
+  // UBC's rules write `✓ ρ` (and ∀'s `✓ᵢ ρ ↦ ψ`) beside a step's rows, so a
+  // step whose child branch lacks them proves nothing: the emitter must
+  // write what the theory's mark roles name.
+  const unmarked: TreeSystem = {
+    ...UBC,
+    theory: { ...UBC.theory, mark: null, markInstance: null },
+  };
+  const once: Shape = {
+    closed: ["p", "np"],
+    rows: [
+      ["c", "P & Q", []],
+      ["np", "¬P", []],
+      ["p", "P", ["c"], "&"],
+      ["q", "Q", ["c"], "&"],
+    ],
+  };
+  const general: Shape = {
+    closed: ["fa", "nfa"],
+    rows: [
+      ["all", "∀x Fx", []],
+      ["nfa", "¬Fa", []],
+      ["fa", "Fa", ["all"], "∀"],
+    ],
+  };
+
+  test("a step writes the mark its rule asks for", async () => {
+    for (const [shape, mark] of [
+      [once, "chk "],
+      [general, "chki "],
+    ] as const) {
+      const checked = await check(shape);
+
+      expect(where(checked.errors)).toEqual([]);
+      expect(checked.verified).toBe(true);
+      expect(checked.proof).toContain(mark);
+    }
+  });
+
+  test("a step without its mark is refused at that step", async () => {
+    expect(where((await check(once, unmarked)).errors)).toEqual(["step p,q"]);
+    expect(where((await check(general, unmarked)).errors)).toEqual([
+      "step fa",
+    ]);
+  });
+});
+
 describe("a signed tableau, from its own theory", () => {
   test("a closed tree verifies: P → (Q → P)", async () => {
     const checked = await check(
