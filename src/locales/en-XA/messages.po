@@ -5356,6 +5356,14 @@ msgstr ""
 msgid "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” writes a new name, and has no @view saying where it is in the rows it writes, so Carnap cannot tell from a branch whether a row was developed by it."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The rule “{rule}” writes no check mark on a branch it opens, though the system's rules write marks, so Carnap cannot tell from a branch whether a row was developed by it."
+msgstr ""
+
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The rule named does not give this from row {cited}."
 msgstr ""
@@ -5450,6 +5458,10 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The system gives “{rule}” the role “{role}”, which Carnap does not know."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system has no @relation on the sort “{sort}”, which Carnap needs to tell from a branch whether its rows are developed."
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts

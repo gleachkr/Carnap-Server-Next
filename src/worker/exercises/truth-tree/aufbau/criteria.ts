@@ -31,6 +31,7 @@ import { roleIndex } from "../../../logic/specs/roles";
 import type { Missing } from "../report";
 import type { Bindings, Metas } from "./patterns";
 import {
+  instantiate,
   matchAll,
   matchTerm,
   occursFree,
@@ -1026,6 +1027,42 @@ function permutations<T>(items: readonly T[]): readonly (readonly T[])[] {
       (rest) => [item, ...rest],
     ),
   );
+}
+
+/**
+ * How a rule's instances at a row are shown, by engine text: as they are, or
+ * in the term the rule shows them in (`σ.n` for a step `n`), with the row's
+ * bindings filled in.
+ */
+export function instanceShower(
+  language: SurfaceLanguage,
+  rule: DevelopmentRule,
+  bindings: Bindings,
+): (instance: string) => string {
+  const slot = rule.instance;
+
+  if (slot === null || slot.shown.kind === "variable") {
+    return (instance) => instance;
+  }
+
+  return (instance) => {
+    const read = language.parse(instance, {
+      lints: false,
+      mode: "engine",
+      sort: slot.sort,
+    });
+
+    if (!read.ok) {
+      return instance;
+    }
+
+    const filled = instantiate(
+      slot.shown,
+      new Map([...bindings, [slot.binder, read.term]]),
+    );
+
+    return termKey(language, filled) ?? instance;
+  };
 }
 
 /** The bindings of a single-row rule's focus against a row; null if none. */

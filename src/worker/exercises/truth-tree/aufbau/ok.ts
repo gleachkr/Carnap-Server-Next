@@ -23,14 +23,16 @@
  *   holds `A` as often as it was written, so where two of a premise's rows
  *   can be one (`A ∧ A`), there is an axiom with one copy as well.
  *
- * A general row owes nothing once (`tree_ok (∀ x ph) ga`), and neither does
- * a row no rule develops: an atom, a negated atom, an identity. Those rows
+ * A row no rule uses once owes nothing once: a general row
+ * (`tree_ok (∀ x ph) ga`), an atom, a negated atom, an identity. Those rows
  * are found by complement: every shape of row the theory's constructors
- * build, less the shapes some rule develops, has an axiom that asks nothing
- * of the branch. A row of a shape a rule develops has only that rule's
- * axioms, so a rule whose axiom cannot be stated (a premise writes no mark, in
- * a theory that marks) leaves its rows undeveloped, which a student sees,
- * rather than developed, which nobody would.
+ * build, less the shapes some once rule develops, has an axiom that asks
+ * nothing of the branch. A row of a shape a once rule develops has only that
+ * rule's axioms, even if a general rule develops it too (`𝕋 □A` in T owes
+ * `T□` whatever `□𝕋` has done), so a rule whose axiom cannot be stated (a
+ * premise writes no mark, in a theory that marks) leaves its rows
+ * undeveloped, which a student sees, rather than developed, which nobody
+ * would.
  *
  * Each judgement's axioms are chained by `@fallback`, so that one citation of
  * the chain's head tries them all.
@@ -112,6 +114,75 @@ export function okAxioms(
   }
 
   return cache.get(language) ?? null;
+}
+
+/**
+ * Whether a general rule is owed its instance at every term of its sort on a
+ * branch, which the axioms can ask: no statement of it has side rows, as
+ * `□𝕋` has, which is owed only the prefixes the branch uses (#469).
+ */
+function atEveryTerm(rule: DevelopmentRule): boolean {
+  return (
+    rule.criterion?.kind === "general" &&
+    rule.instance !== null &&
+    rule.variants.every((variant) => variant.side.length === 0)
+  );
+}
+
+/** Whether a judgement has no congruence, for want of a relation. */
+function incongruent(axioms: OkAxioms, judgement: OkJudgement): boolean {
+  return axioms.problems.some(
+    (each) =>
+      each.rule === judgement.term && each.problem.type === "no-relation",
+  );
+}
+
+/**
+ * Whether the axioms say when a rule's rows are developed, so that the
+ * engine is asked rather than `./complete.ts`: a rule used once or never,
+ * always (where its axioms could not be stated, its rows are never
+ * developed); a general rule owed every term, where its instances'
+ * judgement has a congruence. Not a rule on a pair of rows.
+ */
+export function okJudges(axioms: OkAxioms, rule: DevelopmentRule): boolean {
+  const kind = rule.criterion?.kind;
+
+  if (kind === "once" || kind === "none") {
+    return true;
+  }
+
+  const judgement =
+    rule.instance === null ? undefined : axioms.at.get(rule.instance.sort);
+
+  return (
+    atEveryTerm(rule) &&
+    judgement !== undefined &&
+    !incongruent(axioms, judgement)
+  );
+}
+
+/**
+ * The problems that change a verdict, for an author: all but a judgement's
+ * missing relation where only rules `./complete.ts` still judges would ask
+ * it (a modal prefix's, which only `□𝕋` counts).
+ */
+export function okProblemsReported(
+  axioms: OkAxioms,
+  development: TreeDevelopment,
+): OkAxioms["problems"] {
+  return axioms.problems.filter(({ problem, rule }) => {
+    const sort = [...axioms.at].find(
+      ([, judgement]) => judgement.term === rule,
+    )?.[0];
+
+    return (
+      problem.type !== "no-relation" ||
+      sort === undefined ||
+      development.rules.some(
+        (each) => atEveryTerm(each) && each.instance?.sort === sort,
+      )
+    );
+  });
 }
 
 /** A binder of a generated axiom. */
@@ -499,29 +570,19 @@ function generate(
   }
 
   for (const rule of development.rules) {
-    for (const variant of rule.variants) {
-      if (variant.focus.length === 1) {
-        covered.push(variant.focus[0] as Term);
-      }
-    }
-
     const kind = rule.criterion?.kind;
 
     if (rule.patterns.focus.length !== 1 || kind === undefined) {
       continue;
     }
 
-    if (kind === "none" || kind === "general") {
-      const { conclusion, mentioned } = stated(ok, rule.patterns, [], []);
-      freeDrafts.push({
-        annotations: [],
-        binders: declsOf(rule.patterns.binders, mentioned),
-        comment: `${rule.name}: nothing once`,
-        conclusion,
-      });
-    }
-
     if (kind === "once") {
+      for (const variant of rule.variants) {
+        if (variant.focus.length === 1) {
+          covered.push(variant.focus[0] as Term);
+        }
+      }
+
       const drafts = onceDrafts(rule);
 
       if (drafts === null) {

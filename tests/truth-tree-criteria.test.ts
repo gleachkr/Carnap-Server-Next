@@ -110,6 +110,25 @@ function report(resolved: ResolvedTree, answer: CertifiedAnswer) {
     .report;
 }
 
+/**
+ * The report, as the browser makes it from its compile: where the engine is
+ * asked whether a branch marked open is complete, what it could not prove is
+ * what the branch is missing. A certificate proves it complete, so no
+ * verified one is of a branch that is not.
+ */
+async function compiledReport(
+  item: ExerciseManifestItem,
+  resolved: ResolvedTree,
+  t: TreeBuilder,
+) {
+  return judgeAsBrowser(
+    await engine(),
+    resolved,
+    (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
+    t.answer(),
+  );
+}
+
 describe("UBC's development roles", () => {
   test("read without problems, and say what each rule asks", async () => {
     const { resolved } = await consistency("Fa");
@@ -169,7 +188,10 @@ describe("a general row", () => {
 
     const answer = await certify(item, t);
 
-    expect(report(resolved, answer).ends.get(t.rootNode)).toEqual({
+    expect(answer.mmb).toBeUndefined();
+    expect(
+      (await compiledReport(item, resolved, t)).ends.get(t.rootNode),
+    ).toEqual({
       missing: [{ names: ["b"], row: "r1" }],
       type: "open-incomplete",
     });
@@ -204,7 +226,9 @@ describe("a general row", () => {
     const bare = new TreeBuilder(resolved.rootText);
     bare.open(bare.rootNode);
 
-    expect(report(resolved, bare.answer()).ends.get(bare.rootNode)).toEqual({
+    expect(
+      (await compiledReport(item, resolved, bare)).ends.get(bare.rootNode),
+    ).toEqual({
       missing: [{ names: [], row: "r1" }],
       type: "open-incomplete",
     });
@@ -391,7 +415,7 @@ describe("a row used once", () => {
     } = t.split(t.rootNode, "r1", [["P"], ["Q"]], "∨");
     t.open(left);
 
-    expect(report(resolved, t.answer()).ends.get(left)).toEqual({
+    expect((await compiledReport(item, resolved, t)).ends.get(left)).toEqual({
       missing: [{ row: "r2" }],
       type: "open-incomplete",
     });
@@ -643,6 +667,58 @@ describe("another calculus's roles", () => {
       expect(
         result.diagnostics.map((each) => [each.code, each.params?.rule]),
       ).toContainEqual(["truth_tree_development", "tb_and"]);
+    });
+
+    test("a rule that writes no mark, in a system whose rules do", async () => {
+      const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "").replace(
+        "$ closes ga ; chk (¬ ¬ ph) ; ph $",
+        "$ closes ga ; ph $",
+      );
+      const result = await compileCarnapMarkdown(
+        `:::aufbau-mm0{name="unmarked"}\n${ubc}\n:::\n\n::::truth-tree{#t system="unmarked" finish="one-open"}\nIs this set consistent?\n\n- ¬¬A\n::::`,
+      );
+
+      expect(
+        result.diagnostics.map((each) => [each.code, each.params?.rule]),
+      ).toEqual([["truth_tree_development", "tb_nn"]]);
+    });
+
+    test("a rule that writes a new name it has no view of", async () => {
+      const olp = (
+        theorySourceByFileName("open-logic-tableaux.mm0") ?? ""
+      ).replace(
+        "--| @view {x: var} {a: name} (ga: ctx x) (ph: wff x) (ps: wff): $ closes ga ; 𝕋 ps $ > $ focus ga at (𝕋 ∃ x ph) $\n",
+        "",
+      );
+      const result = await compileCarnapMarkdown(
+        `:::aufbau-mm0{name="viewless"}\n${olp}\n:::\n\n::::truth-tree{#t system="viewless" finish="one-open"}\nIs this set consistent?\n\n- ∃x F(x)\n::::`,
+      );
+
+      expect(
+        result.diagnostics.map((each) => [each.code, each.params?.rule]),
+      ).toEqual([["truth_tree_development", "tb_t_ex"]]);
+    });
+
+    // A modal prefix's step has no relation, which only the rules judged
+    // without the engine need yet (#469): not the author's to fix.
+    test.each([
+      "forallx-ubc",
+      "open-logic-tableaux",
+      "open-logic-intuitionistic",
+      "open-logic-simple-s5",
+      "open-logic-modal-k",
+      "open-logic-modal-t",
+      "open-logic-modal-d",
+      "open-logic-modal-k4",
+      "open-logic-modal-b",
+      "open-logic-modal-s4",
+      "open-logic-modal-s5",
+    ])("the built-in %s says nothing", async (system) => {
+      const result = await compileCarnapMarkdown(
+        `::::truth-tree{#t system="${system}" finish="one-open"}\nIs this set consistent?\n\n- A\n::::`,
+      );
+
+      expect(result.diagnostics).toEqual([]);
     });
 
     test("a substitution that is not one", async () => {

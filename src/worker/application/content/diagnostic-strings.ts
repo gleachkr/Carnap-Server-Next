@@ -406,6 +406,21 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The term “{rule}” has the role tree.substitution, but is not a substitution: it needs three arguments, a bound variable, a body of its own sort, and the term put for the variable.",
         placeholders("rule"),
       ),
+    "The rule “{rule}” writes no check mark on a branch it opens, though the system's rules write marks, so Carnap cannot tell from a branch whether a row was developed by it.":
+      i18n.t(
+        "The rule “{rule}” writes no check mark on a branch it opens, though the system's rules write marks, so Carnap cannot tell from a branch whether a row was developed by it.",
+        placeholders("rule"),
+      ),
+    "The rule “{rule}” writes a new name, and has no @view saying where it is in the rows it writes, so Carnap cannot tell from a branch whether a row was developed by it.":
+      i18n.t(
+        "The rule “{rule}” writes a new name, and has no @view saying where it is in the rows it writes, so Carnap cannot tell from a branch whether a row was developed by it.",
+        placeholders("rule"),
+      ),
+    "The system has no @relation on the sort “{sort}”, which Carnap needs to tell from a branch whether its rows are developed.":
+      i18n.t(
+        "The system has no @relation on the sort “{sort}”, which Carnap needs to tell from a branch whether its rows are developed.",
+        placeholders("sort"),
+      ),
     "Write the root as one argument line or as a list of sentences, not both.":
       i18n.t(
         "Write the root as one argument line or as a list of sentences, not both.",

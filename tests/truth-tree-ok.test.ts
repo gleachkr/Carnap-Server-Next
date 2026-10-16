@@ -4,7 +4,10 @@ import type { SurfaceLanguage } from "@aufbau/syntax";
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
 import type { TreeDevelopment } from "../src/worker/exercises/truth-tree/aufbau/criteria";
 import { readTreeDevelopment } from "../src/worker/exercises/truth-tree/aufbau/criteria";
-import { emitTreeProof } from "../src/worker/exercises/truth-tree/aufbau/emit";
+import {
+  emitTreeProof,
+  readTreeDiagnostics,
+} from "../src/worker/exercises/truth-tree/aufbau/emit";
 import type { OkAxioms } from "../src/worker/exercises/truth-tree/aufbau/ok";
 import { okAxioms } from "../src/worker/exercises/truth-tree/aufbau/ok";
 import { rowSortReader } from "../src/worker/exercises/truth-tree/aufbau/rows";
@@ -13,6 +16,7 @@ import {
   isTreeTheory,
   readTreeTheory,
 } from "../src/worker/exercises/truth-tree/aufbau/theory";
+import type { Missing } from "../src/worker/exercises/truth-tree/report";
 import {
   LANGUAGE_SPEC_SOURCES,
   languageFromSource,
@@ -78,8 +82,15 @@ function row(on: System, text: string): string {
   return read.engine;
 }
 
-/** The branches a tree leaves open: the premises of its last step. */
-function openBranches(on: System, built: TreeBuilder): string[] {
+/**
+ * What each branch of a tree marked open is missing, by the engine: the
+ * theorems the tree's proof states of them that it could not prove, by
+ * leaf. Every other line must hold.
+ */
+function missingOn(
+  on: System,
+  built: TreeBuilder,
+): ReadonlyMap<string, readonly Missing[]> {
   const proof = emitTreeProof(built.tree, {
     development: on.development,
     language: on.language,
@@ -87,14 +98,25 @@ function openBranches(on: System, built: TreeBuilder): string[] {
     rules: built.rules,
     theory: on.theory,
   });
-  const last = (proof.goal ?? "").trim().split("\n").at(-1) ?? "";
-  const premises = last.split(" $ > $ ").slice(0, -1);
-
-  return premises.map((premise) =>
-    premise
-      .slice(premise.indexOf(`${on.theory.closes} (`))
-      .slice(on.theory.closes.length + 2, -1),
+  const result = compiler.compile(
+    `${on.mm0}\n${proof.goal ?? ""}\n`,
+    proof.proof ?? "",
   );
+  const missing = new Map<string, Missing[]>();
+
+  for (const error of readTreeDiagnostics(
+    result.ok ? [] : result.diagnostics,
+    proof,
+  )) {
+    if (error.subject?.type !== "developed") {
+      throw new Error(JSON.stringify(error));
+    }
+
+    const { node } = error.subject;
+    missing.set(node, [...(missing.get(node) ?? []), error.subject.missing]);
+  }
+
+  return missing;
 }
 
 /** A branch of rows, no step taken: the root alone. */
@@ -286,23 +308,24 @@ describe("by marks (UBC)", () => {
 
     const tree = new TreeBuilder(["A & B"]);
     tree.stack(tree.rootNode, "r1", ["A", "B"], "&");
-    const [after] = openBranches(UBC, tree);
+    tree.open(tree.rootNode);
 
-    expect(holds(UBC, [ok(UBC, "A & B", after as string)])).toEqual([true]);
+    expect(missingOn(UBC, tree)).toEqual(new Map());
   });
 
   test("a split's row is developed on each branch", () => {
     const tree = new TreeBuilder(["A ∨ B"]);
-    tree.split(tree.rootNode, "r1", [["A"], ["B"]], "∨");
-    const branches = openBranches(UBC, tree);
+    const { nodes } = tree.split(tree.rootNode, "r1", [["A"], ["B"]], "∨");
+    tree.open(nodes[0]).open(nodes[1]);
 
-    expect(branches).toHaveLength(2);
-    expect(
-      holds(
-        UBC,
-        branches.map((branch) => ok(UBC, "A ∨ B", branch)),
-      ),
-    ).toEqual([true, true]);
+    expect(missingOn(UBC, tree)).toEqual(new Map());
+
+    const bare = new TreeBuilder(["A ∨ B"]);
+    bare.open(bare.rootNode);
+
+    expect(missingOn(UBC, bare)).toEqual(
+      new Map([[bare.rootNode, [{ row: "r1" }]]]),
+    );
   });
 
   test("every rule but identity owes its step", () => {
@@ -330,37 +353,50 @@ describe("by marks (UBC)", () => {
   });
 
   test("a general row is developed at each name it was instantiated at", () => {
-    const tree = new TreeBuilder(["∀xFx", "Ga", "Gb"]);
+    const tree = new TreeBuilder(["∀xFx", "Ga", "Gb", "Gc"]);
     tree.stack(tree.rootNode, "r1", ["Fa"], "∀");
-    const [branch] = openBranches(UBC, tree);
+    tree.open(tree.rootNode);
 
-    expect(
-      holds(UBC, [
-        okat(UBC, "∀xFx", "a", branch as string),
-        okat(UBC, "∀xFx", "b", branch as string),
+    expect(missingOn(UBC, tree)).toEqual(
+      new Map([
+        [
+          tree.rootNode,
+          [
+            { names: ["b"], row: "r1" },
+            { names: ["c"], row: "r1" },
+          ],
+        ],
       ]),
-    ).toEqual([true, false]);
+    );
 
     const negated = new TreeBuilder(["¬∃xFx", "Ga"]);
     negated.stack(negated.rootNode, "r1", ["¬Fa"], "¬∃");
-    const [other] = openBranches(UBC, negated);
+    negated.open(negated.rootNode);
 
-    expect(holds(UBC, [okat(UBC, "¬∃xFx", "a", other as string)])).toEqual([
-      true,
-    ]);
+    expect(missingOn(UBC, negated)).toEqual(new Map());
+  });
+
+  test("a general row on a branch with no names needs one (nonempty)", () => {
+    const bare = new TreeBuilder(["∀xFx"]);
+    bare.open(bare.rootNode);
+
+    expect(missingOn(UBC, bare)).toEqual(
+      new Map([[bare.rootNode, [{ names: [], row: "r1" }]]]),
+    );
+
+    const vacuous = new TreeBuilder(["∀xP"]);
+    vacuous.stack(vacuous.rootNode, "r1", ["P"], "∀");
+    vacuous.open(vacuous.rootNode);
+
+    expect(missingOn(UBC, vacuous)).toEqual(new Map());
   });
 
   test("a vacuous general row, used once, is developed at every name", () => {
     const tree = new TreeBuilder(["∀xGa", "Fb"]);
     tree.stack(tree.rootNode, "r1", ["Ga"], "∀");
-    const [branch] = openBranches(UBC, tree);
+    tree.open(tree.rootNode);
 
-    expect(
-      holds(UBC, [
-        okat(UBC, "∀xGa", "a", branch as string),
-        okat(UBC, "∀xGa", "b", branch as string),
-      ]),
-    ).toEqual([true, true]);
+    expect(missingOn(UBC, tree)).toEqual(new Map());
   });
 
   test("a rule whose premise writes no mark is never developed", () => {
@@ -377,15 +413,33 @@ describe("by marks (UBC)", () => {
 
     const tree = new TreeBuilder(["¬¬A"]);
     tree.stack(tree.rootNode, "r1", ["A"], "¬¬");
-    const [branch] = openBranches(unmarked, tree);
+    tree.open(tree.rootNode);
 
-    expect(holds(unmarked, [ok(unmarked, "¬¬A", branch as string)])).toEqual([
-      false,
-    ]);
+    expect(missingOn(unmarked, tree)).toEqual(
+      new Map([[tree.rootNode, [{ row: "r1" }]]]),
+    );
   });
 });
 
 describe("by contents (Open Logic)", () => {
+  test("a row a general rule develops still owes a rule used once", () => {
+    // In T, `□𝕋` takes `𝕋 □A` to every prefix the branch uses, and `T□`
+    // takes it to its own once.
+    const T = system(LANGUAGE_SPEC_SOURCES["open-logic-modal-t"] ?? "");
+    const bare = new TreeBuilder(["1 T: □A"]);
+    bare.open(bare.rootNode);
+
+    expect(missingOn(T, bare)).toEqual(
+      new Map([[bare.rootNode, [{ row: "r1" }]]]),
+    );
+
+    const tree = new TreeBuilder(["1 T: □A"]);
+    tree.stack(tree.rootNode, "r1", ["1 T: A"], "T□");
+    tree.open(tree.rootNode);
+
+    expect(missingOn(T, tree)).toEqual(new Map());
+  });
+
   test("a row is developed where a premise's rows are on the branch", () => {
     const asks = (rows: readonly string[]) =>
       ok(OLP, rows[0] as string, rootBranch(OLP, rows));

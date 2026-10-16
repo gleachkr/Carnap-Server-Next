@@ -28,8 +28,11 @@
  * A general step's instances are asked of the engine first: each row it
  * wrote is stated, in a link theorem, to be its rule's instance at each term
  * it could be, and the links that hold say which it was. Those go in the
- * answer, and into the certificate, so the server confirms them too.
- * What the engine does not see (the root, unreadable rows, where ends sit)
+ * answer, and into the certificate, so the server confirms them too. So is
+ * whether a branch marked open is complete, where the theory says when a
+ * row is developed: a theorem for each row, which the engine proves only if
+ * it is, so a branch it is not shows what it is missing and certifies no
+ * tree. What the engine does not see (the root, unreadable rows, where ends sit)
  * is checked on every edit by the same `judgeTree` the grader runs. Marks
  * are computed; the margin's citation and rule are typed. As with the model,
  * there is no answer key: the Check is `judgeTree` over public data.

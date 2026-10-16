@@ -10,6 +10,11 @@
  * conclusions are on it already. Nothing here knows a calculus: the rules,
  * their focus patterns and what closes a branch are the theory's.
  *
+ * Where the theory says when a row is developed in axioms the engine reads
+ * (`./ok.ts`), the engine is asked instead, and this judges only the rules
+ * those axioms do not state yet: rules on a pair of rows, and general rules
+ * with side rows (#469).
+ *
  * DOM-free and free of i18n.
  */
 
@@ -26,16 +31,15 @@ import type {
   DevelopmentRule,
   TreeDevelopment,
 } from "./criteria";
-import { isVacuous, matchFocus, ruleMatches } from "./criteria";
+import {
+  instanceShower,
+  isVacuous,
+  matchFocus,
+  ruleMatches,
+} from "./criteria";
 import type { EmittedStep, TreeProof } from "./emit";
 import type { Bindings } from "./patterns";
-import {
-  closedSubterms,
-  conclude,
-  instantiate,
-  matchAll,
-  termKey,
-} from "./patterns";
+import { closedSubterms, conclude, matchAll, termKey } from "./patterns";
 import type { RowSortReader } from "./rows";
 
 export interface CompletenessInput {
@@ -137,8 +141,15 @@ export class TreeCompleteness {
     });
   }
 
-  /** What the branch ending at `leaf` still needs, and what closes it. */
-  branch(leaf: TableauNode): BranchCompleteness {
+  /**
+   * What the branch ending at `leaf` still needs, and what closes it, by
+   * every rule but those in `asked`, which the engine is asked about
+   * (`./ok.ts`).
+   */
+  branch(
+    leaf: TableauNode,
+    asked: ReadonlySet<string> = new Set(),
+  ): BranchCompleteness {
     const { development, index } = this.input;
     const rows = this.read(index.branchRows(leaf.id));
     const onBranch = new Set(rows.map((row) => row.id));
@@ -164,6 +175,10 @@ export class TreeCompleteness {
         this.byHead,
         row.term,
       )) {
+        if (asked.has(rule.name)) {
+          continue;
+        }
+
         const steps: DevelopingStep[] = (this.citing.get(row.id) ?? [])
           .filter(
             (step) =>
@@ -185,7 +200,7 @@ export class TreeCompleteness {
           paired: null,
           vacuous:
             rule.instance !== null && isVacuous(rule.instance, bindings),
-          shown: shower(this.language, rule, bindings),
+          shown: instanceShower(this.language, rule, bindings),
           witnessed: witnessed(this.language, rule, row.term, rows),
           concluded: development.byContents
             ? concluded(this.language, rule, row.term, rows)
@@ -264,7 +279,7 @@ export class TreeCompleteness {
               : [
                   {
                     kind,
-                    shown: shower(this.language, rule, bindings),
+                    shown: instanceShower(this.language, rule, bindings),
                     steps: done.filter(
                       (step) => development.byAxiom.get(step.rule) === rule,
                     ),
@@ -321,42 +336,6 @@ export class TreeCompleteness {
 
     return marks;
   }
-}
-
-/**
- * How a rule's instances at a row are shown, by engine text: as they are, or
- * in the term the rule shows them in (`σ.n` for a step `n`), with the row's
- * bindings filled in.
- */
-function shower(
-  language: SurfaceLanguage,
-  rule: DevelopmentRule,
-  bindings: Bindings,
-): (instance: string) => string {
-  const slot = rule.instance;
-
-  if (slot === null || slot.shown.kind === "variable") {
-    return (instance) => instance;
-  }
-
-  return (instance) => {
-    const read = language.parse(instance, {
-      lints: false,
-      mode: "engine",
-      sort: slot.sort,
-    });
-
-    if (!read.ok) {
-      return instance;
-    }
-
-    const filled = instantiate(
-      slot.shown,
-      new Map([...bindings, [slot.binder, read.term]]),
-    );
-
-    return termKey(language, filled) ?? instance;
-  };
 }
 
 /** A rule's instance in some bindings, by engine text; null if unbound. */

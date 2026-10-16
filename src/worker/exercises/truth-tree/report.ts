@@ -105,14 +105,8 @@ export interface Missing {
 export type BranchState =
   | { readonly type: "closed"; readonly right: boolean }
   | { readonly type: "open"; readonly right: boolean }
-  /** Not ended yet. `complete` says whether it could be marked open. */
-  | {
-      readonly type: "unfinished";
-      readonly complete: boolean;
-      /** The rows that would close it, as in `open-contradiction`. */
-      readonly contradiction: readonly string[] | null;
-      readonly missing: readonly Missing[];
-    };
+  /** Not ended yet. */
+  | { readonly type: "unfinished" };
 
 export type RowMark =
   | { readonly type: "resolved"; readonly names: readonly string[] }

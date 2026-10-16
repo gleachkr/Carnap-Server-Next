@@ -326,7 +326,7 @@ describe("grading", () => {
     expect(graded.status).toBe("correct");
   });
 
-  test("a root with nothing to develop, marked open, needs no certificate", async () => {
+  test("a root with nothing to develop, marked open, is certified complete", async () => {
     const item = await declaration(
       directive(
         '#tl finish="one-open"',
@@ -338,8 +338,8 @@ describe("grading", () => {
 
     const answer = await certified(item, t.answer());
 
-    // There is no inference to state, so nothing to compile or verify.
-    expect((answer as { mmb?: string }).mmb).toBeUndefined();
+    // No inference, but the certificate proves each row developed.
+    expect((answer as { mmb?: string }).mmb).toBeDefined();
     expect((await grade(item, answer)).status).toBe("correct");
   });
 

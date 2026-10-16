@@ -1072,6 +1072,16 @@ on, each role covering the whole `@fallback` chain:
   `ph` known matches `ph` with one term at every `x`; with `te` known and
   `ph` not, as in an identity's `{x / a} ph`, `ph` is the row with every
   `a` made `x`. Anything else the theory would compute matches nothing.
+- Where the rules write check marks (`tree.mark`, above) or the theory has
+  `tree.completeness.contents`, the engine is the judge. Carnap states, from
+  the rules, when a row is developed (by its mark on the branch, or by the
+  rows a premise writes) and asks it of every row of a branch marked open,
+  and of every `general` row at every term of its sort on the branch. The
+  branch is complete when the engine proves each, and the certificate
+  proves them, so the server checks completeness as it checks the steps.
+  Rules on a pair of rows, and `general` rules with side rows (a modal
+  `□𝕋`), are still judged by Carnap from the steps, as is every rule of a
+  theory with neither marks nor `tree.completeness.contents`.
 - Only steps the engine accepted count. A step's instance is found by the
   engine too: the editor asks it which term each row was written with, and
   the certificate proves the answer, so the server checks it as it checks
@@ -1087,7 +1097,12 @@ flag, a binder the rule or one of its `@fallback` statements does not
 have), a `tree.` role it does not know (a misspelt
 `tree.completeness.contents`), a `tree.substitution` term without its three
 arguments, and a rule concluding `focus` whose premises are not rows written
-on the branch, which no row could ever be owed.
+on the branch, which no row could ever be owed. Where the engine judges
+completeness, it also reports a rule that writes no check mark in a theory
+whose rules do, a rule that writes a new name without an `@view` saying
+where the name is in the rows it writes, and a sort without the `@relation`
+the engine needs to read a branch in any order: each would leave a row that
+can never be shown developed.
 
 The student writes every row. **Stack** (`t`) adds a row at the end of the
 branch, **Split** (`s`) branches it in two, and **Add row** (`r`) adds

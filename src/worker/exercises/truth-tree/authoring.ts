@@ -27,6 +27,8 @@ import { formulaParseErrors } from "../../logic/specs/diagnostics";
 import { sentenceSort } from "../../logic/specs/roles";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
+import type { OkAxioms } from "./aufbau/ok";
+import { okAxioms, okProblemsReported } from "./aufbau/ok";
 import {
   isTreeTheory,
   readTreeTheory,
@@ -295,13 +297,66 @@ function reportTreeTheory(
   }
 }
 
+/**
+ * What the axioms saying when a row is developed (`./aufbau/ok.ts`) could not
+ * state, where it changes a verdict: a rule's rows that are then never
+ * developed, or a judgement with no congruence, which the engine cannot
+ * prove of a branch in any order but its own.
+ */
+function reportOkAxioms(
+  axioms: OkAxioms,
+  development: TreeDevelopment,
+  line: number,
+  diagnostics: CompilerDiagnostic[],
+): void {
+  for (const { problem, rule } of okProblemsReported(axioms, development)) {
+    switch (problem.type) {
+      case "unmarked":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” writes no check mark on a branch it opens, though the system's rules write marks, so Carnap cannot tell from a branch whether a row was developed by it.",
+            { params: { rule } },
+          ),
+        );
+        break;
+      case "no-view":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The rule “{rule}” writes a new name, and has no @view saying where it is in the rows it writes, so Carnap cannot tell from a branch whether a row was developed by it.",
+            { params: { rule } },
+          ),
+        );
+        break;
+      case "no-relation":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_development",
+            "The system has no @relation on the sort “{sort}”, which Carnap needs to tell from a branch whether its rows are developed.",
+            { params: { sort: problem.sort } },
+          ),
+        );
+        break;
+    }
+  }
+}
+
 /** What is wrong with a theory's development roles, for an open branch. */
 function reportDevelopment(
   development: TreeDevelopment,
+  axioms: OkAxioms | null,
   name: string,
   line: number,
   diagnostics: CompilerDiagnostic[],
 ): void {
+  if (axioms !== null) {
+    reportOkAxioms(axioms, development, line, diagnostics);
+  }
+
   if (!development.annotated) {
     diagnostics.push(
       diagnostic(
@@ -504,8 +559,11 @@ export async function compileTruthTree(
 
   // A branch can be marked open only where the theory says when it is done.
   if (finish !== "closed") {
+    const development = readTreeDevelopment(language, theory);
+
     reportDevelopment(
-      readTreeDevelopment(language, theory),
+      development,
+      development.annotated ? okAxioms(language, theory, development) : null,
       system,
       block.line,
       diagnostics,

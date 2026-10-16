@@ -45,12 +45,13 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   the step leaves out nor hides one it should not write (`A ∧ B` developed
   as `A` alone, or as `A, A`, with `B` above; `∀x Fx` developed as `Fa, Ga`
   with `Ga` above). A rule that writes one row twice must be written so:
-  `A ∧ A` develops as `A, A`. A tree with no inference to state,
-  its root alone, has nothing to certify. `criteria.ts` reads the theory's
+  `A ∧ A` develops as `A, A`. A tree with nothing to state, its root
+  alone and no branch marked open, has nothing to certify. `criteria.ts` reads the theory's
   development roles into a registry of criteria (`once`, `general`, `pairs`,
   `none`), `patterns.ts` matches a rule's focus against a row and fills in
-  its templates, and `complete.ts` says from the verified steps whether an
-  open branch is complete and what each row's mark is. A theory with
+  its templates, and `complete.ts` says from the verified steps what each
+  row's mark is, and whether an open branch is complete where `ok.ts`
+  (below) cannot say. A theory with
   `tree.completeness.contents` (the Open Logic Project's) also counts a row
   developed when its rule's conclusions are on the branch already, matched
   as the focus is; without it S5's `4r□` would owe a row back to a prefix
@@ -79,9 +80,18 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   contents a premise's rows), and `tree_okat_<sort> ρ t Γ` for a general
   row at t. Rows no rule develops get an axiom asking nothing, found by
   complement over the constructors, so a rule whose axiom cannot be stated
-  leaves its rows visibly undeveloped. Nothing asks these yet;
-  `complete.ts` still judges completeness from the verified steps (#469). A
-  general step's
+  leaves its rows visibly undeveloped. The emitter asks them of each
+  branch marked open: one theorem per row that it is developed, and one per
+  general row and term of its instance's sort on the branch (with a new
+  name where a `nonempty` row's branch has none), each stated with the rows
+  the row's own steps wrote last, where the engine finds them without
+  sorting the branch. A theorem the engine cannot prove is what the branch
+  is missing, and a certificate proves the branches marked open complete,
+  so the server needs nothing else. `complete.ts` still judges the rules
+  the axioms do not state yet: rules on a pair of rows (identity) and
+  general rules with side rows (`□𝕋`), and every rule of a theory with
+  neither marks nor `tree.completeness.contents` (#469). What the axioms
+  cannot state is an author's diagnostic. A general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
   browser compiles every candidate once to find which hold, and that compile

@@ -15,8 +15,12 @@
  *   that the row is the rule's template at a given term (`Rab` is
  *   `{x / a} Rxb`), proved by the judgement relation's reflexivity, so the
  *   engine confirms which instance the step used;
- * - an open leaf, and a step that cannot be written down (no rule, an
- *   unreadable row), is no theorem at all.
+ * - a leaf marked open is a theorem for each row on its branch, that the row
+ *   is developed there (`tree_ok`, `./ok.ts`), and for each general row and
+ *   each term on the branch, that it is developed at the term (`tree_okat`),
+ *   where the theory says how; the engine proves each only if it is;
+ * - a step that cannot be written down (no rule, an unreadable row), and a
+ *   branch left unfinished, is no theorem at all.
  *
  * One theorem per inference rather than one for the tree, so that the
  * engine's errors land on the line of the step at fault, and so that a
@@ -55,8 +59,19 @@ import type {
   TableauRow,
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
-import type { RulePatterns, TreeDevelopment } from "./criteria";
-import { matchFocus, rulePatterns, templateFor } from "./criteria";
+import type { Missing } from "../report";
+import type {
+  DevelopmentRule,
+  RulePatterns,
+  TreeDevelopment,
+} from "./criteria";
+import {
+  instanceShower,
+  matchFocus,
+  rulePatterns,
+  templateFor,
+} from "./criteria";
+import { okAxioms, okJudges } from "./ok";
 import { closedSubterms, instantiate, termKey } from "./patterns";
 import { type RowSortReader, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
@@ -86,7 +101,16 @@ export type LineSubject =
   /** A branch's ×. */
   | { readonly type: "closure"; readonly node: string }
   /** The closure's citation. */
-  | { readonly type: "closure-citation"; readonly node: string };
+  | { readonly type: "closure-citation"; readonly node: string }
+  /**
+   * That a row is developed on a branch marked open, at a term for a
+   * general row: what the branch is missing if not.
+   */
+  | {
+      readonly type: "developed";
+      readonly node: string;
+      readonly missing: Missing;
+    };
 
 /** Why a step was not written down, and so is not checked. */
 export type EmitProblem =
@@ -127,6 +151,20 @@ export interface TreeProof {
    * its theorems past the text cap. Nothing is stated of such a tree.
    */
   readonly oversize: Oversize | null;
+  /**
+   * What it asks the engine of the branches marked open, where the theory
+   * says when a row is developed (`./ok.ts`); null where it does not, and
+   * `./complete.ts` judges them.
+   */
+  readonly developed: Developed | null;
+}
+
+/** What a tree's proof asks of the branches marked open. */
+export interface Developed {
+  /** The leaves whose branches it asks about. */
+  readonly leaves: ReadonlySet<string>;
+  /** The rules whose rows it asks about, by name; the rest are not asked. */
+  readonly rules: ReadonlySet<string>;
 }
 
 /** Which cap a tree is past. */
@@ -137,6 +175,7 @@ export type Oversize =
 /** A tree too big to write down: nothing stated, nothing to report on. */
 function tooBig(oversize: Oversize): TreeProof {
   return {
+    developed: null,
     endProblems: new Map(),
     gaps: 0,
     goal: null,
@@ -192,6 +231,17 @@ export interface EmitOptions {
   readonly textCap?: number;
 }
 
+/**
+ * A member of a branch, as engine text, with the development that wrote it
+ * and the row it is, or is the mark beside; null for the mark of the row a
+ * development cites.
+ */
+interface Member {
+  readonly text: string;
+  readonly dev: string;
+  readonly row: string | null;
+}
+
 /** The run of rows from `start` that one development wrote. */
 function groupAt(rows: readonly TableauRow[], start: number): TableauRow[] {
   const dev = rows[start]?.dev;
@@ -208,6 +258,41 @@ function groupAt(rows: readonly TableauRow[], start: number): TableauRow[] {
   }
 
   return group;
+}
+
+/**
+ * A name of `sort` a branch does not mention: a token of the first pool that
+ * reads at the sort, for a general row that must be developed at some term
+ * on a branch with none (`nonempty`). Developed at a new name, it is
+ * developed at one, vacuously; otherwise it is not.
+ */
+function newName(
+  language: SurfaceLanguage,
+  sort: string,
+  mentioned: ReadonlySet<string>,
+): string | null {
+  for (const info of language.spec.sorts.values()) {
+    for (const token of info.vars) {
+      if (mentioned.has(token)) {
+        continue;
+      }
+
+      const read = language.parse(token, {
+        lints: false,
+        mode: "engine",
+        sort,
+      });
+      const key = read.ok ? termKey(language, read.term) : null;
+
+      if (key === null) {
+        break;
+      }
+
+      return key;
+    }
+  }
+
+  return null;
 }
 
 /** Every token of engine text, for finding the names and variables in it. */
@@ -259,11 +344,15 @@ export function emitTreeProof(
     const location = index.row(rowId);
     return location === null ? null : engineOf(location.row);
   };
-  const readable = (rows: readonly TableauRow[]): string[] =>
+  const rowsOf = (rows: readonly TableauRow[]): Member[] =>
     rows.flatMap((row) => {
       const engine = engineOf(row);
-      return engine === null ? [] : [engine];
+      return engine === null
+        ? []
+        : [{ dev: row.dev, row: row.id, text: engine }];
     });
+  const texts = (members: readonly Member[]): string[] =>
+    members.map((member) => member.text);
   const branch = (rows: readonly string[]): string =>
     rows.length === 0 && theory.empty !== null
       ? theory.empty.engine
@@ -299,7 +388,7 @@ export function emitTreeProof(
    * (`tree.mark.instance`). The engine checks them against the rule as it
    * checks the rows, so a mark written wrong fails the step.
    */
-  const marksFor = (group: readonly TableauRow[]): string[] => {
+  const marksFor = (group: readonly TableauRow[]): Member[] => {
     const first = group[0];
     const cited =
       first?.cites.length === 1 ? (first.cites[0] as string) : null;
@@ -318,17 +407,26 @@ export function emitTreeProof(
       return [];
     }
 
+    const dev = first?.dev ?? "";
+
     return [
       ...(theory.mark !== null && terms.has(theory.mark)
-        ? [`${theory.mark} (${cite})`]
+        ? [{ dev, row: null, text: `${theory.mark} (${cite})` }]
         : []),
       ...(theory.markInstance !== null && terms.has(theory.markInstance)
-        ? readable(group).map(
-            (row) => `${theory.markInstance} (${cite}) (${row})`,
-          )
+        ? rowsOf(group).map((row) => ({
+            ...row,
+            text: `${theory.markInstance} (${cite}) (${row.text})`,
+          }))
         : []),
     ];
   };
+
+  /** What a development puts on its branch: its rows, then their marks. */
+  const writtenBy = (group: readonly TableauRow[]): Member[] => [
+    ...rowsOf(group),
+    ...marksFor(group),
+  ];
 
   /** The binders of a theorem: what its statements mention, by sort. */
   const binders = (texts: readonly string[]): string => {
@@ -566,10 +664,190 @@ export function emitTreeProof(
     );
   };
 
+  const ok =
+    options.development === undefined
+      ? null
+      : okAxioms(language, theory, options.development);
+  const judged: readonly DevelopmentRule[] =
+    ok === null
+      ? []
+      : (options.development?.rules ?? []).filter((rule) =>
+          okJudges(ok, rule),
+        );
+  // The general rules asked at each term, with the slot and judgement each
+  // is asked by.
+  const general = judged.flatMap((rule) => {
+    const slot = rule.instance;
+    const judgement =
+      slot === null || rule.criterion?.kind !== "general"
+        ? undefined
+        : ok?.at.get(slot.sort);
+
+    return slot === null || judgement === undefined
+      ? []
+      : [{ judgement, rule, slot }];
+  });
+  const asked = new Set<string>();
+
+  /**
+   * A theorem that a row is developed on a branch, by the chain `by`; if the
+   * engine cannot prove it, the branch is missing `missing`.
+   */
+  const developed = (
+    node: string,
+    statement: string,
+    by: string,
+    missing: Missing,
+  ): void => {
+    counter += 1;
+    const name = `${TREE_THEOREM}_${counter}`;
+    const label = `o_${counter}`;
+
+    record(
+      `theorem ${name}${binders([statement])}: $ ${statement} $;`,
+      [name, "----", `${label}: $ ${statement} $ by ${by} []`].join("\n"),
+    );
+    lines.set(label, { missing, node, type: "developed" });
+  };
+
+  /**
+   * What a branch marked open is asked, where the theory says when a row is
+   * developed: of each row, that it is, and of each general row, that it is
+   * at each term of its instance's sort on the branch.
+   */
+  const askDeveloped = (
+    node: TableauNode,
+    members: readonly Member[],
+  ): void => {
+    if (ok === null) {
+      return;
+    }
+
+    asked.add(node.id);
+
+    const mentioned = new Set(tokens(branch(texts(members))));
+    // The branch is a multiset, so its members may be stated in any order:
+    // the ones a row's own steps wrote go last, where the engine looks first,
+    // and the rest of the branch need not be sorted to find them
+    // (design/aufbau-issues-2026-10-17). A row developed some other way is
+    // found all the same, at the cost of the sort.
+    const citing = new Map<string, Set<string>>();
+
+    for (const [dev, step] of steps) {
+      for (const cite of step.cites) {
+        citing.set(cite, (citing.get(cite) ?? new Set()).add(dev));
+      }
+    }
+
+    const rows = index.branchRows(node.id).flatMap((row) => {
+      const read = reader.read(row.text);
+      return read.ok
+        ? [{ engine: read.engine, id: row.id, term: read.term }]
+        : [];
+    });
+    // A row written twice is asked about once, on its first copy, and the
+    // steps citing either copy develop it.
+    const copies = new Map<string, string[]>();
+
+    for (const row of rows) {
+      copies.set(row.engine, [...(copies.get(row.engine) ?? []), row.id]);
+    }
+
+    const ordered = (text: string, last: (member: Member) => boolean) => {
+      const devs = new Set(
+        (copies.get(text) ?? []).flatMap((id) => [...(citing.get(id) ?? [])]),
+      );
+      const rank = (member: Member): number =>
+        devs.has(member.dev) ? (last(member) ? 2 : 1) : 0;
+
+      return branch(
+        texts(
+          [0, 1, 2].flatMap((at) =>
+            members.filter((member) => rank(member) === at),
+          ),
+        ),
+      );
+    };
+    const instanceOf = (row: string | null): string | null => {
+      const instances =
+        row === null ? undefined : options.instances?.get(row);
+      return instances?.length === 1 ? (instances[0] as string) : null;
+    };
+    const terms = new Map<string, readonly string[]>();
+    const termsOf = (sort: string): readonly string[] => {
+      let found = terms.get(sort);
+
+      if (found === undefined) {
+        found = [
+          ...new Set(
+            rows.flatMap((row) => closedSubterms(language, row.term, sort)),
+          ),
+        ];
+        terms.set(sort, found);
+      }
+
+      return found;
+    };
+
+    for (const row of rows) {
+      if (copies.get(row.engine)?.[0] !== row.id) {
+        continue;
+      }
+
+      developed(
+        node.id,
+        `${ok.ok.term} (${row.engine}) (${ordered(row.engine, () => false)})`,
+        ok.ok.head,
+        { row: row.id },
+      );
+
+      for (const { judgement, rule, slot } of general) {
+        const bindings = matchFocus(language, rule, row.term);
+
+        if (bindings === null) {
+          continue;
+        }
+
+        const shown = instanceShower(language, rule, bindings);
+        const at = (term: string, names: readonly string[]): void =>
+          developed(
+            node.id,
+            `${judgement.term} (${row.engine}) (${term}) (${ordered(
+              row.engine,
+              (member) => instanceOf(member.row) === term,
+            )})`,
+            judgement.head,
+            { names, row: row.id },
+          );
+        const all = termsOf(slot.sort);
+
+        for (const term of all) {
+          at(term, [shown(term)]);
+        }
+
+        const fresh =
+          all.length === 0 && rule.flags.has("nonempty")
+            ? newName(language, slot.sort, mentioned)
+            : null;
+
+        if (fresh !== null) {
+          at(fresh, []);
+        }
+      }
+    }
+  };
+
   /** The end of a branch: a closure, or a branch left open. */
-  const end = (node: TableauNode, state: readonly string[]): void => {
+  const end = (node: TableauNode, members: readonly Member[]): void => {
+    const state = texts(members);
+
     if (node.end?.type !== "closed") {
       hypotheses += 1;
+
+      if (node.end?.type === "open") {
+        askDeveloped(node, members);
+      }
+
       return;
     }
 
@@ -597,7 +875,7 @@ export function emitTreeProof(
   const walk = (
     node: TableauNode,
     start: number,
-    state: readonly string[],
+    state: readonly Member[],
   ): void => {
     if (stated > textCap) {
       return;
@@ -605,9 +883,9 @@ export function emitTreeProof(
 
     if (start < node.rows.length) {
       const group = groupAt(node.rows, start);
-      const below = [...state, ...readable(group), ...marksFor(group)];
+      const below = [...state, ...writtenBy(group)];
 
-      step(state, [group], [below]);
+      step(texts(state), [group], [texts(below)]);
       walk(node, start + group.length, below);
       return;
     }
@@ -620,13 +898,9 @@ export function emitTreeProof(
     }
 
     const groups = children.map((child) => groupAt(child.rows, 0));
-    const states = groups.map((group) => [
-      ...state,
-      ...readable(group),
-      ...marksFor(group),
-    ]);
+    const states = groups.map((group) => [...state, ...writtenBy(group)]);
 
-    step(state, groups, states);
+    step(texts(state), groups, states.map(texts));
 
     for (const [at, child] of children.entries()) {
       walk(child, (groups[at] as TableauRow[]).length, states[at] ?? state);
@@ -635,6 +909,7 @@ export function emitTreeProof(
 
   const root = index.root;
   const nothing = (count: number): TreeProof => ({
+    developed: null,
     endProblems,
     gaps,
     goal: null,
@@ -661,7 +936,7 @@ export function emitTreeProof(
   }
 
   const rootRows = root.rows.slice(0, options.rootRows);
-  const rootState = readable(rootRows);
+  const rootState = rowsOf(rootRows);
 
   if (rootState.length !== rootRows.length) {
     return nothing(0);
@@ -678,9 +953,18 @@ export function emitTreeProof(
   }
 
   return {
+    developed:
+      ok === null
+        ? null
+        : { leaves: asked, rules: new Set(judged.map((rule) => rule.name)) },
     endProblems,
     gaps,
-    goal: statements.join("\n"),
+    // The axioms saying when a row is developed come first, where a theorem
+    // asks whether one is.
+    goal: [
+      ...(asked.size > 0 && ok !== null ? [ok.text] : []),
+      ...statements,
+    ].join("\n"),
     hypotheses,
     linked,
     lines,
