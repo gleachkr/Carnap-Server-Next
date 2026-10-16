@@ -49,13 +49,13 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   alone and no branch marked open, has nothing to certify. `criteria.ts` reads the theory's
   development roles into a registry of criteria (`once`, `general`, `pairs`,
   `none`), `patterns.ts` matches a rule's focus against a row and fills in
-  its templates, and `complete.ts` says from the verified steps what each
-  row's mark is, and whether an open branch is complete where `ok.ts`
-  (below) cannot say. A theory with
-  `tree.completeness.contents` (the Open Logic Project's) also counts a row
-  developed when its rule's conclusions are on the branch already, matched
-  as the focus is; without it S5's `4r□` would owe a row back to a prefix
-  that has it, and each copy would owe the same again. A rule may name side
+  its templates, `marks.ts` says from the steps what each row's mark is,
+  and `branch.ts` reads what Carnap reads of a branch itself: the rows that
+  would close it, which no theorem can say, and which rows are literals.
+  A theory whose rules write no check marks (the Open Logic Project's) counts
+  a row developed when its rule's conclusions are on the branch, however
+  they got there; counted by steps, S5's `4r□` would owe a row back to a
+  prefix that has it, and each copy would owe the same again. A rule may name side
   rows in its branch, a witness on the branch the student does not cite
   (`□𝕋` wants its prefix used); a general criterion over such a rule is
   owed the instances its side rows find, not every term of the sort, and an
@@ -77,21 +77,28 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   names beside its rows, so the engine checks them as it checks the rows.
   `ok.ts` states, from the rules, when a row is developed: `tree_ok ρ Γ`,
   one axiom per way a rule leaves ρ developed (its mark on Γ, or by
-  contents a premise's rows), and `tree_okat_<sort> ρ t Γ` for a general
-  row at t. Rows no rule develops get an axiom asking nothing, found by
+  contents a premise's rows), `tree_okat_<rule> ρ t Γ` for a general
+  row at t, and `tree_okwith_<rule> ρ σ Γ` for a general row whose rule
+  has side rows, at the side rows σ that witness it (`□𝕋`'s row at a
+  prefix the branch uses). Rows no rule develops get an axiom asking nothing, found by
   complement over the constructors, so a rule whose axiom cannot be stated
   leaves its rows visibly undeveloped. The emitter asks them of each
   branch marked open: one theorem per row that it is developed, and one per
   general row and term of its instance's sort on the branch (with a new
-  name where a `nonempty` row's branch has none), each stated with the rows
+  name where a `nonempty` row's branch has none), or, for a rule with side
+  rows, each witness Carnap finds on the branch, and for each identity
+  (`pairs`) each row it pairs with, by `tree_okpair_<statement>`, with the
+  bindings Carnap's matcher found as a hint (`ph := $ F x c $`, the partner
+  with every `b` made `x`, which the rule's own dependencies keep honest).
+  An identity is developed one way round for every row it pairs with, so
+  the browser asks both statements, keeps the one refused least, and the
+  answer stores it (`directions`, by leaf and row); the server states only
+  that one. Each is stated with the rows
   the row's own steps wrote last, where the engine finds them without
   sorting the branch. A theorem the engine cannot prove is what the branch
   is missing, and a certificate proves the branches marked open complete,
-  so the server needs nothing else. `complete.ts` still judges the rules
-  the axioms do not state yet: rules on a pair of rows (identity) and
-  general rules with side rows (`□𝕋`), and every rule of a theory with
-  neither marks nor `tree.completeness.contents` (#469). What the axioms
-  cannot state is an author's diagnostic. A general step's
+  so the server needs nothing else (#469). What the axioms cannot state is
+  an author's diagnostic. A general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
   browser compiles every candidate once to find which hold, and that compile
@@ -113,13 +120,18 @@ The editor is `src/client/components/carnap-truth-tree-v1.tsx`.
 
 ## Answer data
 
-`truth-tree-answer@1` is `{ nodes, rules?, instances? }`: `rules` maps a
+`truth-tree-answer@1` is `{ nodes, rules?, instances?, directions? }`:
+`rules` maps a
 development's `dev` to the rule its margin names (the theory's spelling of
 one of its `@syntax alias`es), kept beside the document so that the document
 stays logic-free; a development missing from it names no rule. `instances`
 maps a row of a general step to the term it was written with, as engine text
 (`a` for `Fa` from `∀x Fx`): the browser finds it by asking the engine, and
-the certificate proves it. `nodes` is the
+the certificate proves it. `directions` maps an identity on a branch marked
+open, keyed `"<leaf id> <row id>"`, to the statement of its rule it is
+developed by (`tb_id_ba`, every `b` made `a`); one with none is asked by
+the rule's own, and the certificate proves the branch developed in it.
+`nodes` is the
 tableau document: each node a run
 of rows with its parent (`null` for the root) and an optional `end`,
 `{ type: "closed", cites }` or `{ type: "open" }`. A row is
@@ -136,8 +148,8 @@ A bad tree is a valid wrong answer, scored zero with the first problem;
 only JSON that is not a tree is refused. "Not a tree" includes nodes that do
 not form one (the root first, each node after its parent, no node or row id
 used twice, each development one run of rows, or the first run of each
-branch of one split), rules or instances keyed by a development or row the
-tree does not have, and a tree too big to be an attempt (1000 nodes or rows,
+branch of one split), rules, instances or directions keyed by a
+development, row or leaf and row the tree does not have, and a tree too big to be an attempt (1000 nodes or rows,
 a row of 1000 characters, 128 KiB in all). A tree past `TREE_ROW_CAP` (200
 rows) is answered "too many rows" without being read, since each row costs
 a parse; one whose theorems would state more than `TREE_TEXT_CAP` (4

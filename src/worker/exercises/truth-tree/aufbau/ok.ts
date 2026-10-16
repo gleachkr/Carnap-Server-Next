@@ -3,12 +3,26 @@
  *
  * `./criteria.ts` reads from a theory's rules what each row of an open
  * branch owes. This module states the same thing as axioms, so that the
- * engine, not Carnap, says whether a branch is complete. Two judgements, over
+ * engine, not Carnap, says whether a branch is complete. The judgements, over
  * a row ρ and a branch Γ:
  *
  * - `tree_ok ρ Γ`: ρ owes Γ nothing more, as far as it owes anything once;
- * - `tree_okat_<sort> ρ t Γ`: a general row ρ is developed at the term t, for
- *   a rule that counts instances of that sort.
+ * - `tree_okat_<rule> ρ t Γ`: a general row ρ is developed by the rule at the
+ *   term t;
+ * - `tree_okwith_<rule> ρ σ Γ`: a general row ρ is developed by the rule for
+ *   the side rows σ, for a rule owed an instance only where they are on the
+ *   branch (`□𝕋`: `σ.n 𝕋 B` makes `σ 𝕋 □A` owe `σ.n 𝕋 A`). Which rows
+ *   witness is Carnap's to find; whether the row is developed for them, the
+ *   engine's;
+ * - `tree_okpair_<statement> ρ π Γ`: a row ρ a rule on a pair of rows sets
+ *   off (an identity `a = b`) is developed with the row π by that statement
+ *   of the rule (one way round: every `b` made `a`). A row is developed by
+ *   one statement for every row it pairs with, so the answer names the
+ *   statement (`directions`), and the browser finds which by asking each.
+ *
+ * A general rule has a judgement of its own, since two may develop one row
+ * for the same witness (`□𝕋` and `4□` in S5), and each is owed its own
+ * conclusion.
  *
  * There is one axiom for each way a rule leaves its row developed:
  *
@@ -17,7 +31,7 @@
  *   (`tree_ok ρ (ga ; ✓ ρ)`), and a general row at t where the mark beside
  *   its instance at t is (`tree_okat_tm ρ t (ga ; ✓ᵢ ρ ↦ ψ)`, ψ the rule's
  *   row at t);
- * - by contents (`tree.completeness.contents`): a row is developed where the
+ * - by contents, where the rules write no marks: a row is developed where the
  *   rows one premise writes are on the branch, so either branch of a split
  *   will do (`tree_ok (ph ∧ ps) (ga ; ph ; ps)`). A branch is a multiset, and
  *   holds `A` as often as it was written, so where two of a premise's rows
@@ -36,9 +50,6 @@
  *
  * Each judgement's axioms are chained by `@fallback`, so that one citation of
  * the chain's head tries them all.
- *
- * A theory that neither counts by contents nor writes marks has none: what
- * its steps did is not on the branch to be read.
  *
  * DOM-free and free of i18n.
  */
@@ -72,8 +83,10 @@ export interface OkAxioms {
   /** The declarations, to append to the theory once `@syntax` is stripped. */
   readonly text: string;
   readonly ok: OkJudgement;
-  /** By the sort of instance a general rule counts. */
-  readonly at: ReadonlyMap<string, OkJudgement>;
+  /** By general rule, for each whose axioms could be stated. */
+  readonly general: ReadonlyMap<string, OkJudgement>;
+  /** By statement of a rule on a pair of rows (`tree_okpair_<statement>`). */
+  readonly pairs: ReadonlyMap<string, OkJudgement>;
   readonly problems: readonly {
     /** The rule, or for a judgement's `@congr`, its term. */
     readonly rule: string;
@@ -97,12 +110,14 @@ export type OkProblem =
 /** The judgements' names, before any clash with the theory's is avoided. */
 const OK = "tree_ok";
 const OKAT = "tree_okat";
+const OKWITH = "tree_okwith";
+const OKPAIR = "tree_okpair";
 
 const cache = new WeakMap<SurfaceLanguage, OkAxioms | null>();
 
 /**
- * A tree theory's development as axioms, read once per language. Null for a
- * theory that neither counts by contents nor writes marks.
+ * A tree theory's development as axioms, read once per language. Null where
+ * its `closes` term has no branch to judge.
  */
 export function okAxioms(
   language: SurfaceLanguage,
@@ -117,72 +132,15 @@ export function okAxioms(
 }
 
 /**
- * Whether a general rule is owed its instance at every term of its sort on a
- * branch, which the axioms can ask: no statement of it has side rows, as
- * `□𝕋` has, which is owed only the prefixes the branch uses (#469).
+ * Whether a general rule is owed its instance only where its side rows are on
+ * the branch: every statement of it has some.
  */
-function atEveryTerm(rule: DevelopmentRule): boolean {
+export function atWitnesses(rule: DevelopmentRule): boolean {
   return (
     rule.criterion?.kind === "general" &&
     rule.instance !== null &&
-    rule.variants.every((variant) => variant.side.length === 0)
+    rule.variants.every((variant) => variant.side.length > 0)
   );
-}
-
-/** Whether a judgement has no congruence, for want of a relation. */
-function incongruent(axioms: OkAxioms, judgement: OkJudgement): boolean {
-  return axioms.problems.some(
-    (each) =>
-      each.rule === judgement.term && each.problem.type === "no-relation",
-  );
-}
-
-/**
- * Whether the axioms say when a rule's rows are developed, so that the
- * engine is asked rather than `./complete.ts`: a rule used once or never,
- * always (where its axioms could not be stated, its rows are never
- * developed); a general rule owed every term, where its instances'
- * judgement has a congruence. Not a rule on a pair of rows.
- */
-export function okJudges(axioms: OkAxioms, rule: DevelopmentRule): boolean {
-  const kind = rule.criterion?.kind;
-
-  if (kind === "once" || kind === "none") {
-    return true;
-  }
-
-  const judgement =
-    rule.instance === null ? undefined : axioms.at.get(rule.instance.sort);
-
-  return (
-    atEveryTerm(rule) &&
-    judgement !== undefined &&
-    !incongruent(axioms, judgement)
-  );
-}
-
-/**
- * The problems that change a verdict, for an author: all but a judgement's
- * missing relation where only rules `./complete.ts` still judges would ask
- * it (a modal prefix's, which only `□𝕋` counts).
- */
-export function okProblemsReported(
-  axioms: OkAxioms,
-  development: TreeDevelopment,
-): OkAxioms["problems"] {
-  return axioms.problems.filter(({ problem, rule }) => {
-    const sort = [...axioms.at].find(
-      ([, judgement]) => judgement.term === rule,
-    )?.[0];
-
-    return (
-      problem.type !== "no-relation" ||
-      sort === undefined ||
-      development.rules.some(
-        (each) => atEveryTerm(each) && each.instance?.sort === sort,
-      )
-    );
-  });
 }
 
 /** A binder of a generated axiom. */
@@ -226,12 +184,6 @@ function generate(
   theory: TreeTheory,
   development: TreeDevelopment,
 ): OkAxioms | null {
-  const marked = theory.mark !== null || theory.markInstance !== null;
-
-  if (!theory.byContents && !marked) {
-    return null;
-  }
-
   const { spec } = language;
   const closes = spec.terms.get(theory.closes);
   const branchBinder = closes?.binders[0];
@@ -274,11 +226,14 @@ function generate(
    * The binders of a rule's statement that a generated one mentions, bound
    * first. Each regular binder may mention every bound one: the rule's
    * freshness (`ga` may not mention the new name) is about writing a row,
-   * and a row already written owes nothing to it.
+   * and a row already written owes nothing to it. With `own`, each keeps the
+   * rule's dependencies instead, where they say what the rule reads off a
+   * row: `ph: wff x a` in `{x / b} ph` is the row with every `b` made `x`.
    */
   const declsOf = (
     binders: readonly Binder[],
     mentioned: ReadonlySet<string>,
+    own = false,
   ): Decl[] => {
     const kept = binders.filter(
       (binder) => "sort" in binder.type && mentioned.has(binder.name),
@@ -289,54 +244,61 @@ function generate(
 
     return [...bound, ...regular].map((binder) => ({
       binds: binder.binds,
-      deps: binder.binds ? [] : names,
+      deps: binder.binds
+        ? []
+        : own && "sort" in binder.type
+          ? binder.type.dependencies.filter((name) => names.includes(name))
+          : names,
       name: binder.name,
       sort: "sort" in binder.type ? binder.type.sort : "",
     }));
   };
 
   /**
-   * A judgement of a rule's row, on the rest of the branch and `parts`, with
-   * the metavariables `names` renames renamed.
+   * A judgement of a rule's row, at `args` (each a term, or rows joined), on
+   * the rest of the branch and `parts`, with the metavariables `names`
+   * renames renamed.
    */
   const stated = (
     judgement: string,
     patterns: RulePatterns,
-    args: readonly Term[],
+    args: readonly (readonly Term[])[],
     parts: readonly Term[],
     names: ReadonlyMap<string, string> = new Map(),
   ): { conclusion: string; mentioned: Set<string> } => {
-    const focus = renamed(patterns.focus[0] as Term, names);
-    const heads = [focus, ...args.map((arg) => renamed(arg, names))];
-    const terms = [...heads, ...parts];
+    const heads = [[patterns.focus[0] as Term], ...args].map((arg) =>
+      arg.map((term) => renamed(term, names)),
+    );
+    const terms = [...heads.flat(), ...parts];
     const mentioned = new Set([
       patterns.branch,
       ...terms.flatMap(variablesIn),
     ]);
     const conclusion = `${judgement} ${heads
-      .map((term) => `(${print(term)})`)
+      .map(
+        (arg) =>
+          `(${arg.map((term) => print(term)).join(`) ${theory.join} (`)})`,
+      )
       .join(" ")} (${branchText(patterns.branch, parts)})`;
 
     return { conclusion, mentioned };
   };
 
   const ok = global(OK);
-  const at = new Map<string, string>();
-  // Named before its axioms are drafted, since each states it; a sort none
-  // of whose rules could be stated is then not declared.
-  const atFor = (sort: string): string => {
-    let term = at.get(sort);
-
-    if (term === undefined) {
-      term = global(`${OKAT}_${sort}`);
-      at.set(sort, term);
-    }
-
-    return term;
-  };
-
   const okDrafts: Draft[] = [];
-  const atDrafts = new Map<string, Draft[]>();
+  /** The general rules' judgements, each named before it is drafted. */
+  const generals: {
+    readonly rule: DevelopmentRule;
+    readonly term: string;
+    readonly at: readonly [string, string];
+    readonly drafts: readonly Draft[];
+  }[] = [];
+  /** The pair rules' judgements, by statement. */
+  const pairs: {
+    readonly variant: string;
+    readonly term: string;
+    readonly drafts: readonly Draft[];
+  }[] = [];
   const freeDrafts: Draft[] = [];
   const covered: Term[] = [];
 
@@ -394,12 +356,52 @@ function generate(
     return drafts;
   }
 
-  /** A general rule's axioms at its instance, one per premise of each statement. */
+  /**
+   * A rule on a pair of rows, a judgement for each statement of it, since a
+   * row it sets off is developed by one statement for every row it pairs
+   * with (UBC's identity, one way round): one axiom per premise, by the rows
+   * the premise writes, whether or not the theory writes marks, since no
+   * step need write them (a row already on the branch will do).
+   */
+  function pairDrafts(rule: DevelopmentRule): void {
+    for (const patterns of rule.variants) {
+      const second = patterns.focus[1];
+
+      if (patterns.focus.length !== 2 || second === undefined) {
+        continue;
+      }
+
+      const term = global(`${OKPAIR}_${patterns.name}`);
+      const drafts = patterns.written.map((written): Draft => {
+        const { conclusion, mentioned } = stated(
+          term,
+          patterns,
+          [[second]],
+          [...patterns.side, ...written],
+        );
+
+        return {
+          annotations: [],
+          binders: declsOf(patterns.binders, mentioned, true),
+          comment: `by ${patterns.name}`,
+          conclusion,
+        };
+      });
+
+      pairs.push({ drafts, term, variant: patterns.name });
+    }
+  }
+
+  /**
+   * A general rule's axioms at its instance, or for its side rows where it
+   * has them, one per premise of each statement.
+   */
   function generalDrafts(
     rule: DevelopmentRule,
     slot: InstanceSlot,
+    term: string,
   ): Draft[] | null {
-    const term = atFor(slot.sort);
+    const side = atWitnesses(rule);
     const drafts: Draft[] = [];
 
     for (const patterns of rule.variants) {
@@ -424,7 +426,7 @@ function generate(
       for (let premise = 0; premise < patterns.written.length; premise += 1) {
         const parts = theory.byContents
           ? [
-              ...patterns.side,
+              ...(side ? [] : patterns.side),
               ...(patterns.written[premise] ?? []).filter((row) =>
                 variablesIn(row).includes(slot.binder),
               ),
@@ -443,7 +445,7 @@ function generate(
         const { conclusion, mentioned } = stated(
           term,
           patterns,
-          [variable],
+          [side ? patterns.side : [variable]],
           parts,
         );
         drafts.push({
@@ -572,6 +574,11 @@ function generate(
   for (const rule of development.rules) {
     const kind = rule.criterion?.kind;
 
+    if (kind === "pairs") {
+      pairDrafts(rule);
+      continue;
+    }
+
     if (rule.patterns.focus.length !== 1 || kind === undefined) {
       continue;
     }
@@ -593,15 +600,20 @@ function generate(
     }
 
     if (kind === "general" && rule.instance !== null) {
-      const drafts = generalDrafts(rule, rule.instance);
+      // The side rows at the branch sort, as rows joined.
+      const side = atWitnesses(rule);
+      const term = global(`${side ? OKWITH : OKAT}_${rule.name}`);
+      const drafts = generalDrafts(rule, rule.instance, term);
 
       if (drafts === null) {
         problems.push({ problem: { type: "unmarked" }, rule: rule.name });
       } else {
-        atDrafts.set(rule.instance.sort, [
-          ...(atDrafts.get(rule.instance.sort) ?? []),
-          ...drafts,
-        ]);
+        generals.push({
+          at: side ? ["si", branchSort] : ["te", rule.instance.sort],
+          drafts,
+          rule,
+          term,
+        });
       }
     }
   }
@@ -660,9 +672,10 @@ function generate(
   const text: string[] = [
     "-- When a row is developed: generated from the rules (Carnap, gh #46).",
   ];
+  /** A judgement of a row, at `at` (a name and its sort), on a branch. */
   const judgement = (
     term: string,
-    instance: string | null,
+    at: readonly [string, string] | null,
     drafts: readonly Draft[],
   ): OkJudgement | null => {
     if (drafts.length === 0) {
@@ -671,20 +684,14 @@ function generate(
 
     // The row at the branch sort, a branch of one row, so that the congruence
     // asks no relation of the row sort.
-    const sorts = [
-      branchSort,
-      ...(instance === null ? [] : [instance]),
-      branchSort,
-    ];
+    const sorts = [branchSort, ...(at === null ? [] : [at[1]]), branchSort];
     const taken = new Set<string>();
     const local = (base: string): string => {
       const name = fresh(base, taken);
       taken.add(name);
       return name;
     };
-    const names = ["ph", ...(instance === null ? [] : ["te"]), "ga"].map(
-      local,
-    );
+    const names = ["ph", ...(at === null ? [] : [at[0]]), "ga"].map(local);
     text.push(
       `term ${term} ${sorts.map((sort, at) => `(${names[at]}: ${sort})`).join(" ")}: ${judgementSort};`,
     );
@@ -738,22 +745,34 @@ function generate(
   };
 
   const okJudgement = judgement(ok, null, [...okDrafts, ...freeDrafts]);
-  const atJudgements = new Map<string, OkJudgement>();
+  const general = new Map<string, OkJudgement>();
 
   if (okJudgement === null) {
     return null;
   }
 
-  for (const [sort, term] of at) {
-    const each = judgement(term, sort, atDrafts.get(sort) ?? []);
+  for (const { at, drafts, rule, term } of generals) {
+    const each = judgement(term, at, drafts);
 
     if (each !== null) {
-      atJudgements.set(sort, each);
+      general.set(rule.name, each);
+    }
+  }
+
+  // The partner at the branch sort too.
+  const paired = new Map<string, OkJudgement>();
+
+  for (const { drafts, term, variant } of pairs) {
+    const each = judgement(term, ["ps", branchSort], drafts);
+
+    if (each !== null) {
+      paired.set(variant, each);
     }
   }
 
   return {
-    at: atJudgements,
+    general,
+    pairs: paired,
     ok: okJudgement,
     problems,
     text: `${text.join("\n")}\n`,

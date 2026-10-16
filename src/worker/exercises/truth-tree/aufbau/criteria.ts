@@ -5,17 +5,13 @@
  * row a rule applies to resolved, every general row instantiated for each
  * name on the branch, and so on. Which is which is the theory's to say, by a
  * rule's `@syntax role tree.development.<kind>[.<arg>…]`, and what each kind
- * asks is a {@link DevelopmentCriterion} in {@link CRITERIA}: a new kind is
- * one entry there, not a change to the judge.
+ * asks is a {@link DevelopmentCriterion} in {@link CRITERIA}.
  *
- * The evidence is the student's own verified steps: the books are stricter
- * than a check of whether a rule would still add something in places (UBC's
- * conjunction is not developed because its conjuncts arrived some other way)
- * and more lenient in others. A theory that says otherwise
- * (`tree.completeness.contents`, `./theory.ts`) counts a row developed once
- * its rule's conclusions are on the branch, step or no step, as the Open
- * Logic Project defines a complete branch. It can only waive a step, never
- * ask for one.
+ * The engine says whether a row is developed, by axioms generated from what
+ * is read here (`./ok.ts`): by the rule's check marks on the branch, where
+ * the theory's rules write them, as UBC checks rows off, and otherwise by the
+ * rule's conclusions being on the branch, however they got there, as the
+ * Open Logic Project defines a complete branch.
  *
  * A rule a step can name is a chain: the axiom the student's name resolves
  * to and every axiom it falls back on (`@fallback`), which state the same
@@ -28,13 +24,11 @@
 
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { roleIndex } from "../../../logic/specs/roles";
-import type { Missing } from "../report";
 import type { Bindings, Metas } from "./patterns";
 import {
   instantiate,
   matchAll,
   matchTerm,
-  occursFree,
   statementReader,
   substitutionOf,
   termKey,
@@ -90,57 +84,6 @@ export interface InstanceSlot {
    * prefix `m` where the binder is one).
    */
   readonly shown: Term;
-  /**
-   * The metavariables of the templates that may mention a bound variable,
-   * and which: where none does, the instance is vacuous (`∀x Fa`).
-   */
-  readonly dependents: readonly {
-    readonly meta: string;
-    readonly on: string;
-  }[];
-}
-
-/** A step citing a row by its rule, on the branch at hand. */
-export interface DevelopingStep {
-  readonly dev: string;
-  /**
-   * The instance each row of the step was written with, by the engine's
-   * word, in the step's order; null where none is confirmed.
-   */
-  readonly instances: readonly (string | null)[];
-}
-
-/** What a criterion reads to say whether a row is developed on a branch. */
-export interface ObligationInput {
-  readonly row: string;
-  readonly rule: DevelopmentRule;
-  /** The verified steps on the branch that develop the row by this rule. */
-  readonly steps: readonly DevelopingStep[];
-  /** The closed terms of a sort on the branch, by engine text. */
-  readonly terms: (sort: string) => readonly string[];
-  /**
-   * For a rule with side rows, the instances they find on the branch, by
-   * engine text: the ones it must be used for (`□𝕋` at every prefix the
-   * branch uses), in place of every term of the instance's sort. Null for a
-   * rule without.
-   */
-  readonly witnessed: readonly string[] | null;
-  /**
-   * Where the theory judges by contents, each way the rule's conclusions are
-   * on the branch already: the instance that way fixes, by engine text, or
-   * null for a rule that counts none. Empty where it judges by steps.
-   */
-  readonly concluded: readonly (string | null)[];
-  /**
-   * For a rule on a pair of rows, set off by the row (`./complete.ts`
-   * `paired`): whether some statement of it has its conclusions on the branch
-   * for every row it pairs the row with. Null for a rule on one row.
-   */
-  readonly paired: boolean | null;
-  /** Whether the row's instances are vacuous (`∀x Fa`); false without one. */
-  readonly vacuous: boolean;
-  /** An instance as a reader is shown it, by engine text (`InstanceSlot.shown`). */
-  readonly shown: (instance: string) => string;
 }
 
 /** One kind of development criterion, as a role names it. */
@@ -163,8 +106,6 @@ export interface DevelopmentCriterion {
         readonly flags: ReadonlySet<string>;
       }
     | CriterionProblem;
-  /** What a matching row still needs on a branch; null once developed. */
-  readonly missing: (input: ObligationInput) => Missing | null;
   /** What a row's mark says: that it is resolved, or the names it took. */
   readonly mark: "resolved" | "general" | null;
 }
@@ -185,8 +126,6 @@ const KINDS: readonly DevelopmentCriterion[] = [
     flags: [],
     kind: "once",
     mark: "resolved",
-    missing: ({ concluded, row, steps }) =>
-      steps.length > 0 || concluded.length > 0 ? null : { row },
     read: (args, flags, rule) => {
       if (args.length > 1) {
         return { expected: "once[.binder]", type: "bad-arguments" };
@@ -199,39 +138,6 @@ const KINDS: readonly DevelopmentCriterion[] = [
     flags: ["nonempty"],
     kind: "general",
     mark: "general",
-    missing: ({
-      concluded,
-      row,
-      rule,
-      shown,
-      steps,
-      terms,
-      vacuous,
-      witnessed,
-    }) => {
-      const slot = rule.instance;
-      const used = steps.length > 0 || concluded.length > 0;
-
-      if (vacuous || slot === null) {
-        return used ? null : { names: [], row };
-      }
-
-      const all = witnessed ?? terms(slot.sort);
-
-      if (all.length === 0) {
-        return rule.flags.has("nonempty") && !used
-          ? { names: [], row }
-          : null;
-      }
-
-      const seen = new Set([
-        ...steps.flatMap((step) => step.instances),
-        ...concluded,
-      ]);
-      const needed = all.filter((term) => !seen.has(term));
-
-      return needed.length === 0 ? null : { names: needed.map(shown), row };
-    },
     read: (args, flags, rule) => {
       if (args.length !== 1) {
         return { expected: "general.binder", type: "bad-arguments" };
@@ -247,14 +153,13 @@ const KINDS: readonly DevelopmentCriterion[] = [
     // there it pairs with, whether a step wrote them or not, since a step
     // cites the pair and the other row is not the row's to cite. One
     // statement for all: UBC's identity is substituted one way round, every
-    // `a` made `b` or every `b` made `a`. Flag `literals`: only atomic and
-    // negated atomic rows pair. The missing entry is worded as an identity's
+    // `a` made `b` or every `b` made `a`, and the answer says which
+    // (`directions`). Flag `literals`: only atomic and negated atomic rows
+    // pair. What a branch is missing is worded as an identity's
     // substitution, the one rule written so.
     flags: ["literals"],
     kind: "pairs",
     mark: null,
-    missing: ({ paired, row }) =>
-      paired === false ? { row, substitution: true } : null,
     read: (args, flags, rule) => {
       if (args.length > 0) {
         return { expected: "pairs", type: "bad-arguments" };
@@ -269,7 +174,6 @@ const KINDS: readonly DevelopmentCriterion[] = [
     flags: [],
     kind: "none",
     mark: null,
-    missing: () => null,
     read: (args, flags) =>
       args.length > 0
         ? { expected: "none", type: "bad-arguments" }
@@ -343,8 +247,6 @@ export interface TreeDevelopment {
   readonly relation: JudgementRelation | null;
   /** Whether any rule carries a development role. */
   readonly annotated: boolean;
-  /** Whether a row is developed by its conclusions being on the branch. */
-  readonly byContents: boolean;
   readonly problems: readonly {
     /** The rule, or for a role on a term, the term. */
     readonly rule: string;
@@ -570,7 +472,6 @@ function readDevelopment(
   return {
     annotated,
     byAxiom,
-    byContents: theory.byContents,
     closure,
     problems,
     relation,
@@ -833,17 +734,6 @@ function instanceSlot(
     return null;
   }
 
-  const bound = new Set(
-    patterns.binders.filter((each) => each.binds).map((each) => each.name),
-  );
-  const dependents = patterns.binders.flatMap((each) =>
-    "sort" in each.type && templates.some((row) => mentions(row, each.name))
-      ? each.type.dependencies
-          .filter((on) => bound.has(on))
-          .map((on) => ({ meta: each.name, on }))
-      : [],
-  );
-
   const sort = declared.type.sort;
   const alone = language.spec.coercions.some(
     (coercion) => coercion.from === sort,
@@ -861,7 +751,6 @@ function instanceSlot(
 
   return {
     binder,
-    dependents,
     shown: alone ? variable : (argument ?? variable),
     sort,
     templates,
@@ -918,27 +807,6 @@ function mentions(term: Term, name: string): boolean {
   return term.kind === "variable"
     ? term.name === name
     : term.args.some((argument) => mentions(argument, name));
-}
-
-/**
- * Whether a row a rule matched gives vacuous instances: `∀x Fa`. Never for a
- * template that has the instance itself, not by a substitution (`σ.n 𝕋 A`):
- * each instance is its own row.
- */
-export function isVacuous(slot: InstanceSlot, bindings: Bindings): boolean {
-  return (
-    slot.dependents.length > 0 &&
-    slot.dependents.every(({ meta, on }) => {
-      const value = bindings.get(meta);
-      const variable = bindings.get(on);
-
-      return (
-        value === undefined ||
-        variable?.kind !== "variable" ||
-        !occursFree(value, variable.name)
-      );
-    })
-  );
 }
 
 /** Patterns to match against rows: side rows, or a premise's rows. */
@@ -1063,6 +931,64 @@ export function instanceShower(
 
     return termKey(language, filled) ?? instance;
   };
+}
+
+/** Side rows on a branch that make a general row owe an instance. */
+export interface Witness {
+  /** The instance they fix, by engine text. */
+  readonly instance: string;
+  /** The rows, as the rule's side rows, by engine text. */
+  readonly rows: readonly string[];
+}
+
+/**
+ * What a general rule with side rows owes at a row: for each of its
+ * statements that names side rows, each way they match rows of the branch
+ * once its focus matches the row, the rows and the instance that fixes, an
+ * instance once (`σ.n 𝕋 B` makes `σ 𝕋 □A` owe its instance at `n`). None for
+ * a rule that counts no instance.
+ */
+export function witnesses(
+  language: SurfaceLanguage,
+  rule: DevelopmentRule,
+  focus: Term,
+  rows: readonly Term[],
+): Witness[] {
+  const slot = rule.instance;
+  const found = new Map<string, Witness>();
+
+  if (slot === null) {
+    return [];
+  }
+
+  for (const patterns of rule.variants) {
+    if (patterns.side.length === 0) {
+      continue;
+    }
+
+    for (const bindings of ruleMatches(
+      language,
+      patterns,
+      [focus],
+      [{ patterns: patterns.side, rows }],
+    )) {
+      const value = bindings.get(slot.binder);
+      const instance = value === undefined ? null : termKey(language, value);
+      const side = patterns.side.map((pattern) =>
+        termKey(language, instantiate(pattern, bindings)),
+      );
+
+      if (
+        instance !== null &&
+        !found.has(instance) &&
+        side.every((row) => row !== null)
+      ) {
+        found.set(instance, { instance, rows: side as string[] });
+      }
+    }
+  }
+
+  return [...found.values()];
 }
 
 /** The bindings of a single-row rule's focus against a row; null if none. */

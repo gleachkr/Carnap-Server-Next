@@ -433,16 +433,23 @@ describe("an identity on an open branch", () => {
 
     // Each literal is the other way round already (`Fa` with every b made a
     // is `Fa`), but one way must do for all: Fb, or ¬Ga.
-    expect(report(resolved, bare.answer()).ends.get(bare.rootNode)).toEqual({
+    expect(
+      (await compiledReport(item, resolved, bare)).ends.get(bare.rootNode),
+    ).toEqual({
       missing: [{ row: "r1", substitution: true }],
       type: "open-incomplete",
     });
+    expect((await certify(item, bare)).mmb).toBeUndefined();
 
     const t = new TreeBuilder(resolved.rootText);
     t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
     t.open(t.rootNode);
     const answer = await certify(item, t);
 
+    expect(answer.directions).toEqual({ [`${t.rootNode} r1`]: "tb_id_ab" });
+    expect(
+      (await compiledReport(item, resolved, t)).ends.get(t.rootNode),
+    ).toBeUndefined();
     expect(report(resolved, answer).ends.get(t.rootNode)).toBeUndefined();
     // A substitution develops neither row it cites.
     expect(report(resolved, answer).marks.get("r1")).toBeUndefined();
@@ -466,12 +473,38 @@ describe("an identity on an open branch", () => {
     expect(report(resolved, answer).ends.get(left)).toBeUndefined();
   });
 
+  test("is certified only in the direction the answer names", async () => {
+    const { item, resolved } = await consistency("a=b", "Fa", "¬Gb");
+    const t = new TreeBuilder(resolved.rootText);
+    t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
+    t.open(t.rootNode);
+    const answer = await certify(item, t);
+    const key = `${t.rootNode} r1`;
+
+    expect(await grade(item, answer)).toBe("correct");
+    // The other way round, `¬Ga` is missing: the certificate proves the
+    // branch developed one way, and the goal states the other.
+    expect(
+      await grade(item, { ...answer, directions: { [key]: "tb_id_ba" } }),
+    ).toBe("incorrect");
+    // With none named, the rule's own statement is asked.
+    const { directions: _directions, ...unnamed } = answer;
+    expect(await grade(item, unnamed)).toBe("incorrect");
+    // A pair the tree does not have is no answer.
+    await expect(
+      grade(item, { ...answer, directions: { "n9 r1": "tb_id_ab" } }),
+    ).rejects.toThrow("answer refused");
+  });
+
   test("owes nothing a self-identity would be", async () => {
-    const { resolved } = await consistency("a=b", "b=a");
+    const { item, resolved } = await consistency("a=b", "b=a");
     const t = new TreeBuilder(resolved.rootText);
     t.open(t.rootNode);
 
-    expect(report(resolved, t.answer()).ends.get(t.rootNode)).toBeUndefined();
+    expect(
+      (await compiledReport(item, resolved, t)).ends.get(t.rootNode),
+    ).toBeUndefined();
+    expect((await certify(item, t)).mmb).toBeDefined();
   });
 });
 
@@ -757,7 +790,10 @@ describe("another calculus's roles", () => {
     const bare = new TreeBuilder(resolved.rootText);
     bare.open(bare.rootNode);
 
-    expect(report(resolved, bare.answer()).ends.get(bare.rootNode)).toEqual({
+    // It writes no marks, so it is judged by its contents.
+    expect(
+      (await compiledReport(item, resolved, bare)).ends.get(bare.rootNode),
+    ).toEqual({
       missing: [{ row: "r1" }],
       type: "open-incomplete",
     });

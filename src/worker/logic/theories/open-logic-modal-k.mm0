@@ -290,10 +290,10 @@ axiom join_congr (ga de si ta: ctx): $ ctx_eq ga de $ > $ ctx_eq si ta $ > $ ctx
 -- ## The tree judgements, read by role (see `forallx-ubc`)
 --
 -- An open branch is complete when each rule's conclusions are on it, however
--- they got there (`completeness`), not when each row has been checked off.
+-- they got there, not when each row has been checked off: the rules write no
+-- check marks, so Carnap judges a branch by its contents.
 
 --| @syntax role tree.closes
---| @syntax role tree.completeness.contents
 term cl (ga: ctx): judgement;
 prefix cl: $closes$ prec 3;
 --| @congr

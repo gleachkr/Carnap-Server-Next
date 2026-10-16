@@ -21,7 +21,7 @@ import { firstOrderLanguageFor } from "../../exercise-kit/formula";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
 import type { TreeProof } from "./aufbau/emit";
-import { emitTreeProof } from "./aufbau/emit";
+import { emitTreeProof, pairingOf } from "./aufbau/emit";
 import type { EngineFailure, TreeEvidence } from "./aufbau/judge";
 import { judgeTreeProof } from "./aufbau/judge";
 import type { RowSortReader } from "./aufbau/rows";
@@ -227,22 +227,34 @@ export function isTruthTreeAnswerData(
 
   const nodes = data.nodes as TableauNode[];
   const rows = nodes.flatMap((node) => node.rows);
+  const devs = new Set(rows.map((row) => row.dev));
+  const rowIds = new Set(rows.map((row) => row.id));
+  const nodeIds = new Set(nodes.map((node) => node.id));
 
   return (
     rows.length <= MAX_SUBMITTED_ROWS &&
     JSON.stringify(nodes).length <= MAX_SUBMITTED_LENGTH &&
     isOneTree(nodes) &&
     (data.rules === undefined ||
-      isEntries(
-        data.rules,
-        new Set(rows.map((row) => row.dev)),
-        MAX_RULE_TEXT,
-      )) &&
+      isEntries(data.rules, (key) => devs.has(key), MAX_RULE_TEXT)) &&
     (data.instances === undefined ||
       isEntries(
         data.instances,
-        new Set(rows.map((row) => row.id)),
+        (key) => rowIds.has(key),
         MAX_INSTANCE_TEXT,
+      )) &&
+    (data.directions === undefined ||
+      isEntries(
+        data.directions,
+        (key) => {
+          const pairing = pairingOf(key);
+          return (
+            pairing !== null &&
+            nodeIds.has(pairing.leaf) &&
+            rowIds.has(pairing.row)
+          );
+        },
+        MAX_RULE_TEXT,
       ))
   );
 }
@@ -266,14 +278,26 @@ export function answerInstances(
   );
 }
 
+/** The statement each paired row is asked by, by its `pairingKey`. */
+export function answerDirections(
+  answer: TruthTreeAnswerData,
+): ReadonlyMap<string, readonly string[]> {
+  return new Map(
+    Object.entries(answer.directions ?? {}).map(([key, statement]) => [
+      key,
+      [statement],
+    ]),
+  );
+}
+
 /**
- * Rules by development, or instances by row: each keyed by a development or
- * row the tree has, and short. The editor sends no others, so the keys are
- * bounded by the tree's own size cap.
+ * Rules by development, instances by row, or directions by leaf and row: each
+ * keyed by a development, row or leaf and row the tree has, and short. The
+ * editor sends no others, so the keys are bounded by the tree's own size cap.
  */
 function isEntries(
   value: unknown,
-  keys: ReadonlySet<string>,
+  isKey: (key: string) => boolean,
   longest: number,
 ): boolean {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -282,7 +306,7 @@ function isEntries(
 
   return Object.entries(value).every(
     ([key, entry]) =>
-      keys.has(key) && typeof entry === "string" && entry.length <= longest,
+      isKey(key) && typeof entry === "string" && entry.length <= longest,
   );
 }
 
@@ -398,17 +422,30 @@ export interface TreeJudgement {
   readonly problem: TreeJudgementProblem | null;
 }
 
+/**
+ * What a derivation states of the instances and directions the engine finds:
+ * the answer's, or every candidate, for a compile that asks which hold.
+ */
+export interface TreeAsking {
+  readonly instances: ReadonlyMap<string, readonly string[]>;
+  readonly directions: ReadonlyMap<string, readonly string[]>;
+}
+
 /** A tree written down as a derivation, for the engine to check. */
 export function treeProofOf(
   resolved: ResolvedTree,
   answer: TruthTreeAnswerData,
-  instances: ReadonlyMap<string, readonly string[]> = answerInstances(answer),
+  asking: TreeAsking = {
+    directions: answerDirections(answer),
+    instances: answerInstances(answer),
+  },
 ): TreeProof {
   return emitTreeProof(
     { nodes: answer.nodes },
     {
       development: resolved.development,
-      instances,
+      directions: asking.directions,
+      instances: asking.instances,
       language: resolved.language,
       reader: resolved.reader,
       rootRows: resolved.root.length,
@@ -418,6 +455,26 @@ export function treeProofOf(
       theory: resolved.theory,
     },
   );
+}
+
+/**
+ * A tree written down to ask the engine which instance each general row was
+ * written with and which direction each paired row is developed in: every
+ * candidate stated, each failure saying only that it was not that one.
+ */
+export function askingProofOf(
+  resolved: ResolvedTree,
+  answer: TruthTreeAnswerData,
+): TreeProof {
+  const first = treeProofOf(resolved, answer, {
+    directions: new Map(),
+    instances: new Map(),
+  });
+
+  return treeProofOf(resolved, answer, {
+    directions: first.pairings,
+    instances: first.slots,
+  });
 }
 
 /**

@@ -25,7 +25,7 @@ import { engine, TreeBuilder } from "./helpers/truth-tree";
 
 /**
  * A theory's development as axioms (#469): `tree_ok ρ Γ` and
- * `tree_okat_<sort> ρ t Γ`, generated from its rules, asked of real branches
+ * `tree_okat_<rule> ρ t Γ`, generated from its rules, asked of real branches
  * and answered by the engine alone.
  */
 
@@ -140,11 +140,17 @@ function ok(on: System, text: string, branch: string): Ask {
   };
 }
 
-function okat(on: System, text: string, term: string, branch: string): Ask {
-  const judgement = (on.ok as OkAxioms).at.get("tm");
+function okat(
+  on: System,
+  rule: string,
+  text: string,
+  term: string,
+  branch: string,
+): Ask {
+  const judgement = (on.ok as OkAxioms).general.get(rule);
 
   if (judgement === undefined) {
-    throw new Error("no judgement at tm");
+    throw new Error(`no judgement for ${rule}`);
   }
 
   return {
@@ -235,25 +241,24 @@ describe("the generated axioms", () => {
     expect(UBC.ok?.problems).toEqual([]);
     expect(OLP.ok?.problems).toEqual([]);
     // A modal prefix's step is a bound variable, with no relation for a
-    // congruence to pair: the modal instances are stage 4's.
+    // congruence to pair, but `□𝕋` is asked for its witnesses, at the
+    // branch sort.
     expect(
       system(LANGUAGE_SPEC_SOURCES["open-logic-modal-k"] ?? "").ok?.problems,
-    ).toEqual([
-      {
-        problem: { sort: "idx", type: "no-relation" },
-        rule: "tree_okat_idx",
-      },
-    ]);
+    ).toEqual([]);
   });
 
-  test("are none for a theory that neither marks nor counts by contents", () => {
+  test("judge a theory whose rules write no marks by its contents", () => {
     const unmarked = UBC_SOURCE.replace(
       "--| @syntax role tree.mark\n",
       "",
     ).replace("--| @syntax role tree.mark.instance\n", "");
 
     expect(unmarked).not.toContain("role tree.mark");
-    expect(system(unmarked).ok).toBeNull();
+    expect(UBC.theory.byContents).toBe(false);
+    expect(OLP.theory.byContents).toBe(true);
+    expect(system(unmarked).theory.byContents).toBe(true);
+    expect(system(unmarked).ok).not.toBeNull();
   });
 });
 
@@ -276,7 +281,7 @@ describe("what cannot be stated", () => {
       { problem: { type: "unmarked" }, rule: "tb_all1" },
       { problem: { type: "unmarked" }, rule: "tb_nex1" },
     ]);
-    expect(unmarked.ok?.at.size).toBe(0);
+    expect(unmarked.ok?.general.size).toBe(0);
     expect(unmarked.ok?.text).not.toContain("tree_okat");
     expect(result.diagnostics ?? []).toEqual([]);
   });
@@ -478,8 +483,8 @@ describe("by contents (Open Logic)", () => {
 
     expect(
       holds(OLP, [
-        okat(OLP, "T: ∀x F(x)", "a", branch),
-        okat(OLP, "T: ∀x F(x)", "b", branch),
+        okat(OLP, "tb_t_all", "T: ∀x F(x)", "a", branch),
+        okat(OLP, "tb_t_all", "T: ∀x F(x)", "b", branch),
         ok(OLP, "T: ∀x F(x)", branch),
         ok(OLP, "T: G(b)", branch),
       ]),

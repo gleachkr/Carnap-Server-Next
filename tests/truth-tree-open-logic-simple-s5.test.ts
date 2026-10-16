@@ -3,10 +3,7 @@ import { compileCarnapMarkdown } from "../src/worker/application/content/compile
 import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import {
-  judgeTree,
-  resolveTruthTree,
-} from "../src/worker/exercises/truth-tree/grading";
+import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import { markText } from "../src/worker/exercises/truth-tree/labels";
 import type {
   RowMark,
@@ -192,10 +189,13 @@ async function countermodel(both: boolean) {
   );
 
   return {
-    report: judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    }).report,
+    certified: answer.mmb !== undefined,
+    report: judgeAsBrowser(
+      await engine(),
+      resolved,
+      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
+      tree.answer(),
+    ),
     resolved,
     root: tree.rootNode,
   };
@@ -203,20 +203,22 @@ async function countermodel(both: boolean) {
 
 describe("an open branch in simple S5", () => {
   test("is complete with □𝕋 at every prefix it uses", async () => {
-    const { report, resolved } = await countermodel(true);
+    const { certified, report, resolved } = await countermodel(true);
 
     expect(problems(report)).toEqual([]);
+    expect(certified).toBe(true);
     expect(
       markText(report.marks.get("r1") as RowMark, resolved.language),
     ).toBe("\\1,2");
   }, 60_000);
 
   test("is incomplete while □𝕋 skips one", async () => {
-    const { report, root } = await countermodel(false);
+    const { certified, report, root } = await countermodel(false);
 
     expect(report.ends.get(root)).toEqual({
       missing: [{ names: ["w2"], row: "r1" }],
       type: "open-incomplete",
     });
+    expect(certified).toBe(false);
   }, 60_000);
 });

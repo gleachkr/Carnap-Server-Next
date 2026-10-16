@@ -387,11 +387,14 @@ async function certified(root: string, build: (tree: TreeBuilder) => string) {
   );
 
   return {
+    certified: answer.mmb !== undefined,
     open,
-    report: judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    }).report,
+    report: judgeAsBrowser(
+      await engine(),
+      resolved,
+      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
+      tree.answer(),
+    ),
     resolved,
   };
 }
@@ -419,21 +422,23 @@ function countermodel(both: boolean) {
 
 describe("an open branch in intuitionistic logic", () => {
   test("is complete with →𝕋 at every prefix that extends its row's", async () => {
-    const { open, report, resolved } = await countermodel(true);
+    const { certified, open, report, resolved } = await countermodel(true);
 
     expect(report.ends.get(open)).toBeUndefined();
+    expect(certified).toBe(true);
     expect(
       markText(report.marks.get("r1") as RowMark, resolved.language),
     ).toBe("\\1.1,1");
   }, 60_000);
 
   test("is incomplete while →𝕋 skips its own prefix", async () => {
-    const { open, report } = await countermodel(false);
+    const { certified, open, report } = await countermodel(false);
 
     expect(report.ends.get(open)).toEqual({
       missing: [{ names: ["1"], row: "r1" }],
       type: "open-incomplete",
     });
+    expect(certified).toBe(false);
   }, 60_000);
 
   test("owes →𝕋 nothing at a prefix its row's extends", async () => {

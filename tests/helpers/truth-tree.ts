@@ -4,12 +4,15 @@ import { loadCompiler } from "@aufbau/compiler";
 import type { TableauDocument, TableauEnd } from "../../src/tableau/document";
 import { setEnd, splitNode, stackRows } from "../../src/tableau/edit";
 import {
+  heldDirections,
   heldInstances,
+  inDirections,
   readTreeDiagnostics,
 } from "../../src/worker/exercises/truth-tree/aufbau/emit";
 import type { TreeEvidence } from "../../src/worker/exercises/truth-tree/aufbau/judge";
 import type { ResolvedTree } from "../../src/worker/exercises/truth-tree/grading";
 import {
+  askingProofOf,
   judgeTree,
   resolveTruthTree,
   treeProofOf,
@@ -182,6 +185,7 @@ export interface CertifiedAnswer {
   readonly nodes: unknown;
   readonly rules?: unknown;
   readonly instances?: Readonly<Record<string, string>>;
+  readonly directions?: Readonly<Record<string, string>>;
   readonly mmb?: string;
 }
 
@@ -204,22 +208,25 @@ export async function certifyAnswer(
   }
 
   const data = answer as never;
-  const slots = treeProofOf(resolved, data, new Map()).slots;
-  const asking = treeProofOf(resolved, data, slots);
+  const asking = askingProofOf(resolved, data);
 
   if (asking.goal === null || asking.proof === null) {
     return answer;
   }
 
   const asked = loaded.compile(`${mm0}\n${asking.goal}\n`, asking.proof);
-  const held = heldInstances(
+  const errors = readTreeDiagnostics(
+    asked.ok ? [] : asked.diagnostics,
     asking,
-    readTreeDiagnostics(asked.ok ? [] : asked.diagnostics, asking),
   );
-  const instances = Object.fromEntries(held);
+  const held = heldInstances(asking, errors);
+  const directions = heldDirections(asking, errors);
   const submitted = {
     ...answer,
-    ...(held.size === 0 ? {} : { instances }),
+    ...(held.size === 0 ? {} : { instances: Object.fromEntries(held) }),
+    ...(directions.size === 0
+      ? {}
+      : { directions: Object.fromEntries(directions) }),
   };
   const final = treeProofOf(resolved, submitted as never);
 
@@ -260,15 +267,16 @@ export function judgeAsBrowser(
     readonly rules: Readonly<Record<string, string>>;
   },
 ): TreeReport {
-  const slots = treeProofOf(resolved, answer, new Map()).slots;
-  const asking = treeProofOf(resolved, answer, slots);
+  const asking = askingProofOf(resolved, answer);
   let evidence: TreeEvidence = {
     certified: false,
     errors: [],
     kind: "compiled",
   };
-  let submitted: typeof answer & { instances?: Record<string, string> } =
-    answer;
+  let submitted: typeof answer & {
+    instances?: Record<string, string>;
+    directions?: Record<string, string>;
+  } = answer;
 
   if (asking.goal !== null && asking.proof !== null) {
     const asked = compiler.compile(`${mm0}\n${asking.goal}\n`, asking.proof);
@@ -277,11 +285,15 @@ export function judgeAsBrowser(
       asking,
     );
     const held = heldInstances(asking, errors);
-    submitted =
-      held.size === 0
-        ? answer
-        : { ...answer, instances: Object.fromEntries(held) };
-    const stepErrors = errors.filter(
+    const directions = heldDirections(asking, errors);
+    submitted = {
+      ...answer,
+      ...(held.size === 0 ? {} : { instances: Object.fromEntries(held) }),
+      ...(directions.size === 0
+        ? {}
+        : { directions: Object.fromEntries(directions) }),
+    };
+    const stepErrors = inDirections(errors, directions).filter(
       (error) => error.subject?.type !== "link",
     );
     let certified = stepErrors.length === 0 && asked.ok === true;

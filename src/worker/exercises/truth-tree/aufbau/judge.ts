@@ -13,11 +13,10 @@
  *
  * When a tree is done is the exercise's `finish=`. A branch marked open is
  * complete by the theory's development criteria, and is not one a closure
- * rule would close. Where the theory states its criteria as axioms
- * (`./ok.ts`), the engine is asked whether each row on the branch is
- * developed, and a theorem it cannot prove says what the branch is missing;
- * otherwise, and for what those axioms do not state, `./complete.ts` judges
- * it, over the steps the engine confirmed.
+ * rule would close. The criteria are axioms (`./ok.ts`): the engine is asked
+ * whether each row on the branch is developed, and a theorem it cannot prove
+ * says what the branch is missing. That no closure rule closes the branch is
+ * read here (`./branch.ts`), since no theorem says a rule fails.
  *
  * The result is a {@link TreeReport}, the shape the editor and the review
  * already draw.
@@ -40,14 +39,10 @@ import type {
   TreeReport,
 } from "../report";
 import type { TruthTreeFinish } from "../types";
-import { TreeCompleteness } from "./complete";
+import { closing } from "./branch";
 import type { TreeDevelopment } from "./criteria";
-import type {
-  EmitProblem,
-  EmittedStep,
-  TreeDiagnostic,
-  TreeProof,
-} from "./emit";
+import type { EmitProblem, TreeDiagnostic, TreeProof } from "./emit";
+import { treeMarks } from "./marks";
 import type { RowSortReader } from "./rows";
 
 /** What the engine has said about a tree's proof. */
@@ -113,16 +108,21 @@ function emitted(problem: EmitProblem, cite: string): RowProblem | null {
 
 /**
  * The engine's refusals on a branch as what it is missing: a row not
- * developed, once; a general row, once with every term it is not developed
- * at.
+ * developed, once, however many of its pairs were refused; a general row,
+ * once with every term it is not developed at.
  */
 function merged(refused: readonly Missing[]): Missing[] {
   const missing: Missing[] = [];
   const general = new Map<string, string[]>();
+  const once = new Set<string>();
 
   for (const each of refused) {
     if (each.names === undefined) {
-      missing.push(each);
+      if (!once.has(each.row)) {
+        once.add(each.row);
+        missing.push(each);
+      }
+
       continue;
     }
 
@@ -293,47 +293,35 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     treeProblems.push({ type: "unverified" });
   }
 
-  // Ends and branches. Completeness counts the steps the engine has not
-  // refused; whether it has confirmed them is `confirmed`, below.
-  const completeness = new TreeCompleteness({
-    development: input.development,
-    index,
-    instance: (rowId) => {
-      const linked = proof.linked.get(rowId);
-      return !refused && linked?.length === 1 && !unlinked.has(rowId)
-        ? (linked[0] as string)
-        : null;
-    },
-    proof,
-    reader,
-    verified: (step: EmittedStep) =>
-      !refused && step.rows.every((rowId) => !rowProblems.has(rowId)),
-  });
+  // Ends and branches.
   const judged = finish !== "closed" && input.development.annotated;
   const branches = new Map<string, BranchState>();
   const leaves = index.leaves();
   const asked = proof.developed;
   /**
-   * What an open branch is missing and what closes it. Where the engine was
-   * asked, its refusals, and the theory's other rules here; without its word
-   * (a review, or a refused certificate, which says nothing of which), only
-   * the other rules.
+   * What an open branch is missing, by the engine's refusals, and what
+   * closes it; null where the engine was not asked about it. Without the
+   * engine's word (a review, or a refused certificate, which says nothing of
+   * which theorem failed) it is missing nothing that can be said.
    */
   const branchState = (leaf: TableauNode) => {
-    if (asked === null || !asked.leaves.has(leaf.id)) {
-      return completeness.branch(leaf);
+    if (asked === null || !asked.has(leaf.id)) {
+      return null;
     }
 
-    const state = completeness.branch(leaf, asked.rules);
-    const order = new Map(
-      index.branchRows(leaf.id).map((row, at) => [row.id, at]),
+    const rows = index.branchRows(leaf.id).flatMap((row) => {
+      const read = reader.read(row.text);
+      return read.ok ? [{ id: row.id, term: read.term }] : [];
+    });
+    const order = new Map(rows.map((row, at) => [row.id, at]));
+    const missing = merged(undeveloped.get(leaf.id) ?? []).sort(
+      (a, b) => (order.get(a.row) ?? 0) - (order.get(b.row) ?? 0),
     );
-    const missing = [
-      ...merged(undeveloped.get(leaf.id) ?? []),
-      ...state.missing,
-    ].sort((a, b) => (order.get(a.row) ?? 0) - (order.get(b.row) ?? 0));
 
-    return { contradiction: state.contradiction, missing };
+    return {
+      contradiction: closing(reader.language, input.development, rows),
+      missing,
+    };
   };
 
   for (const node of order) {
@@ -424,7 +412,20 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     closed,
     ends: endProblems,
     finished,
-    marks: completeness.marks(),
+    // Marks count the steps the engine has not refused; whether it has
+    // confirmed them is `confirmed`, above.
+    marks: treeMarks({
+      development: input.development,
+      index,
+      instance: (rowId) => {
+        const linked = proof.linked.get(rowId);
+        return !refused && linked?.length === 1 && !unlinked.has(rowId)
+          ? (linked[0] as string)
+          : null;
+      },
+      proof,
+      reader,
+    }),
     open,
     problems,
     rows: rowProblems,

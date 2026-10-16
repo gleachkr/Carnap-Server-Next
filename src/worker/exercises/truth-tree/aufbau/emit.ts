@@ -18,7 +18,9 @@
  * - a leaf marked open is a theorem for each row on its branch, that the row
  *   is developed there (`tree_ok`, `./ok.ts`), and for each general row and
  *   each term on the branch, that it is developed at the term (`tree_okat`),
- *   where the theory says how; the engine proves each only if it is;
+ *   or, for one owed only what its side rows witness, for each witness
+ *   (`tree_okwith`), where the theory says how; the engine proves each only
+ *   if it is;
  * - a step that cannot be written down (no rule, an unreadable row), and a
  *   branch left unfinished, is no theorem at all.
  *
@@ -52,7 +54,7 @@
  * DOM-free: the browser emits and compiles, the worker verifies.
  */
 
-import type { SurfaceLanguage } from "@aufbau/syntax";
+import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import type {
   TableauDocument,
   TableauNode,
@@ -60,19 +62,24 @@ import type {
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
 import type { Missing } from "../report";
-import type {
-  DevelopmentRule,
-  RulePatterns,
-  TreeDevelopment,
-} from "./criteria";
+import { isLiteral, isSelfIdentity } from "./branch";
+import type { RulePatterns, TreeDevelopment } from "./criteria";
 import {
   instanceShower,
   matchFocus,
   rulePatterns,
   templateFor,
+  witnesses,
 } from "./criteria";
-import { okAxioms, okJudges } from "./ok";
-import { closedSubterms, instantiate, termKey } from "./patterns";
+import { atWitnesses, okAxioms } from "./ok";
+import type { Bindings } from "./patterns";
+import {
+  closedSubterms,
+  conclude,
+  instantiate,
+  matchAll,
+  termKey,
+} from "./patterns";
 import { type RowSortReader, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
 /** The theorem every emitted proof proves. */
@@ -110,6 +117,8 @@ export type LineSubject =
       readonly type: "developed";
       readonly node: string;
       readonly missing: Missing;
+      /** For a pair, the identity it is asked of and the statement asking. */
+      readonly pair?: { readonly key: string; readonly statement: string };
     };
 
 /** Why a step was not written down, and so is not checked. */
@@ -147,24 +156,22 @@ export interface TreeProof {
   /** The instances each row's link theorems state, by row. */
   readonly linked: ReadonlyMap<string, readonly string[]>;
   /**
+   * The rows of branches marked open that a rule on a pair of rows sets off
+   * (an identity), by {@link pairingKey}, each with the statements of the
+   * rule that could develop it: the directions it could be substituted in.
+   */
+  readonly pairings: ReadonlyMap<string, readonly string[]>;
+  /**
    * Why the tree was too big to write down, if it was: past the row cap, or
    * its theorems past the text cap. Nothing is stated of such a tree.
    */
   readonly oversize: Oversize | null;
   /**
-   * What it asks the engine of the branches marked open, where the theory
-   * says when a row is developed (`./ok.ts`); null where it does not, and
-   * `./complete.ts` judges them.
+   * The leaves of the branches marked open it asks the engine about, whether
+   * each row on them is developed (`./ok.ts`); null where the theory says
+   * nothing of when a row is, and nothing is asked.
    */
-  readonly developed: Developed | null;
-}
-
-/** What a tree's proof asks of the branches marked open. */
-export interface Developed {
-  /** The leaves whose branches it asks about. */
-  readonly leaves: ReadonlySet<string>;
-  /** The rules whose rows it asks about, by name; the rest are not asked. */
-  readonly rules: ReadonlySet<string>;
+  readonly developed: ReadonlySet<string> | null;
 }
 
 /** Which cap a tree is past. */
@@ -183,6 +190,7 @@ function tooBig(oversize: Oversize): TreeProof {
     linked: new Map(),
     lines: new Map(),
     oversize,
+    pairings: new Map(),
     problems: new Map(),
     proof: null,
     slots: new Map(),
@@ -220,6 +228,12 @@ export interface EmitOptions {
    * row's own candidates are stated.
    */
   readonly instances?: ReadonlyMap<string, readonly string[]>;
+  /**
+   * The statements to ask each paired row by, by {@link pairingKey}: every
+   * candidate for a compile that asks which holds, the one chosen for a tree
+   * to certify. A row with none here is asked by its rule's own statement.
+   */
+  readonly directions?: ReadonlyMap<string, readonly string[]>;
   /** The most rows a tree may have to be written down. */
   readonly rowCap?: number;
   /**
@@ -295,6 +309,29 @@ function newName(
   return null;
 }
 
+/**
+ * The key of a row a rule on a pair of rows sets off, on the branch ending at
+ * a leaf: each branch is complete in a direction of its own.
+ */
+export function pairingKey(leaf: string, row: string): string {
+  return `${leaf} ${row}`;
+}
+
+/** A {@link pairingKey}'s leaf and row; null for a key that is not one. */
+export function pairingOf(
+  key: string,
+): { readonly leaf: string; readonly row: string } | null {
+  const [leaf, row, ...rest] = key.split(" ");
+  return leaf === undefined || row === undefined || rest.length > 0
+    ? null
+    : { leaf, row };
+}
+
+/** Every variable in a term, binding occurrences too. */
+function variablesOf(term: Term): Extract<Term, { kind: "variable" }>[] {
+  return term.kind === "variable" ? [term] : term.args.flatMap(variablesOf);
+}
+
 /** Every token of engine text, for finding the names and variables in it. */
 function tokens(engine: string): string[] {
   return engine.split(/[\s(),]+/u).filter((token) => token.length > 0);
@@ -314,6 +351,7 @@ export function emitTreeProof(
   const steps = new Map<string, EmittedStep>();
   const slots = new Map<string, readonly string[]>();
   const linked = new Map<string, readonly string[]>();
+  const pairings = new Map<string, readonly string[]>();
   const reader = options.reader ?? rowSortReader(language, theory.rowSort);
   const resolve = (name: string): string =>
     language.spec.ruleAliases.get(name) ?? name;
@@ -668,29 +706,68 @@ export function emitTreeProof(
     options.development === undefined
       ? null
       : okAxioms(language, theory, options.development);
-  const judged: readonly DevelopmentRule[] =
-    ok === null
-      ? []
-      : (options.development?.rules ?? []).filter((rule) =>
-          okJudges(ok, rule),
-        );
-  // The general rules asked at each term, with the slot and judgement each
-  // is asked by.
-  const general = judged.flatMap((rule) => {
+  const rules = options.development?.rules ?? [];
+  // The general rules, with the slot and judgement each is asked by: at each
+  // term, or at each witness on the branch. A rule whose axioms could not be
+  // stated has none (an author's diagnostic, `./ok.ts`), and is not asked.
+  const general = rules.flatMap((rule) => {
     const slot = rule.instance;
-    const judgement =
-      slot === null || rule.criterion?.kind !== "general"
-        ? undefined
-        : ok?.at.get(slot.sort);
+    const judgement = ok?.general.get(rule.name);
 
     return slot === null || judgement === undefined
       ? []
-      : [{ judgement, rule, slot }];
+      : [{ judgement, rule, slot, witnessed: atWitnesses(rule) }];
   });
+  const paired = rules.filter((rule) => rule.criterion?.kind === "pairs");
   const asked = new Set<string>();
 
   /**
-   * A theorem that a row is developed on a branch, by the chain `by`; if the
+   * The bindings that tell the engine how a statement of a rule on a pair of
+   * rows matched them, as a proof line writes them: the matcher's, with each
+   * variable it made up (the hole of `{x / b} ph`) given a token of its
+   * sort's pool that `text` does not mention. Only a hint: the engine proves
+   * the theorem from them or not at all.
+   */
+  const pairBindings = (
+    patterns: RulePatterns,
+    bindings: Bindings,
+    text: string,
+  ): string | null => {
+    const taken = new Set(tokens(text));
+    const renames = new Map<string, Term>();
+
+    for (const value of bindings.values()) {
+      for (const variable of variablesOf(value)) {
+        if (sortOf.has(variable.name) || renames.has(variable.name)) {
+          continue;
+        }
+
+        const token = language.spec.sorts
+          .get(variable.sort)
+          ?.vars.find((each) => !taken.has(each));
+
+        if (token === undefined) {
+          return null;
+        }
+
+        taken.add(token);
+        renames.set(variable.name, { ...variable, name: token });
+      }
+    }
+
+    const written = [...bindings]
+      .filter(([meta]) => meta !== patterns.branch)
+      .map(([meta, value]) => {
+        const engine = termKey(language, instantiate(value, renames));
+        return engine === null ? null : `${meta} := $ ${engine} $`;
+      });
+
+    return written.some((each) => each === null) ? null : written.join(", ");
+  };
+
+  /**
+   * A theorem that a row is developed on a branch, by the chain `by`, with
+   * `bindings` for its binders where the engine cannot find them; if the
    * engine cannot prove it, the branch is missing `missing`.
    */
   const developed = (
@@ -698,22 +775,38 @@ export function emitTreeProof(
     statement: string,
     by: string,
     missing: Missing,
+    pair?: {
+      readonly bindings: string;
+      readonly key: string;
+      readonly statement: string;
+    },
   ): void => {
     counter += 1;
     const name = `${TREE_THEOREM}_${counter}`;
     const label = `o_${counter}`;
+    const bound = pair === undefined ? "" : ` (${pair.bindings})`;
 
     record(
-      `theorem ${name}${binders([statement])}: $ ${statement} $;`,
-      [name, "----", `${label}: $ ${statement} $ by ${by} []`].join("\n"),
+      `theorem ${name}${binders([statement, bound])}: $ ${statement} $;`,
+      [name, "----", `${label}: $ ${statement} $ by ${by}${bound} []`].join(
+        "\n",
+      ),
     );
-    lines.set(label, { missing, node, type: "developed" });
+    lines.set(label, {
+      missing,
+      node,
+      type: "developed",
+      ...(pair === undefined
+        ? {}
+        : { pair: { key: pair.key, statement: pair.statement } }),
+    });
   };
 
   /**
    * What a branch marked open is asked, where the theory says when a row is
    * developed: of each row, that it is, and of each general row, that it is
-   * at each term of its instance's sort on the branch.
+   * at each term of its instance's sort on the branch, or for each witness
+   * on it.
    */
   const askDeveloped = (
     node: TableauNode,
@@ -801,7 +894,7 @@ export function emitTreeProof(
         { row: row.id },
       );
 
-      for (const { judgement, rule, slot } of general) {
+      for (const { judgement, rule, slot, witnessed } of general) {
         const bindings = matchFocus(language, rule, row.term);
 
         if (bindings === null) {
@@ -809,6 +902,28 @@ export function emitTreeProof(
         }
 
         const shown = instanceShower(language, rule, bindings);
+
+        if (witnessed) {
+          for (const witness of witnesses(
+            language,
+            rule,
+            row.term,
+            rows.map((each) => each.term),
+          )) {
+            developed(
+              node.id,
+              `${judgement.term} (${row.engine}) (${branch(witness.rows)}) (${ordered(
+                row.engine,
+                (member) => instanceOf(member.row) === witness.instance,
+              )})`,
+              judgement.head,
+              { names: [shown(witness.instance)], row: row.id },
+            );
+          }
+
+          continue;
+        }
+
         const at = (term: string, names: readonly string[]): void =>
           developed(
             node.id,
@@ -832,6 +947,116 @@ export function emitTreeProof(
 
         if (fresh !== null) {
           at(fresh, []);
+        }
+      }
+    }
+
+    // Each row a rule on a pair of rows sets off (an identity), with every
+    // other row it pairs with, by one statement of the rule: it is developed
+    // one way round for all of them. Which way is the browser's to find, by
+    // asking each, and the answer's to say.
+    const firsts = rows.filter(
+      (row) => copies.get(row.engine)?.[0] === row.id,
+    );
+
+    for (const rule of paired) {
+      for (const row of firsts) {
+        // Each statement the row sets off, with how its first focus row
+        // matched: the first way, as an identity `a = b` matches one way.
+        const starts = rule.variants.flatMap((patterns) => {
+          const [first, second] = patterns.focus;
+          const judgement = ok.pairs.get(patterns.name);
+          const start =
+            first === undefined || patterns.focus.length !== 2
+              ? null
+              : matchAll(language, first, row.term, patterns.metas).next();
+
+          return judgement === undefined ||
+            second === undefined ||
+            start === null ||
+            start.done === true
+            ? []
+            : [{ judgement, patterns, second, start: start.value }];
+        });
+
+        if (starts.length === 0) {
+          continue;
+        }
+
+        const key = pairingKey(node.id, row.id);
+        // The rule's own statement first, where it applies: asked when the
+        // answer names none, and kept on a tie.
+        const names = starts.map((each) => each.patterns.name);
+        const candidates = [
+          ...names.filter((name) => name === rule.patterns.name),
+          ...names.filter((name) => name !== rule.patterns.name),
+        ];
+        const stated = options.directions?.get(key) ?? [
+          candidates[0] as string,
+        ];
+        const partners = firsts.filter(
+          (each) =>
+            each.id !== row.id &&
+            (!rule.flags.has("literals") || isLiteral(language, each.term)),
+        );
+
+        pairings.set(key, candidates);
+
+        for (const { judgement, patterns, second, start } of starts) {
+          if (!stated.includes(patterns.name)) {
+            continue;
+          }
+
+          for (const partner of partners) {
+            const devs = new Set(
+              (copies.get(partner.engine) ?? []).flatMap((id) => [
+                ...(citing.get(id) ?? []),
+              ]),
+            );
+
+            for (const bindings of matchAll(
+              language,
+              second,
+              partner.term,
+              patterns.metas,
+              start,
+            )) {
+              // A conclusion that is a self-identity (`b = b`) is true on
+              // any branch, and no step need write it.
+              const waived = patterns.written.some(
+                (premise) =>
+                  premise.length > 0 &&
+                  premise.every((each) =>
+                    isSelfIdentity(
+                      language,
+                      conclude(language, each, bindings),
+                    ),
+                  ),
+              );
+              const hints = waived
+                ? null
+                : pairBindings(
+                    patterns,
+                    bindings,
+                    `${row.engine} ${partner.engine}`,
+                  );
+
+              if (hints === null) {
+                continue;
+              }
+
+              developed(
+                node.id,
+                `${judgement.term} (${row.engine}) (${partner.engine}) (${ordered(
+                  row.engine,
+                  (member) => devs.has(member.dev),
+                )})`,
+                judgement.head,
+                { row: row.id, substitution: true },
+                { bindings: hints, key, statement: patterns.name },
+              );
+            }
+          }
         }
       }
     }
@@ -917,6 +1142,7 @@ export function emitTreeProof(
     linked,
     lines,
     oversize: null,
+    pairings,
     problems,
     proof: null,
     slots,
@@ -953,10 +1179,7 @@ export function emitTreeProof(
   }
 
   return {
-    developed:
-      ok === null
-        ? null
-        : { leaves: asked, rules: new Set(judged.map((rule) => rule.name)) },
+    developed: ok === null ? null : asked,
     endProblems,
     gaps,
     // The axioms saying when a row is developed come first, where a theorem
@@ -969,6 +1192,7 @@ export function emitTreeProof(
     linked,
     lines,
     oversize: null,
+    pairings,
     problems,
     proof: `${proofs.join("\n\n")}\n`,
     slots,
@@ -1051,4 +1275,57 @@ export function heldInstances(
   }
 
   return held;
+}
+
+/**
+ * The statement each paired row is developed by, from a compile that asked
+ * every candidate (`directions` = a proof's own `pairings`): one the engine
+ * refused nothing of, else the one it refused least of, the rule's own first
+ * on a tie, so that what the branch is missing is said in one direction.
+ */
+export function heldDirections(
+  asked: TreeProof,
+  errors: readonly TreeDiagnostic[],
+): Map<string, string> {
+  const refused = new Map<string, number>();
+
+  for (const error of errors) {
+    const pair =
+      error.subject?.type === "developed" ? error.subject.pair : undefined;
+
+    if (pair !== undefined) {
+      const at = `${pair.key}\n${pair.statement}`;
+      refused.set(at, (refused.get(at) ?? 0) + 1);
+    }
+  }
+
+  const held = new Map<string, string>();
+
+  for (const [key, candidates] of asked.pairings) {
+    const count = (statement: string) =>
+      refused.get(`${key}\n${statement}`) ?? 0;
+    const best = [...candidates].sort((a, b) => count(a) - count(b))[0];
+
+    if (best !== undefined) {
+      held.set(key, best);
+    }
+  }
+
+  return held;
+}
+
+/**
+ * A compile's errors, less the refusals of the directions not chosen
+ * (`heldDirections`): what the tree shows is said in the one it is
+ * developed by.
+ */
+export function inDirections(
+  errors: readonly TreeDiagnostic[],
+  directions: ReadonlyMap<string, string>,
+): TreeDiagnostic[] {
+  return errors.filter((error) => {
+    const pair =
+      error.subject?.type === "developed" ? error.subject.pair : undefined;
+    return pair === undefined || directions.get(pair.key) === pair.statement;
+  });
 }

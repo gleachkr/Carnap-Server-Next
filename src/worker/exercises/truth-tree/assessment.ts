@@ -143,6 +143,9 @@ export const TRUTH_TREE_ASSESSMENT = {
           ...(data.instances === undefined
             ? {}
             : { instances: data.instances }),
+          ...(data.directions === undefined
+            ? {}
+            : { directions: data.directions }),
         } as unknown as JsonValue,
         kind: TRUTH_TREE_ANSWER_KIND,
         schemaVersion: TRUTH_TREE_SCHEMA_VERSION,

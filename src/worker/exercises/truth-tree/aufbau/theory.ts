@@ -30,11 +30,6 @@ import { statementReader } from "./patterns";
  * - `tree.root` — where the root says it, for a calculus whose rows are
  *   somewhere as well as signed (a prefixed tableau's `1`): a term with no
  *   arguments, filling an assert or deny term's argument of its sort;
- * - `tree.completeness.contents` — on any term, that the theory calls an open
- *   branch complete by what is on it, not by what was done to it: a row is
- *   developed once its rule's conclusions are on the branch, however they got
- *   there (the Open Logic Project's definition). Without it a row is developed
- *   by a step that cites it, as UBC checks rows off;
  * - `tree.mark` and `tree.mark.instance` — a check mark, which a rule writes
  *   on the branch beside its rows and the student never types: `✓ ρ` for the
  *   row ρ the step cites, and `✓ᵢ ρ ↦ ψ` beside each row ψ a step writes
@@ -71,7 +66,13 @@ export interface TreeTheory {
   readonly deny: string | null;
   /** The term the root's rows are at, if they are at anything (`tree.root`). */
   readonly root: string | null;
-  /** Whether completeness is by the branch's contents (`tree.completeness.contents`). */
+  /**
+   * Whether an open branch is complete by what is on it, not by what was done
+   * to it: a row is developed once its rule's conclusions are on the branch,
+   * however they got there (the Open Logic Project's definition). So it is
+   * where the rules write no check marks; where they do, a row is developed
+   * where its mark is, as UBC checks rows off.
+   */
   readonly byContents: boolean;
   /** The check mark a step writes for the row it cites (`tree.mark`). */
   readonly mark: string | null;
@@ -100,7 +101,6 @@ export const TREE_ROLES: ReadonlySet<string> = new Set([
   "tree.assert",
   "tree.deny",
   "tree.root",
-  "tree.completeness.contents",
   "tree.substitution",
   "tree.mark",
   "tree.mark.instance",
@@ -168,7 +168,9 @@ export function readTreeTheory(
 
   return {
     assert,
-    byContents: roles.termFor("tree.completeness.contents") !== null,
+    byContents:
+      roles.termFor("tree.mark") === null &&
+      roles.termFor("tree.mark.instance") === null,
     closes: closes as string,
     closure: closure as string,
     deny,

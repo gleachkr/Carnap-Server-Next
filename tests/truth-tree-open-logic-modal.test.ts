@@ -362,15 +362,18 @@ describe("an open branch in K", () => {
       item.publicData as unknown as TruthTreePublicData,
       tree.answer(),
     );
-    const judged = judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    }).report;
+    const judged = judgeAsBrowser(
+      await engine(),
+      resolved,
+      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
+      tree.answer(),
+    );
 
     expect(judged.ends.get(open)).toEqual({
       missing: [{ names: ["((1) . wb)"], row: box }],
       type: "open-incomplete",
     });
+    expect(answer.mmb).toBeUndefined();
     expect(await grade(item, answer)).toBe("incorrect");
   }, 60_000);
 

@@ -29,10 +29,10 @@
  * wrote is stated, in a link theorem, to be its rule's instance at each term
  * it could be, and the links that hold say which it was. Those go in the
  * answer, and into the certificate, so the server confirms them too. So is
- * whether a branch marked open is complete, where the theory says when a
- * row is developed: a theorem for each row, which the engine proves only if
- * it is, so a branch it is not shows what it is missing and certifies no
- * tree. What the engine does not see (the root, unreadable rows, where ends sit)
+ * whether a branch marked open is complete: a theorem for each row, which
+ * the engine proves only if it is, so a branch it is not shows what it is
+ * missing and certifies no tree. An identity is developed one way round,
+ * and both are asked; the way refused least goes in the answer too. What the engine does not see (the root, unreadable rows, where ends sit)
  * is checked on every edit by the same `judgeTree` the grader runs. Marks
  * are computed; the margin's citation and rule are typed. As with the model,
  * there is no answer key: the Check is `judgeTree` over public data.
@@ -62,10 +62,14 @@ import { layoutTableau, rowAtLine } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
 import { treeAnnotations } from "../../worker/exercises/truth-tree/annotations";
-import { closesAlone } from "../../worker/exercises/truth-tree/aufbau/complete";
+import { closesAlone } from "../../worker/exercises/truth-tree/aufbau/branch";
 import type { TreeProof } from "../../worker/exercises/truth-tree/aufbau/emit";
 import {
+  heldDirections,
   heldInstances,
+  inDirections,
+  pairingKey,
+  pairingOf,
   readTreeDiagnostics,
 } from "../../worker/exercises/truth-tree/aufbau/emit";
 import type {
@@ -76,6 +80,7 @@ import { ruleSpelling } from "../../worker/exercises/truth-tree/aufbau/theory";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
 import {
   answerRules,
+  askingProofOf,
   isTruthTreeAnswerData,
   isTruthTreePublicData,
   judgeTree,
@@ -131,6 +136,7 @@ interface Derived {
   proof?: {
     readonly rules: ReadonlyMap<string, string>;
     readonly instances: ReadonlyMap<string, string>;
+    readonly directions: ReadonlyMap<string, string>;
     readonly proof: TreeProof;
   };
   /** The report, and the evidence it was made with. */
@@ -280,6 +286,12 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * keystroke would have every open branch flash incomplete.
    */
   private instances: ReadonlyMap<string, string> = new Map();
+  /**
+   * The direction each identity on a branch marked open is developed in, by
+   * `pairingKey`, as the last compile found it: kept across edits like the
+   * instances.
+   */
+  private directions: ReadonlyMap<string, string> = new Map();
   /**
    * The derivation whose certificate the answer still owes, for the tree and
    * rules it was made from: the last compile found every step right and left
@@ -493,6 +505,29 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
         },
       ),
     );
+
+    // And each identity's direction to its leaf and row: nodes keep their
+    // places too.
+    const freshNodes = new Map(
+      saved.nodes.flatMap((node, at) => {
+        const now = this.tree.nodes[at];
+        return now === undefined ? [] : [[node.id, now.id] as const];
+      }),
+    );
+
+    this.directions = new Map(
+      Object.entries((usable ? prior.directions : undefined) ?? {}).flatMap(
+        ([key, statement]) => {
+          const pairing = pairingOf(key);
+          const nowLeaf = freshNodes.get(pairing?.leaf ?? "");
+          const nowRow = freshRows.get(pairing?.row ?? "");
+
+          return nowLeaf === undefined || nowRow === undefined
+            ? []
+            : [[pairingKey(nowLeaf, nowRow), statement] as const];
+        },
+      ),
+    );
   }
 
   /** The last row of the tree in tree order: a sensible place to start. */
@@ -508,12 +543,13 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   }
 
   /**
-   * The instances, like the certificate, are what the engine made of the
-   * tree, not what the student wrote: an answer that gains them when a
-   * compile lands is no less saved than it was.
+   * The instances and directions, like the certificate, are what the engine
+   * made of the tree, not what the student wrote: an answer that gains them
+   * when a compile lands is no less saved than it was.
    */
   protected override authoredAnswer(): string {
     const {
+      directions: _directions,
       instances: _instances,
       mmb: _mmb,
       ...authored
@@ -539,8 +575,20 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const instances = [...this.instances]
       .filter(([id]) => ids.has(id))
       .sort(byKey);
+    const nodes = new Set(this.tree.nodes.map((node) => node.id));
+    const directions = [...this.directions]
+      .filter(([key]) => {
+        const pairing = pairingOf(key);
+        return (
+          pairing !== null && nodes.has(pairing.leaf) && ids.has(pairing.row)
+        );
+      })
+      .sort(byKey);
 
     return {
+      ...(directions.length === 0
+        ? {}
+        : { directions: Object.fromEntries(directions) }),
       ...(instances.length === 0
         ? {}
         : { instances: Object.fromEntries(instances) }),
@@ -578,9 +626,11 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     if (
       derived.proof?.rules !== this.rules ||
-      derived.proof.instances !== this.instances
+      derived.proof.instances !== this.instances ||
+      derived.proof.directions !== this.directions
     ) {
       derived.proof = {
+        directions: this.directions,
         instances: this.instances,
         proof: treeProofOf(resolved, this.getAnswer()),
         rules: this.rules,
@@ -619,10 +669,11 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * root has nothing to compile.
    *
    * The first compile also asks which instance each general row was written
-   * with: it states every candidate, and a link that fails says only that the
-   * row was not that one. The instances that hold are kept, and when the
-   * derivation stating only those differs from the one asked, it is compiled
-   * again for the certificate.
+   * with, and which way round each identity on a branch marked open is
+   * developed: it states every candidate, and a link or pair that fails says
+   * only that it was not that one. The instances that hold, and the direction
+   * refused least, are kept, and when the derivation stating only those
+   * differs from the one asked, it is compiled again for the certificate.
    */
   protected async compile(): Promise<void> {
     const resolved = this.resolved;
@@ -638,13 +689,13 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     this.owed = null;
 
-    const slots = treeProofOf(resolved, answer, new Map()).slots;
-    const asking = treeProofOf(resolved, answer, slots);
+    const asking = askingProofOf(resolved, answer);
 
     // Nothing to state, or a tree past the caps, refused unread: the engine
     // is not asked.
     if (asking.goal === null || asking.proof === null) {
       this.instances = new Map();
+      this.directions = new Map();
       this.evidence = { certified: false, errors: [], kind: "compiled" };
       this.rerender();
       return;
@@ -668,12 +719,12 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     }
 
     const errors = readTreeDiagnostics(asked.verdict.problems, asking);
-    const instances = heldInstances(asking, errors);
-
-    this.instances = instances;
+    this.instances = heldInstances(asking, errors);
+    this.directions = heldDirections(asking, errors);
 
     const final = this.proof(resolved);
-    const stepErrors = errors.filter(
+    // What the tree shows is said in the directions chosen.
+    const stepErrors = inDirections(errors, this.directions).filter(
       (error) => error.subject?.type !== "link",
     );
     let certified = asked.verdict.certificate !== null;

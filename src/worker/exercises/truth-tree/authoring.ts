@@ -28,7 +28,7 @@ import { sentenceSort } from "../../logic/specs/roles";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
 import type { OkAxioms } from "./aufbau/ok";
-import { okAxioms, okProblemsReported } from "./aufbau/ok";
+import { okAxioms } from "./aufbau/ok";
 import {
   isTreeTheory,
   readTreeTheory,
@@ -299,17 +299,16 @@ function reportTreeTheory(
 
 /**
  * What the axioms saying when a row is developed (`./aufbau/ok.ts`) could not
- * state, where it changes a verdict: a rule's rows that are then never
- * developed, or a judgement with no congruence, which the engine cannot
- * prove of a branch in any order but its own.
+ * state: a rule's rows that are then never developed, or a judgement with no
+ * congruence, which the engine cannot prove of a branch in any order but its
+ * own.
  */
 function reportOkAxioms(
   axioms: OkAxioms,
-  development: TreeDevelopment,
   line: number,
   diagnostics: CompilerDiagnostic[],
 ): void {
-  for (const { problem, rule } of okProblemsReported(axioms, development)) {
+  for (const { problem, rule } of axioms.problems) {
     switch (problem.type) {
       case "unmarked":
         diagnostics.push(
@@ -354,7 +353,7 @@ function reportDevelopment(
   diagnostics: CompilerDiagnostic[],
 ): void {
   if (axioms !== null) {
-    reportOkAxioms(axioms, development, line, diagnostics);
+    reportOkAxioms(axioms, line, diagnostics);
   }
 
   if (!development.annotated) {

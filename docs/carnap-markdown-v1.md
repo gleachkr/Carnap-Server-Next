@@ -969,7 +969,6 @@ says what that means through `@syntax role` annotations:
 | `context-join` | a term | the branch join, as for a sequent's context |
 | `tree.assert`, `tree.deny` | terms | how the root says a sentence is true, and is not |
 | `tree.root` | a term | where the root says it, for rows that are somewhere (a prefixed tableau's `1`) |
-| `tree.completeness.contents` | a term | an open branch is complete by what is on it (see [When a row is developed](#when-a-row-is-developed)) |
 | `tree.mark` | a term | a check mark a rule writes for the row it develops (`✓ ρ`) |
 | `tree.mark.instance` | a term | a check mark a rule writes beside each instance it writes (`✓ᵢ ρ ↦ ψ`) |
 
@@ -1056,14 +1055,16 @@ on, each role covering the whole `@fallback` chain:
   every `a` made `b` (`tb_id_ab`) or every `b` made `a` (`tb_id_ba`), for all
   the rows it pairs with. A conclusion `b = b` (by the `identity` role) is
   waived, as the book's solutions leave it out. An open branch that still
-  owes one says the identity still needs substituting.
-- By default a row is developed by a step, as UBC checks rows off: a
+  owes one says the identity still needs substituting. Which way round each
+  identity is developed is found by the editor, which asks the engine both,
+  and saved with the answer.
+- Where the rules write check marks (`tree.mark`, above), a row is developed
+  where its rule's mark is on the branch, as UBC checks rows off: a
   conjunction whose conjuncts arrived some other way is still owed its step.
-  A theory with `tree.completeness.contents` on any term (the Open Logic
-  Project's, on `closes`) is the book's other way: a row is developed once
-  its rule's conclusions are on the branch, by a step or not, and a
-  `general` row is owed only the instances whose conclusions are missing.
-  This is matched as the focus is.
+  Where they write none (the Open Logic Project's theories), a row is
+  developed once its rule's conclusions are on the branch, by a step or
+  not, and a `general` row is owed only the instances whose conclusions are
+  missing.
 - A rule applies to a row its focus pattern matches: `∀ x ph` matches any
   universal. The match is syntactic, but for two things the theory can say
   it computes: a list (`@acui assoc _ unit _`, above) and its substitution,
@@ -1072,16 +1073,15 @@ on, each role covering the whole `@fallback` chain:
   `ph` known matches `ph` with one term at every `x`; with `te` known and
   `ph` not, as in an identity's `{x / a} ph`, `ph` is the row with every
   `a` made `x`. Anything else the theory would compute matches nothing.
-- Where the rules write check marks (`tree.mark`, above) or the theory has
-  `tree.completeness.contents`, the engine is the judge. Carnap states, from
-  the rules, when a row is developed (by its mark on the branch, or by the
-  rows a premise writes) and asks it of every row of a branch marked open,
-  and of every `general` row at every term of its sort on the branch. The
-  branch is complete when the engine proves each, and the certificate
-  proves them, so the server checks completeness as it checks the steps.
-  Rules on a pair of rows, and `general` rules with side rows (a modal
-  `□𝕋`), are still judged by Carnap from the steps, as is every rule of a
-  theory with neither marks nor `tree.completeness.contents`.
+- The engine is the judge. Carnap states, from the rules, when a row is
+  developed (by its mark on the branch, or by the rows a premise writes)
+  and asks it of every row of a branch marked open, of every `general` row
+  at every term of its sort on the branch, or, where its rule has side
+  rows, at every row of the branch that witnesses it (each prefix `σ.n` a
+  modal `□𝕋` is owed), and of every identity with every row it pairs
+  with. The branch is complete when the engine proves each, and the
+  certificate proves them, so the server checks completeness as it checks
+  the steps.
 - Only steps the engine accepted count. A step's instance is found by the
   engine too: the editor asks it which term each row was written with, and
   the certificate proves the answer, so the server checks it as it checks
@@ -1094,11 +1094,10 @@ A theory with no development roles at all cannot be used with `finish`
 other than `closed`. When the lesson compiles, Carnap reports whatever it
 would otherwise pass over: a role that does not read (an unknown kind or
 flag, a binder the rule or one of its `@fallback` statements does not
-have), a `tree.` role it does not know (a misspelt
-`tree.completeness.contents`), a `tree.substitution` term without its three
+have), a `tree.` role it does not know (a misspelt `tree.mark`), a
+`tree.substitution` term without its three
 arguments, and a rule concluding `focus` whose premises are not rows written
-on the branch, which no row could ever be owed. Where the engine judges
-completeness, it also reports a rule that writes no check mark in a theory
+on the branch, which no row could ever be owed. It also reports a rule that writes no check mark in a theory
 whose rules do, a rule that writes a new name without an `@view` saying
 where the name is in the rows it writes, and a sort without the `@relation`
 the engine needs to read a branch in any order: each would leave a row that

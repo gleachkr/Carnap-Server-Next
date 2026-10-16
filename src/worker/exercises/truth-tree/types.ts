@@ -105,4 +105,13 @@ export interface TruthTreeAnswerData {
    * a stored instance is one the engine confirmed. Completeness counts them.
    */
   readonly instances?: Readonly<Record<string, string>>;
+  /**
+   * The statement of a rule on a pair of rows each row it sets off is
+   * developed by, on a branch marked open, keyed `"<leaf id> <row id>"`: the
+   * direction an identity is substituted in there (`tb_id_ba`, every `b` made
+   * `a`). The browser finds it by asking the engine, and the certificate
+   * proves the branch developed in it. A row with none is asked by its
+   * rule's own statement.
+   */
+  readonly directions?: Readonly<Record<string, string>>;
 }

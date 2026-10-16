@@ -246,10 +246,13 @@ async function s5Branch(with4: boolean) {
   );
 
   return {
-    report: judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    }).report,
+    certified: answer.mmb !== undefined,
+    report: judgeAsBrowser(
+      await engine(),
+      resolved,
+      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
+      tree.answer(),
+    ),
     root: tree.rootNode,
   };
 }
@@ -259,18 +262,20 @@ describe("an open branch in S5", () => {
   // both are on the branch already, so neither is owed again. Judged by steps,
   // writing them would set off the same obligations without end.
   test("is complete when each rule's conclusions are on it", async () => {
-    const { report } = await s5Branch(true);
+    const { certified, report } = await s5Branch(true);
 
     expect(problems(report)).toEqual([]);
+    expect(certified).toBe(true);
   }, 60_000);
 
   test("owes 4□ at a prefix it uses", async () => {
-    const { report, root } = await s5Branch(false);
+    const { certified, report, root } = await s5Branch(false);
 
     expect(report.ends.get(root)).toEqual({
       missing: [{ names: ["((1) . wa)"], row: "r1" }],
       type: "open-incomplete",
     });
+    expect(certified).toBe(false);
   }, 60_000);
 });
 
@@ -347,14 +352,12 @@ describe("a row more than one rule develops", () => {
     }
 
     tree.open(tree.rootNode);
-    const answer = await certifyAnswer(
-      item.publicData as unknown as TruthTreePublicData,
+    const report = judgeAsBrowser(
+      await engine(),
+      resolved,
+      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
       tree.answer(),
     );
-    const { report } = judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    });
 
     return { language: resolved.language, report };
   }
