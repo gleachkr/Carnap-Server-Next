@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { loadCompiler } from "@aufbau/compiler";
 import { UNSAVED_ANSWER_ATTRIBUTE } from "../../src/worker/exercise-kit/answer-events";
@@ -40,6 +40,17 @@ const compile = await mockProofCompiler((mm0, proof) =>
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`
 // resolves and `register` lands in the window the fixtures are built in.
 await import("../../src/client/components/carnap-truth-tree-v1");
+
+// A widget left in the page from an earlier test, with a compile still
+// debounced, would compile under this one's mock: count as this test's call,
+// or take a failure meant for this test's widget.
+beforeEach(() => {
+  for (const form of Array.from(
+    dom.window.document.querySelectorAll("form.exercise-submission"),
+  )) {
+    form.remove();
+  }
+});
 
 function treeExercise(attrs: string, body: string) {
   return compileExercise(`::::truth-tree{#t ${attrs}}\n${body}\n::::`);
@@ -321,6 +332,81 @@ describe("upgrading", () => {
     expect(submitted.mmb).toBeDefined();
   });
 
+  test("a prior answer's instances are kept until the engine says again, and an edit keeps them", async () => {
+    const prior = {
+      nodes: [
+        {
+          id: "old-root",
+          parent: null,
+          rows: [
+            { cites: [], dev: "root", id: "r1", text: "∀xRxb" },
+            { cites: [], dev: "root", id: "r2", text: "Fa" },
+            { cites: ["r1"], dev: "d1", id: "r3", text: "Rab" },
+            { cites: ["r1"], dev: "d1", id: "r4", text: "Rbb" },
+          ],
+        },
+      ],
+      instances: { r3: "a", r4: "b" },
+      rules: { d1: "∀" },
+    };
+    const mounted = mountExercise(
+      await treeExercise(
+        'finish="one-open"',
+        "Is this set consistent?\n\n- ∀x Rxb\n- Fa",
+      ),
+      { priorAnswer: prior },
+    );
+    const instancesOf = () =>
+      (
+        JSON.parse(mounted.answerData.value) as {
+          instances?: Record<string, string>;
+        }
+      ).instances;
+    const [, , rab, rbb] = answerOf(mounted).nodes[0]?.rows ?? [];
+
+    // Before any compile: the prior's, on their rows' fresh ids.
+    expect(instancesOf()).toEqual({
+      [rab?.id ?? ""]: "a",
+      [rbb?.id ?? ""]: "b",
+    });
+
+    // Marking the branch open is an edit; the general row is still
+    // instantiated for both names, so the branch is not flagged incomplete
+    // while the compile it starts is pending.
+    press(cursor(mounted), "o");
+    const end = mounted.root.querySelector(".tableau-end");
+
+    expect(end).not.toBeNull();
+    expect(end?.hasAttribute("data-flagged")).toBe(false);
+    expect(instancesOf()).toEqual({
+      [rab?.id ?? ""]: "a",
+      [rbb?.id ?? ""]: "b",
+    });
+  });
+
+  test("the rules are the answer in one order, however they were typed", async () => {
+    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+
+    press(cursor(mounted), "t");
+    write(mounted, "P", "1");
+    name(mounted, "&");
+    press(cursor(mounted), "t");
+    write(mounted, "Q", "1");
+    name(mounted, "&");
+
+    const typed = mounted.answerData.value;
+    const first = rows(mounted).find(
+      (each) => each.querySelector(".tableau-text")?.textContent === "P",
+    );
+
+    // Clear the first step's rule and type it again: the same answer.
+    first?.click();
+    name(mounted, "");
+    name(mounted, "&");
+
+    expect(mounted.answerData.value).toBe(typed);
+  });
+
   test("a tree past the row cap is refused without asking the engine", async () => {
     const extra = Array.from({ length: 200 }, (_, at) => ({
       cites: ["r1"],
@@ -381,6 +467,83 @@ describe("upgrading", () => {
     expect(answerOf(mounted).nodes[0]?.rows.map((each) => each.text)).toEqual(
       ["P & Q", "¬P"],
     );
+  });
+});
+
+describe("when the engine fails", () => {
+  const ENGINE_FAILURE =
+    "The proof engine couldn't read this proof — check for unexpected characters.";
+
+  test("the mark says so, and so does the Check", async () => {
+    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+
+    compile.mockImplementationOnce(() => {
+      throw new Error("wasm trap");
+    });
+    // A step nothing but the engine could find fault with.
+    press(cursor(mounted), "t");
+    write(mounted, "P", "1");
+    name(mounted, "&");
+    press(cursor(mounted), "r");
+    write(mounted, "Q", "1");
+
+    await until(() => markState(mounted) === "error", 3_000);
+
+    mounted.form
+      .querySelector<HTMLButtonElement>(".truth-tree-check")
+      ?.click();
+    await until(() => statusText(mounted) !== "", 3_000);
+
+    expect(statusText(mounted)).toBe(ENGINE_FAILURE);
+    expect(markState(mounted)).toBe("error");
+  });
+
+  test("a certificate that does not compile at submit takes back the check, and the submit", async () => {
+    const prior = {
+      nodes: [
+        {
+          end: { type: "open" },
+          id: "old-root",
+          parent: null,
+          rows: [
+            { cites: [], dev: "root", id: "r1", text: "∀xRxb" },
+            { cites: [], dev: "root", id: "r2", text: "Fa" },
+            { cites: ["r1"], dev: "d1", id: "r3", text: "Rab" },
+            { cites: ["r1"], dev: "d1", id: "r4", text: "Rbb" },
+          ],
+        },
+      ],
+      rules: { d1: "∀" },
+    };
+    const mounted = mountExercise(
+      await treeExercise(
+        'finish="one-open"',
+        "Is this set consistent?\n\n- ∀x Rxb\n- Fa",
+      ),
+      { priorAnswer: prior },
+    );
+
+    mounted.form
+      .querySelector<HTMLButtonElement>(".truth-tree-check")
+      ?.click();
+    await until(() => statusText(mounted) !== "", 3_000);
+    expect(markState(mounted)).toBe("ok");
+
+    const sent: string[] = [];
+    mounted.form.addEventListener("submit", (event) => {
+      if (!event.defaultPrevented) {
+        sent.push(mounted.answerData.value);
+        event.preventDefault();
+      }
+    });
+
+    // The certificate the submit waits on does not come.
+    compile.mockImplementationOnce(() => ({ diagnostics: [], ok: false }));
+    expect(submitForm(mounted).defaultPrevented).toBe(true);
+    await until(() => markState(mounted) !== "ok", 3_000);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(sent).toEqual([]);
   });
 });
 

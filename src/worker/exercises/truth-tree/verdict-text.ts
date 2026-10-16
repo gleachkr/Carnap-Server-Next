@@ -12,6 +12,7 @@ import type { TableauDocument } from "../../../tableau/document";
 import { TableauIndex } from "../../../tableau/document";
 import { layoutTableau } from "../../../tableau/layout";
 import type { MessageResolver } from "../../i18n/translator";
+import type { EngineFailure } from "./aufbau/judge";
 import type { TreeJudgement } from "./grading";
 import type { EndProblem, RowProblem, TreeProblem } from "./report";
 import type { TruthTreeVerdict } from "./types";
@@ -226,6 +227,18 @@ function rightVerdict(verdict: TruthTreeVerdict, words: TreeWords): string {
   }
 }
 
+/** Why the engine had no word on the tree, as the proof widgets say it. */
+export function engineFailureText(
+  reason: EngineFailure,
+  words: TreeWords,
+): string {
+  return reason === "unavailable"
+    ? words("Could not load the proof engine.")
+    : words(
+        "The proof engine couldn't read this proof — check for unexpected characters.",
+      );
+}
+
 /**
  * The whole verdict in one sentence. With `detail` (full feedback) it names
  * the first problem in tree order; without it, only whether the tree is
@@ -246,6 +259,12 @@ export function describeJudgement(
   // Only the engine could say, and its word is not to hand.
   if (judgement.problem?.type === "unconfirmed") {
     return "";
+  }
+
+  // Not a verdict but a malfunction, said under any feedback, as the proof
+  // widgets say it.
+  if (judgement.problem?.type === "engine-failed") {
+    return engineFailureText(judgement.problem.reason, words);
   }
 
   if (!detail || judgement.problem === null) {

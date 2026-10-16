@@ -22,7 +22,7 @@ import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
 import type { TreeProof } from "./aufbau/emit";
 import { emitTreeProof } from "./aufbau/emit";
-import type { TreeEvidence } from "./aufbau/judge";
+import type { EngineFailure, TreeEvidence } from "./aufbau/judge";
 import { judgeTreeProof } from "./aufbau/judge";
 import type { RowSortReader } from "./aufbau/rows";
 import { displayRow, rowSortReader } from "./aufbau/rows";
@@ -386,7 +386,9 @@ export type TreeJudgementProblem =
   | { readonly type: "tree"; readonly problem: TreeProblem }
   | { readonly type: "unfinished"; readonly finish: TruthTreeFinish }
   /** Finished as far as can be seen, and the engine's word is not to hand. */
-  | { readonly type: "unconfirmed" };
+  | { readonly type: "unconfirmed" }
+  /** The engine could not run, so nothing the engine checks is known. */
+  | { readonly type: "engine-failed"; readonly reason: EngineFailure };
 
 export interface TreeJudgement {
   readonly ok: boolean;
@@ -452,9 +454,11 @@ export function judgeTree(
       ? { problem: first, type: "tree" }
       : report.finished && shows !== null
         ? null
-        : unconfirmed
-          ? { type: "unconfirmed" }
-          : { finish: resolved.finish, type: "unfinished" };
+        : evidence.kind === "failed"
+          ? { reason: evidence.reason, type: "engine-failed" }
+          : unconfirmed
+            ? { type: "unconfirmed" }
+            : { finish: resolved.finish, type: "unfinished" };
 
   return { ok: problem === null, problem, report, shows };
 }

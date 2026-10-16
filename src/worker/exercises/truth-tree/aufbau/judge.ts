@@ -58,7 +58,16 @@ export type TreeEvidence =
       readonly certified: boolean;
     }
   /** The server's verification of the certificate the browser sent. */
-  | { readonly kind: "verified"; readonly ok: boolean };
+  | { readonly kind: "verified"; readonly ok: boolean }
+  /**
+   * The browser's engine could not run: it would not load, or could not read
+   * the derivation. It has no word on the tree, as with `none`, and the
+   * failure is the editor's to say.
+   */
+  | { readonly kind: "failed"; readonly reason: EngineFailure };
+
+/** Why the engine had no word on a tree. */
+export type EngineFailure = "unavailable" | "unreadable";
 
 export interface JudgeInput {
   readonly tree: TableauDocument;

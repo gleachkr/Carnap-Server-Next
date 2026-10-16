@@ -65,7 +65,10 @@ import {
   heldInstances,
   readTreeDiagnostics,
 } from "../../worker/exercises/truth-tree/aufbau/emit";
-import type { TreeEvidence } from "../../worker/exercises/truth-tree/aufbau/judge";
+import type {
+  EngineFailure,
+  TreeEvidence,
+} from "../../worker/exercises/truth-tree/aufbau/judge";
 import { ruleSpelling } from "../../worker/exercises/truth-tree/aufbau/theory";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
 import {
@@ -90,6 +93,7 @@ import {
   describeEndProblem,
   describeJudgement,
   describeRowProblem,
+  engineFailureText,
 } from "../../worker/exercises/truth-tree/verdict-text";
 import { TableauView } from "../tableau/view";
 import { register } from "./base";
@@ -266,7 +270,11 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   private rules: ReadonlyMap<string, string> = new Map();
   /**
    * The instance each row of a general step was written with, as the last
-   * compile found; empty until it has run.
+   * compile found, or as the prior answer recorded until one has run. An
+   * edit keeps them until the next compile replaces them: a row whose text
+   * no longer has its instance in it drops it on its own (`emitTreeProof`
+   * states only a row's candidates), and dropping all of them at every
+   * keystroke would have every open branch flash incomplete.
    */
   private instances: ReadonlyMap<string, string> = new Map();
   /**
@@ -425,9 +433,14 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
   override disconnectedCallback(): void {
     super.disconnectedCallback();
+    // A compile or certificate in flight lands on nothing: its run is
+    // superseded, nothing is owed, and with no mount there is no render.
+    this.cancelCompile();
+    this.owed = null;
     this.listeners.abort();
     if (this.mount !== null) {
       render(null, this.mount);
+      this.mount = null;
     }
   }
 
@@ -451,11 +464,14 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const before = saved.nodes.flatMap((node) => node.rows);
     const after = this.tree.nodes.flatMap((node) => node.rows);
 
+    const freshRows = new Map<string, string>();
+
     for (const [at, row] of before.entries()) {
       const now = after[at];
 
       if (now !== undefined) {
         fresh.set(row.dev, now.dev);
+        freshRows.set(row.id, now.id);
       }
     }
 
@@ -464,6 +480,15 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
         const now = fresh.get(dev);
         return now === undefined ? [] : [[now, rule] as const];
       }),
+    );
+    // And each row's instance to its row, until the first compile says again.
+    this.instances = new Map(
+      Object.entries((usable ? prior.instances : undefined) ?? {}).flatMap(
+        ([row, instance]) => {
+          const now = freshRows.get(row);
+          return now === undefined ? [] : [[now, instance] as const];
+        },
+      ),
     );
   }
 
@@ -499,8 +524,18 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const rows = this.tree.nodes.flatMap((node) => node.rows);
     const devs = new Set(rows.map((row) => row.dev));
     const ids = new Set(rows.map((row) => row.id));
-    const rules = [...this.rules].filter(([dev]) => devs.has(dev));
-    const instances = [...this.instances].filter(([id]) => ids.has(id));
+    // In key order, so that the same rules make the same answer however
+    // they were typed: a rule cleared and typed again is no unsaved work.
+    const byKey = (
+      [a]: readonly [string, string],
+      [b]: readonly [string, string],
+    ) => (a < b ? -1 : a > b ? 1 : 0);
+    const rules = [...this.rules]
+      .filter(([dev]) => devs.has(dev))
+      .sort(byKey);
+    const instances = [...this.instances]
+      .filter(([id]) => ids.has(id))
+      .sort(byKey);
 
     return {
       ...(instances.length === 0
@@ -623,7 +658,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     }
 
     if (asked.kind !== "verdict") {
-      this.evidence = { kind: "none" };
+      this.engineFailed(asked.kind);
       this.syncAnswer();
       this.rerender();
       return;
@@ -723,14 +758,19 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
       }
 
       // It certifies whenever every step held; should it not, the evidence
-      // says so rather than let the submit go on a promise.
-      if (run.kind !== "verdict" || run.verdict.certificate === null) {
+      // says so rather than let the submit go on a promise, and the mark
+      // takes back its check, so the submit it held is refused, not sent
+      // without a certificate.
+      if (run.kind !== "verdict") {
+        this.engineFailed(run.kind);
+      } else if (run.verdict.certificate === null) {
         this.evidence = {
           certified: false,
           errors:
             this.evidence.kind === "compiled" ? this.evidence.errors : [],
           kind: "compiled",
         };
+        this.setMark("idle");
       }
 
       this.syncAnswer();
@@ -738,6 +778,16 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     })();
 
     return owed.settling;
+  }
+
+  /**
+   * The engine could not be loaded, or could not read the derivation: it
+   * has no word on the tree, and the mark says why, as the proof widgets'
+   * does, since without that word the tree can be neither right nor wrong.
+   */
+  private engineFailed(reason: EngineFailure): void {
+    this.evidence = { kind: "failed", reason };
+    this.setMark("error", engineFailureText(reason, this.words));
   }
 
   private async runCheck(): Promise<void> {
@@ -751,12 +801,20 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     await this.settled();
 
     const judgement = this.judgement(resolved);
-
-    this.setCheckStatus(
-      describeJudgement(judgement, this.tree, this.words, this.showsDetail),
-      judgement.ok,
+    const status = describeJudgement(
+      judgement,
+      this.tree,
+      this.words,
+      this.showsDetail,
     );
-    this.setMark(judgement.ok ? "ok" : "idle");
+
+    this.setCheckStatus(status, judgement.ok);
+
+    if (judgement.problem?.type === "engine-failed") {
+      this.setMark("error", status);
+    } else {
+      this.setMark(judgement.ok ? "ok" : "idle");
+    }
   }
 
   // --- Editing -------------------------------------------------------------
@@ -794,7 +852,6 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   private edited(): void {
     this.forgetVerdict();
     this.evidence = { kind: "none" };
-    this.instances = new Map();
     this.setMark("idle");
     this.syncAnswer();
     this.scheduleCompile();
