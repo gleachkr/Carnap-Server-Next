@@ -226,6 +226,84 @@ describe("a general row", () => {
   });
 });
 
+describe("a step writes what its rule does", () => {
+  // A branch is a set to the engine, so a row already on it is written
+  // whether or not the rule writes it; the theory's patterns tell.
+  async function wrongRows(
+    members: string[],
+    cite: string,
+    rows: string[],
+    rule: string,
+    closeOn: [number, string],
+  ) {
+    const { item, resolved } = await consistency(...members);
+    const t = new TreeBuilder(resolved.rootText);
+    const written = t.stack(t.rootNode, cite, rows, rule);
+    t.close(t.rootNode, written[closeOn[0]] as string, closeOn[1]);
+    const answer = await certify(item, t);
+
+    return {
+      graded: await grade(item, answer),
+      rows: report(resolved, answer).rows,
+      written,
+    };
+  }
+
+  test("a general step may not write a row that is no instance", async () => {
+    const { graded, rows, written } = await wrongRows(
+      ["∀x Fx", "Ga", "¬Fa"],
+      "r1",
+      ["Fa", "Ga"],
+      "∀",
+      [0, "r3"],
+    );
+
+    expect(rows.get(written[1] as string)?.type).toBe("step-wrong");
+    expect(graded).toBe("incorrect");
+  });
+
+  test("a step may not write one conclusion twice for another on the branch", async () => {
+    const { graded, rows, written } = await wrongRows(
+      ["A & B", "B", "¬A"],
+      "r1",
+      ["A", "A"],
+      "&",
+      [0, "r3"],
+    );
+
+    expect(rows.get(written[0] as string)?.type).toBe("step-wrong");
+    expect(graded).toBe("incorrect");
+  });
+
+  test("a step may not leave out a conclusion already on the branch", async () => {
+    const { graded, rows, written } = await wrongRows(
+      ["A & B", "B", "¬A"],
+      "r1",
+      ["A"],
+      "&",
+      [0, "r3"],
+    );
+
+    expect(rows.get(written[0] as string)?.type).toBe("step-wrong");
+    expect(graded).toBe("incorrect");
+  });
+
+  test("the same steps, written as the rule writes them, are right", async () => {
+    expect(
+      (await wrongRows(["∀x Fx", "Ga", "¬Fa"], "r1", ["Fa"], "∀", [0, "r3"]))
+        .graded,
+    ).toBe("correct");
+    expect(
+      (
+        await wrongRows(["A & B", "B", "¬A"], "r1", ["A", "B"], "&", [
+          0,
+          "r3",
+        ])
+      ).graded,
+    ).toBe("correct");
+  });
+});
+
 describe("a row used once", () => {
   test("takes ✓ with the name an existential step introduced", async () => {
     const { item, resolved } = await consistency("∃x Fx", "∀x ¬Gx");

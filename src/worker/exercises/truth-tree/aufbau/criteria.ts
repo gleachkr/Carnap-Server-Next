@@ -29,8 +29,14 @@
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { roleIndex } from "../../../logic/specs/roles";
 import type { Missing } from "../report";
-import type { Bindings, Metas } from "./patterns";
-import { matchTerm, occursFree, statementReader, termKey } from "./patterns";
+import type { Bindings, Metas, Substitution } from "./patterns";
+import {
+  matchTerm,
+  occursFree,
+  statementReader,
+  substitutionOf,
+  termKey,
+} from "./patterns";
 import type { TreeTheory } from "./theory";
 
 /** The namespace a development role is in: `tree.development.general.te`. */
@@ -299,13 +305,6 @@ export interface DevelopmentRule {
    * way, as `□𝕋` is for a witness of either sign.
    */
   readonly variants: readonly RulePatterns[];
-  /**
-   * How many rows each axiom of the chain writes on each branch, sorted: a
-   * step must write one of these. The engine cannot tell, because a branch
-   * is a set and a row already on it is not written again (`A ∧ B` with `B`
-   * above gives `Γ ; A ; B`, which is `Γ ; A`).
-   */
-  readonly shapes: readonly (readonly number[])[];
   /** Null where its roles do not read: an author's diagnostic. */
   readonly criterion: DevelopmentCriterion | null;
   readonly flags: ReadonlySet<string>;
@@ -477,7 +476,6 @@ function readDevelopment(
       instance,
       name,
       patterns,
-      shapes: variants.map((each) => rowShape(each.written)),
       variants,
     };
 
@@ -511,13 +509,6 @@ function readDevelopment(
     relation,
     rules: relation === null ? rules.map(withoutInstance) : rules,
   };
-}
-
-/** How many rows each branch holds, sorted: branches may come in any order. */
-export function rowShape(
-  branches: readonly (readonly unknown[])[],
-): readonly number[] {
-  return branches.map((rows) => rows.length).sort((a, b) => a - b);
 }
 
 /** A rule whose instances cannot be confirmed asks only that it be used. */
@@ -892,15 +883,147 @@ export function* ruleMatches(
   }
 }
 
-/** Every order of some terms; one order for one term or none. */
-function permutations(terms: readonly Term[]): readonly (readonly Term[])[] {
-  if (terms.length <= 1) {
-    return [terms];
+/**
+ * Whether a step's rows are what a rule writes: some statement of the rule
+ * whose focus matches the cited rows, and whose premises' rows match the
+ * step's branches, one row for one row. A branch is a set to the engine, so
+ * a row already on it counts as written whether the rule writes it or not:
+ * `A ∧ B` with `B` above "writes" `A, A`, and `∀x Fx` with `Ga` above writes
+ * `Fa, Ga`. Only the rule's patterns can tell.
+ *
+ * Where the patterns cannot pin a row down, the row is the engine's alone to
+ * confirm, and is not matched here (it still counts against the premise's
+ * rows). That is a row that depends on the body of a substitution the focus
+ * is matched through (`=𝕋` cites `𝕋 {z / te} ph`: which occurrences of `te`
+ * are `z` is for the written row to say, not the cited one), or a row in the
+ * instance's place where the theory does not name its substitution
+ * (`tree.substitution`), whose link theorem confirms it instead. A step whose
+ * cited rows no statement's focus matches is not refused either: the engine
+ * has matched it, and the patterns did not.
+ */
+export function writesRule(
+  language: SurfaceLanguage,
+  rule: DevelopmentRule,
+  cited: readonly Term[],
+  branches: readonly (readonly Term[])[],
+): boolean {
+  const substitution = substitutionOf(language);
+  let focused = false;
+
+  const writes = rule.variants.some((patterns) => {
+    const opaque = new Set(
+      [...patterns.focus, ...patterns.side].flatMap((pattern) =>
+        substitutionBodies(pattern, substitution),
+      ),
+    );
+
+    if (rule.instance !== null && substitution === null) {
+      opaque.add(rule.instance.binder);
+    }
+
+    for (const bindings of ruleMatches(language, patterns, cited, [])) {
+      focused = true;
+
+      // A split's branches may come in any order.
+      for (const premises of permutations(patterns.written)) {
+        if (
+          premises.length === branches.length &&
+          premises.every(
+            (written, at) => written.length === branches[at]?.length,
+          ) &&
+          coversAll(
+            language,
+            patterns.metas,
+            premises,
+            branches,
+            bindings,
+            opaque,
+          )
+        ) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  });
+
+  return writes || !focused;
+}
+
+/** Each branch's rows matched one for one by its premise's patterns. */
+function coversAll(
+  language: SurfaceLanguage,
+  metas: Metas,
+  premises: readonly (readonly Term[])[],
+  branches: readonly (readonly Term[])[],
+  bindings: Bindings,
+  opaque: ReadonlySet<string>,
+): boolean {
+  const [written, ...restWritten] = premises;
+  const [rows, ...restRows] = branches;
+
+  if (written === undefined || rows === undefined) {
+    return true;
   }
 
-  return terms.flatMap((term, at) =>
-    permutations([...terms.slice(0, at), ...terms.slice(at + 1)]).map(
-      (rest) => [term, ...rest],
+  const cover = (
+    patterns: readonly Term[],
+    left: readonly Term[],
+    bound: Bindings,
+  ): boolean => {
+    const [pattern, ...rest] = patterns;
+
+    if (pattern === undefined) {
+      return coversAll(language, metas, restWritten, restRows, bound, opaque);
+    }
+
+    return left.some((row, at) => {
+      const others = [...left.slice(0, at), ...left.slice(at + 1)];
+
+      if ([...opaque].some((name) => mentions(pattern, name))) {
+        return cover(rest, others, bound);
+      }
+
+      const next = matchTerm(language, pattern, row, metas, bound);
+      return next !== null && cover(rest, others, next);
+    });
+  };
+
+  return cover(written, rows, bindings);
+}
+
+/** The metavariables a pattern substitutes into: `ph` of `{z / te} ph`. */
+function substitutionBodies(
+  pattern: Term,
+  substitution: Substitution | null,
+): string[] {
+  if (pattern.kind === "variable") {
+    return [];
+  }
+
+  const body =
+    pattern.term === substitution?.term
+      ? pattern.args[substitution.body]
+      : undefined;
+
+  return [
+    ...(body?.kind === "variable" ? [body.name] : []),
+    ...pattern.args.flatMap((argument) =>
+      substitutionBodies(argument, substitution),
+    ),
+  ];
+}
+
+/** Every order of some items; one order for one item or none. */
+function permutations<T>(items: readonly T[]): readonly (readonly T[])[] {
+  if (items.length <= 1) {
+    return [items];
+  }
+
+  return items.flatMap((item, at) =>
+    permutations([...items.slice(0, at), ...items.slice(at + 1)]).map(
+      (rest) => [item, ...rest],
     ),
   );
 }

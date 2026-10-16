@@ -156,7 +156,7 @@ function normal(language: SurfaceLanguage, term: Term): Term {
  * The theory's substitution constructor, `{x / te} ph`: which argument is the
  * bound variable, which the term put for it, and which the body.
  */
-interface Substitution {
+export interface Substitution {
   readonly term: string;
   readonly hole: number;
   readonly value: number;
@@ -170,7 +170,9 @@ const substitutionCache = new WeakMap<SurfaceLanguage, Substitution | null>();
  * one a bound variable, one of the sort it builds (the body), and the term.
  * Null where the theory names none, or one of another shape.
  */
-function substitutionOf(language: SurfaceLanguage): Substitution | null {
+export function substitutionOf(
+  language: SurfaceLanguage,
+): Substitution | null {
   if (substitutionCache.has(language)) {
     return substitutionCache.get(language) ?? null;
   }

@@ -21,6 +21,7 @@
  * DOM-free and free of i18n.
  */
 
+import type { Term } from "@aufbau/syntax";
 import type { TableauDocument } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
 import type {
@@ -34,7 +35,7 @@ import type {
 import type { TruthTreeFinish } from "../types";
 import { TreeCompleteness } from "./complete";
 import type { TreeDevelopment } from "./criteria";
-import { rowShape } from "./criteria";
+import { writesRule } from "./criteria";
 import type {
   EmitProblem,
   EmittedStep,
@@ -226,22 +227,32 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     }
   }
 
-  // A step must write every row its rule does, even one already on the
-  // branch, which the engine would take as written.
+  // A step writes what its rule does: every row of it, even one already on
+  // the branch, and no other. The engine takes a row already on the branch
+  // as written either way, a branch being a set.
+  const termOf = (rowId: string) => {
+    const location = index.row(rowId);
+    const read = location === null ? null : reader.read(location.row.text);
+    return read?.ok === true ? read.term : null;
+  };
+
   for (const step of proof.steps.values()) {
-    const shapes = input.development.byAxiom.get(step.rule)?.shapes ?? [];
-    const byNode = new Map<string, string[]>();
+    const rule = input.development.byAxiom.get(step.rule);
+    const byNode = new Map<string, Term[]>();
+    const cited = step.cites.flatMap((rowId) => termOf(rowId) ?? []);
 
     for (const rowId of step.rows) {
       const node = index.row(rowId)?.node.id ?? "";
-      byNode.set(node, [...(byNode.get(node) ?? []), rowId]);
+      const term = termOf(rowId);
+
+      if (term !== null) {
+        byNode.set(node, [...(byNode.get(node) ?? []), term]);
+      }
     }
 
-    const shape = rowShape([...byNode.values()]).join(" ");
-
     if (
-      shapes.length > 0 &&
-      !shapes.some((each) => each.join(" ") === shape)
+      rule !== undefined &&
+      !writesRule(reader.language, rule, cited, [...byNode.values()])
     ) {
       for (const rowId of step.rows) {
         flag(rowId, { rule: step.rule, type: "step-wrong" });

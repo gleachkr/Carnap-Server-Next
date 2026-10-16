@@ -64,8 +64,9 @@ export function question(rows: readonly OlpTableauRow[]): {
 /** How many rows a stacking rule writes, from the theory. */
 function writes(resolved: ResolvedTree, rule: string): number {
   const axiom = resolved.language.spec.ruleAliases.get(rule) ?? rule;
-  const shape = resolved.development.byAxiom.get(axiom)?.shapes[0];
-  return shape?.length === 1 ? (shape[0] as number) : 1;
+  const written =
+    resolved.development.byAxiom.get(axiom)?.variants[0]?.written;
+  return written?.length === 1 ? (written[0]?.length ?? 1) : 1;
 }
 
 /**

@@ -101,6 +101,21 @@ describe("open-logic-tableaux", () => {
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
   }, 60_000);
 
+  test("a rule's conclusions are written as it writes them, even one already on the branch", async () => {
+    const tree = new TreeBuilder(["T: A ∧ B", "T: B", "F: A"]);
+    const [first, second] = tree.stack("n0", "r1", ["T: A", "T: A"], "∧T");
+    tree.close("n0", first as string, "r3");
+    const report = await judge("A ∧ B, B :|-: A", tree);
+
+    expect(problems(report)).toContain(`row ${second}: step-wrong`);
+
+    const right = new TreeBuilder(["T: A ∧ B", "T: B", "F: A"]);
+    const [a] = right.stack("n0", "r1", ["T: A", "T: B"], "∧T");
+    right.close("n0", a as string, "r3");
+
+    expect(problems(await judge("A ∧ B, B :|-: A", right))).toEqual([]);
+  }, 60_000);
+
   test("a branch closes on one formula with both signs, not one sign twice", async () => {
     const tree = new TreeBuilder(["T: A", "T: ¬A"]);
     const [f] = tree.stack("n0", "r2", ["F: A"], "¬T");

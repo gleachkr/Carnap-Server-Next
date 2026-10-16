@@ -1055,6 +1055,13 @@ student's name resolves to (the aliased axiom; the role covers its
   `ph` known matches `ph` with one term at every `x`; with `te` known and
   `ph` not, as in an identity's `{x / a} ph`, `ph` is the row with every
   `a` made `x`. Anything else the theory would compute matches nothing.
+- A step's rows must be, one for one, what some statement of its rule
+  writes, matched the same way. The engine cannot tell, since a branch is a
+  set and a row already on it is written either way (`A ∧ B` developed as
+  `A, A` with `B` above). Where the match cannot pin a row down, the row is
+  the engine's alone: a row built from the body of a substitution in the
+  rule's focus (`=𝕋`, which rewrites some occurrences, not all), and, in a
+  theory that names no substitution, a row in an instance's place.
 - Only steps the engine accepted count. A step's instance is found by the
   engine too: the editor asks it which term each row was written with, and
   the certificate proves the answer, so the server checks it as it checks
