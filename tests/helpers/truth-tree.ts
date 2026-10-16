@@ -1,49 +1,21 @@
 import { readFileSync } from "node:fs";
 import type { LoadedCompiler } from "@aufbau/compiler";
 import { loadCompiler } from "@aufbau/compiler";
-import type { SurfaceLanguage } from "@aufbau/syntax";
 import type { TableauDocument, TableauEnd } from "../../src/tableau/document";
 import { setEnd, splitNode, stackRows } from "../../src/tableau/edit";
-import type { Formula } from "../../src/worker/exercise-kit/formula";
-import { parseFormula } from "../../src/worker/exercise-kit/formula";
 import {
   heldInstances,
   readTreeDiagnostics,
 } from "../../src/worker/exercises/truth-tree/aufbau/emit";
+import type { TreeEvidence } from "../../src/worker/exercises/truth-tree/aufbau/judge";
+import type { ResolvedTree } from "../../src/worker/exercises/truth-tree/grading";
 import {
+  judgeTree,
   resolveTruthTree,
   treeProofOf,
 } from "../../src/worker/exercises/truth-tree/grading";
-import type { TreeReport } from "../../src/worker/exercises/truth-tree/logic/check";
-import { checkTree } from "../../src/worker/exercises/truth-tree/logic/check";
-import { rowReader } from "../../src/worker/exercises/truth-tree/logic/formulas";
-import type { TableauSystem } from "../../src/worker/exercises/truth-tree/logic/system";
-import { FORALLX_UBC } from "../../src/worker/exercises/truth-tree/logic/system";
+import type { TreeReport } from "../../src/worker/exercises/truth-tree/report";
 import type { TruthTreePublicData } from "../../src/worker/exercises/truth-tree/types";
-import { languageById } from "../../src/worker/logic/specs";
-
-export const UBC = (() => {
-  const found = languageById("forallx-ubc");
-
-  if (found === null) {
-    throw new Error("forallx-ubc does not ship");
-  }
-
-  return found;
-})();
-
-export function ubcFormula(
-  text: string,
-  lang: SurfaceLanguage = UBC,
-): Formula {
-  const read = parseFormula(text, lang);
-
-  if (!read.ok) {
-    throw new Error(`'${text}' does not parse: ${read.errors[0]?.message}`);
-  }
-
-  return read.formula;
-}
 
 /**
  * Builds a truth tree the way the editor does, through the tableau's own edit
@@ -188,18 +160,6 @@ export class TreeBuilder {
   get tree(): TableauDocument {
     return this.document;
   }
-
-  check(
-    root?: readonly Formula[],
-    system: TableauSystem = FORALLX_UBC,
-  ): TreeReport {
-    return checkTree({
-      reader: rowReader(UBC),
-      root: root ?? this.rootTexts.map((text) => ubcFormula(text)),
-      system,
-      tree: this.document,
-    });
-  }
 }
 
 let compiler: Promise<LoadedCompiler> | null = null;
@@ -284,4 +244,61 @@ export async function certifyTree(
   answer: { readonly nodes: unknown; readonly rules?: unknown },
 ): Promise<string | undefined> {
   return (await certifyAnswer(publicData, answer)).mmb;
+}
+
+/**
+ * The report on a tree, as the browser makes it: one
+ * compile asking every candidate instance, the instances that held, and a
+ * second compile for the certificate where the derivation changed.
+ */
+export function judgeAsBrowser(
+  compiler: LoadedCompiler,
+  resolved: ResolvedTree,
+  mm0: string,
+  answer: {
+    readonly nodes: TableauDocument["nodes"];
+    readonly rules: Readonly<Record<string, string>>;
+  },
+): TreeReport {
+  const slots = treeProofOf(resolved, answer, new Map()).slots;
+  const asking = treeProofOf(resolved, answer, slots);
+  let evidence: TreeEvidence = {
+    certified: false,
+    errors: [],
+    kind: "compiled",
+  };
+  let submitted: typeof answer & { instances?: Record<string, string> } =
+    answer;
+
+  if (asking.goal !== null && asking.proof !== null) {
+    const asked = compiler.compile(`${mm0}\n${asking.goal}\n`, asking.proof);
+    const errors = readTreeDiagnostics(
+      asked.ok ? [] : asked.diagnostics,
+      asking,
+    );
+    const held = heldInstances(asking, errors);
+    submitted =
+      held.size === 0
+        ? answer
+        : { ...answer, instances: Object.fromEntries(held) };
+    const stepErrors = errors.filter(
+      (error) => error.subject?.type !== "link",
+    );
+    let certified = stepErrors.length === 0 && asked.ok === true;
+    const final = treeProofOf(resolved, submitted);
+
+    if (
+      stepErrors.length === 0 &&
+      final.goal !== null &&
+      final.proof !== null &&
+      (final.goal !== asking.goal || final.proof !== asking.proof)
+    ) {
+      const run = compiler.compile(`${mm0}\n${final.goal}\n`, final.proof);
+      certified = run.ok === true;
+    }
+
+    evidence = { certified, errors: stepErrors, kind: "compiled" };
+  }
+
+  return judgeTree(resolved, submitted, evidence).report;
 }

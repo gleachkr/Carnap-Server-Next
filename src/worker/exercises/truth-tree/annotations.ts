@@ -13,9 +13,9 @@ import type { TableauDocument } from "../../../tableau/document";
 import { TableauIndex } from "../../../tableau/document";
 import type { MarginNote, TableauAnnotations } from "../../../tableau/html";
 import type { TableauLayout } from "../../../tableau/layout";
-import type { TreeReport } from "./logic/check";
-import { isCitationProblem, isIncomplete } from "./logic/check";
-import { markText } from "./logic/labels";
+import { markText } from "./labels";
+import type { TreeReport } from "./report";
+import { isCitationProblem, isIncomplete } from "./report";
 import type { TreeWords } from "./verdict-text";
 
 export function treeAnnotations(

@@ -22,6 +22,13 @@ export const TRUTH_TREE_CAPABILITIES: ExerciseCapabilities = {
   supportsManualReview: true,
 };
 
+/**
+ * The most rows a tree may have before it is not read: first-order trees
+ * need not end, and each row costs a parse and a place in every step's
+ * branch.
+ */
+export const TREE_ROW_CAP = 200;
+
 /** The generic group name for an untitled exercise of this type. */
 export function truthTreeName(i18n: Translator): string {
   return i18n.t("Truth tree");
@@ -56,8 +63,6 @@ export interface TruthTreePublicData {
   readonly source?: string;
   /** The same for the engine, without its `@syntax` annotations. */
   readonly mm0?: string;
-  /** The tree rules, by the id of a `TableauSystem` record. */
-  readonly rules: string;
   /** When the tree is done; `closed` where absent. */
   readonly finish?: TruthTreeFinish;
   readonly task: TruthTreeTask;

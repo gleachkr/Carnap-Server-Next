@@ -30,7 +30,7 @@ import type {
   TreeLevelProblem,
   TreeProblem,
   TreeReport,
-} from "../logic/check";
+} from "../report";
 import type { TruthTreeFinish } from "../types";
 import { TreeCompleteness } from "./complete";
 import type { TreeDevelopment } from "./criteria";
@@ -120,7 +120,6 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
       closed: false,
       ends: new Map(),
       finished: false,
-      justifications: new Map(),
       marks: new Map(),
       open: false,
       problems: [
@@ -377,7 +376,6 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
     closed,
     ends: endProblems,
     finished,
-    justifications: new Map(),
     marks: completeness.marks(),
     open,
     problems,

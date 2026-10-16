@@ -2,7 +2,7 @@
  * The shared first-order syntax core: the formula tree the formula-reading
  * types share, the reader that builds it from a language spec, and the few
  * operations on it that more than one type needs (evaluation, forcing sets,
- * substitution, the argument line). The types read formulas through this
+ * the argument line). The types read formulas through this
  * barrel; anything only one type needs (finite models, equivalence theories,
  * tree rules) stays with the type that owns it.
  *
@@ -48,14 +48,6 @@ export {
   satisfies,
   symbolKey,
 } from "./semantics";
-export {
-  complementary,
-  isLiteral,
-  namesIn,
-  replaceName,
-  sameFormula,
-  substitute,
-} from "./syntax";
 
 export const DEFAULT_LANGUAGE_ID = "forallx-calgary";
 

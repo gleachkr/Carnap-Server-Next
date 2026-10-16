@@ -306,10 +306,6 @@ msgstr "{name} ({detail})"
 msgid "{name} already names {block}."
 msgstr "{name} already names {block}."
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "{name} is already on this branch, and row {cited} needs a new name."
-msgstr "{name} is already on this branch, and row {cited} needs a new name."
-
 #: src/worker/exercises/world/strings.ts
 msgid "{name} names both {block} and {other}."
 msgstr "{name} names both {block} and {other}."
@@ -359,10 +355,6 @@ msgstr "{used} of {allowed}"
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A “-- label:” comment must sit at the end of the proof line it marks, not on its own line."
 msgstr "A “-- label:” comment must sit at the end of the proof line it marks, not on its own line."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "A branch closes on one row only if that row says something is not identical to itself."
-msgstr "A branch closes on one row only if that row says something is not identical to itself."
 
 #: src/worker/web/lti.tsx
 msgid "A Carnap account already exists for {email}. We sent a confirmation link to that address — open it to connect your LMS identity to the account, then launch again from your LMS."
@@ -505,10 +497,6 @@ msgstr "A reading records no scores, so it has no gradebook."
 #: src/worker/application/manual-grading.ts
 msgid "A reading records no work to grade."
 msgstr "A reading records no work to grade."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "A row citing two rows substitutes by an identity, and neither row {cited} nor row {other} is one."
-msgstr "A row citing two rows substitutes by an identity, and neither row {cited} nor row {other} is one."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A short-answer exercise needs at least one accepted answer."
@@ -1373,10 +1361,6 @@ msgstr "Citation of row {row}, not yet written"
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Citation of row {row}: {cites}"
 msgstr "Citation of row {row}: {cites}"
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Cite just one row, the one this row comes from, or two for a substitution by an identity."
-msgstr "Cite just one row, the one this row comes from, or two for a substitution by an identity."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Cite the two rows the branch closes on."
@@ -4255,10 +4239,6 @@ msgid "Revoked"
 msgstr "Revoked"
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Rewriting row {into} by the identity on row {identity} does not give this sentence."
-msgstr "Rewriting row {into} by the identity on row {identity} does not give this sentence."
-
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "Right: a complete open branch shows the argument is invalid."
 msgstr "Right: a complete open branch shows the argument is invalid."
 
@@ -4286,18 +4266,6 @@ msgstr "Role & status"
 #: src/worker/exercises/world/strings.ts
 msgid "Row"
 msgstr "Row"
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} does not read, so it cannot be developed."
-msgstr "Row {cited} does not read, so it cannot be developed."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} has no rule: it is atomic, or the negation of an atomic sentence."
-msgstr "Row {cited} has no rule: it is atomic, or the negation of an atomic sentence."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {cited} is an identity: cite it together with the row it rewrites."
-msgstr "Row {cited} is an identity: cite it together with the row it rewrites."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {cited} is not above this row on its branch."
@@ -5341,10 +5309,6 @@ msgid "The root's rows are given, and cannot be changed."
 msgstr "The root's rows are given, and cannot be changed."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "The rows a closure cites must be a sentence and its negation."
-msgstr "The rows a closure cites must be a sentence and its negation."
-
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "The rows of one step must cite the same row."
 msgstr "The rows of one step must cite the same row."
 
@@ -5387,18 +5351,6 @@ msgstr "The rule “{rule}” names more than one development kind."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know."
 msgstr "The rule “{rule}” names the development kind “{kind}”, which Carnap does not know."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "The rule for row {cited} does not split the branch."
-msgstr "The rule for row {cited} does not split the branch."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "The rule for row {cited} does not write this sentence."
-msgstr "The rule for row {cited} does not write this sentence."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "The rule for row {cited} splits the branch into {branches} branches."
-msgstr "The rule for row {cited} splits the branch into {branches} branches."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The rule named does not give this from row {cited}."
@@ -5591,17 +5543,9 @@ msgstr "There's an error somewhere."
 msgid "These are pinned and have been changed: {objects}."
 msgstr "These are pinned and have been changed: {objects}."
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "These branches are not the ones the rule for row {cited} writes."
-msgstr "These branches are not the ones the rule for row {cited} writes."
-
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "These options leave no cells for the student to fill."
 msgstr "These options leave no cells for the student to fill."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "These trees have no rules for identity."
-msgstr "These trees have no rules for identity."
 
 #: src/worker/web/courses.tsx
 msgid "These values are currently recorded for this member. Clearing them returns the member to the course defaults."
@@ -5753,10 +5697,6 @@ msgid "This is a {kind}, not a complete sentence."
 msgstr "This is a {kind}, not a complete sentence."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "This is not an instance of row {cited}."
-msgstr "This is not an instance of row {cited}."
-
-#: src/worker/exercises/truth-tree/strings.ts
 msgid "This is not the sentence the exercise gives."
 msgstr "This is not the sentence the exercise gives."
 
@@ -5860,17 +5800,9 @@ msgstr "This row isn't a counterexample."
 msgid "This row isn't filled in correctly yet."
 msgstr "This row isn't filled in correctly yet."
 
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "This row repeats one its step already wrote."
-msgstr "This row repeats one its step already wrote."
-
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”."
 msgstr "This rule takes its premises from a subproof — cite a range “a-b”, not line “{token}”."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "This step is missing a row: the rule for row {cited} writes more."
-msgstr "This step is missing a row: the rule for row {cited} writes more."
 
 #: src/worker/exercises/translation/strings.ts
 msgid "This submission is not in Conjunctive Normal Form."

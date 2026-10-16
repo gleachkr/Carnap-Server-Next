@@ -20,7 +20,7 @@ import type {
   TableauRow,
 } from "../../../../tableau/document";
 import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
-import type { Missing, RowMark } from "../logic/check";
+import type { Missing, RowMark } from "../report";
 import type {
   DevelopingStep,
   DevelopmentRule,

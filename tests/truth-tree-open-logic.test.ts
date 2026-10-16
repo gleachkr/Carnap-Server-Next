@@ -4,10 +4,9 @@ import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
 import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
-import type { TreeReport } from "../src/worker/exercises/truth-tree/logic/check";
+import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
 import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
-import { engine, TreeBuilder } from "./helpers/truth-tree";
-import { judgeAsBrowser } from "./helpers/truth-tree-differential";
+import { engine, judgeAsBrowser, TreeBuilder } from "./helpers/truth-tree";
 
 /**
  * The Open Logic Project's first-order signed tableaux

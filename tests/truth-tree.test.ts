@@ -21,7 +21,8 @@ import {
 
 /**
  * The truth-tree type's worker half: the directive, the grader and the
- * review. The checker itself is `tests/truth-tree-check.test.ts`.
+ * review. The judgement itself is `tests/truth-tree-aufbau.test.ts` and
+ * `tests/truth-tree-criteria.test.ts`.
  */
 
 function directive(attrs: string, body: string): string {

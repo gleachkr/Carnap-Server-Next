@@ -31,7 +31,7 @@ import {
   resolveTruthTree,
   startingTree,
 } from "./grading";
-import type { TreeReport } from "./logic/check";
+import type { TreeReport } from "./report";
 import reviewStyles from "./review.css" with { type: "text" };
 import shadowStyles from "./shadow.css" with { type: "text" };
 import { buildTruthTreeStrings } from "./strings";

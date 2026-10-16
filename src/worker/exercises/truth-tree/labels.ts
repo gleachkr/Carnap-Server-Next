@@ -10,8 +10,8 @@
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import { printTerm } from "@aufbau/syntax";
-import { individualSorts } from "../../../logic/specs/roles";
-import type { RowMark } from "./check";
+import { individualSorts } from "../../logic/specs/roles";
+import type { RowMark } from "./report";
 
 /**
  * An instance as the language shows it: `a₁` for the identifier `a1`, `1.1`

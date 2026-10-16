@@ -4,7 +4,7 @@ import type { ExerciseManifestItem } from "../src/worker/domain/content";
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
 import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
-import type { TreeReport } from "../src/worker/exercises/truth-tree/logic/check";
+import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
 import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import {
   assumptions,
@@ -19,8 +19,7 @@ import type {
   OlpTableauRow,
 } from "./helpers/olp-first-order-tableaux";
 import { OLP_MODAL_K_TABLEAUX } from "./helpers/olp-modal-k-tableaux";
-import { engine } from "./helpers/truth-tree";
-import { judgeAsBrowser } from "./helpers/truth-tree-differential";
+import { engine, judgeAsBrowser } from "./helpers/truth-tree";
 
 /**
  * Every worked tableau of the Open Logic Project's tableaux for K, written

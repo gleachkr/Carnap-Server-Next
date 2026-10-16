@@ -1,5 +1,5 @@
 import type { ResolvedTree } from "../../src/worker/exercises/truth-tree/grading";
-import type { TreeReport } from "../../src/worker/exercises/truth-tree/logic/check";
+import type { TreeReport } from "../../src/worker/exercises/truth-tree/report";
 import type { OlpTableauRow } from "./olp-first-order-tableaux";
 import { TreeBuilder } from "./truth-tree";
 

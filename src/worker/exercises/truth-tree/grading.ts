@@ -28,9 +28,7 @@ import type { RowSortReader } from "./aufbau/rows";
 import { displayRow, rowSortReader } from "./aufbau/rows";
 import type { TreeTheory } from "./aufbau/theory";
 import { isTreeTheory, readTreeTheory } from "./aufbau/theory";
-import type { TreeProblem, TreeReport } from "./logic/check";
-import type { TableauSystem } from "./logic/system";
-import { FORALLX_UBC } from "./logic/system";
+import type { TreeProblem, TreeReport } from "./report";
 import type {
   TruthTreeAnswerData,
   TruthTreeFinish,
@@ -38,21 +36,13 @@ import type {
   TruthTreeTask,
   TruthTreeVerdict,
 } from "./types";
-
-/** Every tree rule system, by the id a declaration stores. */
-const SYSTEMS: ReadonlyMap<string, TableauSystem> = new Map([
-  [FORALLX_UBC.id, FORALLX_UBC],
-]);
-
-export function tableauSystemById(id: string): TableauSystem | null {
-  return SYSTEMS.get(id) ?? null;
-}
+import { TREE_ROW_CAP } from "./types";
 
 /**
  * The most a submitted tree may carry before it is not a tree at all: rows,
- * nodes, characters in a row, and characters in all. The checker reads no
- * tree past the system's `rowCap` (200), so these only bound the work of
- * refusing one; a row longer than any sentence a student would type is not a
+ * nodes, characters in a row, and characters in all. No tree past
+ * `TREE_ROW_CAP` (200) is judged, so these only bound the work of refusing
+ * one; a row longer than any sentence a student would type is not a
  * row. A 200-row tree of long sentences is some 40,000 characters.
  */
 const MAX_SUBMITTED_ROWS = 1000;
@@ -99,7 +89,6 @@ export function isTruthTreePublicData(
   return (
     typeof data.promptHtml === "string" &&
     typeof data.system === "string" &&
-    typeof data.rules === "string" &&
     (data.task === "validity" || data.task === "consistency") &&
     (data.finish === undefined ||
       data.finish === "closed" ||
@@ -296,7 +285,7 @@ export function resolveTruthTree(
     reader,
     root: publicData.root,
     rootText,
-    rowCap: FORALLX_UBC.rowCap,
+    rowCap: TREE_ROW_CAP,
     task: publicData.task,
     theory,
   };

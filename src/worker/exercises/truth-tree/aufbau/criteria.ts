@@ -28,7 +28,7 @@
 
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { roleIndex } from "../../../logic/specs/roles";
-import type { Missing } from "../logic/check";
+import type { Missing } from "../report";
 import type { Bindings, Metas } from "./patterns";
 import { matchTerm, occursFree, statementReader, termKey } from "./patterns";
 import type { TreeTheory } from "./theory";

@@ -11,7 +11,7 @@ for K and the logics past it (`open-logic-modal-k` through
 intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
 [`docs/carnap-markdown-v1.md`](../../../../docs/carnap-markdown-v1.md#truth-tree-directive).
 
-## Three layers
+## Two layers
 
 1. **The tableau component, which knows no logic.** `src/tableau/` is its
    framework-free core (the document of nodes and rows, the edits, the
@@ -20,30 +20,15 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
    `dev` are opaque to it; `kind` and `prefix` are there for the signed or
    world-labelled rows of a non-classical tableau. Boundary tests keep it
    free of this type and of the kit (`tests/tableau.test.ts`).
-2. **The rules, as data.** `logic/system.ts` is the `TableauSystem` record:
-   where a new name must be new, what closes a branch, whether a closure
-   cites its rows, when a tree is done. `FORALLX_UBC` is the one record. A
-   second classical textbook is a second record, selected by the stored
-   `rules` field.
-3. **The checker**, `logic/check.ts`, DOM-free: every row, every
-   development, every branch end, and whether the tree is done. The browser
-   runs it on each edit; the grader runs it again on the submitted tree.
-   `logic/rules.ts` says what a row develops into. The binary connectives'
-   rules are the kit's forcing sets (`exercise-kit/formula/forcing.ts`), the
-   same computation the world's evaluation game makes its moves from.
-   Identity (§12.7) is the checker's own: a step citing two rows, `a=b` and
-   one to rewrite (the kit's `replaceName`), which develops neither; a
-   branch closed by one row `a≠a`; and a completion clause asking each
-   identity to be substituted one way into every literal on its branch,
-   bar a rewriting that says something is itself (`b=b`), which the book's
-   solutions leave out. A system record without `identity`
-   refuses rows that use `=`.
+2. **The judgement, from the theory.** A tree's rules are the theory's:
+   `system=` names an MM0 file whose `@syntax role tree.*` annotations say
+   what a row is, what closes a branch, and what each axiom develops, and
+   the engine checks every step and closure as a derivation. The browser
+   judges on each edit; the grader judges again on the submitted tree. There
+   is no rule table on this side: a second textbook is a second theory.
 
 ## Layout
 
-- `logic/` — `system.ts`, `rules.ts`, `check.ts`, `formulas.ts` (the
-  caching row reader, and display through the language's own printer, which
-  is what writes `a₁` and `a≠b`), `labels.ts` (the names a mark lists).
 - `aufbau/` — the engine's half (gh #46): `theory.ts` reads a tree theory's
   roles (the contract is in the authoring docs, "Writing a tree theory"),
   `rows.ts` reads rows at its row sort, `emit.ts` writes each step and
@@ -59,10 +44,10 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   writes fewer rows than its rule does (`A ∧ B` developed as `A` alone, with
   `B` above). A tree with no inference to state, its root alone, has
   nothing to certify. `criteria.ts` reads the theory's
-  development roles into a registry of criteria (`once`, `general`, `none`),
-  `patterns.ts` matches a rule's focus against a row and fills in its
-  templates, and `complete.ts` says from the verified steps whether an open
-  branch is complete and what each row's mark is. A theory with
+  development roles into a registry of criteria (`once`, `general`, `pairs`,
+  `none`), `patterns.ts` matches a rule's focus against a row and fills in
+  its templates, and `complete.ts` says from the verified steps whether an
+  open branch is complete and what each row's mark is. A theory with
   `tree.completeness.contents` (the Open Logic Project's) also counts a row
   developed when its rule's conclusions are on the branch already, matched
   as the focus is; without it S5's `4r□` would owe a row back to a prefix
@@ -76,7 +61,10 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   more (`@acui assoc _ unit _`): a metavariable of its sort stands for any
   run of members, so intuitionistic `→𝕋`'s side row at `σ . ρ` finds `σ` and
   every prefix that extends it, and terms are compared, and instances
-  proposed, as lists. A general step's
+  proposed, as lists. With `tree.substitution` on its substitution term,
+  `patterns.ts` matches `{x / te} ph` as the substitution it denotes, which
+  is what lets UBC's identity rule (`tree.development.pairs`) be owed one
+  rewriting of each literal on its branch. A general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
   browser compiles every candidate once to find which hold, and that compile
@@ -84,18 +72,11 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   compiled for the certificate when the student submits, so typing pays for
   one compile, not two. The answer carries them (`instances`), and the
   server writes the same links. A tree past the row cap is not compiled.
-- `logic/` — the old UBC checker, kept for the differential test (#440),
-  `tests/truth-tree-differential.test.ts`. It develops every root the book
-  works a tree from (`tests/helpers/ubc-tree-roots.ts`, read from the
-  book's LaTeX source) as UBC's procedure does, correctly and with one
-  injected fault of each kind, and judges each tree with both checkers as
-  the browser runs them. They must agree on the verdict, which developments
-  are wrong or unfinished, every end, what an open branch is missing and
-  every mark, bar the differences `KNOWN_DIFFERENCES` names. Identity
-  completion is the theory's (`tree.development.pairs`), and a test holds
-  the two checkers to agreeing on a branch that skips a substitution.
-- `grading.ts` — guards, the declaration resolved back to formulas, and the
-  judgement: the report, and what the tree shows once it is done.
+- `report.ts` — the report the judge makes: each row's and end's problem,
+  each branch's state, each row's mark. `labels.ts` spells a mark's
+  instances in the language (`✓a₁`, `\1.1,1.2`).
+- `grading.ts` — guards, the declaration resolved back to its theory, and
+  the judgement: the report, and what the tree shows once it is done.
 - `annotations.ts` — what the tree draws beside its rows, for both the
   server's static tree and the editor.
 - `authoring.ts`, `assessment.ts`, `read-only-view.ts`, `strings.ts`,
@@ -128,7 +109,7 @@ A bad tree is a valid wrong answer, scored zero with the first problem;
 only JSON that is not a tree is refused. "Not a tree" includes nodes that do
 not form one (the root first, each node after its parent, no node or row id
 used twice), and a tree too big to be an attempt (1000 nodes or rows, a row
-of 1000 characters, 128 KiB in all). A tree past the system's `rowCap` (200
+of 1000 characters, 128 KiB in all). A tree past `TREE_ROW_CAP` (200
 rows) is answered "too many rows" without being read, since each row costs
 a parse. A prior answer whose root is not the declaration's (a correction
 changed it) is set aside when the element restores, as the root cannot be
@@ -144,6 +125,5 @@ Verifying 5 MB takes about 50 ms in workerd, decoding included.
 
 - Reading an interpretation off a complete open branch, merging the names
   an identity on it equates (§12.7).
-- A `rules=` attribute, which arrives with a second system record.
 - The language accepts two things the book forbids: `((A & B))` and
   `∀x∃xFx`.

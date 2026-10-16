@@ -78,8 +78,8 @@ import {
   startsFromRoot,
   treeProofOf,
 } from "../../worker/exercises/truth-tree/grading";
-import type { TreeReport } from "../../worker/exercises/truth-tree/logic/check";
-import { displayName } from "../../worker/exercises/truth-tree/logic/labels";
+import { displayName } from "../../worker/exercises/truth-tree/labels";
+import type { TreeReport } from "../../worker/exercises/truth-tree/report";
 import type { TruthTreeStringId } from "../../worker/exercises/truth-tree/strings";
 import type {
   TruthTreeAnswerData,

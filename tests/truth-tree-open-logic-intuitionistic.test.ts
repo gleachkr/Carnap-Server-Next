@@ -7,15 +7,19 @@ import {
   judgeTree,
   resolveTruthTree,
 } from "../src/worker/exercises/truth-tree/grading";
+import { markText } from "../src/worker/exercises/truth-tree/labels";
 import type {
   RowMark,
   TreeReport,
-} from "../src/worker/exercises/truth-tree/logic/check";
-import { markText } from "../src/worker/exercises/truth-tree/logic/labels";
+} from "../src/worker/exercises/truth-tree/report";
 import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
-import { certifyAnswer, engine, TreeBuilder } from "./helpers/truth-tree";
-import { judgeAsBrowser } from "./helpers/truth-tree-differential";
+import {
+  certifyAnswer,
+  engine,
+  judgeAsBrowser,
+  TreeBuilder,
+} from "./helpers/truth-tree";
 
 /**
  * The Open Logic Project's prefixed tableaux for intuitionistic logic

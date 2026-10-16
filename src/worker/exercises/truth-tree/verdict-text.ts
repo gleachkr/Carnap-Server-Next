@@ -13,7 +13,7 @@ import { TableauIndex } from "../../../tableau/document";
 import { layoutTableau } from "../../../tableau/layout";
 import type { MessageResolver } from "../../i18n/translator";
 import type { TreeJudgement } from "./grading";
-import type { EndProblem, RowProblem, TreeProblem } from "./logic/check";
+import type { EndProblem, RowProblem, TreeProblem } from "./report";
 import type { TruthTreeVerdict } from "./types";
 
 export type TreeWords = MessageResolver;
@@ -56,17 +56,11 @@ export function describeRowProblem(
             error.params as Readonly<Record<string, string>> | undefined,
           );
     }
-    case "identity":
-      return words("These trees have no rules for identity.");
     case "root-mismatch":
       return words("This is not the sentence the exercise gives.");
     case "uncited":
       return words(
         "Say which row this row comes from: type that row's number in the margin.",
-      );
-    case "cites-several":
-      return words(
-        "Cite just one row, the one this row comes from, or two for a substitution by an identity.",
       );
     case "cites-differ":
       return words("The rows of one step must cite the same row.");
@@ -74,66 +68,6 @@ export function describeRowProblem(
       return words("Row {cited} is not above this row on its branch.", {
         cited: number(problem.cite),
       });
-    case "cite-unreadable":
-      return words("Row {cited} does not read, so it cannot be developed.", {
-        cited: number(problem.cite),
-      });
-    case "no-rule":
-      return words(
-        "Row {cited} has no rule: it is atomic, or the negation of an atomic sentence.",
-        { cited: citedRow },
-      );
-    case "identity-alone":
-      return words(
-        "Row {cited} is an identity: cite it together with the row it rewrites.",
-        { cited: citedRow },
-      );
-    case "no-identity":
-      return words(
-        "A row citing two rows substitutes by an identity, and neither row {cited} nor row {other} is one.",
-        { cited: citedRow, other: otherRow },
-      );
-    case "not-substitution":
-      return words(
-        "Rewriting row {into} by the identity on row {identity} does not give this sentence.",
-        { identity: number(problem.identity), into: number(problem.into) },
-      );
-    case "not-from-rule":
-      return words("The rule for row {cited} does not write this sentence.", {
-        cited: citedRow,
-      });
-    case "should-split":
-      return words(
-        "The rule for row {cited} splits the branch into {branches} branches.",
-        { branches: String(problem.branches), cited: citedRow },
-      );
-    case "should-stack":
-      return words("The rule for row {cited} does not split the branch.", {
-        cited: citedRow,
-      });
-    case "incomplete":
-      return words(
-        "This step is missing a row: the rule for row {cited} writes more.",
-        {
-          cited: citedRow,
-        },
-      );
-    case "extra":
-      return words("This row repeats one its step already wrote.");
-    case "wrong-branches":
-      return words(
-        "These branches are not the ones the rule for row {cited} writes.",
-        { cited: citedRow },
-      );
-    case "not-instance":
-      return words("This is not an instance of row {cited}.", {
-        cited: citedRow,
-      });
-    case "name-not-new":
-      return words(
-        "{name} is already on this branch, and row {cited} needs a new name.",
-        { cited: citedRow, name: problem.name },
-      );
     case "no-rule-named":
       return words(
         "Name the rule this step uses: type it in the margin, after the row it develops.",
@@ -167,14 +101,6 @@ export function describeEndProblem(
       return words("Cite the two rows the branch closes on.");
     case "closure-cite-off-branch":
       return words("A closure cites rows on its own branch.");
-    case "closure-not-contradiction":
-      return words(
-        "The rows a closure cites must be a sentence and its negation.",
-      );
-    case "closure-not-self-non-identity":
-      return words(
-        "A branch closes on one row only if that row says something is not identical to itself.",
-      );
     case "open-contradiction": {
       const [first, second] = problem.rows;
 

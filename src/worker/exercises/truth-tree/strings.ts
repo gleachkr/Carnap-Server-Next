@@ -260,19 +260,12 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "This row is empty: write a sentence on it, or delete it.": i18n.t(
       "This row is empty: write a sentence on it, or delete it.",
     ),
-    "These trees have no rules for identity.": i18n.t(
-      "These trees have no rules for identity.",
-    ),
     "This is not the sentence the exercise gives.": i18n.t(
       "This is not the sentence the exercise gives.",
     ),
     "Say which row this row comes from: type that row's number in the margin.":
       i18n.t(
         "Say which row this row comes from: type that row's number in the margin.",
-      ),
-    "Cite just one row, the one this row comes from, or two for a substitution by an identity.":
-      i18n.t(
-        "Cite just one row, the one this row comes from, or two for a substitution by an identity.",
       ),
     "The rows of one step must cite the same row.": i18n.t(
       "The rows of one step must cite the same row.",
@@ -281,65 +274,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "Row {cited} is not above this row on its branch.",
       placeholders("cited"),
     ),
-    "Row {cited} does not read, so it cannot be developed.": i18n.t(
-      "Row {cited} does not read, so it cannot be developed.",
-      placeholders("cited"),
-    ),
-    "Row {cited} has no rule: it is atomic, or the negation of an atomic sentence.":
-      i18n.t(
-        "Row {cited} has no rule: it is atomic, or the negation of an atomic sentence.",
-        placeholders("cited"),
-      ),
-    "Row {cited} is an identity: cite it together with the row it rewrites.":
-      i18n.t(
-        "Row {cited} is an identity: cite it together with the row it rewrites.",
-        placeholders("cited"),
-      ),
-    "A row citing two rows substitutes by an identity, and neither row {cited} nor row {other} is one.":
-      i18n.t(
-        "A row citing two rows substitutes by an identity, and neither row {cited} nor row {other} is one.",
-        placeholders("cited", "other"),
-      ),
-    "Rewriting row {into} by the identity on row {identity} does not give this sentence.":
-      i18n.t(
-        "Rewriting row {into} by the identity on row {identity} does not give this sentence.",
-        placeholders("identity", "into"),
-      ),
-    "The rule for row {cited} does not write this sentence.": i18n.t(
-      "The rule for row {cited} does not write this sentence.",
-      placeholders("cited"),
-    ),
-    "The rule for row {cited} splits the branch into {branches} branches.":
-      i18n.t(
-        "The rule for row {cited} splits the branch into {branches} branches.",
-        placeholders("branches", "cited"),
-      ),
-    "The rule for row {cited} does not split the branch.": i18n.t(
-      "The rule for row {cited} does not split the branch.",
-      placeholders("cited"),
-    ),
-    "This step is missing a row: the rule for row {cited} writes more.":
-      i18n.t(
-        "This step is missing a row: the rule for row {cited} writes more.",
-        placeholders("cited"),
-      ),
-    "This row repeats one its step already wrote.": i18n.t(
-      "This row repeats one its step already wrote.",
-    ),
-    "These branches are not the ones the rule for row {cited} writes.":
-      i18n.t(
-        "These branches are not the ones the rule for row {cited} writes.",
-        placeholders("cited"),
-      ),
-    "This is not an instance of row {cited}.": i18n.t(
-      "This is not an instance of row {cited}.",
-      placeholders("cited"),
-    ),
-    "{name} is already on this branch, and row {cited} needs a new name.":
-      i18n.t(
-        "{name} is already on this branch, and row {cited} needs a new name.",
-        placeholders("cited", "name"),
-      ),
     "The branches of a split must all come from one step.": i18n.t(
       "The branches of a split must all come from one step.",
     ),
@@ -351,13 +285,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     "A closure cites rows on its own branch.": i18n.t(
       "A closure cites rows on its own branch.",
     ),
-    "The rows a closure cites must be a sentence and its negation.": i18n.t(
-      "The rows a closure cites must be a sentence and its negation.",
-    ),
-    "A branch closes on one row only if that row says something is not identical to itself.":
-      i18n.t(
-        "A branch closes on one row only if that row says something is not identical to itself.",
-      ),
     "Row {row} says something is not identical to itself, so this branch closes.":
       i18n.t(
         "Row {row} says something is not identical to itself, so this branch closes.",

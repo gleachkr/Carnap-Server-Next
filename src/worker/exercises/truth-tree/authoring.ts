@@ -34,13 +34,13 @@ import {
   type TreeTheory,
   type TreeTheoryProblem,
 } from "./aufbau/theory";
-import { FORALLX_UBC } from "./logic/system";
 import type {
   TruthTreeFinish,
   TruthTreePublicData,
   TruthTreeTask,
 } from "./types";
 import {
+  TREE_ROW_CAP,
   TRUTH_TREE_ANSWER_KIND,
   TRUTH_TREE_CAPABILITIES,
   TRUTH_TREE_COMPONENT_METADATA,
@@ -614,13 +614,13 @@ export async function compileTruthTree(
     root.push(row);
   }
 
-  if (root.length > FORALLX_UBC.rowCap) {
+  if (root.length > TREE_ROW_CAP) {
     diagnostics.push(
       diagnostic(
         block.line,
         "truth_tree_root_too_long",
         "A truth tree's root may have at most {max} sentences.",
-        { params: { max: String(FORALLX_UBC.rowCap) } },
+        { params: { max: String(TREE_ROW_CAP) } },
       ),
     );
   }
@@ -634,7 +634,6 @@ export async function compileTruthTree(
       lineOffset: block.bodyStartLine - 1,
     }),
     root,
-    rules: FORALLX_UBC.id,
     system,
     task,
   };
