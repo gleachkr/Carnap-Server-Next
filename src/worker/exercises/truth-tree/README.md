@@ -74,8 +74,14 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   `✓ᵢ ρ ↦ ψ`): the pattern reader sets them aside as not rows
   (`RulePatterns.marks`), and the emitter writes the ones a step's rule
   names beside its rows, so the engine checks them as it checks the rows.
-  Nothing reads them back yet; `complete.ts` still judges completeness from
-  the verified steps. A general step's
+  `ok.ts` states, from the rules, when a row is developed: `tree_ok ρ Γ`,
+  one axiom per way a rule leaves ρ developed (its mark on Γ, or by
+  contents a premise's rows), and `tree_okat_<sort> ρ t Γ` for a general
+  row at t. Rows no rule develops get an axiom asking nothing, found by
+  complement over the constructors, so a rule whose axiom cannot be stated
+  leaves its rows visibly undeveloped. Nothing asks these yet;
+  `complete.ts` still judges completeness from the verified steps (#469). A
+  general step's
   instances are link theorems: the emitter states that a row is its rule's
   template at a given term, which the engine proves only if it is. The
   browser compiles every candidate once to find which hold, and that compile

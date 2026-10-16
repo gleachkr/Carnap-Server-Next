@@ -46,6 +46,8 @@ const DEVELOPMENT = "tree.development.";
 
 /** A rule statement's terms, as patterns. */
 export interface RulePatterns {
+  /** The statement's name: the axiom. */
+  readonly name: string;
   /** The rows the rule develops, at the row sort; one for most rules. */
   readonly focus: readonly Term[];
   /**
@@ -61,6 +63,8 @@ export interface RulePatterns {
    * `tree.mark.instance`), which are not rows: no student types one.
    */
   readonly marks: readonly (readonly Term[])[];
+  /** The branch metavariable: the rest of the branch (`ga`). */
+  readonly branch: string;
   /** The statement's binders: its metavariables. */
   readonly metas: Metas;
   readonly binders: AssertStatement["binders"];
@@ -648,7 +652,7 @@ export function rulePatterns(
   const side =
     branch === null ? null : rowsOf(language, theory, focused, branch);
 
-  if (focus === null || side === null) {
+  if (focus === null || side === null || branch?.kind !== "variable") {
     return null;
   }
 
@@ -692,6 +696,7 @@ export function rulePatterns(
 
   return {
     binders: statement.binders,
+    branch: branch.name,
     focus,
     marks,
     metas: new Map(
@@ -699,6 +704,7 @@ export function rulePatterns(
         .filter((binder) => "sort" in binder.type)
         .map((binder) => [binder.name, binder.binds]),
     ),
+    name: statement.name,
     side,
     written,
   };
@@ -1041,22 +1047,53 @@ function judgementRelation(
   theory: TreeTheory,
 ): JudgementRelation | null {
   const sort = language.spec.terms.get(theory.closes)?.returnSort;
+  const relation =
+    sort === undefined ? undefined : relationsOf(language).get(sort);
+
+  return relation === undefined || relation.mp === null
+    ? null
+    : { mp: relation.mp, refl: relation.refl };
+}
+
+/** A sort's equivalence, as its `@relation` names it. */
+export interface SortRelation {
+  /** The relation's term: `ctx_eq`, `⟚`'s `jeq`. */
+  readonly term: string;
+  readonly refl: string;
+  /** Its modus ponens, where it names one (`_` where not). */
+  readonly mp: string | null;
+}
+
+/**
+ * Every sort's `@relation <sort> <term> <refl> <trans> <sym> <mp>`, by sort:
+ * the equivalence the engine reasons modulo.
+ */
+export function relationsOf(
+  language: SurfaceLanguage,
+): ReadonlyMap<string, SortRelation> {
+  const relations = new Map<string, SortRelation>();
 
   for (const info of language.spec.rules.values()) {
     for (const annotation of info.foreignAnnotations) {
-      const [head, of, , refl, , , mp] = annotation.text.trim().split(/\s+/u);
+      const [head, sort, term, refl, , , mp] = annotation.text
+        .trim()
+        .split(/\s+/u);
 
       if (
         head === "@relation" &&
-        of === sort &&
+        sort !== undefined &&
+        term !== undefined &&
         refl !== undefined &&
-        mp !== undefined &&
-        mp !== "_"
+        !relations.has(sort)
       ) {
-        return { mp, refl };
+        relations.set(sort, {
+          mp: mp === undefined || mp === "_" ? null : mp,
+          refl,
+          term,
+        });
       }
     }
   }
 
-  return null;
+  return relations;
 }
