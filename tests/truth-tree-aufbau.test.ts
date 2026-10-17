@@ -1,10 +1,7 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import type { LoadedCompiler } from "@aufbau/compiler";
-import { loadCompiler } from "@aufbau/compiler";
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import { stripSyntaxAnnotations } from "@aufbau/syntax";
-import type { TableauDocument, TableauNode } from "../src/tableau/document";
 import { verifyMmb } from "../src/worker/exercise-kit/proof/verifier";
 import type { TreeDiagnostic } from "../src/worker/exercises/truth-tree/aufbau/emit";
 import {
@@ -21,6 +18,8 @@ import {
   LANGUAGE_SPEC_SOURCES,
   languageFromSource,
 } from "../src/worker/logic/specs";
+import { engine } from "./helpers/engine";
+import { TreeBuilder } from "./helpers/truth-tree";
 
 /**
  * Truth trees checked as Aufbau derivations (gh #46), on the Rudolf-style
@@ -62,90 +61,6 @@ const SIGNED = treeSystem(
   ),
 );
 
-let compiler: LoadedCompiler;
-
-beforeAll(async () => {
-  compiler = await loadCompiler({
-    wasmBytes: readFileSync(
-      new URL(
-        "../node_modules/@aufbau/compiler/compiler.wasm",
-        import.meta.url,
-      ),
-    ),
-  });
-});
-
-/** A row: number (its id), text, the rows it cites, and the rule written. */
-type Row = readonly [string, string, readonly string[], string?];
-
-/** A node: its rows, and its children or its end. */
-interface Shape {
-  readonly rows: readonly Row[];
-  readonly children?: readonly Shape[];
-  /** The rows a × cites; absent for an open or unfinished branch. */
-  readonly closed?: readonly string[];
-}
-
-/**
- * The tree as the editor stores it. Rows that cite the same rows with the
- * same rule, in one node or at the head of a split's children, are one
- * development, as the editor writes them.
- */
-function tree(root: Shape): {
-  document: TableauDocument;
-  rules: Map<string, string>;
-} {
-  const nodes: TableauNode[] = [];
-  const rules = new Map<string, string>();
-  let nodeCount = 0;
-
-  const add = (shape: Shape, parent: string | null, splitDev?: string) => {
-    const id = `n${nodeCount++}`;
-    let previous: string | null = null;
-    const rows = shape.rows.map(([rowId, text, cites, rule], at) => {
-      const key = `${parent ?? "root"}:${cites.join(",")}:${rule ?? ""}`;
-      const dev =
-        cites.length === 0
-          ? "root"
-          : at === 0 && splitDev !== undefined
-            ? splitDev
-            : previous?.startsWith(key)
-              ? previous
-              : `${key}@${id}:${rowId}`;
-      previous = dev;
-
-      if (rule !== undefined) {
-        rules.set(dev, rule);
-      }
-
-      return { cites, dev, id: rowId, text };
-    });
-
-    nodes.push({
-      id,
-      parent,
-      rows,
-      ...(shape.closed === undefined
-        ? {}
-        : { end: { cites: shape.closed, type: "closed" as const } }),
-    });
-
-    const children = shape.children ?? [];
-    const first = children[0]?.rows[0];
-    const split =
-      first === undefined
-        ? undefined
-        : `split@${id}:${first[2].join(",")}:${first[3] ?? ""}`;
-
-    for (const child of children) {
-      add(child, id, split);
-    }
-  };
-
-  add(root, null);
-  return { document: { nodes }, rules };
-}
-
 interface Checked {
   readonly ok: boolean;
   readonly verified: boolean;
@@ -159,14 +74,11 @@ interface Checked {
   readonly mmbBytes: number;
 }
 
-async function check(root: Shape, system = UBC): Promise<Checked> {
-  const { document, rules } = tree(root);
-  // The root is the root node's leading rows that cite nothing.
-  const cited = root.rows.findIndex(([, , cites]) => cites.length > 0);
-  const proof = emitTreeProof(document, {
+async function check(tree: TreeBuilder, system = UBC): Promise<Checked> {
+  const proof = emitTreeProof(tree.tree, {
     language: system.language,
-    rootRows: cited < 0 ? root.rows.length : cited,
-    rules,
+    rootRows: tree.root.length,
+    rules: tree.rules,
     theory: system.theory,
   });
 
@@ -174,6 +86,7 @@ async function check(root: Shape, system = UBC): Promise<Checked> {
     throw new Error("nothing to check");
   }
 
+  const compiler = await engine();
   const mm0 = `${system.mm0}\n${proof.goal}\n`;
   const started = performance.now();
   const result = compiler.compile(mm0, proof.proof);
@@ -185,11 +98,11 @@ async function check(root: Shape, system = UBC): Promise<Checked> {
 
   return {
     errors: readTreeDiagnostics(result.diagnostics, proof),
-    problems: proof.problems,
     hypotheses: proof.hypotheses,
     milliseconds,
     mmbBytes: result.ok ? (result.mmbBytes?.length ?? 0) : 0,
     ok: result.ok === true,
+    problems: proof.problems,
     proof: proof.proof,
     verified,
   };
@@ -216,136 +129,132 @@ function where(errors: readonly TreeDiagnostic[]): string[] {
   });
 }
 
-// P ⊃ Q, Q ⊃ R :|-: P ⊃ R
-const chain = (
-  overrides: {
-    cite3?: string;
-    rule6?: string;
-    swap?: boolean;
-    close?: readonly string[];
+/**
+ * P ⊃ Q, Q ⊃ R :|-: P ⊃ R, closed, with the mistakes asked for: the ¬⊃
+ * step citing the wrong row or naming no rule, the first ⊃ step naming the
+ * wrong rule, its branches swapped, the left branch closed on two rows that
+ * do not contradict.
+ */
+function chain(
+  mistakes: {
+    readonly citeWrong?: boolean;
+    readonly noRule?: boolean;
+    readonly wrongRule?: boolean;
+    readonly swap?: boolean;
+    readonly closeWrong?: boolean;
   } = {},
-): Shape => {
-  const left: Shape = {
-    closed: overrides.close ?? ["4", "6"],
-    rows: [["6", "¬P", ["1"], overrides.rule6 ?? "⊃"]],
-  };
-  const right: Shape = {
-    children: [
-      { closed: ["7", "8"], rows: [["8", "¬Q", ["2"], "⊃"]] },
-      { closed: ["5", "9"], rows: [["9", "R", ["2"], "⊃"]] },
-    ],
-    rows: [["7", "Q", ["1"], overrides.rule6 ?? "⊃"]],
-  };
+) {
+  const tree = new TreeBuilder(["P ⊃ Q", "Q ⊃ R", "¬(P ⊃ R)"]);
+  const developed = tree.stack(
+    tree.rootNode,
+    mistakes.citeWrong ? "r2" : "r3",
+    ["P", "¬R"],
+    mistakes.noRule ? undefined : "¬⊃",
+  );
+  const [p, nr] = developed as [string, string];
+  const branches = [["¬P"], ["Q"]];
+  const split = tree.split(
+    tree.rootNode,
+    "r1",
+    mistakes.swap ? [...branches].reverse() : branches,
+    mistakes.wrongRule ? "∨" : "⊃",
+  );
+  const [leftAt, rightAt] = mistakes.swap ? [1, 0] : [0, 1];
+  const left = split.nodes[leftAt] as string;
+  const right = split.nodes[rightAt] as string;
+  const np = split.rows[leftAt]?.[0] as string;
+  const q = split.rows[rightAt]?.[0] as string;
+  const below = tree.split(right, "r2", [["¬Q"], ["R"]], "⊃");
+  tree.close(left, ...(mistakes.closeWrong ? [p, nr] : [p, np]));
+  tree.close(below.nodes[0], q, below.rows[0][0] as string);
+  tree.close(below.nodes[1], nr, below.rows[1][0] as string);
 
-  return {
-    children: overrides.swap ? [right, left] : [left, right],
-    rows: [
-      ["1", "P ⊃ Q", []],
-      ["2", "Q ⊃ R", []],
-      ["3", "¬(P ⊃ R)", []],
-      ["4", "P", [overrides.cite3 ?? "3"], "¬⊃"],
-      ["5", "¬R", [overrides.cite3 ?? "3"], "¬⊃"],
-    ],
-  };
-};
+  return { left, p, nr, np, q, tree };
+}
 
 describe("a sentential tree", () => {
   test("a closed tree proves its root closes, and verifies", async () => {
-    const checked = await check(chain());
+    const checked = await check(chain().tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.hypotheses).toBe(0);
     expect(checked.verified).toBe(true);
   });
 
   test("a split's branches may come in either order", async () => {
-    const checked = await check(chain({ swap: true }));
+    const checked = await check(chain({ swap: true }).tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("citing the wrong row is an error at that step", async () => {
-    const checked = await check(chain({ cite3: "2" }));
-    expect(where(checked.errors)).toEqual(["step 4,5"]);
+    const { p, nr, tree } = chain({ citeWrong: true });
+    expect(where((await check(tree)).errors)).toEqual([`step ${p},${nr}`]);
   });
 
   test("naming the wrong rule is an error at that step", async () => {
-    const checked = await check(chain({ rule6: "∨" }));
-    expect(where(checked.errors)).toEqual(["step 6,7"]);
+    const { np, q, tree } = chain({ wrongRule: true });
+    expect(where((await check(tree)).errors)).toEqual([`step ${np},${q}`]);
   });
 
   test("a closure on rows that do not contradict is an error at that end", async () => {
-    const checked = await check(chain({ close: ["4", "5"] }));
-    expect(where(checked.errors)).toEqual(["closure n1"]);
+    const { left, tree } = chain({ closeWrong: true });
+    expect(where((await check(tree)).errors)).toEqual([`closure ${left}`]);
   });
 
   test("every mistake is reported in one compile", async () => {
-    const checked = await check(
-      chain({ cite3: "2", close: ["4", "5"], rule6: "∨" }),
-    );
-    expect(where(checked.errors)).toEqual([
-      "step 4,5",
-      "step 6,7",
-      "closure n1",
+    const { left, np, nr, p, q, tree } = chain({
+      citeWrong: true,
+      closeWrong: true,
+      wrongRule: true,
+    });
+    expect(where((await check(tree)).errors)).toEqual([
+      `step ${p},${nr}`,
+      `step ${np},${q}`,
+      `closure ${left}`,
     ]);
   });
 
   test("a branch may close on a row it has developed", async () => {
-    const checked = await check({
-      rows: [
-        ["1", "P & Q", []],
-        ["2", "¬(P & Q)", []],
-        ["3", "P", ["1"], "&"],
-        ["4", "Q", ["1"], "&"],
-      ],
-      closed: ["1", "2"],
-    });
+    const tree = new TreeBuilder(["P & Q", "¬(P & Q)"]);
+    tree.stack(tree.rootNode, "r1", ["P", "Q"], "&");
+    tree.close(tree.rootNode, "r1", "r2");
+    const checked = await check(tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("citing a row that is not above the step is an error in its citation", async () => {
-    // Rows 3 and 4 develop row 5, which is written below them.
-    const checked = await check({
-      closed: ["2", "3"],
-      rows: [
-        ["1", "¬¬(P & Q)", []],
-        ["2", "¬P", []],
-        ["3", "P", ["5"], "&"],
-        ["4", "Q", ["5"], "&"],
-        ["5", "P & Q", ["1"], "¬¬"],
-      ],
-    });
-    expect(where(checked.errors)).toEqual(["citation 3,4"]);
+    // P and Q develop P & Q, which is written below them.
+    const tree = new TreeBuilder(["¬¬(P & Q)", "¬P"]);
+    const [p, q] = tree.stack(tree.rootNode, "r1", ["P", "Q"], "&");
+    const [both] = tree.stack(tree.rootNode, "r1", ["P & Q"], "¬¬");
+    tree.recite([p as string, q as string], both as string);
+    tree.close(tree.rootNode, "r2", p as string);
+    expect(where((await check(tree)).errors)).toEqual([`citation ${p},${q}`]);
   });
 
   test("a step with no rule is left out, and everything else is checked", async () => {
-    const shape = chain({ close: ["4", "5"] });
-    const checked = await check({
-      ...shape,
-      rows: shape.rows.map((row) =>
-        row[0] === "4" || row[0] === "5" ? [row[0], row[1], row[2]] : row,
-      ),
-    });
-    expect(where(checked.errors)).toEqual(["closure n1"]);
+    const { left, nr, p, tree } = chain({ closeWrong: true, noRule: true });
+    const checked = await check(tree);
+    expect(where(checked.errors)).toEqual([`closure ${left}`]);
     expect([...checked.problems]).toEqual([
-      ["4", { type: "no-rule-named" }],
-      ["5", { type: "no-rule-named" }],
+      [p, { type: "no-rule-named" }],
+      [nr, { type: "no-rule-named" }],
     ]);
     expect(checked.hypotheses).toBe(0);
   });
 
   test("an open branch is assumed, not checked, and the rest still is", async () => {
     // P ∨ Q, ¬P: the right branch stays open.
-    const checked = await check({
-      children: [
-        { closed: ["2", "3"], rows: [["3", "P", ["1"], "∨"]] },
-        { rows: [["4", "Q", ["1"], "∨"]] },
-      ],
-      rows: [
-        ["1", "P ∨ Q", []],
-        ["2", "¬P", []],
-      ],
-    });
+    const tree = new TreeBuilder(["P ∨ Q", "¬P"]);
+    const { nodes, rows } = tree.split(
+      tree.rootNode,
+      "r1",
+      [["P"], ["Q"]],
+      "∨",
+    );
+    tree.close(nodes[0], "r2", rows[0][0] as string);
+    const checked = await check(tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.hypotheses).toBe(1);
     expect(checked.ok).toBe(true);
@@ -353,99 +262,88 @@ describe("a sentential tree", () => {
 });
 
 describe("a first-order tree", () => {
-  // ∀x(Fx ⊃ Gx), ∃xFx :|-: ∃xGx
-  const quantifiers = (name4 = "a"): Shape => ({
-    children: [
-      { closed: ["4", "7"], rows: [["7", `¬F${name4}`, ["5"], "⊃"]] },
-      { closed: ["6", "8"], rows: [["8", `G${name4}`, ["5"], "⊃"]] },
-    ],
-    rows: [
-      ["1", "∀x(Fx ⊃ Gx)", []],
-      ["2", "∃xFx", []],
-      ["3", "¬∃xGx", []],
-      ["4", `F${name4}`, ["2"], "∃"],
-      ["5", `F${name4} ⊃ G${name4}`, ["1"], "∀"],
-      ["6", `¬G${name4}`, ["3"], "¬∃"],
-    ],
-  });
+  // ∀x(Fx ⊃ Gx), ∃xFx :|-: ∃xGx, below any `before` rows.
+  const quantifiers = (before: readonly string[] = []) => {
+    const tree = new TreeBuilder([...before, "∀x(Fx ⊃ Gx)", "∃xFx", "¬∃xGx"]);
+    const root = (at: number) => `r${before.length + at}`;
+    const [fa] = tree.stack(tree.rootNode, root(2), ["Fa"], "∃");
+    const [imp] = tree.stack(tree.rootNode, root(1), ["Fa ⊃ Ga"], "∀");
+    const [nga] = tree.stack(tree.rootNode, root(3), ["¬Ga"], "¬∃");
+    const { nodes, rows } = tree.split(
+      tree.rootNode,
+      imp as string,
+      [["¬Fa"], ["Ga"]],
+      "⊃",
+    );
+    tree.close(nodes[0], fa as string, rows[0][0] as string);
+    tree.close(nodes[1], nga as string, rows[1][0] as string);
+    return { fa: fa as string, tree };
+  };
 
   test("a closed tree verifies, with every instance inferred", async () => {
-    const checked = await check(quantifiers());
+    const checked = await check(quantifiers().tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("∃ to a name already on the branch is refused", async () => {
-    const shape = quantifiers();
-    const checked = await check({
-      ...shape,
-      rows: [
-        ["0", "Ha", []],
-        ...shape.rows.slice(0, 3),
-        ...shape.rows.slice(3),
-      ],
-    });
-    expect(where(checked.errors)).toEqual(["step 4"]);
+    const { fa, tree } = quantifiers(["Ha"]);
+    expect(where((await check(tree)).errors)).toEqual([`step ${fa}`]);
   });
 
   // Fa, Fb, ∀x¬Fx: one ∀ step writes both instances.
-  const twoInstances = (second: string): Shape => ({
-    rows: [
-      ["1", "Fa", []],
-      ["2", "Fb", []],
-      ["3", "∀x¬Fx", []],
-      ["4", "¬Fa", ["3"], "∀"],
-      ["5", second, ["3"], "∀"],
-    ],
-    closed: ["1", "4"],
-  });
+  const twoInstances = (second: string) => {
+    const tree = new TreeBuilder(["Fa", "Fb", "∀x¬Fx"]);
+    const rows = tree.stack(tree.rootNode, "r3", ["¬Fa", second], "∀");
+    tree.close(tree.rootNode, "r1", rows[0] as string);
+    return { rows, tree };
+  };
 
   test("one ∀ step may write several instances", async () => {
-    const checked = await check(twoInstances("¬Fb"));
+    const checked = await check(twoInstances("¬Fb").tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("a row in a ∀ step that is no instance is refused", async () => {
-    const checked = await check(twoInstances("¬Ga"));
-    expect(where(checked.errors)).toEqual(["step 4,5"]);
+    const { rows, tree } = twoInstances("¬Ga");
+    expect(where((await check(tree)).errors)).toEqual([
+      `step ${rows.join(",")}`,
+    ]);
   });
 });
 
 describe("identity", () => {
   test("a = b rewrites a row, and a ≠ a closes alone", async () => {
-    // ∀x a = x, ∃x x ≠ a
-    const checked = await check({
-      closed: ["5"],
-      rows: [
-        ["1", "∀x a = x", []],
-        ["2", "∃x x ≠ a", []],
-        ["3", "b ≠ a", ["2"], "∃"],
-        ["4", "a = b", ["1"], "∀"],
-        ["5", "a ≠ a", ["3", "4"], "="],
-      ],
-    });
+    const tree = new TreeBuilder(["∀x a = x", "∃x x ≠ a"]);
+    const [bna] = tree.stack(tree.rootNode, "r2", ["b ≠ a"], "∃");
+    const [ab] = tree.stack(tree.rootNode, "r1", ["a = b"], "∀");
+    const [ana] = tree.stack(
+      tree.rootNode,
+      [bna as string, ab as string],
+      ["a ≠ a"],
+      "=",
+    );
+    tree.close(tree.rootNode, ana as string);
+    const checked = await check(tree);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("a rewrite that leaves an a behind is refused", async () => {
-    const checked = await check({
-      closed: ["4", "5"],
-      rows: [
-        ["1", "a = b", []],
-        ["2", "Faa", []],
-        ["3", "¬Fbb", []],
-        ["4", "Fab", ["1", "2"], "="],
-        ["5", "¬Fab", ["1", "3"], "="],
-      ],
-    });
-    expect(where(checked.errors)).toEqual(["step 4", "step 5"]);
+    const tree = new TreeBuilder(["a = b", "Faa", "¬Fbb"]);
+    const [fab] = tree.stack(tree.rootNode, ["r1", "r2"], ["Fab"], "=");
+    const [nfab] = tree.stack(tree.rootNode, ["r1", "r3"], ["¬Fab"], "=");
+    tree.close(tree.rootNode, fab as string, nfab as string);
+    expect(where((await check(tree)).errors)).toEqual([
+      `step ${fab}`,
+      `step ${nfab}`,
+    ]);
   });
 });
 
 describe("size", () => {
-  test("a 61-row chain checks in under two seconds", async () => {
+  test("a chain of 30 conditionals, 92 rows, checks in under two seconds", async () => {
     const n = 30;
     // Atoms A₁…: use predicate letters with names, Fa₁ … Fa₉, Ga₁ … so the
     // chain has enough distinct atoms.
@@ -458,59 +356,34 @@ describe("size", () => {
             ? `H${"abcdefghi"[i - 18]}`
             : `J${"abcdefghi"[i - 27]}`,
     );
-    let row = 0;
-    const id = () => `${++row}`;
-    const rootRows: Row[] = [[id(), atoms[0] as string, []]];
-    const conditionals: string[] = [];
+    const tree = new TreeBuilder([
+      atoms[0] as string,
+      ...atoms.slice(0, n).map((atom, i) => `${atom} ⊃ ${atoms[i + 1]}`),
+      `¬${atoms[n]}`,
+    ]);
+    let node = tree.rootNode;
+    let atom = "r1";
 
-    for (let i = 0; i < n; i += 1) {
-      const rowId = id();
-      conditionals.push(rowId);
-      rootRows.push([rowId, `${atoms[i]} ⊃ ${atoms[i + 1]}`, []]);
+    for (let k = 0; k < n; k += 1) {
+      const { nodes, rows } = tree.split(
+        node,
+        `r${k + 2}`,
+        [[`¬${atoms[k]}`], [atoms[k + 1] as string]],
+        "⊃",
+      );
+      tree.close(nodes[0], atom, rows[0][0] as string);
+      node = nodes[1];
+      atom = rows[1][0] as string;
     }
 
-    const last = id();
-    rootRows.push([last, `¬${atoms[n]}`, []]);
-    const atomRow = new Map<number, string>([[0, "1"]]);
-
-    const develop = (k: number): Shape => {
-      if (k === n) {
-        return { closed: [atomRow.get(n) as string, last], rows: [] };
-      }
-
-      const leftId = id();
-      const rightId = id();
-      atomRow.set(k + 1, rightId);
-      return {
-        children: [
-          {
-            closed: [atomRow.get(k) as string, leftId],
-            rows: [
-              [leftId, `¬${atoms[k]}`, [conditionals[k] as string], "⊃"],
-            ],
-          },
-          {
-            ...develop(k + 1),
-            rows: [
-              [
-                rightId,
-                atoms[k + 1] as string,
-                [conditionals[k] as string],
-                "⊃",
-              ],
-            ],
-          },
-        ],
-        rows: [],
-      };
-    };
-
-    const body = develop(0);
-    const checked = await check({ ...body, rows: rootRows });
+    tree.close(node, atom, `r${n + 2}`);
+    const rows = tree.tree.nodes.flatMap((each) => each.rows).length;
+    const checked = await check(tree);
+    expect(rows).toBe(92);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
     console.log(
-      `  ${row} rows: compile ${checked.milliseconds.toFixed(0)} ms`,
+      `  ${rows} rows: compile ${checked.milliseconds.toFixed(0)} ms`,
     );
     expect(checked.milliseconds).toBeLessThan(2000);
   });
@@ -522,23 +395,20 @@ describe("a step's certificate", () => {
   // view computes, and rows and marks in another order than the rule's each
   // used to cost a rearrangement of the whole branch (design/
   // aufbau-issues-2026-10-17, followup/ and followup-2/).
-  const names = "abcdefghijklm".split("");
-  const middle: Row[] = names.flatMap((name, i) =>
-    ["F", "G", "H"].map((p, j): Row => [`m${3 * i + j}`, `${p}${name}`, []]),
-  );
+  const middle = "abcdefghijklm"
+    .split("")
+    .flatMap((name) => ["F", "G", "H"].map((p) => `${p}${name}`));
 
   test("grows with the step, not with the branch's order", async () => {
-    const checked = await check({
-      closed: ["p", "np"],
-      rows: [
-        ["c", "P & Q", []],
-        ...middle,
-        ...middle.slice(0, 4).map(([id, text]): Row => [`${id}'`, text, []]),
-        ["np", "¬P", []],
-        ["p", "P", ["c"], "&"],
-        ["q", "Q", ["c"], "&"],
-      ],
-    });
+    const tree = new TreeBuilder([
+      "P & Q",
+      ...middle,
+      ...middle.slice(0, 4),
+      "¬P",
+    ]);
+    const [p] = tree.stack(tree.rootNode, "r1", ["P", "Q"], "&");
+    tree.close(tree.rootNode, p as string, `r${tree.root.length}`);
+    const checked = await check(tree);
 
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
@@ -546,15 +416,10 @@ describe("a step's certificate", () => {
   });
 
   test("a ∀ step grows with the step, not with the branch", async () => {
-    const checked = await check({
-      closed: ["fn", "nfn"],
-      rows: [
-        ["all", "∀x Jx", []],
-        ...middle,
-        ["nfn", "¬Jn", []],
-        ["fn", "Jn", ["all"], "∀"],
-      ],
-    });
+    const tree = new TreeBuilder(["∀x Jx", ...middle, "¬Jn"]);
+    const [jn] = tree.stack(tree.rootNode, "r1", ["Jn"], "∀");
+    tree.close(tree.rootNode, jn as string, `r${tree.root.length}`);
+    const checked = await check(tree);
 
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
@@ -570,30 +435,25 @@ describe("check marks", () => {
     ...UBC,
     theory: { ...UBC.theory, mark: null, markInstance: null },
   };
-  const once: Shape = {
-    closed: ["p", "np"],
-    rows: [
-      ["c", "P & Q", []],
-      ["np", "¬P", []],
-      ["p", "P", ["c"], "&"],
-      ["q", "Q", ["c"], "&"],
-    ],
+  const once = () => {
+    const tree = new TreeBuilder(["P & Q", "¬P"]);
+    const rows = tree.stack(tree.rootNode, "r1", ["P", "Q"], "&");
+    tree.close(tree.rootNode, rows[0] as string, "r2");
+    return { rows, tree };
   };
-  const general: Shape = {
-    closed: ["fa", "nfa"],
-    rows: [
-      ["all", "∀x Fx", []],
-      ["nfa", "¬Fa", []],
-      ["fa", "Fa", ["all"], "∀"],
-    ],
+  const general = () => {
+    const tree = new TreeBuilder(["∀x Fx", "¬Fa"]);
+    const rows = tree.stack(tree.rootNode, "r1", ["Fa"], "∀");
+    tree.close(tree.rootNode, rows[0] as string, "r2");
+    return { rows, tree };
   };
 
   test("a step writes the mark its rule asks for", async () => {
-    for (const [shape, mark] of [
+    for (const [make, mark] of [
       [once, "chk "],
       [general, "chki "],
     ] as const) {
-      const checked = await check(shape);
+      const checked = await check(make().tree);
 
       expect(where(checked.errors)).toEqual([]);
       expect(checked.verified).toBe(true);
@@ -602,66 +462,58 @@ describe("check marks", () => {
   });
 
   test("a step without its mark is refused at that step", async () => {
-    expect(where((await check(once, unmarked)).errors)).toEqual(["step p,q"]);
-    expect(where((await check(general, unmarked)).errors)).toEqual([
-      "step fa",
-    ]);
+    for (const make of [once, general]) {
+      const { rows, tree } = make();
+
+      expect(where((await check(tree, unmarked)).errors)).toEqual([
+        `step ${rows.join(",")}`,
+      ]);
+    }
   });
 });
 
 describe("a signed tableau, from its own theory", () => {
-  test("a closed tree verifies: P → (Q → P)", async () => {
-    const checked = await check(
-      {
-        closed: ["2", "5"],
-        rows: [
-          ["1", "F P → (Q → P)", []],
-          ["2", "T P", ["1"], "F→"],
-          ["3", "F Q → P", ["1"], "F→"],
-          ["4", "T Q", ["3"], "F→"],
-          ["5", "F P", ["3"], "F→"],
-        ],
-      },
-      SIGNED,
+  // P → (Q → P), its second step's first row signed `second`.
+  const conditional = (second: string) => {
+    const tree = new TreeBuilder(["F P → (Q → P)"]);
+    const first = tree.stack(tree.rootNode, "r1", ["T P", second], "F→");
+    const next = tree.stack(
+      tree.rootNode,
+      first[1] as string,
+      ["T Q", "F P"],
+      "F→",
     );
+    tree.close(tree.rootNode, first[0] as string, next[1] as string);
+    return { first, next, tree };
+  };
+
+  test("a closed tree verifies: P → (Q → P)", async () => {
+    const checked = await check(conditional("F Q → P").tree, SIGNED);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("a split, with its branches in either order", async () => {
     // T P ∨ Q, F P, F Q
-    const checked = await check(
-      {
-        children: [
-          { closed: ["5", "3"], rows: [["5", "T Q", ["1"], "T∨"]] },
-          { closed: ["2", "4"], rows: [["4", "T P", ["1"], "T∨"]] },
-        ],
-        rows: [
-          ["1", "T P ∨ Q", []],
-          ["2", "F P", []],
-          ["3", "F Q", []],
-        ],
-      },
-      SIGNED,
+    const tree = new TreeBuilder(["T P ∨ Q", "F P", "F Q"]);
+    const { nodes, rows } = tree.split(
+      tree.rootNode,
+      "r1",
+      [["T Q"], ["T P"]],
+      "T∨",
     );
+    tree.close(nodes[0], rows[0][0] as string, "r3");
+    tree.close(nodes[1], "r2", rows[1][0] as string);
+    const checked = await check(tree, SIGNED);
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
   });
 
   test("a wrong sign is an error at that step", async () => {
-    const checked = await check(
-      {
-        closed: ["2", "5"],
-        rows: [
-          ["1", "F P → (Q → P)", []],
-          ["2", "T P", ["1"], "F→"],
-          ["3", "T Q → P", ["1"], "F→"],
-          ["4", "T Q", ["3"], "F→"],
-          ["5", "F P", ["3"], "F→"],
-        ],
-      },
-      SIGNED,
-    );
-    expect(where(checked.errors)).toEqual(["step 2,3", "step 4,5"]);
+    const { first, next, tree } = conditional("T Q → P");
+    expect(where((await check(tree, SIGNED)).errors)).toEqual([
+      `step ${first.join(",")}`,
+      `step ${next.join(",")}`,
+    ]);
   });
 });

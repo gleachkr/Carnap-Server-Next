@@ -1,22 +1,15 @@
 import { describe, expect, test } from "bun:test";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import {
   assumptions,
   closesEverywhere,
   flipped,
-  problems,
   question,
   write,
 } from "./helpers/olp-corpus";
 import type { OlpTableau } from "./helpers/olp-first-order-tableaux";
 import { OLP_FIRST_ORDER_TABLEAUX } from "./helpers/olp-first-order-tableaux";
-import { engine, judgeAsBrowser } from "./helpers/truth-tree";
+import { judgeAsBrowser, problems, treeExercise } from "./helpers/truth-tree";
 
 /**
  * Every worked tableau of the Open Logic Project's first-order chapter,
@@ -34,37 +27,11 @@ const WRONG: ReadonlySet<string> = new Set([
   "proof-systems/tableaux.tex #1",
 ]);
 
-async function exercise(body: string): Promise<{
-  resolved: ResolvedTree;
-  mm0: string;
-}> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-tableaux"}\nShow it.\n\n${body}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      result.diagnostics.map((d) => `${d.code}: ${d.message}`).join("\n"),
-    );
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const publicData = withSystemText(
-    raw.publicData,
-    result.artifact.systems,
-  ) as unknown as TruthTreePublicData;
-  const resolved = resolveTruthTree(publicData);
-
-  if (resolved === null || publicData.mm0 === undefined) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return { mm0: publicData.mm0, resolved };
-}
-
-async function judge(
-  tableau: OlpTableau,
-): Promise<{ report: TreeReport } | null> {
+/** The book's tree as a student writes it, judged, and its written rows. */
+async function judge(tableau: OlpTableau): Promise<{
+  readonly report: TreeReport;
+  readonly written: readonly string[];
+} | null> {
   const root = assumptions(tableau.tree);
   const asked = question(root);
 
@@ -72,11 +39,11 @@ async function judge(
     return null;
   }
 
-  const { mm0, resolved } = await exercise(asked.body);
-  const { tree } = write(resolved, root, asked.order);
-  return {
-    report: judgeAsBrowser(await engine(), resolved, mm0, tree.answer()),
-  };
+  const exercise = await treeExercise(asked.body, {
+    system: "open-logic-tableaux",
+  });
+  const { tree, written } = write(exercise.resolved, root, asked.order);
+  return { report: await judgeAsBrowser(exercise, tree), written };
 }
 
 describe("the Open Logic Project's first-order tableaux", () => {
@@ -106,8 +73,6 @@ describe("a book tableau with one row signed wrong is refused", () => {
     }
 
     test(tableau.from, async () => {
-      const refused: string[] = [];
-
       for (let n = 0; ; n += 1) {
         const tree = flipped(tableau.tree, n);
 
@@ -115,21 +80,12 @@ describe("a book tableau with one row signed wrong is refused", () => {
           break;
         }
 
-        let judged: { report: TreeReport } | null;
+        const judged = await judge({ from: tableau.from, tree });
 
-        try {
-          judged = await judge({ from: tableau.from, tree });
-        } catch {
-          // The book's closure has no pair to close on: refused all the same.
-          refused.push(`row ${n}`);
-          continue;
-        }
-
-        if (judged !== null && problems(judged.report).length > 0) {
-          refused.push(`row ${n}`);
-        }
-
-        expect(refused).toContain(`row ${n}`);
+        // Refused at the step that wrote it, whatever else follows.
+        expect(problems(judged?.report as TreeReport)).toContain(
+          `row ${judged?.written[n]}: step-wrong`,
+        );
       }
     }, 120_000);
   }

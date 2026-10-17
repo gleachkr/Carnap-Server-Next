@@ -1,9 +1,18 @@
-import { readFileSync } from "node:fs";
+import { expect } from "bun:test";
 import type { LoadedCompiler } from "@aufbau/compiler";
-import { loadCompiler } from "@aufbau/compiler";
 import { readCompileResult } from "../../src/client/proof-compiler";
 import type { TableauDocument, TableauEnd } from "../../src/tableau/document";
-import { setEnd, splitNode, stackRows } from "../../src/tableau/edit";
+import {
+  setEnd,
+  setRowCites,
+  splitNode,
+  stackRows,
+} from "../../src/tableau/edit";
+import { compileCarnapMarkdown } from "../../src/worker/application/content/compiler";
+import type { ExerciseManifestItem } from "../../src/worker/domain/content";
+import { verifyMmb } from "../../src/worker/exercise-kit/proof/verifier";
+import { withSystemText } from "../../src/worker/exercise-kit/systems/join";
+import { TRUTH_TREE_EXERCISE } from "../../src/worker/exercises/truth-tree";
 import {
   askingProofOf,
   readAsked,
@@ -13,12 +22,107 @@ import type { ResolvedTree } from "../../src/worker/exercises/truth-tree/grading
 import {
   judgeTree,
   resolveTruthTree,
+  treeProofOf,
 } from "../../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../../src/worker/exercises/truth-tree/report";
 import type {
   TruthTreeAnswerData,
   TruthTreePublicData,
 } from "../../src/worker/exercises/truth-tree/types";
+import {
+  TRUTH_TREE_ANSWER_KIND,
+  TRUTH_TREE_SCHEMA_VERSION,
+} from "../../src/worker/exercises/truth-tree/types";
+import { theorySourceByFileName } from "../../src/worker/logic/theories";
+import { engine } from "./engine";
+
+/** A truth-tree exercise as a lesson compiles it, joined with its systems. */
+export interface TreeExercise {
+  /** The manifest entry, its public data joined as the browser gets it. */
+  readonly item: ExerciseManifestItem;
+  readonly publicData: TruthTreePublicData;
+  readonly resolved: ResolvedTree;
+  /** The frozen theory, its `@syntax` stripped, as the engine takes it. */
+  readonly mm0: string;
+}
+
+/** A lesson's first exercise, which must be a truth tree that resolves. */
+export async function lessonTree(source: string): Promise<TreeExercise> {
+  const result = await compileCarnapMarkdown(source);
+
+  if (!result.ok) {
+    throw new Error(
+      result.diagnostics.map((d) => `${d.code}: ${d.message}`).join("\n"),
+    );
+  }
+
+  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
+  const publicData = withSystemText(
+    raw.publicData,
+    result.artifact.systems,
+  ) as unknown as TruthTreePublicData;
+  const resolved = resolveTruthTree(publicData);
+
+  if (resolved === null || publicData.mm0 === undefined) {
+    throw new Error("the exercise does not resolve");
+  }
+
+  return {
+    item: { ...raw, publicData: publicData as never },
+    mm0: publicData.mm0,
+    publicData,
+    resolved,
+  };
+}
+
+/**
+ * A truth-tree exercise asking `question` (an argument line, or a list of
+ * sentences), in `system` (the directive's default where absent) and with
+ * `finish` (likewise).
+ */
+export function treeExercise(
+  question: string,
+  options: {
+    readonly system?: string;
+    readonly finish?: string;
+    readonly prompt?: string;
+  } = {},
+): Promise<TreeExercise> {
+  const attributes = [
+    "#t",
+    ...(options.system === undefined ? [] : [`system="${options.system}"`]),
+    ...(options.finish === undefined ? [] : [`finish="${options.finish}"`]),
+  ].join(" ");
+
+  return lessonTree(
+    `::::truth-tree{${attributes}}\n${options.prompt ?? "Show it."}\n\n${question}\n::::`,
+  );
+}
+
+/** Each problem as `row|end id: type`, in tree order. */
+export function problems(report: TreeReport): string[] {
+  return report.problems.map(({ at }) =>
+    at.type === "tree"
+      ? `tree: ${at.problem.type}`
+      : `${at.type} ${at.id}: ${at.problem.type}`,
+  );
+}
+
+/**
+ * The text of a built-in theory file from `start` up to `end`, both of which
+ * it must have: for the theories whose headers say they share a part with
+ * another word for word.
+ */
+export function section(file: string, start: string, end: string): string {
+  const text = theorySourceByFileName(file) ?? "";
+  const from = text.indexOf(start);
+  const to = text.indexOf(end, from);
+
+  expect(from).toBeGreaterThanOrEqual(0);
+  expect(to).toBeGreaterThan(from);
+
+  return text.slice(from, to);
+}
 
 /**
  * Builds a truth tree the way the editor does, through the tableau's own edit
@@ -147,6 +251,21 @@ export class TreeBuilder {
     };
   }
 
+  /**
+   * Make `rows` cite `cites` instead, as the editor's citation field does:
+   * a step may come to cite a row written after it.
+   */
+  recite(rows: readonly string[], ...cites: string[]): this {
+    this.document = setRowCites(this.document, rows, cites);
+    return this;
+  }
+
+  /** Change the tree as the editor never would, for a shape it cannot make. */
+  reshape(change: (document: TableauDocument) => TableauDocument): this {
+    this.document = change(this.document);
+    return this;
+  }
+
   close(node: string, ...cites: string[]): this {
     return this.end(node, { cites, type: "closed" });
   }
@@ -163,21 +282,6 @@ export class TreeBuilder {
   get tree(): TableauDocument {
     return this.document;
   }
-}
-
-let compiler: Promise<LoadedCompiler> | null = null;
-
-export function engine(): Promise<LoadedCompiler> {
-  compiler ??= loadCompiler({
-    wasmBytes: readFileSync(
-      new URL(
-        "../../node_modules/@aufbau/compiler/compiler.wasm",
-        import.meta.url,
-      ),
-    ),
-  });
-
-  return compiler;
 }
 
 /** A tree's answer as the browser would submit it. */
@@ -282,17 +386,84 @@ export async function certifyTree(
 }
 
 /** The report on a tree, as the browser makes it once a submit certifies. */
-export function judgeAsBrowser(
-  compiler: LoadedCompiler,
-  resolved: ResolvedTree,
-  mm0: string,
-  answer: {
-    readonly nodes: TableauDocument["nodes"];
-    readonly rules: Readonly<Record<string, string>>;
-  },
-): TreeReport {
-  const browsed = askAsBrowser(compiler, resolved, mm0, answer);
+export async function judgeAsBrowser(
+  exercise: TreeExercise,
+  tree: TreeBuilder,
+): Promise<TreeReport> {
+  const browsed = askAsBrowser(
+    await engine(),
+    exercise.resolved,
+    exercise.mm0,
+    tree.answer(),
+  );
 
-  return judgeTree(resolved, browsed.answer as never, browsed.evidence)
-    .report;
+  return judgeTree(
+    exercise.resolved,
+    browsed.answer as never,
+    browsed.evidence,
+  ).report;
+}
+
+/**
+ * The report on a submitted answer, as the server makes it: its certificate,
+ * where it has one, verified against the goal written from the answer, and
+ * none verified where it has none.
+ */
+export async function judgeAsServer(
+  exercise: TreeExercise,
+  answer: CertifiedAnswer,
+): Promise<TreeReport> {
+  const data = answer as unknown as TruthTreeAnswerData;
+  const proof = treeProofOf(exercise.resolved, data);
+  const verified =
+    answer.mmb !== undefined && proof.goal !== null
+      ? (
+          await verifyMmb(
+            `${exercise.mm0}\n${proof.goal}\n`,
+            Buffer.from(answer.mmb, "base64"),
+          )
+        ).ok
+      : false;
+
+  return judgeTree(
+    exercise.resolved,
+    data,
+    { kind: "verified", ok: verified },
+    proof,
+  ).report;
+}
+
+/**
+ * A submitted answer's status, as the grader gives it: normalized, its
+ * certificate verified, and judged.
+ */
+export async function gradeAnswer(
+  item: ExerciseManifestItem,
+  data: CertifiedAnswer,
+): Promise<string> {
+  const normalized = TRUTH_TREE_EXERCISE.normalizeAnswer(
+    {
+      data: data as never,
+      kind: TRUTH_TREE_ANSWER_KIND,
+      schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+    },
+    item,
+  );
+
+  if (!normalized.ok) {
+    throw new Error(`answer refused: ${normalized.reason}`);
+  }
+
+  const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
+    normalized.answer,
+    item,
+    {
+      ...(normalized.certificate === undefined
+        ? {}
+        : { certificate: normalized.certificate }),
+      now: new Date("2026-01-01T00:00:00Z"),
+    } as never,
+  );
+
+  return evaluation.status;
 }

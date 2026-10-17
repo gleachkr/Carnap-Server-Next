@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
-import { engine, judgeAsBrowser, TreeBuilder } from "./helpers/truth-tree";
+import {
+  judgeAsBrowser,
+  lessonTree,
+  problems,
+  TreeBuilder,
+  treeExercise,
+} from "./helpers/truth-tree";
 
 /**
  * The Open Logic Project's first-order signed tableaux
@@ -16,44 +16,12 @@ import { engine, judgeAsBrowser, TreeBuilder } from "./helpers/truth-tree";
  * and margins name the book's rules (`∧𝕋`, typed `∧T` or `&T`).
  */
 
-async function exercise(
-  root: string,
-  finish = "closed",
-): Promise<{ resolved: ResolvedTree; mm0: string }> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-tableaux" finish="${finish}"}\nShow it.\n\n${root}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(result.diagnostics.map((d) => d.code).join(", "));
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const publicData = withSystemText(
-    raw.publicData,
-    result.artifact.systems,
-  ) as unknown as TruthTreePublicData;
-  const resolved = resolveTruthTree(publicData);
-
-  if (resolved === null || publicData.mm0 === undefined) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return { mm0: publicData.mm0, resolved };
+function exercise(root: string, finish = "closed") {
+  return treeExercise(root, { finish, system: "open-logic-tableaux" });
 }
 
 async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
-  const { mm0, resolved } = await exercise(root);
-  return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
-}
-
-/** Each problem as `row|end id: type`, in tree order. */
-function problems(report: TreeReport): string[] {
-  return report.problems.map(({ at }) =>
-    at.type === "tree"
-      ? `tree: ${at.problem.type}`
-      : `${at.type} ${at.id}: ${at.problem.type}`,
-  );
+  return judgeAsBrowser(await exercise(root), tree);
 }
 
 describe("open-logic-tableaux", () => {
@@ -246,14 +214,14 @@ describe("open-logic-tableaux", () => {
 // through the substitution it is written by (`tree.substitution`).
 describe("an open branch, by its contents", () => {
   async function open(...members: string[]): Promise<TreeReport> {
-    const { mm0, resolved } = await exercise(
+    const asked = await exercise(
       members.map((each) => `- ${each}`).join("\n"),
       "one-open",
     );
-    const tree = new TreeBuilder(resolved.rootText);
+    const tree = new TreeBuilder(asked.resolved.rootText);
     tree.open(tree.rootNode);
 
-    return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
+    return judgeAsBrowser(asked, tree);
   }
 
   test("owes a ∀𝕋 instance not on it", async () => {
@@ -275,28 +243,12 @@ describe("an open branch, by its contents", () => {
       "--| @syntax alias =𝕋 =T\n--| @syntax role tree.development.pairs",
     );
     expect(source).toContain("tree.development.pairs");
-    const result = await compileCarnapMarkdown(
+    const paired = await lessonTree(
       `:::aufbau-mm0{name="paired"}\n${source}\n:::\n\n::::truth-tree{#t system="paired" finish="one-open"}\nShow it.\n\n- a = b\n- a = a\n::::`,
     );
-
-    if (!result.ok) {
-      throw new Error(result.diagnostics.map((d) => d.code).join(", "));
-    }
-
-    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-    const publicData = withSystemText(
-      raw.publicData,
-      result.artifact.systems,
-    ) as unknown as TruthTreePublicData;
-    const resolved = resolveTruthTree(publicData) as ResolvedTree;
-    const tree = new TreeBuilder(resolved.rootText);
+    const tree = new TreeBuilder(paired.resolved.rootText);
     tree.open(tree.rootNode);
-    const report = judgeAsBrowser(
-      await engine(),
-      resolved,
-      publicData.mm0 as string,
-      tree.answer(),
-    );
+    const report = await judgeAsBrowser(paired, tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.ends.get("n0")).toBeUndefined();

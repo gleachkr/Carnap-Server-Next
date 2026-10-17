@@ -1,23 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import {
-  judgeTree,
-  resolveTruthTree,
-} from "../src/worker/exercises/truth-tree/grading";
 import { markText } from "../src/worker/exercises/truth-tree/labels";
 import type {
   RowMark,
   TreeReport,
 } from "../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import {
   certifyAnswer,
-  engine,
   judgeAsBrowser,
+  judgeAsServer,
+  lessonTree,
+  problems,
   TreeBuilder,
+  treeExercise,
 } from "./helpers/truth-tree";
 
 /**
@@ -28,43 +22,8 @@ import {
 
 type Logic = "k" | "t" | "d" | "b" | "k4" | "s4" | "s5";
 
-async function exercise(
-  logic: Logic,
-  root: string,
-  finish = "closed",
-): Promise<{
-  item: ExerciseManifestItem;
-  resolved: ResolvedTree;
-  mm0: string;
-}> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-modal-${logic}" finish="${finish}"}\nShow it.\n\n${root}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      result.diagnostics
-        .map((d) => `${d.code}: ${JSON.stringify(d)}`)
-        .join("\n"),
-    );
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const publicData = withSystemText(
-    raw.publicData,
-    result.artifact.systems,
-  ) as unknown as TruthTreePublicData;
-  const resolved = resolveTruthTree(publicData);
-
-  if (resolved === null || publicData.mm0 === undefined) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return {
-    item: { ...raw, publicData: publicData as never },
-    mm0: publicData.mm0,
-    resolved,
-  };
+function exercise(logic: Logic, root: string, finish = "closed") {
+  return treeExercise(root, { finish, system: `open-logic-modal-${logic}` });
 }
 
 async function judge(
@@ -72,17 +31,7 @@ async function judge(
   root: string,
   tree: TreeBuilder,
 ): Promise<TreeReport> {
-  const { mm0, resolved } = await exercise(logic, root);
-  return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
-}
-
-/** Each problem as `row|end id: type`, in tree order. */
-function problems(report: TreeReport): string[] {
-  return report.problems.map(({ at }) =>
-    at.type === "tree"
-      ? `tree: ${at.problem.type}`
-      : `${at.type} ${at.id}: ${at.problem.type}`,
-  );
+  return judgeAsBrowser(await exercise(logic, root), tree);
 }
 
 /** A closed tree for `⊢ goal`, written by `build` below its root row. */
@@ -229,8 +178,8 @@ describe("the more-rules side conditions", () => {
 
 /** Whether the open branch of a tree for `- □p` and `- ◇q` in S5 is done. */
 async function s5Branch(with4: boolean) {
-  const { item, resolved } = await exercise("s5", "- □p\n- ◇q", "one-open");
-  const tree = new TreeBuilder(resolved.rootText);
+  const asked = await exercise("s5", "- □p\n- ◇q", "one-open");
+  const tree = new TreeBuilder(asked.resolved.rootText);
   tree.stack(tree.rootNode, "r2", ["1.1 T: q"], "◇T");
   tree.stack(tree.rootNode, "r1", ["1.1 T: p"], "□T");
   tree.stack(tree.rootNode, "r1", ["1 T: p"], "T□");
@@ -240,19 +189,11 @@ async function s5Branch(with4: boolean) {
   }
 
   tree.open(tree.rootNode);
-  const answer = await certifyAnswer(
-    item.publicData as unknown as TruthTreePublicData,
-    tree.answer(),
-  );
+  const answer = await certifyAnswer(asked.publicData, tree.answer());
 
   return {
     certified: answer.mmb !== undefined,
-    report: judgeAsBrowser(
-      await engine(),
-      resolved,
-      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
-      tree.answer(),
-    ),
+    report: await judgeAsBrowser(asked, tree),
     root: tree.rootNode,
   };
 }
@@ -283,23 +224,12 @@ describe("a complete branch, as completeness.tex defines one", () => {
   // UBC would have the conjunction checked off; the book asks only that its
   // conjuncts be on the branch, as they are here from the root.
   test("owes a rule nothing whose conclusions are on it already", async () => {
-    const { item, resolved } = await exercise(
-      "k",
-      "- A ∧ B\n- A\n- B",
-      "one-open",
-    );
-    const tree = new TreeBuilder(resolved.rootText);
+    const asked = await exercise("k", "- A ∧ B\n- A\n- B", "one-open");
+    const tree = new TreeBuilder(asked.resolved.rootText);
     tree.open(tree.rootNode);
-    const answer = await certifyAnswer(
-      item.publicData as unknown as TruthTreePublicData,
-      tree.answer(),
-    );
-    const { report } = judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    });
+    const answer = await certifyAnswer(asked.publicData, tree.answer());
 
-    expect(problems(report)).toEqual([]);
+    expect(problems(await judgeAsServer(asked, answer))).toEqual([]);
   }, 60_000);
 });
 
@@ -311,28 +241,12 @@ describe("a logic the table does not have", () => {
       "axiom tb_ax_4r_dia (ga: ctx) (si: pfx) (n: idx) (ph: wff):",
       "  $ closes ga ; si 𝔽 ◇ ph $ > $ focus ga at (si . n 𝔽 ◇ ph) $;",
     ].join("\n");
-    const result = await compileCarnapMarkdown(
+    const kt5 = await lessonTree(
       `:::aufbau-mm0{name="kt5" src="/theories/open-logic-modal-t.mm0"}\n${rules}\n:::\n\n::::truth-tree{#t system="kt5"}\nShow it.\n\n:|-: ${FIVE.goal}\n::::`,
     );
-
-    if (!result.ok) {
-      throw new Error(result.diagnostics.map((d) => d.code).join(", "));
-    }
-
-    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-    const publicData = withSystemText(
-      raw.publicData,
-      result.artifact.systems,
-    ) as unknown as TruthTreePublicData;
-    const resolved = resolveTruthTree(publicData);
     const tree = new TreeBuilder([`1 F: ${FIVE.goal}`]);
     FIVE.build(tree);
-    const report = judgeAsBrowser(
-      await engine(),
-      resolved as ResolvedTree,
-      publicData.mm0 as string,
-      tree.answer(),
-    );
+    const report = await judgeAsBrowser(kt5, tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -342,8 +256,8 @@ describe("a logic the table does not have", () => {
 describe("a row more than one rule develops", () => {
   // In T, 𝕋 □p is T□'s once and □𝕋's at every prefix: never done with.
   async function marked(withBox: boolean) {
-    const { item, resolved } = await exercise("t", "- □p\n- ◇q", "one-open");
-    const tree = new TreeBuilder(resolved.rootText);
+    const asked = await exercise("t", "- □p\n- ◇q", "one-open");
+    const tree = new TreeBuilder(asked.resolved.rootText);
     tree.stack(tree.rootNode, "r2", ["1.1 T: q"], "◇T");
     tree.stack(tree.rootNode, "r1", ["1 T: p"], "T□");
 
@@ -352,14 +266,9 @@ describe("a row more than one rule develops", () => {
     }
 
     tree.open(tree.rootNode);
-    const report = judgeAsBrowser(
-      await engine(),
-      resolved,
-      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
-      tree.answer(),
-    );
+    const report = await judgeAsBrowser(asked, tree);
 
-    return { language: resolved.language, report };
+    return { language: asked.resolved.language, report };
   }
 
   test("is not checked off by the rule it is used once by", async () => {

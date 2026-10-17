@@ -1,8 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { loadCompiler } from "@aufbau/compiler";
 import { UNSAVED_ANSWER_ATTRIBUTE } from "../../src/worker/exercise-kit/answer-events";
 import { dom } from "../helpers/dom";
+import { engine } from "../helpers/engine";
 import {
   compileExercise,
   type MountedExercise as Mounted,
@@ -23,18 +22,9 @@ import { mockProofCompiler } from "./proof-compiler-mock";
 
 // The real engine behind the loader: the tree is compiled as a proof is, and
 // what the engine says of it is what these tests are about.
-const engine = await loadCompiler({
-  wasmBytes: new Uint8Array(
-    readFileSync(
-      new URL(
-        "../../node_modules/@aufbau/compiler/compiler.wasm",
-        import.meta.url,
-      ),
-    ),
-  ).buffer,
-});
+const compiler = await engine();
 const compile = await mockProofCompiler((mm0, proof) =>
-  engine.compile(mm0, proof),
+  compiler.compile(mm0, proof),
 );
 
 // After `helpers/dom` has installed the globals, so `extends HTMLElement`

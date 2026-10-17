@@ -20,6 +20,7 @@ import { passthroughTranslator } from "../src/worker/i18n/translator";
 import {
   certifyAnswer,
   certifyTree,
+  lessonTree,
   TreeBuilder,
 } from "./helpers/truth-tree";
 
@@ -39,20 +40,7 @@ async function compileCodes(source: string): Promise<string[]> {
 }
 
 async function declaration(source: string): Promise<ExerciseManifestItem> {
-  const result = await compileCarnapMarkdown(source);
-
-  if (!result.ok) {
-    throw new Error(
-      `compile failed: ${result.diagnostics.map((d) => d.code).join(", ")}`,
-    );
-  }
-
-  const item = result.artifact.manifest[0] as ExerciseManifestItem;
-
-  return {
-    ...item,
-    publicData: withSystemText(item.publicData, result.artifact.systems),
-  };
+  return (await lessonTree(source)).item;
 }
 
 function publicDataOf(item: ExerciseManifestItem): TruthTreePublicData {

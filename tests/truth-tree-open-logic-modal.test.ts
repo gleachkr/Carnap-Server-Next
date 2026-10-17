@@ -1,30 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
 import { displayRow } from "../src/worker/exercises/truth-tree/aufbau/rows";
 import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import {
-  judgeTree,
-  resolveTruthTree,
-} from "../src/worker/exercises/truth-tree/grading";
 import { markText } from "../src/worker/exercises/truth-tree/labels";
 import type {
   RowMark,
   TreeReport,
 } from "../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
-import {
-  TRUTH_TREE_ANSWER_KIND,
-  TRUTH_TREE_SCHEMA_VERSION,
-} from "../src/worker/exercises/truth-tree/types";
-import type { CertifiedAnswer } from "./helpers/truth-tree";
 import {
   certifyAnswer,
-  engine,
+  gradeAnswer,
   judgeAsBrowser,
+  judgeAsServer,
+  problems,
   TreeBuilder,
+  treeExercise,
 } from "./helpers/truth-tree";
 
 /**
@@ -34,56 +23,12 @@ import {
  * `1.1 T: A`, and margins name the book's rules (`□𝕋`, typed `[]T`).
  */
 
-async function exercise(
-  root: string,
-  finish = "closed",
-): Promise<{
-  item: ExerciseManifestItem;
-  resolved: ResolvedTree;
-  mm0: string;
-}> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-modal-k" finish="${finish}"}\nShow it.\n\n${root}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      result.diagnostics
-        .map((d) => `${d.code}: ${JSON.stringify(d)}`)
-        .join("\n"),
-    );
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const publicData = withSystemText(
-    raw.publicData,
-    result.artifact.systems,
-  ) as unknown as TruthTreePublicData;
-  const resolved = resolveTruthTree(publicData);
-
-  if (resolved === null || publicData.mm0 === undefined) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return {
-    item: { ...raw, publicData: publicData as never },
-    mm0: publicData.mm0,
-    resolved,
-  };
+function exercise(root: string, finish = "closed") {
+  return treeExercise(root, { finish, system: "open-logic-modal-k" });
 }
 
 async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
-  const { mm0, resolved } = await exercise(root);
-  return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
-}
-
-/** Each problem as `row|end id: type`, in tree order. */
-function problems(report: TreeReport): string[] {
-  return report.problems.map(({ at }) =>
-    at.type === "tree"
-      ? `tree: ${at.problem.type}`
-      : `${at.type} ${at.id}: ${at.problem.type}`,
-  );
+  return judgeAsBrowser(await exercise(root), tree);
 }
 
 describe("open-logic-modal-k", () => {
@@ -240,37 +185,6 @@ describe("open-logic-modal-k", () => {
 });
 
 /** The grade the server gives a certified answer. */
-async function grade(
-  item: ExerciseManifestItem,
-  data: CertifiedAnswer,
-): Promise<string> {
-  const normalized = TRUTH_TREE_EXERCISE.normalizeAnswer(
-    {
-      data: data as never,
-      kind: TRUTH_TREE_ANSWER_KIND,
-      schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
-    },
-    item,
-  );
-
-  if (!normalized.ok) {
-    throw new Error(`answer refused: ${normalized.reason}`);
-  }
-
-  const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
-    normalized.answer,
-    item,
-    {
-      ...(normalized.certificate === undefined
-        ? {}
-        : { certificate: normalized.certificate }),
-      now: new Date("2026-01-01T00:00:00Z"),
-    } as never,
-  );
-
-  return evaluation.status;
-}
-
 // countermodels.tex, its first tableau: □(p ∨ q) → (□p ∨ □q) fails in K.
 function countermodel(resolved: ResolvedTree, both: boolean) {
   const tree = new TreeBuilder(resolved.rootText);
@@ -326,19 +240,11 @@ function countermodel(resolved: ResolvedTree, both: boolean) {
 
 describe("an open branch in K", () => {
   test("is complete with □𝕋 at every prefix it uses", async () => {
-    const { item, resolved } = await exercise(
-      ":|-: □(p ∨ q) → (□p ∨ □q)",
-      "one-open",
-    );
+    const asked = await exercise(":|-: □(p ∨ q) → (□p ∨ □q)", "one-open");
+    const { resolved } = asked;
     const { box, tree } = countermodel(resolved, true);
-    const answer = await certifyAnswer(
-      item.publicData as unknown as TruthTreePublicData,
-      tree.answer(),
-    );
-    const judged = judgeTree(resolved, answer as never, {
-      kind: "verified",
-      ok: true,
-    }).report;
+    const answer = await certifyAnswer(asked.publicData, tree.answer());
+    const judged = await judgeAsServer(asked, answer);
 
     expect(problems(judged)).toEqual([]);
     const mark = judged.marks.get(box);
@@ -349,46 +255,32 @@ describe("an open branch in K", () => {
       type: "general",
     });
     expect(markText(mark as RowMark, resolved.language)).toBe("\\1.1,1.2");
-    expect(await grade(item, answer)).toBe("correct");
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
   }, 60_000);
 
   test("is incomplete while □𝕋 skips a prefix it uses", async () => {
-    const { item, resolved } = await exercise(
-      ":|-: □(p ∨ q) → (□p ∨ □q)",
-      "one-open",
-    );
-    const { box, open, tree } = countermodel(resolved, false);
-    const answer = await certifyAnswer(
-      item.publicData as unknown as TruthTreePublicData,
-      tree.answer(),
-    );
-    const judged = judgeAsBrowser(
-      await engine(),
-      resolved,
-      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
-      tree.answer(),
-    );
+    const asked = await exercise(":|-: □(p ∨ q) → (□p ∨ □q)", "one-open");
+    const { box, open, tree } = countermodel(asked.resolved, false);
+    const answer = await certifyAnswer(asked.publicData, tree.answer());
+    const judged = await judgeAsBrowser(asked, tree);
 
     expect(judged.ends.get(open)).toEqual({
       missing: [{ names: ["((1) . wb)"], row: box }],
       type: "open-incomplete",
     });
     expect(answer.mmb).toBeUndefined();
-    expect(await grade(item, answer)).toBe("incorrect");
+    expect(await gradeAnswer(asked.item, answer)).toBe("incorrect");
   }, 60_000);
 
   test("owes □𝕋 nothing at a prefix its world does not see", async () => {
-    const { item, resolved } = await exercise("- ◇◇p\n- □q", "one-open");
-    const tree = new TreeBuilder(resolved.rootText);
+    const asked = await exercise("- ◇◇p\n- □q", "one-open");
+    const tree = new TreeBuilder(asked.resolved.rootText);
     const [dp] = tree.stack(tree.rootNode, "r1", ["1.1 T: ◇p"], "◇T");
     tree.stack(tree.rootNode, dp as string, ["1.1.1 T: p"], "◇T");
     tree.stack(tree.rootNode, "r2", ["1.1 T: q"], "□T");
     tree.open(tree.rootNode);
-    const answer = await certifyAnswer(
-      item.publicData as unknown as TruthTreePublicData,
-      tree.answer(),
-    );
+    const answer = await certifyAnswer(asked.publicData, tree.answer());
 
-    expect(await grade(item, answer)).toBe("correct");
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
   }, 60_000);
 });

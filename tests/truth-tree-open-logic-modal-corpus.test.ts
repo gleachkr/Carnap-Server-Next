@@ -1,16 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
 import {
   assumptions,
   closesEverywhere,
   flipped,
-  problems,
   question,
   write,
 } from "./helpers/olp-corpus";
@@ -19,7 +12,7 @@ import type {
   OlpTableauRow,
 } from "./helpers/olp-first-order-tableaux";
 import { OLP_MODAL_K_TABLEAUX } from "./helpers/olp-modal-k-tableaux";
-import { engine, judgeAsBrowser } from "./helpers/truth-tree";
+import { judgeAsBrowser, problems, treeExercise } from "./helpers/truth-tree";
 
 /**
  * Every worked tableau of the Open Logic Project's tableaux for K, written
@@ -78,37 +71,6 @@ function relabelled(
   return walk(tree);
 }
 
-async function exercise(
-  body: string,
-  finish: string,
-): Promise<{
-  resolved: ResolvedTree;
-  mm0: string;
-}> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-modal-k" finish="${finish}"}\nShow it.\n\n${body}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      result.diagnostics.map((d) => `${d.code}: ${d.message}`).join("\n"),
-    );
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const publicData = withSystemText(
-    raw.publicData,
-    result.artifact.systems,
-  ) as unknown as TruthTreePublicData;
-  const resolved = resolveTruthTree(publicData);
-
-  if (resolved === null || publicData.mm0 === undefined) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return { mm0: publicData.mm0, resolved };
-}
-
 /**
  * The book's tree as a student writes it, judged. With `open`, each branch
  * the book leaves open is marked open, and the exercise offers that.
@@ -127,11 +89,11 @@ async function judge(
     return null;
   }
 
-  const { mm0, resolved } = await exercise(
-    asked.body,
-    open ? "one-open" : "closed",
-  );
-  const { tree, written } = write(resolved, root, asked.order);
+  const exercise = await treeExercise(asked.body, {
+    finish: open ? "one-open" : "closed",
+    system: "open-logic-modal-k",
+  });
+  const { tree, written } = write(exercise.resolved, root, asked.order);
 
   if (open) {
     const parents = new Set(tree.tree.nodes.map((node) => node.parent));
@@ -144,7 +106,7 @@ async function judge(
   }
 
   return {
-    report: judgeAsBrowser(await engine(), resolved, mm0, tree.answer()),
+    report: await judgeAsBrowser(exercise, tree),
     written,
   };
 }
@@ -221,17 +183,12 @@ describe("a book tableau for K with one row signed wrong is refused", () => {
           break;
         }
 
-        let refused: boolean;
+        const judged = await judge({ from: tableau.from, tree });
 
-        try {
-          const judged = await judge({ from: tableau.from, tree });
-          refused = judged !== null && problems(judged.report).length > 0;
-        } catch {
-          // The book's closure has no pair to close on: refused all the same.
-          refused = true;
-        }
-
-        expect({ n, refused }).toEqual({ n, refused: true });
+        // Refused at the step that wrote it, whatever else follows.
+        expect(problems(judged?.report as TreeReport)).toContain(
+          `row ${judged?.written[n]}: step-wrong`,
+        );
       }
     }, 120_000);
   }

@@ -1,5 +1,4 @@
 import type { ResolvedTree } from "../../src/worker/exercises/truth-tree/grading";
-import type { TreeReport } from "../../src/worker/exercises/truth-tree/report";
 import type { OlpTableauRow } from "./olp-first-order-tableaux";
 import { TreeBuilder } from "./truth-tree";
 
@@ -8,7 +7,8 @@ import { TreeBuilder } from "./truth-tree";
  * student would write it, every step the book's, by the rule it names and
  * citing the rows it cites, and each branch it closes closed. The book's
  * closures cite nothing, so a closure here cites the branch's first pair of
- * one row signed both ways. Shared by the first-order and modal corpora.
+ * one row signed both ways, and cites nothing where there is none. Shared by
+ * the first-order and modal corpora.
  */
 
 /** A row's sign, and the rest after it: `1.1 𝕋 A` is 𝕋 and `A`. */
@@ -113,7 +113,9 @@ export function write(
       }
     }
 
-    throw new Error("the book closes a branch with no pair to close on");
+    // No pair to close on, where a row is signed wrong: the closure cites
+    // nothing, which is itself a problem.
+    tree.close(node);
   };
 
   const after = (
@@ -228,15 +230,6 @@ export function closesEverywhere(row: OlpTableauRow): boolean {
   return children.length === 0
     ? row.closed === true
     : children.every(closesEverywhere);
-}
-
-/** Each problem as `row|end id: type`, in tree order. */
-export function problems(report: TreeReport): string[] {
-  return report.problems.map(({ at }) =>
-    at.type === "tree"
-      ? `tree: ${at.problem.type}`
-      : `${at.type} ${at.id}: ${at.problem.type}`,
-  );
 }
 
 /** The tree with its `n`th written row (in preorder) signed the other way. */

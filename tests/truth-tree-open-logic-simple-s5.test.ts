@@ -1,21 +1,16 @@
 import { describe, expect, test } from "bun:test";
-import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import { resolveTruthTree } from "../src/worker/exercises/truth-tree/grading";
 import { markText } from "../src/worker/exercises/truth-tree/labels";
 import type {
   RowMark,
   TreeReport,
 } from "../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
-import { theorySourceByFileName } from "../src/worker/logic/theories";
 import {
   certifyAnswer,
-  engine,
   judgeAsBrowser,
+  problems,
+  section,
   TreeBuilder,
+  treeExercise,
 } from "./helpers/truth-tree";
 
 /**
@@ -24,68 +19,12 @@ import {
  * `2 𝕋 A`, because in S5 every world sees every world.
  */
 
-async function exercise(
-  root: string,
-  finish = "closed",
-): Promise<{
-  item: ExerciseManifestItem;
-  resolved: ResolvedTree;
-  mm0: string;
-}> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t system="open-logic-simple-s5" finish="${finish}"}\nShow it.\n\n${root}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(
-      result.diagnostics
-        .map((d) => `${d.code}: ${JSON.stringify(d)}`)
-        .join("\n"),
-    );
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const publicData = withSystemText(
-    raw.publicData,
-    result.artifact.systems,
-  ) as unknown as TruthTreePublicData;
-  const resolved = resolveTruthTree(publicData);
-
-  if (resolved === null || publicData.mm0 === undefined) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return {
-    item: { ...raw, publicData: publicData as never },
-    mm0: publicData.mm0,
-    resolved,
-  };
+function exercise(root: string, finish = "closed") {
+  return treeExercise(root, { finish, system: "open-logic-simple-s5" });
 }
 
 async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
-  const { mm0, resolved } = await exercise(root);
-  return judgeAsBrowser(await engine(), resolved, mm0, tree.answer());
-}
-
-/** Each problem as `row|end id: type`, in tree order. */
-function problems(report: TreeReport): string[] {
-  return report.problems.map(({ at }) =>
-    at.type === "tree"
-      ? `tree: ${at.problem.type}`
-      : `${at.type} ${at.id}: ${at.problem.type}`,
-  );
-}
-
-/** The text of a file from `start` up to `end`. */
-function section(file: string, start: string, end: string): string {
-  const text = theorySourceByFileName(file) ?? "";
-  const from = text.indexOf(start);
-  const to = text.indexOf(end, from);
-
-  expect(from).toBeGreaterThanOrEqual(0);
-  expect(to).toBeGreaterThan(from);
-
-  return text.slice(from, to);
+  return judgeAsBrowser(await exercise(root), tree);
 }
 
 describe("open-logic-simple-s5", () => {
@@ -173,8 +112,8 @@ describe("open-logic-simple-s5", () => {
 
 /** A tree for `- □p` and `- ◇q`, with `□𝕋` at 1 and, if `both`, at 2. */
 async function countermodel(both: boolean) {
-  const { item, resolved } = await exercise("- □p\n- ◇q", "one-open");
-  const tree = new TreeBuilder(resolved.rootText);
+  const asked = await exercise("- □p\n- ◇q", "one-open");
+  const tree = new TreeBuilder(asked.resolved.rootText);
   tree.stack(tree.rootNode, "r2", ["2 T: q"], "◇T");
   tree.stack(tree.rootNode, "r1", ["1 T: p"], "□T");
 
@@ -183,20 +122,12 @@ async function countermodel(both: boolean) {
   }
 
   tree.open(tree.rootNode);
-  const answer = await certifyAnswer(
-    item.publicData as unknown as TruthTreePublicData,
-    tree.answer(),
-  );
+  const answer = await certifyAnswer(asked.publicData, tree.answer());
 
   return {
     certified: answer.mmb !== undefined,
-    report: judgeAsBrowser(
-      await engine(),
-      resolved,
-      (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
-      tree.answer(),
-    ),
-    resolved,
+    report: await judgeAsBrowser(asked, tree),
+    resolved: asked.resolved,
     root: tree.rootNode,
   };
 }

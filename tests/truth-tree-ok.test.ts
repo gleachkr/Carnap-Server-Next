@@ -21,7 +21,8 @@ import {
   LANGUAGE_SPEC_SOURCES,
   languageFromSource,
 } from "../src/worker/logic/specs";
-import { engine, TreeBuilder } from "./helpers/truth-tree";
+import { engine } from "./helpers/engine";
+import { TreeBuilder } from "./helpers/truth-tree";
 
 /**
  * A theory's development as axioms (#469): `tree_ok ρ Γ` and

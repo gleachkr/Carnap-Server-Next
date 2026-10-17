@@ -1,29 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
-import type { ExerciseManifestItem } from "../src/worker/domain/content";
-import { withSystemText } from "../src/worker/exercise-kit/systems/join";
-import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
 import { readTreeDevelopment } from "../src/worker/exercises/truth-tree/aufbau/criteria";
 import { matchTerm } from "../src/worker/exercises/truth-tree/aufbau/patterns";
-import type { ResolvedTree } from "../src/worker/exercises/truth-tree/grading";
-import {
-  judgeTree,
-  resolveTruthTree,
-} from "../src/worker/exercises/truth-tree/grading";
-import type { TruthTreePublicData } from "../src/worker/exercises/truth-tree/types";
-import {
-  TRUTH_TREE_ANSWER_KIND,
-  TRUTH_TREE_SCHEMA_VERSION,
-} from "../src/worker/exercises/truth-tree/types";
 import { languageById } from "../src/worker/logic/specs";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
-import type { CertifiedAnswer } from "./helpers/truth-tree";
+import type { TreeExercise } from "./helpers/truth-tree";
 import {
   certifyAnswer,
-  engine,
+  gradeAnswer,
   judgeAsBrowser,
+  judgeAsServer,
+  lessonTree,
   TreeBuilder,
+  treeExercise,
 } from "./helpers/truth-tree";
 
 /**
@@ -33,100 +23,15 @@ import {
  * again by the server's verification.
  */
 
-async function exercise(
-  body: string,
-): Promise<{ item: ExerciseManifestItem; resolved: ResolvedTree }> {
-  const result = await compileCarnapMarkdown(
-    `::::truth-tree{#t finish="one-open"}\n${body}\n::::`,
-  );
-
-  if (!result.ok) {
-    throw new Error(result.diagnostics.map((d) => d.code).join(", "));
-  }
-
-  const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-  const item = {
-    ...raw,
-    publicData: withSystemText(raw.publicData, result.artifact.systems),
-  };
-  const resolved = resolveTruthTree(
-    item.publicData as unknown as TruthTreePublicData,
-  );
-
-  if (resolved === null) {
-    throw new Error("the exercise does not resolve");
-  }
-
-  return { item, resolved };
-}
-
 function consistency(...members: string[]) {
-  return exercise(
-    `Is this set consistent?\n\n${members.map((each) => `- ${each}`).join("\n")}`,
-  );
+  return treeExercise(members.map((each) => `- ${each}`).join("\n"), {
+    finish: "one-open",
+    prompt: "Is this set consistent?",
+  });
 }
 
-async function grade(
-  item: ExerciseManifestItem,
-  data: CertifiedAnswer,
-): Promise<string> {
-  const normalized = TRUTH_TREE_EXERCISE.normalizeAnswer(
-    {
-      data: data as never,
-      kind: TRUTH_TREE_ANSWER_KIND,
-      schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
-    },
-    item,
-  );
-
-  if (!normalized.ok) {
-    throw new Error(`answer refused: ${normalized.reason}`);
-  }
-
-  const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
-    normalized.answer,
-    item,
-    {
-      ...(normalized.certificate === undefined
-        ? {}
-        : { certificate: normalized.certificate }),
-      now: new Date("2026-01-01T00:00:00Z"),
-    } as never,
-  );
-
-  return evaluation.status;
-}
-
-function certify(item: ExerciseManifestItem, t: TreeBuilder) {
-  return certifyAnswer(
-    item.publicData as unknown as TruthTreePublicData,
-    t.answer(),
-  );
-}
-
-/** The report, as the server makes it once the certificate verifies. */
-function report(resolved: ResolvedTree, answer: CertifiedAnswer) {
-  return judgeTree(resolved, answer as never, { kind: "verified", ok: true })
-    .report;
-}
-
-/**
- * The report, as the browser makes it from its compile: where the engine is
- * asked whether a branch marked open is complete, what it could not prove is
- * what the branch is missing. A certificate proves it complete, so no
- * verified one is of a branch that is not.
- */
-async function compiledReport(
-  item: ExerciseManifestItem,
-  resolved: ResolvedTree,
-  t: TreeBuilder,
-) {
-  return judgeAsBrowser(
-    await engine(),
-    resolved,
-    (item.publicData as unknown as TruthTreePublicData).mm0 ?? "",
-    t.answer(),
-  );
+function certify(exercise: TreeExercise, t: TreeBuilder) {
+  return certifyAnswer(exercise.publicData, t.answer());
 }
 
 describe("UBC's development roles", () => {
@@ -160,12 +65,12 @@ describe("UBC's development roles", () => {
 
 describe("a general row", () => {
   test("is developed once instantiated for every name on its branch", async () => {
-    const { item, resolved } = await consistency("∀x Rxb", "Fa");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("∀x Rxb", "Fa");
+    const t = new TreeBuilder(asked.resolved.rootText);
     const [rab, rbb] = t.stack(t.rootNode, "r1", ["Rab", "Rbb"], "∀");
     t.open(t.rootNode);
 
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
 
     // `Rab` could be the instance at a or at b; the engine says which.
     expect(answer.instances).toEqual({
@@ -173,42 +78,40 @@ describe("a general row", () => {
       [rbb as string]: "b",
     });
     expect(answer.mmb).toBeDefined();
-    expect(report(resolved, answer).marks.get("r1")).toEqual({
+    expect((await judgeAsServer(asked, answer)).marks.get("r1")).toEqual({
       names: ["a", "b"],
       type: "general",
     });
-    expect(await grade(item, answer)).toBe("correct");
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
   });
 
   test("is not developed while a name on its branch is missing", async () => {
-    const { item, resolved } = await consistency("∀x Rxb", "Fa");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("∀x Rxb", "Fa");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, "r1", ["Rab"], "∀");
     t.open(t.rootNode);
 
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
 
     expect(answer.mmb).toBeUndefined();
-    expect(
-      (await compiledReport(item, resolved, t)).ends.get(t.rootNode),
-    ).toEqual({
+    expect((await judgeAsBrowser(asked, t)).ends.get(t.rootNode)).toEqual({
       missing: [{ names: ["b"], row: "r1" }],
       type: "open-incomplete",
     });
-    expect(await grade(item, answer)).toBe("incorrect");
+    expect(await gradeAnswer(asked.item, answer)).toBe("incorrect");
   });
 
   test("an instance the certificate does not prove fails verification", async () => {
-    const { item, resolved } = await consistency("∀x Rxb", "Fa");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("∀x Rxb", "Fa");
+    const t = new TreeBuilder(asked.resolved.rootText);
     // `Rab` twice: both are the instance at a, so b is still missing.
     const [, second] = t.stack(t.rootNode, "r1", ["Rab", "Rab"], "∀");
     t.open(t.rootNode);
 
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
 
     expect(Object.values(answer.instances ?? {})).toEqual(["a", "a"]);
-    expect(await grade(item, answer)).toBe("incorrect");
+    expect(await gradeAnswer(asked.item, answer)).toBe("incorrect");
 
     // Claim the second was the instance at b: the branch would look
     // complete, but the certificate does not prove that link.
@@ -217,44 +120,50 @@ describe("a general row", () => {
       instances: { ...answer.instances, [second as string]: "b" },
     };
 
-    expect(report(resolved, forged).ends.get(t.rootNode)).toBeUndefined();
-    expect(await grade(item, forged)).toBe("incorrect");
+    expect(
+      (await judgeAsServer(asked, forged)).ends.get(t.rootNode),
+    ).toBeUndefined();
+    expect(await gradeAnswer(asked.item, forged)).toBe("incorrect");
   });
 
   test("on a branch with no names, needs one instance (nonempty)", async () => {
-    const { item, resolved } = await consistency("∀x Fx");
-    const bare = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("∀x Fx");
+    const bare = new TreeBuilder(asked.resolved.rootText);
     bare.open(bare.rootNode);
 
     expect(
-      (await compiledReport(item, resolved, bare)).ends.get(bare.rootNode),
+      (await judgeAsBrowser(asked, bare)).ends.get(bare.rootNode),
     ).toEqual({
       missing: [{ names: [], row: "r1" }],
       type: "open-incomplete",
     });
 
-    const t = new TreeBuilder(resolved.rootText);
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, "r1", ["Fa"], "∀");
     t.open(t.rootNode);
 
-    expect(await grade(item, await certify(item, t))).toBe("correct");
+    expect(await gradeAnswer(asked.item, await certify(asked, t))).toBe(
+      "correct",
+    );
   });
 
-  // Judged as if verified: the engine cannot yet check a vacuous step at all,
-  // since `@recover` finds no instance in a body without the variable.
+  // The engine is asked about a vacuous step once, at any one term.
   test("vacuous, needs one step whatever the names", async () => {
-    const { item, resolved } = await consistency("∀x Fa", "Gb");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("∀x Fa", "Gb");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, "r1", ["Fa"], "∀");
     t.open(t.rootNode);
 
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
+    const report = await judgeAsServer(asked, answer);
 
-    expect(report(resolved, answer).ends.get(t.rootNode)).toBeUndefined();
-    expect(report(resolved, answer).branches.get(t.rootNode)).toEqual({
+    expect(answer.mmb).toBeDefined();
+    expect(report.problems).toEqual([]);
+    expect(report.branches.get(t.rootNode)).toEqual({
       right: true,
       type: "open",
     });
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
   });
 });
 
@@ -268,22 +177,15 @@ describe("a step writes what its rule does", () => {
     rule: string,
     closeOn: [number, string],
   ) {
-    const { item, resolved } = await consistency(...members);
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency(...members);
+    const t = new TreeBuilder(asked.resolved.rootText);
     const written = t.stack(t.rootNode, cite, rows, rule);
     t.close(t.rootNode, written[closeOn[0]] as string, closeOn[1]);
-    const answer = await certify(item, t);
-
-    const mm0 = (item.publicData as unknown as TruthTreePublicData).mm0;
+    const answer = await certify(asked, t);
 
     return {
-      graded: await grade(item, answer),
-      rows: judgeAsBrowser(
-        await engine(),
-        resolved,
-        mm0 as string,
-        t.answer(),
-      ).rows,
+      graded: await gradeAnswer(asked.item, answer),
+      rows: (await judgeAsBrowser(asked, t)).rows,
       written,
     };
   }
@@ -359,19 +261,14 @@ describe("a step writes what its rule does", () => {
 
 describe("a citation not above its row", () => {
   test("names the row that is not, not the first one cited", async () => {
-    const { item, resolved } = await consistency("a=b", "Fa → Ga");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("a=b", "Fa → Ga");
+    const t = new TreeBuilder(asked.resolved.rootText);
     const {
       nodes: [left],
       rows: [, [ga]],
     } = t.split(t.rootNode, "r2", [["¬Fa"], ["Ga"]], "→");
     const [gb] = t.stack(left, ["r1", ga as string], ["Gb"], "=");
-    const rows = judgeAsBrowser(
-      await engine(),
-      resolved,
-      (item.publicData as unknown as TruthTreePublicData).mm0 as string,
-      t.answer(),
-    ).rows;
+    const rows = (await judgeAsBrowser(asked, t)).rows;
 
     expect(rows.get(gb as string)).toEqual({
       cite: ga as string,
@@ -382,18 +279,18 @@ describe("a citation not above its row", () => {
 
 describe("a row used once", () => {
   test("takes ✓ with the name an existential step introduced", async () => {
-    const { item, resolved } = await consistency("∃x Fx", "∀x ¬Gx");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("∃x Fx", "∀x ¬Gx");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, "r1", ["Fa"], "∃");
     t.stack(t.rootNode, "r2", ["¬Ga"], "∀");
     t.open(t.rootNode);
 
-    const answer = await certify(item, t);
-    const marks = report(resolved, answer).marks;
+    const answer = await certify(asked, t);
+    const marks = (await judgeAsServer(asked, answer)).marks;
 
     expect(marks.get("r1")).toEqual({ names: ["a"], type: "resolved" });
     expect(marks.get("r2")).toEqual({ names: ["a"], type: "general" });
-    expect(await grade(item, answer)).toBe("correct");
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
   });
 
   // Without a modus ponens the engine confirms no instance, and the rule is
@@ -404,45 +301,34 @@ describe("a row used once", () => {
       "--| @relation judgement jeq jeq_refl jeq_trans jeq_sym _",
     );
     expect(ubc).toContain("jeq_sym _");
-    const result = await compileCarnapMarkdown(
+    const asked = await lessonTree(
       `:::aufbau-mm0{name="plain"}\n${ubc}\n:::\n\n::::truth-tree{#t system="plain"}\nIs this set consistent?\n\n- ∃x Fx\n- ∀x ¬Fx\n::::`,
     );
-
-    if (!result.ok) {
-      throw new Error(result.diagnostics.map((d) => d.code).join(", "));
-    }
-
-    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-    const publicData = withSystemText(
-      raw.publicData,
-      result.artifact.systems,
-    ) as unknown as TruthTreePublicData;
-    const resolved = resolveTruthTree(publicData) as ResolvedTree;
-    const t = new TreeBuilder(resolved.rootText);
+    const t = new TreeBuilder(asked.resolved.rootText);
     const [fa] = t.stack(t.rootNode, "r1", ["Fa"], "∃");
     const [nfa] = t.stack(t.rootNode, "r2", ["¬Fa"], "∀");
     t.close(t.rootNode, fa as string, nfa as string);
 
     expect(
-      report(resolved, await certifyAnswer(publicData, t.answer())).marks.get(
-        "r1",
-      ),
+      (await judgeAsServer(asked, await certify(asked, t))).marks.get("r1"),
     ).toEqual({ names: [], type: "resolved" });
   });
 
   test("on a split, needs developing on the branch marked open", async () => {
-    const { item, resolved } = await consistency("P ∨ Q", "R & S");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("P ∨ Q", "R & S");
+    const t = new TreeBuilder(asked.resolved.rootText);
     const {
       nodes: [left],
     } = t.split(t.rootNode, "r1", [["P"], ["Q"]], "∨");
     t.open(left);
 
-    expect((await compiledReport(item, resolved, t)).ends.get(left)).toEqual({
+    expect((await judgeAsBrowser(asked, t)).ends.get(left)).toEqual({
       missing: [{ row: "r2" }],
       type: "open-incomplete",
     });
-    expect(await grade(item, await certify(item, t))).toBe("incorrect");
+    expect(await gradeAnswer(asked.item, await certify(asked, t))).toBe(
+      "incorrect",
+    );
   });
 });
 
@@ -450,38 +336,42 @@ describe("a row used once", () => {
 // one way round into every atomic and negated atomic row on it (`pairs`).
 describe("an identity on an open branch", () => {
   test("owes its substitution into each literal, one way round", async () => {
-    const { item, resolved } = await consistency("a=b", "Fa", "¬Gb");
-    const bare = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("a=b", "Fa", "¬Gb");
+    const bare = new TreeBuilder(asked.resolved.rootText);
     bare.open(bare.rootNode);
 
     // Each literal is the other way round already (`Fa` with every b made a
     // is `Fa`), but one way must do for all: Fb, or ¬Ga.
     expect(
-      (await compiledReport(item, resolved, bare)).ends.get(bare.rootNode),
+      (await judgeAsBrowser(asked, bare)).ends.get(bare.rootNode),
     ).toEqual({
       missing: [{ row: "r1", substitution: true }],
       type: "open-incomplete",
     });
-    expect((await certify(item, bare)).mmb).toBeUndefined();
+    expect((await certify(asked, bare)).mmb).toBeUndefined();
 
-    const t = new TreeBuilder(resolved.rootText);
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
     t.open(t.rootNode);
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
 
     expect(answer.directions).toEqual({ [`${t.rootNode} r1`]: "tb_id_ab" });
     expect(
-      (await compiledReport(item, resolved, t)).ends.get(t.rootNode),
+      (await judgeAsBrowser(asked, t)).ends.get(t.rootNode),
     ).toBeUndefined();
-    expect(report(resolved, answer).ends.get(t.rootNode)).toBeUndefined();
+    expect(
+      (await judgeAsServer(asked, answer)).ends.get(t.rootNode),
+    ).toBeUndefined();
     // A substitution develops neither row it cites.
-    expect(report(resolved, answer).marks.get("r1")).toBeUndefined();
-    expect(await grade(item, answer)).toBe("correct");
+    expect(
+      (await judgeAsServer(asked, answer)).marks.get("r1"),
+    ).toBeUndefined();
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
   });
 
   test("is not owed into a row that is not a literal", async () => {
-    const { item, resolved } = await consistency("a=b", "Fa → Ga");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("a=b", "Fa → Ga");
+    const t = new TreeBuilder(asked.resolved.rootText);
     const {
       nodes: [left, right],
       rows: [[nfa], [ga]],
@@ -489,66 +379,78 @@ describe("an identity on an open branch", () => {
     t.stack(left, ["r1", nfa as string], ["¬Fb"], "=");
     t.stack(right, ["r1", ga as string], ["Gb"], "=");
     t.open(left);
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
 
     // `Fa → Ga` with every a made b is owed nowhere.
-    expect(report(resolved, answer).problems).toEqual([]);
-    expect(report(resolved, answer).ends.get(left)).toBeUndefined();
+    expect((await judgeAsServer(asked, answer)).problems).toEqual([]);
+    expect(
+      (await judgeAsServer(asked, answer)).ends.get(left),
+    ).toBeUndefined();
   });
 
   test("is certified only in the direction the answer names", async () => {
-    const { item, resolved } = await consistency("a=b", "Fa", "¬Gb");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("a=b", "Fa", "¬Gb");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
     t.open(t.rootNode);
-    const answer = await certify(item, t);
+    const answer = await certify(asked, t);
     const key = `${t.rootNode} r1`;
 
-    expect(await grade(item, answer)).toBe("correct");
+    expect(await gradeAnswer(asked.item, answer)).toBe("correct");
     // The other way round, `¬Ga` is missing: the certificate proves the
     // branch developed one way, and the goal states the other.
     expect(
-      await grade(item, { ...answer, directions: { [key]: "tb_id_ba" } }),
+      await gradeAnswer(asked.item, {
+        ...answer,
+        directions: { [key]: "tb_id_ba" },
+      }),
     ).toBe("incorrect");
     // With none named, the rule's own statement is asked.
     const { directions: _directions, ...unnamed } = answer;
-    expect(await grade(item, unnamed)).toBe("incorrect");
+    expect(await gradeAnswer(asked.item, unnamed)).toBe("incorrect");
     // A pair the tree does not have is no answer.
     await expect(
-      grade(item, { ...answer, directions: { "n9 r1": "tb_id_ab" } }),
+      gradeAnswer(asked.item, {
+        ...answer,
+        directions: { "n9 r1": "tb_id_ab" },
+      }),
     ).rejects.toThrow("answer refused");
   });
 
   test("owes nothing a self-identity would be", async () => {
-    const { item, resolved } = await consistency("a=b", "b=a");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("a=b", "b=a");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.open(t.rootNode);
 
     expect(
-      (await compiledReport(item, resolved, t)).ends.get(t.rootNode),
+      (await judgeAsBrowser(asked, t)).ends.get(t.rootNode),
     ).toBeUndefined();
-    expect((await certify(item, t)).mmb).toBeDefined();
+    expect((await certify(asked, t)).mmb).toBeDefined();
   });
 });
 
 describe("closure, as the theory says it", () => {
   test("a branch marked open that a closure rule closes is refused", async () => {
-    const { resolved } = await consistency("P", "¬P");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("P", "¬P");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.open(t.rootNode);
 
-    expect(report(resolved, t.answer()).ends.get(t.rootNode)).toEqual({
+    expect(
+      (await judgeAsServer(asked, t.answer())).ends.get(t.rootNode),
+    ).toEqual({
       rows: ["r1", "r2"],
       type: "open-contradiction",
     });
   });
 
   test("a row a≠a closes a branch alone", async () => {
-    const { resolved } = await consistency("¬a = a");
-    const t = new TreeBuilder(resolved.rootText);
+    const asked = await consistency("¬a = a");
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.open(t.rootNode);
 
-    expect(report(resolved, t.answer()).ends.get(t.rootNode)).toEqual({
+    expect(
+      (await judgeAsServer(asked, t.answer())).ends.get(t.rootNode),
+    ).toEqual({
       rows: ["r1"],
       type: "open-contradiction",
     });
@@ -794,37 +696,26 @@ describe("another calculus's roles", () => {
       "--| @syntax alias T∧",
       "--| @syntax role tree.development.once\n--| @syntax alias T∧",
     );
-    const result = await compileCarnapMarkdown(lesson(annotated, "one-open"));
+    expect(await codes(lesson(annotated, "one-open"))).toEqual([]);
 
-    expect(result.diagnostics).toEqual([]);
-
-    if (!result.ok) {
-      return;
-    }
-
-    const raw = result.artifact.manifest[0] as ExerciseManifestItem;
-    const item = {
-      ...raw,
-      publicData: withSystemText(raw.publicData, result.artifact.systems),
-    };
-    const resolved = resolveTruthTree(
-      item.publicData as unknown as TruthTreePublicData,
-    ) as ResolvedTree;
-    const bare = new TreeBuilder(resolved.rootText);
+    const asked = await lessonTree(lesson(annotated, "one-open"));
+    const bare = new TreeBuilder(asked.resolved.rootText);
     bare.open(bare.rootNode);
 
     // It writes no marks, so it is judged by its contents.
     expect(
-      (await compiledReport(item, resolved, bare)).ends.get(bare.rootNode),
+      (await judgeAsBrowser(asked, bare)).ends.get(bare.rootNode),
     ).toEqual({
       missing: [{ row: "r1" }],
       type: "open-incomplete",
     });
 
-    const t = new TreeBuilder(resolved.rootText);
+    const t = new TreeBuilder(asked.resolved.rootText);
     t.stack(t.rootNode, "r1", ["T P", "T Q"], "T∧");
     t.open(t.rootNode);
 
-    expect(await grade(item, await certify(item, t))).toBe("correct");
+    expect(await gradeAnswer(asked.item, await certify(asked, t))).toBe(
+      "correct",
+    );
   });
 });
