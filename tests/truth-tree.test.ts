@@ -138,7 +138,6 @@ describe("the directive", () => {
 
     expect(item.kind).toBe("truth-tree@1");
     expect(data.task).toBe("validity");
-    expect(data.premises).toBe(1);
     expect(data.system).toBe("forallx-ubc");
     expect(resolved?.rootText).toEqual(["P & Q", "¬P"]);
     expect(data.promptHtml).toContain("Is this argument valid?");

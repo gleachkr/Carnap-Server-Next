@@ -17,6 +17,7 @@ import { markText } from "./labels";
 import type { TreeReport } from "./report";
 import { isCitationProblem, isIncomplete } from "./report";
 import type { TreeWords } from "./verdict-text";
+import { layoutNumbers } from "./verdict-text";
 
 export function treeAnnotations(
   tree: TableauDocument,
@@ -33,10 +34,7 @@ export function treeAnnotations(
   },
 ): TableauAnnotations {
   const index = new TableauIndex(tree);
-  const number = (rowId: string): string => {
-    const line = layout.rows.get(rowId)?.line;
-    return line === undefined ? "?" : String(line);
-  };
+  const number = layoutNumbers(layout);
   const marks = new Map<string, string>();
 
   for (const [rowId, mark] of report.marks) {
@@ -181,7 +179,7 @@ export function treeAnnotations(
 }
 
 /** A root row: one of the root node's first rows, which the exercise gives. */
-function isRootRow(
+export function isRootRow(
   index: TableauIndex,
   rowId: string,
   rootRows: number,

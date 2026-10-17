@@ -79,8 +79,6 @@ export interface TruthTreePublicData {
    * conclusion for a validity task, the set's members for a consistency task.
    */
   readonly root: readonly string[];
-  /** How many of the root rows are premises; the rest negate the conclusion. */
-  readonly premises: number;
 }
 
 /**

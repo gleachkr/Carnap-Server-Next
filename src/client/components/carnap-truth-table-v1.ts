@@ -34,6 +34,7 @@ import type {
   TruthTableCounterexampleTarget,
   TruthTablePublicData,
 } from "../../worker/exercises/truth-table/types";
+import { mountActionButton } from "./action-bar";
 import { CarnapExerciseElement, register } from "./base";
 
 const CYCLE: Record<TruthTableCellValue, TruthTableCellValue> = {
@@ -595,38 +596,24 @@ class CarnapTruthTable extends CarnapExerciseElement<TruthTableStringId> {
    * `setCheckStatus`.
    */
   private buildControls(): void {
-    const bar = this.querySelector<HTMLElement>(".exercise-actions");
-
-    if (bar === null) {
-      return;
-    }
-
-    // Insert our controls before the (server-rendered) submit button, so the row
-    // reads Check · counterexample · Submit.
-    const submit = bar.querySelector<HTMLElement>('button[type="submit"]');
-
+    // In the order the row reads: Check · counterexample · Submit.
     if (this.checkMode !== "off") {
-      const check = document.createElement("button");
-      check.type = "button";
-      check.className = "tt-check";
-      check.textContent = this.t("Check");
-      check.addEventListener("click", () => {
+      mountActionButton(this, "tt-check", this.t("Check"), () => {
         this.runCheck();
       });
-      bar.insertBefore(check, submit);
     }
 
     if (this.ceTarget !== null) {
-      const ce = document.createElement("button");
-      ce.type = "button";
-      ce.className = "tt-check tt-ce";
-      ce.textContent = this.t("Find counterexample");
-      ce.setAttribute("aria-pressed", "false");
-      ce.addEventListener("click", () => {
-        this.setCounterexampleMode(!this.ceMode);
-      });
+      const ce = mountActionButton(
+        this,
+        "tt-check tt-ce",
+        this.t("Find counterexample"),
+        () => {
+          this.setCounterexampleMode(!this.ceMode);
+        },
+      );
+      ce?.setAttribute("aria-pressed", "false");
       this.ceButton = ce;
-      bar.insertBefore(ce, submit);
     }
   }
 

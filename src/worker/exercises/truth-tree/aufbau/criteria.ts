@@ -23,6 +23,7 @@
  */
 
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
+import { relationsOf } from "../../../logic/specs/annotations";
 import { roleIndex } from "../../../logic/specs/roles";
 import type { Bindings, Metas } from "./patterns";
 import {
@@ -33,6 +34,7 @@ import {
   substitutionOf,
   termKey,
 } from "./patterns";
+import { readEngine } from "./rows";
 import type { TreeTheory } from "./theory";
 import { TREE_ROLES } from "./theory";
 
@@ -182,7 +184,7 @@ const KINDS: readonly DevelopmentCriterion[] = [
 ];
 
 /** Every criterion a theory may name, by kind. */
-export const CRITERIA: ReadonlyMap<string, DevelopmentCriterion> = new Map(
+const CRITERIA: ReadonlyMap<string, DevelopmentCriterion> = new Map(
   KINDS.map((criterion) => [criterion.kind, criterion]),
 );
 
@@ -914,22 +916,17 @@ export function instanceShower(
   }
 
   return (instance) => {
-    const read = language.parse(instance, {
-      lints: false,
-      mode: "engine",
-      sort: slot.sort,
-    });
+    const read = readEngine(language, instance, slot.sort);
 
-    if (!read.ok) {
-      return instance;
-    }
-
-    const filled = instantiate(
-      slot.shown,
-      new Map([...bindings, [slot.binder, read.term]]),
-    );
-
-    return termKey(language, filled) ?? instance;
+    return read === null
+      ? instance
+      : termKey(
+          language,
+          instantiate(
+            slot.shown,
+            new Map([...bindings, [slot.binder, read]]),
+          ),
+        );
   };
 }
 
@@ -978,12 +975,8 @@ export function witnesses(
         termKey(language, instantiate(pattern, bindings)),
       );
 
-      if (
-        instance !== null &&
-        !found.has(instance) &&
-        side.every((row) => row !== null)
-      ) {
-        found.set(instance, { instance, rows: side as string[] });
+      if (instance !== null && !found.has(instance)) {
+        found.set(instance, { instance, rows: side });
       }
     }
   }
@@ -1016,47 +1009,4 @@ function judgementRelation(
   return relation === undefined || relation.mp === null
     ? null
     : { mp: relation.mp, refl: relation.refl };
-}
-
-/** A sort's equivalence, as its `@relation` names it. */
-export interface SortRelation {
-  /** The relation's term: `ctx_eq`, `⟚`'s `jeq`. */
-  readonly term: string;
-  readonly refl: string;
-  /** Its modus ponens, where it names one (`_` where not). */
-  readonly mp: string | null;
-}
-
-/**
- * Every sort's `@relation <sort> <term> <refl> <trans> <sym> <mp>`, by sort:
- * the equivalence the engine reasons modulo.
- */
-export function relationsOf(
-  language: SurfaceLanguage,
-): ReadonlyMap<string, SortRelation> {
-  const relations = new Map<string, SortRelation>();
-
-  for (const info of language.spec.rules.values()) {
-    for (const annotation of info.foreignAnnotations) {
-      const [head, sort, term, refl, , , mp] = annotation.text
-        .trim()
-        .split(/\s+/u);
-
-      if (
-        head === "@relation" &&
-        sort !== undefined &&
-        term !== undefined &&
-        refl !== undefined &&
-        !relations.has(sort)
-      ) {
-        relations.set(sort, {
-          mp: mp === undefined || mp === "_" ? null : mp,
-          refl,
-          term,
-        });
-      }
-    }
-  }
-
-  return relations;
 }

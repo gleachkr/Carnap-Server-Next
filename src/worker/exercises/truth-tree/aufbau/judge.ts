@@ -41,9 +41,10 @@ import type {
 import type { TruthTreeFinish } from "../types";
 import { closing } from "./branch";
 import type { TreeDevelopment } from "./criteria";
-import type { EmitProblem, TreeDiagnostic, TreeProof } from "./emit";
+import type { TreeDiagnostic, TreeProof } from "./emit";
 import { treeMarks } from "./marks";
 import type { RowSortReader } from "./rows";
+import { isDeclaredRoot } from "./rows";
 
 /** What the engine has said about a tree's proof. */
 export type TreeEvidence =
@@ -81,29 +82,6 @@ export interface JudgeInput {
   readonly finish: TruthTreeFinish;
   /** The theory's development rules, for completeness and marks. */
   readonly development: TreeDevelopment;
-}
-
-/**
- * An unwritten step's problem, as the report names it; `null` for a step with
- * a row that does not read, which is reported on that row.
- */
-function emitted(problem: EmitProblem, cite: string): RowProblem | null {
-  switch (problem.type) {
-    case "no-rule":
-      return { type: "no-rule-named" };
-    case "uncited":
-      return { type: "uncited" };
-    case "cites-differ":
-      return { type: "cites-differ" };
-    case "cite-unknown":
-      return { cite, type: "cite-not-above" };
-    case "split-mixed":
-      return { type: "split-mixed" };
-    // Reported on the rows that do not read, and on the empty branch.
-    case "unreadable":
-    case "empty-branch":
-      return null;
-  }
 }
 
 /**
@@ -213,29 +191,18 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
       break;
     }
 
-    const read = reader.read(row.text);
-
-    if (row.cites.length > 0 || !read.ok || read.engine !== expected) {
+    if (!isDeclaredRoot(reader, row, expected)) {
       rowProblems.set(row.id, { type: "root-mismatch" });
     }
   }
 
   // The steps the proof could not write down, and why.
   for (const [rowId, problem] of proof.problems) {
-    const named = emitted(problem, index.row(rowId)?.row.cites[0] ?? "");
-
-    if (named !== null) {
-      flag(rowId, named);
-    }
+    flag(rowId, problem);
   }
 
   for (const [nodeId, problem] of proof.endProblems) {
-    flagEnd(
-      nodeId,
-      problem.type === "uncited"
-        ? { type: "closure-uncited" }
-        : { type: "closure-cite-off-branch" },
-    );
+    flagEnd(nodeId, problem);
   }
 
   // What the engine refused, on the step or end it is about. A link that
@@ -246,6 +213,8 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
   // What each branch marked open is missing, by the engine's word: its leaf,
   // then each row's entries.
   const undeveloped = new Map<string, Missing[]>();
+  // An engine refusal about no line Carnap wrote.
+  let unattributed = false;
 
   for (const error of engineErrors) {
     const subject = error.subject;
@@ -257,7 +226,12 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
         }
         break;
       case "citation": {
-        const cite = index.row(subject.rows[0] ?? "")?.row.cites[0] ?? "";
+        // The engine says only that the step's cites are not all on its
+        // branch; which one is not, the tree says.
+        const first = subject.rows[0] ?? "";
+        const above = new Set(index.rowsAbove(first).map((row) => row.id));
+        const cites = index.row(first)?.row.cites ?? [];
+        const cite = cites.find((each) => !above.has(each)) ?? cites[0] ?? "";
 
         for (const rowId of subject.rows) {
           flag(rowId, { cite, type: "cite-not-above" });
@@ -280,7 +254,7 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
         ]);
         break;
       default:
-        treeProblems.push({ type: "unverified" });
+        unattributed = true;
     }
   }
 
@@ -290,7 +264,8 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
   const unstated = proof.goal === null;
   const refused = !unstated && evidence.kind === "verified" && !evidence.ok;
 
-  if (refused) {
+  // Said once, of the whole tree, however many refusals name no line.
+  if (unattributed || refused) {
     treeProblems.push({ type: "unverified" });
   }
 

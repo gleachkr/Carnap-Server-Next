@@ -9,8 +9,8 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import { printTerm } from "@aufbau/syntax";
 import { individualSorts } from "../../logic/specs/roles";
+import { displayText, readEngine } from "./aufbau/rows";
 import type { RowMark } from "./report";
 
 /**
@@ -24,14 +24,10 @@ export function displayName(name: string, language: SurfaceLanguage): string {
   ];
 
   for (const sort of sorts) {
-    const read = language.parse(name, { lints: false, mode: "engine", sort });
+    const term = readEngine(language, name, sort);
 
-    if (read.ok) {
-      try {
-        return printTerm(language, read.term, "display");
-      } catch {
-        return name;
-      }
+    if (term !== null) {
+      return displayText(language, term) ?? name;
     }
   }
 

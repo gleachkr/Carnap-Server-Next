@@ -11,8 +11,10 @@
  */
 
 import type { AppTerm, SurfaceLanguage } from "@aufbau/syntax";
-import { printTerm, UnprintableTermError } from "@aufbau/syntax";
+import { printTerm } from "@aufbau/syntax";
+import { acuiOf } from "../../../logic/specs/annotations";
 import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
+import { readEngine } from "./rows";
 
 /**
  * A tree calculus's plumbing:
@@ -185,16 +187,11 @@ function emptyBranch(
   language: SurfaceLanguage,
   join: string | null,
 ): TreeTheory["empty"] {
-  const statement = language.spec.statements.find(
-    (each) => each.kind === "term" && each.name === join,
-  );
-  const acui = statement?.annotations
-    .map((annotation) => annotation.text.trim().split(/\s+/u))
-    .find((words) => words[0] === "@acui");
-  const unit = acui?.[3];
-  const info = unit === undefined ? undefined : language.spec.terms.get(unit);
+  const unit =
+    join === null ? null : (acuiOf(language).get(join)?.unit ?? null);
+  const info = unit === null ? undefined : language.spec.terms.get(unit);
 
-  if (unit === undefined || info === undefined) {
+  if (unit === null || info === undefined) {
     return null;
   }
 
@@ -245,25 +242,8 @@ export function rootRow(
     return null;
   }
 
-  const parsed = language.parse(text, {
-    lints: false,
-    mode: "engine",
-    sort: theory.rowSort,
-  });
-
-  if (!parsed.ok) {
-    return null;
-  }
-
-  try {
-    return printTerm(language, parsed.term, "engine");
-  } catch (error) {
-    if (error instanceof UnprintableTermError) {
-      return null;
-    }
-
-    throw error;
-  }
+  const read = readEngine(language, text, theory.rowSort);
+  return read === null ? null : printTerm(language, read, "engine");
 }
 
 /**
@@ -309,18 +289,11 @@ export function ruleSpelling(
   language: SurfaceLanguage,
   typed: string,
 ): string | null {
-  const aliases = language.spec.ruleAliases;
-  const axiom = aliases.get(typed.trim());
+  const axiom = language.spec.ruleAliases.get(typed.trim());
+  const aliases =
+    axiom === undefined
+      ? []
+      : (language.spec.rules.get(axiom)?.aliases ?? []);
 
-  if (axiom === undefined) {
-    return null;
-  }
-
-  for (const [alias, named] of aliases) {
-    if (named === axiom) {
-      return alias;
-    }
-  }
-
-  return null;
+  return aliases[0] ?? null;
 }

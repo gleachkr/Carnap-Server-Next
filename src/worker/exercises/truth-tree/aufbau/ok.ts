@@ -62,13 +62,14 @@ import type {
   TermInfo,
 } from "@aufbau/syntax";
 import { parseStatements, printTerm } from "@aufbau/syntax";
+import { acuiOf, relationsOf } from "../../../logic/specs/annotations";
 import type {
   DevelopmentRule,
   InstanceSlot,
   RulePatterns,
   TreeDevelopment,
 } from "./criteria";
-import { relationsOf, rulePatterns } from "./criteria";
+import { rulePatterns } from "./criteria";
 import type { TreeTheory } from "./theory";
 
 /** A judgement and the axiom to cite for it. */
@@ -894,17 +895,9 @@ function constructorsBySort(
   language: SurfaceLanguage,
 ): ReadonlyMap<string, readonly TermInfo[]> {
   const bySort = new Map<string, TermInfo[]>();
-  const lists = new Set<string>();
-
-  for (const info of language.spec.terms.values()) {
-    if (
-      info.foreignAnnotations.some((each) =>
-        each.text.trim().startsWith("@acui"),
-      )
-    ) {
-      lists.add(info.returnSort);
-    }
-  }
+  const lists = new Set(
+    [...acuiOf(language).values()].map((each) => each.sort),
+  );
 
   for (const info of language.spec.terms.values()) {
     if (

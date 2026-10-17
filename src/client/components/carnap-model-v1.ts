@@ -51,6 +51,7 @@ import {
   describeProblem,
   describeVerdict,
 } from "../../worker/exercises/model/verdict-text";
+import { mountActionButton } from "./action-bar";
 import { CarnapExerciseElement, register } from "./base";
 
 /** A field's row in the shadow root, with the field it stands for. */
@@ -166,23 +167,9 @@ class CarnapModel extends CarnapExerciseElement<ModelStringId> {
       return;
     }
 
-    const bar = this.querySelector<HTMLElement>(".exercise-actions");
-
-    if (bar === null) {
-      return;
-    }
-
-    const check = document.createElement("button");
-    check.type = "button";
-    check.className = "model-check";
-    check.textContent = this.t("Check");
-    check.addEventListener("click", () => {
+    mountActionButton(this, "model-check", this.t("Check"), () => {
       this.runCheck();
     });
-    bar.insertBefore(
-      check,
-      bar.querySelector<HTMLElement>('button[type="submit"]'),
-    );
   }
 
   /** The sentences changed: reread them, reshape the fields, re-mirror. */

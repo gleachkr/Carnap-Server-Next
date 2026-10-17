@@ -37,7 +37,7 @@ import {
   termKey,
 } from "./patterns";
 import type { Member, RowSortReader } from "./rows";
-import { branchText, engineTokens } from "./rows";
+import { branchText, engineTokens, readEngine } from "./rows";
 import type { TreeTheory } from "./theory";
 
 /**
@@ -126,18 +126,13 @@ function newName(
         continue;
       }
 
-      const read = language.parse(token, {
-        lints: false,
-        mode: "engine",
-        sort,
-      });
-      const key = read.ok ? termKey(language, read.term) : null;
+      const read = readEngine(language, token, sort);
 
-      if (key === null) {
+      if (read === null) {
         break;
       }
 
-      return key;
+      return termKey(language, read);
     }
   }
 
@@ -240,14 +235,13 @@ export function branchQuestions(
       }
     }
 
-    const written = [...bindings]
+    return [...bindings]
       .filter(([meta]) => meta !== patterns.branch)
-      .map(([meta, value]) => {
-        const engine = termKey(language, instantiate(value, renames));
-        return engine === null ? null : `${meta} := $ ${engine} $`;
-      });
-
-    return written.some((each) => each === null) ? null : written.join(", ");
+      .map(
+        ([meta, value]) =>
+          `${meta} := $ ${termKey(language, instantiate(value, renames))} $`,
+      )
+      .join(", ");
   };
 
   // Of each row, that it is developed; of each general row, that it is at

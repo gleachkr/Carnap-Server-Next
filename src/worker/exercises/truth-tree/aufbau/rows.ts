@@ -9,8 +9,9 @@
  * DOM-free and free of i18n.
  */
 
-import type { SurfaceLanguage, Term } from "@aufbau/syntax";
+import type { Scope, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { printTerm, UnprintableTermError } from "@aufbau/syntax";
+import type { TableauRow } from "../../../../tableau/document";
 import type { ParseError } from "../../../exercise-kit/formula";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
 import type { TreeTheory } from "./theory";
@@ -65,24 +66,37 @@ export function rowSortReader(
   };
 }
 
-/** A row's engine text as a reader is shown it, or `null` if it does not read. */
-export function displayRow(
-  engine: string,
+/**
+ * Engine text read at a sort, with a theorem's binders in scope where it is
+ * given; null where it does not read. Without the spec's lints, which are
+ * conventions about what a person may type.
+ */
+export function readEngine(
   language: SurfaceLanguage,
+  text: string,
   sort: string,
-): string | null {
-  const parsed = language.parse(engine, {
+  scope?: Scope,
+): Term | null {
+  const read = language.parse(text.trim(), {
     lints: false,
     mode: "engine",
     sort,
+    ...(scope === undefined ? {} : { scope }),
   });
 
-  if (!parsed.ok) {
-    return null;
-  }
+  return read.ok ? read.term : null;
+}
 
+/**
+ * A term as a reader is shown it; null for what engine text can spell and
+ * display text cannot (an elided term).
+ */
+export function displayText(
+  language: SurfaceLanguage,
+  term: Term,
+): string | null {
   try {
-    return printTerm(language, parsed.term, "display");
+    return printTerm(language, term, "display");
   } catch (error) {
     if (error instanceof UnprintableTermError) {
       return null;
@@ -90,6 +104,33 @@ export function displayRow(
 
     throw error;
   }
+}
+
+/**
+ * Whether a row is the root row the exercise declares: `expected`, read at
+ * the row sort, and citing nothing.
+ */
+export function isDeclaredRoot(
+  reader: RowSortReader,
+  row: TableauRow | undefined,
+  expected: string,
+): boolean {
+  if (row === undefined || row.cites.length > 0) {
+    return false;
+  }
+
+  const read = reader.read(row.text);
+  return read.ok && read.engine === expected;
+}
+
+/** A row's engine text as a reader is shown it, or `null` if it does not read. */
+export function displayRow(
+  engine: string,
+  language: SurfaceLanguage,
+  sort: string,
+): string | null {
+  const term = readEngine(language, engine, sort);
+  return term === null ? null : displayText(language, term);
 }
 
 /**
@@ -113,7 +154,13 @@ export function branchText(
     : rows.map((row) => `(${row})`).join(` ${theory.join} `);
 }
 
-/** Every token of engine text, for finding the names and variables in it. */
+/**
+ * Every token of engine text, for finding the names and variables in it.
+ * Splitting is sound on what the engine printer writes, which sets every
+ * token apart by a space or a bracket (a question's bindings by commas too);
+ * the statements it is asked of are built from printed rows, too many and
+ * too long to read back as terms.
+ */
 export function engineTokens(engine: string): string[] {
   return engine.split(/[\s(),]+/u).filter((token) => token.length > 0);
 }

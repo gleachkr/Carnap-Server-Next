@@ -44,6 +44,38 @@ export interface CompiledExercise {
 }
 
 /**
+ * What an argument line (`premises :|-: conclusions`) says when it does not
+ * read: a second turnstile, or a side the type needs left empty. One wording
+ * for every type that reads one, as the line is one spelling for all of them
+ * (`formula/argument.ts`); which sides a type needs is its own to say.
+ */
+export function tooManyTurnstiles(line: number): CompilerDiagnostic {
+  return diagnostic(
+    line,
+    "multiple_turnstiles",
+    "A validity sequent must contain exactly one ':|-:' turnstile.",
+  );
+}
+
+/** See {@link tooManyTurnstiles}. */
+export function noPremises(line: number): CompilerDiagnostic {
+  return diagnostic(
+    line,
+    "empty_premises",
+    "A validity sequent needs at least one premise before the ':|-:' turnstile.",
+  );
+}
+
+/** See {@link tooManyTurnstiles}. */
+export function noConclusions(line: number): CompilerDiagnostic {
+  return diagnostic(
+    line,
+    "empty_conclusions",
+    "A validity sequent needs at least one conclusion after the ':|-:' turnstile.",
+  );
+}
+
+/**
  * What an exercise ID may be: an HTML id, bounded in length.
  *
  * HTML's own rule is "not empty and no ASCII whitespace", and that is very

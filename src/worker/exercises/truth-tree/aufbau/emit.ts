@@ -59,7 +59,8 @@ import type {
   TableauRow,
 } from "../../../../tableau/document";
 import { TableauIndex } from "../../../../tableau/document";
-import type { Missing } from "../report";
+import { languageRuleReader } from "../../../exercise-kit/proof/formulas";
+import type { EndProblem, Missing, RowProblem } from "../report";
 import type { RulePatterns, TreeDevelopment } from "./criteria";
 import { matchFocus, rulePatterns, templateFor } from "./criteria";
 import type { Question } from "./developed";
@@ -67,11 +68,11 @@ import { branchQuestions } from "./developed";
 import { okAxioms } from "./ok";
 import { closedSubterms, instantiate, termKey } from "./patterns";
 import type { Member, RowSortReader } from "./rows";
-import { branchText, engineTokens, rowSortReader } from "./rows";
+import { branchText, engineTokens, readEngine, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
 
 /** The theorem every emitted proof proves. */
-export const TREE_THEOREM = "tree";
+const TREE_THEOREM = "tree";
 
 /** What a proof line is about, so a diagnostic finds its way back. */
 export type LineSubject =
@@ -109,31 +110,22 @@ export type LineSubject =
       readonly pair?: { readonly key: string; readonly statement: string };
     };
 
-/** Why a step was not written down, and so is not checked. */
-export type EmitProblem =
-  | { readonly type: "no-rule" }
-  | { readonly type: "uncited" }
-  | { readonly type: "cites-differ" }
-  | { readonly type: "cite-unknown" }
-  | { readonly type: "unreadable" }
-  | { readonly type: "split-mixed" }
-  /** A split one of whose branches has no rows. */
-  | { readonly type: "empty-branch" };
-
 export interface TreeProof {
   /** The theorems, to append to the theory. Null if there are none. */
   readonly goal: string | null;
   /** Their proofs. Null with the goal. */
   readonly proof: string | null;
   readonly lines: ReadonlyMap<string, LineSubject>;
-  /** Rows whose step was not written down, and why. */
-  readonly problems: ReadonlyMap<string, EmitProblem>;
-  /** Node ids whose end was not written down. */
-  readonly endProblems: ReadonlyMap<string, EmitProblem>;
+  /**
+   * Rows whose step was not written down, and why; not those whose step has
+   * a row that does not read, or a branch with none, which are reported on
+   * that row and that branch.
+   */
+  readonly problems: ReadonlyMap<string, RowProblem>;
+  /** Node ids whose end was not written down, and why. */
+  readonly endProblems: ReadonlyMap<string, EndProblem>;
   /** How many branches are open: neither closed nor ended by a step. */
   readonly hypotheses: number;
-  /** How many steps or ends were not written down. */
-  readonly gaps: number;
   /** Every step written down, by its `dev`. */
   readonly steps: ReadonlyMap<string, EmittedStep>;
   /**
@@ -172,7 +164,6 @@ function tooBig(oversize: Oversize): TreeProof {
   return {
     developed: null,
     endProblems: new Map(),
-    gaps: 0,
     goal: null,
     hypotheses: 0,
     linked: new Map(),
@@ -264,8 +255,8 @@ export function emitTreeProof(
   const { language, theory } = options;
   const index = new TableauIndex(document);
   const lines = new Map<string, LineSubject>();
-  const problems = new Map<string, EmitProblem>();
-  const endProblems = new Map<string, EmitProblem>();
+  const problems = new Map<string, RowProblem>();
+  const endProblems = new Map<string, EndProblem>();
   const statements: string[] = [];
   const proofs: string[] = [];
   const steps = new Map<string, EmittedStep>();
@@ -273,11 +264,9 @@ export function emitTreeProof(
   const linked = new Map<string, readonly string[]>();
   const pairings = new Map<string, readonly string[]>();
   const reader = options.reader ?? rowSortReader(language, theory.rowSort);
-  const resolve = (name: string): string =>
-    language.spec.ruleAliases.get(name) ?? name;
+  const resolve = languageRuleReader(language);
   const sortOf = new Map<string, string>();
   let counter = 0;
-  let gaps = 0;
   let hypotheses = 0;
   let stated = 0;
   const textCap = options.textCap ?? Number.POSITIVE_INFINITY;
@@ -487,25 +476,19 @@ export function emitTreeProof(
           return;
         }
 
-        const term = language.parse(instance, {
-          lints: false,
-          mode: "engine",
-          sort: slot.sort,
-        });
-        const written = term.ok
-          ? termKey(
-              language,
-              instantiate(
-                templateFor(language, developing, slot, bindings, read.term),
-                new Map([...bindings, [slot.binder, term.term]]),
-              ),
-            )
-          : null;
+        const term = readEngine(language, instance, slot.sort);
 
-        if (written === null) {
+        if (term === null) {
           continue;
         }
 
+        const written = termKey(
+          language,
+          instantiate(
+            templateFor(language, developing, slot, bindings, read.term),
+            new Map([...bindings, [slot.binder, term]]),
+          ),
+        );
         counter += 1;
         const name = `${TREE_THEOREM}_${counter}`;
         const label = `k_${counter}`;
@@ -538,16 +521,14 @@ export function emitTreeProof(
     const rows = groups.flat();
     const ids = rows.map((row) => row.id);
     const first = rows[0];
-    const fail = (problem: EmitProblem): void => {
+    const fail = (problem: RowProblem): void => {
       for (const id of ids) {
         problems.set(id, problem);
       }
-
-      gaps += 1;
     };
 
+    // A branch with no rows is reported on that branch.
     if (first === undefined || groups.some((group) => group.length === 0)) {
-      fail({ type: "empty-branch" });
       return;
     }
 
@@ -573,20 +554,21 @@ export function emitTreeProof(
       return;
     }
 
+    // A row that does not read is reported on that row.
     if (rows.some((row) => engineOf(row) === null)) {
-      fail({ type: "unreadable" });
       return;
     }
 
     const cites = first.cites.map(engineOfId);
+    const unknown = first.cites.find((_, at) => cites[at] === null);
 
-    if (cites.some((cite) => cite === null)) {
-      fail({ type: "cite-unknown" });
+    if (unknown !== undefined) {
+      fail({ cite: unknown, type: "cite-not-above" });
       return;
     }
 
     if (rule.length === 0) {
-      fail({ type: "no-rule" });
+      fail({ type: "no-rule-named" });
       return;
     }
 
@@ -702,14 +684,12 @@ export function emitTreeProof(
     const cites = node.end.cites.map(engineOfId);
 
     if (cites.length === 0) {
-      endProblems.set(node.id, { type: "uncited" });
-      gaps += 1;
+      endProblems.set(node.id, { type: "closure-uncited" });
       return;
     }
 
     if (cites.some((cite) => cite === null)) {
-      endProblems.set(node.id, { type: "cite-unknown" });
-      gaps += 1;
+      endProblems.set(node.id, { type: "closure-cite-off-branch" });
       return;
     }
 
@@ -759,7 +739,6 @@ export function emitTreeProof(
   const nothing = (count: number): TreeProof => ({
     developed: null,
     endProblems,
-    gaps,
     goal: null,
     hypotheses: count,
     linked,
@@ -804,7 +783,6 @@ export function emitTreeProof(
   return {
     developed: ok === null ? null : asked,
     endProblems,
-    gaps,
     // The axioms saying when a row is developed come first, where a theorem
     // asks whether one is.
     goal: [

@@ -1,6 +1,7 @@
 /**
- * Stored truth-tree data turned back into something the checker can judge,
- * and the judgement itself: the tree's report, and what the tree shows.
+ * Stored truth-tree data resolved into what a tree is judged against (its
+ * language, theory and root), and the judgement itself: the tree's report,
+ * and what the tree shows.
  *
  * The tree's steps and closures are the engine's to check (gh #46): the
  * caller hands over what it has said, the browser's compile or the server's
@@ -26,7 +27,7 @@ import { emitTreeProof } from "./aufbau/emit";
 import type { EngineFailure, TreeEvidence } from "./aufbau/judge";
 import { judgeTreeProof } from "./aufbau/judge";
 import type { RowSortReader } from "./aufbau/rows";
-import { displayRow, rowSortReader } from "./aufbau/rows";
+import { displayRow, isDeclaredRoot, rowSortReader } from "./aufbau/rows";
 import type { TreeTheory } from "./aufbau/theory";
 import { isTreeTheory, readTreeTheory } from "./aufbau/theory";
 import type { TreeProblem, TreeReport } from "./report";
@@ -97,7 +98,6 @@ export function isTruthTreePublicData(
       data.finish === "complete" ||
       data.finish === "one-open") &&
     isStringArray(data.root) &&
-    typeof data.premises === "number" &&
     (data.source === undefined || typeof data.source === "string") &&
     (data.mm0 === undefined || typeof data.mm0 === "string")
   );
@@ -268,14 +268,14 @@ export function answerRules(
 }
 
 /** The instance each row was written with, by row id. */
-export function answerInstances(
+function answerInstances(
   answer: TruthTreeAnswerData,
 ): ReadonlyMap<string, string> {
   return new Map(Object.entries(answer.instances ?? {}));
 }
 
 /** The statement each paired row is developed by, by its `pairingKey`. */
-export function answerDirections(
+function answerDirections(
   answer: TruthTreeAnswerData,
 ): ReadonlyMap<string, string> {
   return new Map(Object.entries(answer.directions ?? {}));
@@ -372,16 +372,13 @@ export function startsFromRoot(
 ): boolean {
   const rows = tree.nodes[0]?.rows ?? [];
 
-  return resolved.root.every((expected, at) => {
-    const text = rows[at]?.text;
-    const read = text === undefined ? null : resolved.reader.read(text);
-
-    return read?.ok === true && read.engine === expected;
-  });
+  return resolved.root.every((expected, at) =>
+    isDeclaredRoot(resolved.reader, rows[at], expected),
+  );
 }
 
 /** What a done tree shows, in the task's own terms. */
-export function treeVerdict(
+function treeVerdict(
   task: TruthTreeTask,
   report: TreeReport,
 ): TruthTreeVerdict | null {

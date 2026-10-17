@@ -57,7 +57,7 @@ const TRUTH_TREE_REVIEW_STYLES = [
  * `rules` are the rules its steps name; `report` is the tree's own, when the
  * caller has already checked it.
  */
-export function treeHtml(
+function treeHtml(
   tree: TableauDocument,
   resolved: ResolvedTree,
   words: TreeWords,

@@ -10,10 +10,12 @@ import {
   COMMON_EXERCISE_ATTRIBUTES,
   type CompiledExercise,
   type DirectiveBlock,
+  noConclusions,
   parseExamAttribute,
   parsePoints,
   reconcileFeedback,
   requireAttribute,
+  tooManyTurnstiles,
   validateAttributes,
   validateExerciseId,
 } from "../../exercise-kit/authoring";
@@ -584,34 +586,16 @@ export async function compileTruthTree(
     task = "validity";
 
     for (const extra of body.arguments.slice(1)) {
-      diagnostics.push(
-        diagnostic(
-          extra.line,
-          "multiple_turnstiles",
-          "A validity sequent must contain exactly one ':|-:' turnstile.",
-        ),
-      );
+      diagnostics.push(tooManyTurnstiles(extra.line));
     }
 
     const first = body.arguments[0] as Located;
     const argument = splitArgumentLine(first.text);
 
     if (argument === null) {
-      diagnostics.push(
-        diagnostic(
-          first.line,
-          "multiple_turnstiles",
-          "A validity sequent must contain exactly one ':|-:' turnstile.",
-        ),
-      );
+      diagnostics.push(tooManyTurnstiles(first.line));
     } else if (argument.conclusions.length === 0) {
-      diagnostics.push(
-        diagnostic(
-          first.line,
-          "empty_conclusions",
-          "A validity sequent needs at least one conclusion after the ':|-:' turnstile.",
-        ),
-      );
+      diagnostics.push(noConclusions(first.line));
     } else if (argument.conclusions.length > 1) {
       diagnostics.push(
         diagnostic(
@@ -721,7 +705,6 @@ export async function compileTruthTree(
   const publicData: TruthTreePublicData = {
     // Stored only where it is not the default.
     ...(finish === "closed" ? {} : { finish }),
-    premises: premises.length,
     promptHtml: await renderMarkdownSource(body.promptLines.join("\n"), {
       ...renderOptions,
       lineOffset: block.bodyStartLine - 1,

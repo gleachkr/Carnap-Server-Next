@@ -33,8 +33,11 @@
  */
 
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
-import { printTerm, UnprintableTermError } from "@aufbau/syntax";
+import { printTerm } from "@aufbau/syntax";
+import { binderScope } from "../../../exercise-kit/proof/formulas";
+import { acuiOf } from "../../../logic/specs/annotations";
 import { roleIndex } from "../../../logic/specs/roles";
+import { readEngine } from "./rows";
 
 /** What each metavariable of a pattern stands for. */
 export type Bindings = ReadonlyMap<string, Term>;
@@ -60,26 +63,9 @@ function listsOf(language: SurfaceLanguage): ReadonlyMap<string, List> {
   if (lists === undefined) {
     const found = new Map<string, List>();
 
-    for (const statement of language.spec.statements) {
-      if (statement.kind !== "term") {
-        continue;
-      }
-
-      for (const annotation of statement.annotations) {
-        const [head, , comm, unit, idem] = annotation.text
-          .trim()
-          .split(/\s+/u);
-        const sort = language.spec.terms.get(statement.name)?.returnSort;
-
-        if (
-          head === "@acui" &&
-          comm === "_" &&
-          idem === "_" &&
-          unit !== undefined &&
-          sort !== undefined
-        ) {
-          found.set(sort, { term: statement.name, unit });
-        }
+    for (const acui of acuiOf(language).values()) {
+      if (acui.comm === null && acui.idem === null && acui.unit !== null) {
+        found.set(acui.sort, { term: acui.term, unit: acui.unit });
       }
     }
 
@@ -449,7 +435,7 @@ function matchSubstitution(
       ? coerced(language, variable, value.sort)
       : null;
 
-  if (key === null || occurrence === null) {
+  if (occurrence === null) {
     return null;
   }
 
@@ -490,7 +476,7 @@ function matchFilled(
 
     if (!occursFree(left, name)) {
       const key = termKey(language, left);
-      return key !== null && key === termKey(language, right) ? sofar : null;
+      return key === termKey(language, right) ? sofar : null;
     }
 
     if (
@@ -524,46 +510,16 @@ export function statementReader(
   statement: AssertStatement,
   sort: string,
 ): (text: string) => Term | null {
-  const scope = new Map<string, string>();
-
-  for (const binder of statement.binders) {
-    if ("sort" in binder.type) {
-      scope.set(binder.name, binder.type.sort);
-    }
-  }
-
-  return (text) => {
-    try {
-      const read = language.parse(text.trim(), {
-        lints: false,
-        mode: "engine",
-        scope,
-        sort,
-      });
-      return read.ok ? read.term : null;
-    } catch {
-      return null;
-    }
-  };
+  const scope = binderScope(statement);
+  return (text) => readEngine(language, text, sort, scope);
 }
 
 /**
  * A term's engine text: one canonical spelling, for identity, with each list
  * in it flattened.
  */
-export function termKey(
-  language: SurfaceLanguage,
-  term: Term,
-): string | null {
-  try {
-    return printTerm(language, normal(language, term), "engine");
-  } catch (error) {
-    if (error instanceof UnprintableTermError) {
-      return null;
-    }
-
-    throw error;
-  }
+export function termKey(language: SurfaceLanguage, term: Term): string {
+  return printTerm(language, normal(language, term), "engine");
 }
 
 /**
@@ -616,7 +572,7 @@ export function* matchAll(
 
     const key = termKey(language, bound);
 
-    if (key !== null && key === termKey(language, term)) {
+    if (key === termKey(language, term)) {
       yield bindings;
     }
 
@@ -729,7 +685,7 @@ function* matchList(
   metas: Metas,
   bindings: Bindings,
 ): Generator<Bindings> {
-  const key = (term: Term): string | null => termKey(language, term);
+  const key = (term: Term): string => termKey(language, term);
   const from = function* (
     at: number,
     taken: number,
@@ -850,7 +806,7 @@ export function closedSubterms(
   const add = (node: Term): void => {
     const key = termKey(language, node);
 
-    if (key !== null && !found.includes(key)) {
+    if (!found.includes(key)) {
       found.push(key);
     }
   };

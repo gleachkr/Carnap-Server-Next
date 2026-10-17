@@ -496,11 +496,14 @@ export function proofRuleReader(
   const read =
     source === null || source === undefined ? null : proofLanguage(source);
 
-  if (read === null) {
-    return ENGINE_RULE;
-  }
+  return read === null ? ENGINE_RULE : languageRuleReader(read.language);
+}
 
-  const aliases = read.language.spec.ruleAliases;
+/** {@link proofRuleReader} for a language already read. */
+export function languageRuleReader(
+  language: SurfaceLanguage,
+): ProofRuleReader {
+  const aliases = language.spec.ruleAliases;
 
   return (cited) => aliases.get(cited) ?? cited;
 }
@@ -811,11 +814,14 @@ export function goalBinderScope(
   return goal === null ? new Map() : binderScope(goal);
 }
 
-/** A goal's own binders, name to sort; a hypothesis binder binds no name. */
-function binderScope(goal: AssertStatement): Scope {
+/**
+ * A statement's own binders, name to sort, which its formulas read in; a
+ * hypothesis binder binds no name.
+ */
+export function binderScope(statement: AssertStatement): Scope {
   const scope = new Map<string, string>();
 
-  for (const binder of goal.binders) {
+  for (const binder of statement.binders) {
     if ("sort" in binder.type) {
       scope.set(binder.name, binder.type.sort);
     }

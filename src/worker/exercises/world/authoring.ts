@@ -10,10 +10,12 @@ import {
   COMMON_EXERCISE_ATTRIBUTES,
   type CompiledExercise,
   type DirectiveBlock,
+  noConclusions,
   parseExamAttribute,
   parsePoints,
   reconcileFeedback,
   requireAttribute,
+  tooManyTurnstiles,
   validateAttributes,
   validateExerciseId,
 } from "../../exercise-kit/authoring";
@@ -273,13 +275,7 @@ function parseBody(
           text: line.replace(/^\s*-\s+/, ""),
         };
       } else {
-        diagnostics.push(
-          diagnostic(
-            lineNumber,
-            "multiple_turnstiles",
-            "A validity sequent must contain exactly one ':|-:' turnstile.",
-          ),
-        );
+        diagnostics.push(tooManyTurnstiles(lineNumber));
       }
 
       continue;
@@ -884,13 +880,7 @@ export async function compileWorld(
       const argument = splitArgumentLine(body.sequent.text);
 
       if (argument === null) {
-        diagnostics.push(
-          diagnostic(
-            body.sequent.line,
-            "multiple_turnstiles",
-            "A validity sequent must contain exactly one ':|-:' turnstile.",
-          ),
-        );
+        diagnostics.push(tooManyTurnstiles(body.sequent.line));
       }
 
       const side = (pieces: readonly string[], target: boolean): void => {
@@ -913,13 +903,7 @@ export async function compileWorld(
       side(argument?.conclusions ?? [], false);
 
       if (argument !== null && sentences.length === before) {
-        diagnostics.push(
-          diagnostic(
-            body.sequent.line,
-            "empty_conclusions",
-            "A validity sequent needs at least one conclusion after the ':|-:' turnstile.",
-          ),
-        );
+        diagnostics.push(noConclusions(body.sequent.line));
       }
     }
   } else {

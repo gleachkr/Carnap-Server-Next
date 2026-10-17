@@ -16,6 +16,7 @@ import {
   isTreeTheory,
   readTreeTheory,
 } from "../src/worker/exercises/truth-tree/aufbau/theory";
+import type { RowProblem } from "../src/worker/exercises/truth-tree/report";
 import {
   LANGUAGE_SPEC_SOURCES,
   languageFromSource,
@@ -149,7 +150,8 @@ interface Checked {
   readonly ok: boolean;
   readonly verified: boolean;
   readonly hypotheses: number;
-  readonly gaps: number;
+  /** The rows whose step was not written down, and why. */
+  readonly problems: ReadonlyMap<string, RowProblem>;
   readonly errors: readonly TreeDiagnostic[];
   readonly milliseconds: number;
   /** The proof text, and its certificate's size in bytes (0 if none). */
@@ -183,7 +185,7 @@ async function check(root: Shape, system = UBC): Promise<Checked> {
 
   return {
     errors: readTreeDiagnostics(result.diagnostics, proof),
-    gaps: proof.gaps,
+    problems: proof.problems,
     hypotheses: proof.hypotheses,
     milliseconds,
     mmbBytes: result.ok ? (result.mmbBytes?.length ?? 0) : 0,
@@ -325,7 +327,10 @@ describe("a sentential tree", () => {
       ),
     });
     expect(where(checked.errors)).toEqual(["closure n1"]);
-    expect(checked.gaps).toBe(1);
+    expect([...checked.problems]).toEqual([
+      ["4", { type: "no-rule-named" }],
+      ["5", { type: "no-rule-named" }],
+    ]);
     expect(checked.hypotheses).toBe(0);
   });
 

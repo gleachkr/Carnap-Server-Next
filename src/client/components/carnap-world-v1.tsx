@@ -66,6 +66,7 @@ import type {
   WorldPublicData,
 } from "../../worker/exercises/world/types";
 import { describeWorldVerdict } from "../../worker/exercises/world/verdict-text";
+import { mountActionButton } from "./action-bar";
 import { CarnapExerciseElement, register } from "./base";
 import islandStyles from "./carnap-world-v1.css" with { type: "text" };
 import { isAuthorPreview, mountCopySource } from "./copy-source";
@@ -1343,20 +1344,8 @@ class CarnapWorld extends CarnapExerciseElement<WorldStringId> {
       return;
     }
 
-    const bar = this.querySelector<HTMLElement>(".exercise-actions");
-
-    if (bar === null) {
-      return;
-    }
-
-    const check = document.createElement("button");
-    check.type = "button";
-    check.className = "world-check";
-    check.textContent = this.t("Check");
-    check.addEventListener("click", () => this.runCheck());
-    bar.insertBefore(
-      check,
-      bar.querySelector<HTMLElement>('button[type="submit"]'),
+    mountActionButton(this, "world-check", this.t("Check"), () =>
+      this.runCheck(),
     );
   }
 

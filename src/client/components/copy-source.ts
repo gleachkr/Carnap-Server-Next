@@ -17,6 +17,8 @@
  * and so never uses.
  */
 
+import { mountActionButton } from "./action-bar";
+
 /** Whether `host` is being edited in the revision editor's live preview. */
 export function isAuthorPreview(host: HTMLElement): boolean {
   return (
@@ -35,18 +37,15 @@ export function mountCopySource(
   strings: { readonly copied: string; readonly label: string },
   source: () => string | null,
 ): HTMLButtonElement | null {
-  const bar = host.querySelector<HTMLElement>(".exercise-actions");
-
-  if (bar === null || !isAuthorPreview(host)) {
+  if (!isAuthorPreview(host)) {
     return null;
   }
 
-  const status = bar.querySelector<HTMLElement>("[data-exercise-status]");
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "copy-source";
-  button.textContent = strings.label;
-  button.addEventListener("click", () => {
+  const status = host.querySelector<HTMLElement>(
+    ".exercise-actions [data-exercise-status]",
+  );
+
+  return mountActionButton(host, "copy-source", strings.label, () => {
     const text = source();
 
     if (text === null) {
@@ -67,10 +66,4 @@ export function mountCopySource(
       () => undefined,
     );
   });
-  bar.insertBefore(
-    button,
-    bar.querySelector<HTMLElement>('button[type="submit"]'),
-  );
-
-  return button;
 }

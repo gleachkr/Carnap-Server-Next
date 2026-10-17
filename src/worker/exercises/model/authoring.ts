@@ -10,11 +10,14 @@ import {
   COMMON_EXERCISE_ATTRIBUTES,
   type CompiledExercise,
   type DirectiveBlock,
+  noConclusions,
+  noPremises,
   parseBooleanAttribute,
   parseExamAttribute,
   parsePoints,
   reconcileFeedback,
   requireAttribute,
+  tooManyTurnstiles,
   validateAttributes,
   validateExerciseId,
 } from "../../exercise-kit/authoring";
@@ -403,13 +406,7 @@ function parseValidityBody(
   const argument = splitArgumentLine(sequent.text);
 
   if (argument === null || extraTurnstile) {
-    diagnostics.push(
-      diagnostic(
-        sequent.line,
-        "multiple_turnstiles",
-        "A validity sequent must contain exactly one ':|-:' turnstile.",
-      ),
-    );
+    diagnostics.push(tooManyTurnstiles(sequent.line));
 
     return { givenLines, promptLines, required: [], targeted: [] };
   }
@@ -428,23 +425,11 @@ function parseValidityBody(
   );
 
   if (required.length === 0) {
-    diagnostics.push(
-      diagnostic(
-        sequent.line,
-        "empty_premises",
-        "A validity sequent needs at least one premise before the ':|-:' turnstile.",
-      ),
-    );
+    diagnostics.push(noPremises(sequent.line));
   }
 
   if (targeted.length === 0) {
-    diagnostics.push(
-      diagnostic(
-        sequent.line,
-        "empty_conclusions",
-        "A validity sequent needs at least one conclusion after the ':|-:' turnstile.",
-      ),
-    );
+    diagnostics.push(noConclusions(sequent.line));
   }
 
   return { givenLines, promptLines, required, targeted };

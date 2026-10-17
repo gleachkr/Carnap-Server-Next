@@ -31,7 +31,7 @@
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { printTerm } from "@aufbau/syntax";
 import { roleIndex } from "../../logic/specs/roles";
-import { theoryLanguage } from "./formulas";
+import { binderScope, theoryLanguage } from "./formulas";
 
 /** One formula a sequent's context assumes. */
 export interface RuleAssumption {
@@ -158,14 +158,7 @@ function readSignature(
   statement: AssertStatement,
   reading: SequentReading,
 ): RuleSignature | null {
-  const scope = new Map<string, string>();
-
-  for (const binder of statement.binders) {
-    if ("sort" in binder.type) {
-      scope.set(binder.name, binder.type.sort);
-    }
-  }
-
+  const scope = binderScope(statement);
   const conclusion = readSequent(statement.conclusion.text, scope, reading);
 
   if (conclusion === null) {

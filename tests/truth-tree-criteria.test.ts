@@ -357,6 +357,29 @@ describe("a step writes what its rule does", () => {
   });
 });
 
+describe("a citation not above its row", () => {
+  test("names the row that is not, not the first one cited", async () => {
+    const { item, resolved } = await consistency("a=b", "Fa → Ga");
+    const t = new TreeBuilder(resolved.rootText);
+    const {
+      nodes: [left],
+      rows: [, [ga]],
+    } = t.split(t.rootNode, "r2", [["¬Fa"], ["Ga"]], "→");
+    const [gb] = t.stack(left, ["r1", ga as string], ["Gb"], "=");
+    const rows = judgeAsBrowser(
+      await engine(),
+      resolved,
+      (item.publicData as unknown as TruthTreePublicData).mm0 as string,
+      t.answer(),
+    ).rows;
+
+    expect(rows.get(gb as string)).toEqual({
+      cite: ga as string,
+      type: "cite-not-above",
+    });
+  });
+});
+
 describe("a row used once", () => {
   test("takes ✓ with the name an existential step introduced", async () => {
     const { item, resolved } = await consistency("∃x Fx", "∀x ¬Gx");

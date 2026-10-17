@@ -61,7 +61,10 @@ import type { TableauLayout } from "../../tableau/layout";
 import { layoutTableau, rowAtLine } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
-import { treeAnnotations } from "../../worker/exercises/truth-tree/annotations";
+import {
+  isRootRow,
+  treeAnnotations,
+} from "../../worker/exercises/truth-tree/annotations";
 import {
   askingProofOf,
   readAsked,
@@ -97,12 +100,16 @@ import type {
 } from "../../worker/exercises/truth-tree/types";
 import type { TreeWords } from "../../worker/exercises/truth-tree/verdict-text";
 import {
+  atBranchEnd,
+  atRow,
   describeEndProblem,
   describeJudgement,
   describeRowProblem,
   engineFailureText,
+  layoutNumbers,
 } from "../../worker/exercises/truth-tree/verdict-text";
 import { TableauView } from "../tableau/view";
+import { mountActionButton } from "./action-bar";
 import { register } from "./base";
 import islandStyles from "./carnap-truth-tree-v1.css" with { type: "text" };
 import {
@@ -755,20 +762,8 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
       return;
     }
 
-    const bar = this.querySelector<HTMLElement>(".exercise-actions");
-
-    if (bar === null) {
-      return;
-    }
-
-    const check = document.createElement("button");
-    check.type = "button";
-    check.className = "truth-tree-check";
-    check.textContent = this.t("Check");
-    check.addEventListener("click", () => this.runCheck());
-    bar.insertBefore(
-      check,
-      bar.querySelector<HTMLElement>('button[type="submit"]'),
+    mountActionButton(this, "truth-tree-check", this.t("Check"), () =>
+      this.runCheck(),
     );
   }
 
@@ -907,18 +902,11 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   }
 
   private number(rowId: string, layout = this.layout): string {
-    const line = layout.rows.get(rowId)?.line;
-    return line === undefined ? "?" : String(line);
+    return layoutNumbers(layout)(rowId);
   }
 
   private isRootRow(rowId: string): boolean {
-    const location = this.index.row(rowId);
-
-    return (
-      location !== null &&
-      location.node.parent === null &&
-      location.index < (this.resolved?.root.length ?? 0)
-    );
+    return isRootRow(this.index, rowId, this.resolved?.root.length ?? 0);
   }
 
   /** Whether an id names a branch's end mark: its node's, with an end. */
@@ -2188,6 +2176,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     layout: TableauLayout,
   ): string | null {
     const index = this.index;
+    const number = layoutNumbers(layout);
     const location = this.cursor === null ? null : index.row(this.cursor);
 
     if (location === null) {
@@ -2200,19 +2189,13 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
       return endNote === undefined || last === undefined
         ? null
-        : this.t("The branch ending at row {row}: {problem}", {
-            problem: endNote,
-            row: this.number(last.id, layout),
-          });
+        : atBranchEnd(endNote, last.id, this.words, number);
     }
 
     const rowNote = notes.get(location.row.id);
 
     if (rowNote !== undefined) {
-      return this.t("Row {row}: {problem}", {
-        problem: rowNote,
-        row: this.number(location.row.id, layout),
-      });
+      return atRow(rowNote, location.row.id, this.words, number);
     }
 
     const endNote = notes.get(location.node.id);
@@ -2220,10 +2203,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     return endNote === undefined || last === undefined
       ? null
-      : this.t("The branch ending at row {row}: {problem}", {
-          problem: endNote,
-          row: this.number(last.id, layout),
-        });
+      : atBranchEnd(endNote, last.id, this.words, number);
   }
 
   private view(

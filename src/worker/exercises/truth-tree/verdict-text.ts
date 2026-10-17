@@ -10,6 +10,7 @@
 
 import type { TableauDocument } from "../../../tableau/document";
 import { TableauIndex } from "../../../tableau/document";
+import type { TableauLayout } from "../../../tableau/layout";
 import { layoutTableau } from "../../../tableau/layout";
 import type { MessageResolver } from "../../i18n/translator";
 import type { EngineFailure } from "./aufbau/judge";
@@ -22,14 +23,43 @@ export type TreeWords = MessageResolver;
 /** A row's number as a reader sees it, or `?` for a row that is not there. */
 export type RowNumber = (rowId: string) => string;
 
-/** The row numbers of a tree, from its layout. */
-export function rowNumbers(tree: TableauDocument): RowNumber {
-  const layout = layoutTableau(tree);
-
+/** The row numbers a layout gives. */
+export function layoutNumbers(layout: TableauLayout): RowNumber {
   return (rowId) => {
     const line = layout.rows.get(rowId)?.line;
     return line === undefined ? "?" : String(line);
   };
+}
+
+/** The row numbers of a tree, from its layout. */
+function rowNumbers(tree: TableauDocument): RowNumber {
+  return layoutNumbers(layoutTableau(tree));
+}
+
+/** A row's note, said of that row: "Row 4: …". */
+export function atRow(
+  note: string,
+  rowId: string,
+  words: TreeWords,
+  number: RowNumber,
+): string {
+  return words("Row {row}: {problem}", { problem: note, row: number(rowId) });
+}
+
+/**
+ * A branch end's note, said of its branch by the row it ends at: "The branch
+ * ending at row 7: …".
+ */
+export function atBranchEnd(
+  note: string,
+  lastRowId: string | undefined,
+  words: TreeWords,
+  number: RowNumber,
+): string {
+  return words("The branch ending at row {row}: {problem}", {
+    problem: note,
+    row: lastRowId === undefined ? "?" : number(lastRowId),
+  });
 }
 
 /** What is wrong with a row, said of that row; `cites` is its citation. */
@@ -165,7 +195,7 @@ export function describeEndProblem(
 }
 
 /** A problem with where it is: "Row 4: …", "The branch ending at row 7: …". */
-export function describeTreeProblem(
+function describeTreeProblem(
   problem: TreeProblem,
   tree: TableauDocument,
   words: TreeWords,
@@ -195,19 +225,22 @@ export function describeTreeProblem(
   if (at.type === "row") {
     const cites = index.row(at.id)?.row.cites ?? [];
 
-    return words("Row {row}: {problem}", {
-      problem: describeRowProblem(at.problem, cites, words, number),
-      row: number(at.id),
-    });
+    return atRow(
+      describeRowProblem(at.problem, cites, words, number),
+      at.id,
+      words,
+      number,
+    );
   }
 
   const rows = index.branchRows(at.id);
-  const last = rows[rows.length - 1];
 
-  return words("The branch ending at row {row}: {problem}", {
-    problem: describeEndProblem(at.problem, words, number),
-    row: last === undefined ? "?" : number(last.id),
-  });
+  return atBranchEnd(
+    describeEndProblem(at.problem, words, number),
+    rows[rows.length - 1]?.id,
+    words,
+    number,
+  );
 }
 
 function rightVerdict(verdict: TruthTreeVerdict, words: TreeWords): string {
