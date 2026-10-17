@@ -1462,19 +1462,30 @@ revision, and an instructor's assignment page checks the revision the
 assignment uses; either page explains the warning. A theory counts as
 changed in these cases:
 
-- **A built-in**, when the file this site ships no longer matches
-  the recorded hash. Save the lesson again, with the same source if nothing
-  else changed, to build a revision on the current file. A revision's content
-  hash covers the theories it read, so this save is not refused as a
-  duplicate.
+- **A built-in**, when the file this site ships differs from the one the
+  revision read in more than its `--` comments and layout. `--|` lines are
+  annotations the language and the engine read, so they count. Save the
+  lesson again, with the same source if nothing else changed, to build a
+  revision on the current file. A revision's content hash covers the theories
+  it read, so this save is not refused as a duplicate.
 - **A hosted theory**, when its item has a later revision with
   different text that the reader may read. The warning gives that revision's
   address; point the block's `src` at it and save. A later revision the
   reader may not read is not mentioned.
 
 An assignment then takes up the new lesson revision through a correction,
-which records the change and refreshes scores. Revisions saved before
-origins were recorded give no warning.
+which records the change and refreshes scores. The assignment page says which
+step is left: when the lesson's latest revision already reads the current
+text, the assignment only needs pointing at it, and saving the lesson again
+would be refused as a duplicate of that revision. Only the lesson's owner can
+save it or point an assignment at one of its revisions, so another instructor
+on the course is told so instead.
+
+Revisions saved before origins were recorded give no warning. The first save
+of such a lesson makes a new revision even when nothing has changed, because
+its content hash now covers the theories it read. A built-in recorded before
+comments were left out of its hash reads as changed once, until the lesson is
+saved again.
 
 ### Extending a theory, and writing one
 
@@ -2274,6 +2285,12 @@ A new source profile would use a name such as `carnap-markdown-v2`.
 Assignments depend on pinned revision IDs and stored manifests, not mutable
 drafts. Stored systems preserve the theory source used when the lesson was
 compiled, rather than resolving a newer built-in at grading time.
+
+The built-in `forallx-calgary-2019` was renamed `forallx-calgary`, with no
+alias. A draft naming the old id, or `/theories/forallx-calgary-2019.mm0`,
+must be changed before it is saved again. Lessons compiled before formula
+exercises took `system=` stored the old id as their dialect, and their model
+and translation exercises no longer grade.
 
 The old `carnap-` prefix on the original exercise directive names is no longer
 accepted. For example, change `carnap-truth-table` to `truth-table` before

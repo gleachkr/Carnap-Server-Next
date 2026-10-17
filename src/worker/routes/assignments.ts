@@ -1722,10 +1722,9 @@ async function instructorDetailPage(
     // Asked of the revision row, not the artifact, so it answers even when
     // the artifact will not read — on the page whose correction form is how
     // that gets repaired.
-    outdatedTheories: await contentService(context).outdatedTheories(
-      actor,
-      detail.contentRevision.systemOrigins,
-    ),
+    outdatedTheories: await contentService(
+      context,
+    ).outdatedTheoriesForAssignment(actor, detail.contentRevision),
     overrides,
     revisions,
     students,

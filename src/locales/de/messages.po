@@ -5592,8 +5592,24 @@ msgid "This assignment is not accepting new attempts."
 msgstr "Diese Aufgabe nimmt keine neuen Versuche an."
 
 #: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. Only the lesson's author can move it onto the new one."
+msgstr "Die Revision dieser Aufgabe wurde mit {src} erstellt, und diese Theorie hat eine neuere Revision unter {current}. Nur die Autorin oder der Autor der Lektion kann die Aufgabe auf die neue umstellen."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. The lesson's latest revision no longer uses {src}: point this assignment at it."
+msgstr "Die Revision dieser Aufgabe wurde mit {src} erstellt, und diese Theorie hat eine neuere Revision unter {current}. Die neueste Revision der Lektion verwendet {src} nicht mehr: Verweisen Sie diese Aufgabe auf sie."
+
+#: src/worker/web/revisions.ts
 msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision."
 msgstr "Die Revision dieser Aufgabe wurde mit {src} erstellt, und diese Theorie hat eine neuere Revision unter {current}. Um sie zu verwenden, ändern Sie src in der Lektion auf die neue Adresse, speichern Sie die Lektion und verweisen Sie diese Aufgabe auf die neue Revision."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. Only the lesson's author can move it onto the current one."
+msgstr "Die Revision dieser Aufgabe wurde mit einer älteren Version von {src} erstellt. Nur die Autorin oder der Autor der Lektion kann die Aufgabe auf die aktuelle umstellen."
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. The lesson's latest revision is built on the current one: point this assignment at it."
+msgstr "Die Revision dieser Aufgabe wurde mit einer älteren Version von {src} erstellt. Die neueste Revision der Lektion ist mit der aktuellen erstellt: Verweisen Sie diese Aufgabe auf sie."
 
 #: src/worker/web/revisions.ts
 msgid "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision."

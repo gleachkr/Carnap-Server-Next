@@ -185,6 +185,20 @@ export interface OutdatedTheory {
 }
 
 /**
+ * An outdated theory under an assignment, with what this actor can do about
+ * it. Only a lesson's owner can save it or point an assignment at one of its
+ * revisions, and the lesson may already have a revision that takes the change
+ * up — which a save would then be refused as a duplicate of.
+ *
+ * - `repoint`: the lesson's latest revision no longer reads the old text.
+ * - `resave`: no revision does yet; saving the lesson again makes one.
+ * - `author`: someone else's lesson, so its owner is the one to do either.
+ */
+export interface AssignmentOutdatedTheory extends OutdatedTheory {
+  readonly remedy: "author" | "repoint" | "resave";
+}
+
+/**
  * Whether this actor may read this revision — the one place the scope is
  * interpreted, so that the revision page, the document, the source download,
  * the theory route and the compiler's resolver cannot come to disagree about
@@ -562,6 +576,48 @@ export class ContentService {
     origins: CompiledSystemOrigins,
   ): Promise<readonly OutdatedTheory[]> {
     return (await this.outdatedTheoriesOf(actor, [origins]))[0] ?? [];
+  }
+
+  /**
+   * The theories an assignment's revision froze that have changed since,
+   * each with what this actor can do about it. Asks of the lesson's latest
+   * revision only when the assignment's revision is outdated and the actor
+   * owns the lesson, so the usual page pays nothing more.
+   */
+  async outdatedTheoriesForAssignment(
+    actor: AuthenticatedActor,
+    revision: Pick<ContentRevisionSummary, "id" | "itemId" | "systemOrigins">,
+  ): Promise<readonly AssignmentOutdatedTheory[]> {
+    const outdated = await this.outdatedTheories(
+      actor,
+      revision.systemOrigins,
+    );
+
+    if (outdated.length === 0) {
+      return [];
+    }
+
+    const store = this.options.stores.content;
+    const item = await store.getItem(revision.itemId);
+
+    if (item === null || !ownsItem(item, actor)) {
+      return outdated.map((theory) => ({ ...theory, remedy: "author" }));
+    }
+
+    const [latest] = await store.latestRevisionsForItems([item.id]);
+    const stillOutdated =
+      latest === undefined || latest.id === revision.id
+        ? outdated
+        : await this.outdatedTheories(actor, latest.systemOrigins);
+
+    // Taken up when the latest revision no longer reads the old text: a
+    // built-in at its current hash, a hosted theory at its newer address.
+    return outdated.map((theory) => ({
+      ...theory,
+      remedy: stillOutdated.some((one) => one.src === theory.src)
+        ? "resave"
+        : "repoint",
+    }));
   }
 
   /**

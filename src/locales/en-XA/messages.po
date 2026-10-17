@@ -5592,7 +5592,23 @@ msgid "This assignment is not accepting new attempts."
 msgstr ""
 
 #: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. Only the lesson's author can move it onto the new one."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. The lesson's latest revision no longer uses {src}: point this assignment at it."
+msgstr ""
+
+#: src/worker/web/revisions.ts
 msgid "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. Only the lesson's author can move it onto the current one."
+msgstr ""
+
+#: src/worker/web/revisions.ts
+msgid "This assignment's revision was built on an older version of {src}. The lesson's latest revision is built on the current one: point this assignment at it."
 msgstr ""
 
 #: src/worker/web/revisions.ts

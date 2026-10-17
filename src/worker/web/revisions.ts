@@ -1,4 +1,7 @@
-import type { OutdatedTheory } from "../application/content";
+import type {
+  AssignmentOutdatedTheory,
+  OutdatedTheory,
+} from "../application/content";
 import type { ContentRevision } from "../domain/content";
 import type { Translator } from "../i18n/translator";
 import { utcTimestampText } from "./timestamp-formats";
@@ -94,38 +97,73 @@ export function revisionOptionLabel(
 }
 
 /**
- * Why a revision's theory is out of date, and what to do about it — on the
- * content item's page, of its latest revision, and on an assignment's, of the
- * revision it publishes. A built-in changed in place, so the same lesson saved
+ * Why a content item's latest revision is built on an outdated theory, and
+ * what to do about it. A built-in changed in place, so the same lesson saved
  * again takes the change up; a hosted theory's newer text is at another
  * address, so the lesson's `src=` has to be pointed there first.
  */
 export function outdatedTheoryText(
   i18n: Translator,
   theory: OutdatedTheory,
-  page: "assignment" | "item",
+): string {
+  return theory.current === theory.src
+    ? i18n.t(
+        "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one.",
+        { src: theory.src },
+      )
+    : i18n.t(
+        "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision.",
+        { current: theory.current, src: theory.src },
+      );
+}
+
+/**
+ * The same for the revision an assignment publishes, with the remedy this
+ * reader has: the lesson may already have a revision on the current theory,
+ * which a save would be refused as a duplicate of, and only the lesson's
+ * owner can save it or point an assignment at it.
+ */
+export function assignmentOutdatedTheoryText(
+  i18n: Translator,
+  theory: AssignmentOutdatedTheory,
 ): string {
   const params = { current: theory.current, src: theory.src };
 
   if (theory.current === theory.src) {
-    return page === "item"
-      ? i18n.t(
-          "The latest revision was built on an older version of {src}. Save a new revision to build it on the current one.",
-          { src: theory.src },
-        )
-      : i18n.t(
-          "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision.",
-          { src: theory.src },
+    switch (theory.remedy) {
+      case "repoint":
+        return i18n.t(
+          "This assignment's revision was built on an older version of {src}. The lesson's latest revision is built on the current one: point this assignment at it.",
+          params,
         );
+      case "resave":
+        return i18n.t(
+          "This assignment's revision was built on an older version of {src}. To use the current one, save the lesson again and point this assignment at the new revision.",
+          params,
+        );
+      case "author":
+        return i18n.t(
+          "This assignment's revision was built on an older version of {src}. Only the lesson's author can move it onto the current one.",
+          params,
+        );
+    }
   }
 
-  return page === "item"
-    ? i18n.t(
-        "The latest revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the src to the new address and save a new revision.",
+  switch (theory.remedy) {
+    case "repoint":
+      return i18n.t(
+        "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. The lesson's latest revision no longer uses {src}: point this assignment at it.",
         params,
-      )
-    : i18n.t(
+      );
+    case "resave":
+      return i18n.t(
         "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. To use it, change the lesson's src to the new address, save the lesson, and point this assignment at the new revision.",
         params,
       );
+    case "author":
+      return i18n.t(
+        "This assignment's revision was built on {src}, and that theory has a newer revision at {current}. Only the lesson's author can move it onto the new one.",
+        params,
+      );
+  }
 }

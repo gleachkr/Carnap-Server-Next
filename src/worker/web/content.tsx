@@ -1070,9 +1070,7 @@ export function renderContentItem(
         <Notice>{message}</Notice>
       ))}
       {model.outdatedTheories.map((theory) => (
-        <Notice tone="warn">
-          {outdatedTheoryText(i18n, theory, "item")}
-        </Notice>
+        <Notice tone="warn">{outdatedTheoryText(i18n, theory)}</Notice>
       ))}
       <Sheet
         description={i18n.t(

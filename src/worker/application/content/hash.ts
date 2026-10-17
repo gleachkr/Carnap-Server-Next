@@ -40,7 +40,7 @@ export async function sha256Id(value: string): Promise<string> {
 
 /**
  * The hash of a piece of MM0 text: an MM0 revision's `contentHash`, and the
- * hash a lesson records for each theory it froze from an address. One function
+ * hash a lesson records for each hosted theory it froze. One function
  * so the two cannot disagree — a lesson's record of a hosted theory is checked
  * against that theory's later revisions by comparing exactly these strings.
  */
@@ -49,11 +49,68 @@ export function mm0TextHash(text: string): Promise<string> {
 }
 
 /**
- * A built-in theory's {@link mm0TextHash}, once per isolate. The built-ins are
- * in the module graph and cannot change while it runs, so the compiler
- * recording a lesson's origins and the outdated-theory check comparing them
- * hash each file once between them. Keyed by address, and for built-ins only:
- * a hosted theory's text is not the caller's to keep for the isolate's life.
+ * MM0 text without what only a reader of the file sees: its `--` comments and
+ * the layout between lexemes. `--|` lines stay, whole, since they are
+ * annotations the language and the engine read; math strings stay verbatim,
+ * since a `--` inside one is not a comment. The lexing is MM0's file level,
+ * as `@aufbau/syntax` reads it.
+ */
+export function mm0Meaning(text: string): string {
+  const words: string[] = [];
+  let word = "";
+  let i = 0;
+
+  const endWord = () => {
+    if (word !== "") {
+      words.push(word);
+      word = "";
+    }
+  };
+
+  while (i < text.length) {
+    const ch = text[i] ?? "";
+
+    if (ch === "-" && text[i + 1] === "-") {
+      const lineEnd = text.indexOf("\n", i);
+      const end = lineEnd === -1 ? text.length : lineEnd;
+
+      endWord();
+      // Ended by its newline, so an annotation cannot run into the next word.
+      if (text[i + 2] === "|") {
+        words.push(`--| ${text.slice(i + 3, end).trim()}\n`);
+      }
+      i = end;
+    } else if (ch === "$") {
+      const close = text.indexOf("$", i + 1);
+      const end = close === -1 ? text.length : close + 1;
+
+      endWord();
+      words.push(text.slice(i, end));
+      i = end;
+    } else if (/\s/.test(ch)) {
+      endWord();
+      i += 1;
+    } else {
+      word += ch;
+      i += 1;
+    }
+  }
+
+  endWord();
+  return words.join(" ");
+}
+
+/**
+ * The hash a lesson records for a built-in theory it froze, once per isolate.
+ * Of the file's {@link mm0Meaning}, not its text, so that rewording a comment
+ * in a shipped theory does not call every lesson on it out of date; a hosted
+ * theory keeps {@link mm0TextHash}, which is how its later revisions are found.
+ *
+ * The built-ins are in the module graph and cannot change while it runs, so
+ * the compiler recording a lesson's origins and the outdated-theory check
+ * comparing them hash each file once between them. Keyed by address, and for
+ * built-ins only: a hosted theory's text is not the caller's to keep for the
+ * isolate's life.
  */
 const builtInHashes = new Map<string, Promise<string>>();
 
@@ -64,7 +121,7 @@ export function builtInTheoryHash(
   let hash = builtInHashes.get(src);
 
   if (hash === undefined) {
-    hash = mm0TextHash(text);
+    hash = sha256Id(`mm0-meaning-v1\n${mm0Meaning(text)}`);
     builtInHashes.set(src, hash);
   }
 

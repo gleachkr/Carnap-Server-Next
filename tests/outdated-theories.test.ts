@@ -3,7 +3,8 @@ import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { ContentService } from "../src/worker/application/content";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import {
-  mm0TextHash,
+  builtInTheoryHash,
+  mm0Meaning,
   sha256Id,
 } from "../src/worker/application/content/hash";
 import type { AppStores } from "../src/worker/application/stores";
@@ -155,7 +156,7 @@ describe("what a lesson records about its theories", () => {
   test("a built-in named by id records its address and the hash of its file", async () => {
     expect(await originsOf(CALGARY_LESSON)).toEqual({
       "forallx-calgary": {
-        hash: await mm0TextHash(theoryByPath(CALGARY) ?? ""),
+        hash: await builtInTheoryHash(CALGARY, theoryByPath(CALGARY) ?? ""),
         src: CALGARY,
       },
     });
@@ -171,7 +172,7 @@ term Cube (x: name): wff;
 ${CALGARY_LESSON.replace("forallx-calgary", "mine")}`);
 
     expect(origins.mine).toEqual({
-      hash: await mm0TextHash(theoryByPath(CALGARY) ?? ""),
+      hash: await builtInTheoryHash(CALGARY, theoryByPath(CALGARY) ?? ""),
       src: CALGARY,
     });
   });
@@ -238,6 +239,45 @@ ${CALGARY_LESSON.replace("forallx-calgary", "mine")}`);
         await sha256Id(`carnap-markdown-v1\n${CALGARY_LESSON}`),
       );
     });
+  });
+});
+
+describe("what of a built-in's text counts as a change", () => {
+  const theory = `-- A theory.
+sort wff;
+--| @syntax role sentence
+term imp (a b: wff): wff; -- the conditional
+infixr imp: $->$ prec 25;
+`;
+
+  test("not its comments or layout", () => {
+    expect(
+      mm0Meaning(`sort  wff;
+-- Reworded, and moved.
+--|   @syntax role sentence
+term imp
+  (a b: wff): wff;
+
+infixr imp: $->$ prec 25;`),
+    ).toBe(mm0Meaning(theory));
+  });
+
+  test("its annotations, which the language reads", () => {
+    expect(
+      mm0Meaning(theory.replace("role sentence", "role individual")),
+    ).not.toBe(mm0Meaning(theory));
+  });
+
+  test("its declarations", () => {
+    expect(mm0Meaning(theory.replace("prec 25", "prec 26"))).not.toBe(
+      mm0Meaning(theory),
+    );
+  });
+
+  test("a math string's text, where `--` is not a comment", () => {
+    expect(mm0Meaning(theory.replace("$->$", "$--$"))).not.toBe(
+      mm0Meaning(theory.replace("$->$", "$-- x$")),
+    );
   });
 });
 
@@ -357,6 +397,74 @@ describe("a hosted theory with a newer revision", () => {
 
       expect(html).toContain("has a newer revision");
       expect(html).toContain(hostedTheoryPath(v2.id));
+    });
+  });
+
+  test("tells each reader of an assignment what they can do about it", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "author@example.test");
+      const colleague = await login(env, "colleague@example.test");
+      const theoryId = await createItem(env, author, "mm0");
+      const v1 = await save(env, author, theoryId, THEORY_V1);
+      const lessonId = await createItem(env, author, "markdown");
+      const lesson = await save(
+        env,
+        author,
+        lessonId,
+        lessonNaming(hostedTheoryPath(v1.id)),
+      );
+      const courseId = await createCourse(env, author);
+      const created = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/assignments`,
+        jsonRequest(
+          { contentRevisionId: lesson.id, title: "Homework 1" },
+          author,
+        ),
+        env,
+      );
+      const staffed = await appRequest(
+        createTestApp(),
+        `/courses/${courseId}/staff`,
+        jsonRequest(
+          { role: "instructor", userId: colleague.actorId },
+          author,
+        ),
+        env,
+      );
+
+      expect(created.status).toBe(201);
+      expect(staffed.status).toBe(201);
+
+      const assignmentId = (
+        (await created.json()) as { assignment: { id: string } }
+      ).assignment.id;
+      const path = `/courses/${courseId}/instructor/assignments/${assignmentId}`;
+      const v2 = await save(env, author, theoryId, THEORY_V2);
+
+      await share(env, author, v2.id, "authors");
+
+      // No revision of the lesson reads the new text yet.
+      expect(await page(env, path, author)).toContain(
+        "save the lesson, and point this assignment at the new revision",
+      );
+      // Only the lesson's owner can save it or repoint an assignment at it.
+      expect(await page(env, path, colleague)).toContain(
+        "Only the lesson&#39;s author can move it onto the new one.",
+      );
+
+      // Once one does, saving again would be refused as a duplicate of it.
+      await save(
+        env,
+        author,
+        lessonId,
+        lessonNaming(hostedTheoryPath(v2.id)),
+      );
+
+      const html = await page(env, path, author);
+
+      expect(html).toContain("point this assignment at it.");
+      expect(html).not.toContain("save the lesson");
     });
   });
 
