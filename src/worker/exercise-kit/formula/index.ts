@@ -11,7 +11,8 @@
  */
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
-import { languageById, languageFromSource } from "../../logic/specs";
+import { namedLanguage } from "../../logic/specs/by-id";
+import { languageFromSource } from "../../logic/specs/read";
 
 export type { ArgumentLine } from "./argument";
 export {
@@ -77,6 +78,6 @@ export function firstOrderLanguageFor(data: {
   return data.source === undefined
     ? data.dialect === undefined
       ? null
-      : languageById(data.dialect)
+      : namedLanguage(data.dialect)
     : languageFromSource(data.source);
 }

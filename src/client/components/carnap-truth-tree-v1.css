@@ -161,11 +161,11 @@
 }
 
 /* A line whose margin a click cites from, or names the rule in. */
-.tableau-margin[data-citable] {
+.tableau-margin[data-editable] {
   cursor: pointer;
 }
 
-.tableau-margin[data-citable]:hover {
+.tableau-margin[data-editable]:hover {
   color: var(--_accent-text);
 }
 

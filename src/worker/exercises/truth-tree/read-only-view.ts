@@ -68,7 +68,7 @@ function treeHtml(
     { kind: "none" },
   ).report,
 ): string {
-  const layout = layoutTableau(tree);
+  const layout = layoutTableau(tree, rules);
   const annotations = treeAnnotations(
     tree,
     layout,

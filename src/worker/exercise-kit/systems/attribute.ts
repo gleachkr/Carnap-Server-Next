@@ -43,7 +43,7 @@ import {
   type CompilerDiagnostic,
   diagnostic,
 } from "../../application/content/diagnostics";
-import { languageFromSource } from "../../logic/specs";
+import { languageFromSource } from "../../logic/specs/read";
 import type { DirectiveBlock } from "../authoring";
 import { builtInSystem, type SystemResolver } from "./theory";
 

@@ -120,7 +120,9 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
 - `authoring.ts`, `assessment.ts`, `read-only-view.ts`, `strings.ts`,
   `verdict-text.ts` — the usual halves of a type.
 
-The editor is `src/client/components/carnap-truth-tree-v1.tsx`.
+The editor is `src/client/components/carnap-truth-tree-v1.tsx`, with its
+margin (`truth-tree-margin.ts`), closing mode (`truth-tree-closing.ts`) and
+help dialog (`truth-tree-help.ts`) beside it as DOM-free functions.
 
 ## Answer data
 

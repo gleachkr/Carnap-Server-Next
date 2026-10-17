@@ -49,7 +49,7 @@ import type {
   Term as SurfaceTerm,
 } from "@aufbau/syntax";
 import { adjoin, printTerm } from "@aufbau/syntax";
-import { languageById, languageFromSource } from "../../../logic/specs";
+import { namedLanguage } from "../../../logic/specs/by-id";
 import type { BinaryConnective } from "../../../logic/specs/connectives";
 import {
   BINARY_CONNECTIVES,
@@ -59,6 +59,7 @@ import {
 } from "../../../logic/specs/connectives";
 import type { FormulaParseError } from "../../../logic/specs/diagnostics";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
+import { languageFromSource } from "../../../logic/specs/read";
 import { roleIndex } from "../../../logic/specs/roles";
 
 export type { BinaryConnective };
@@ -162,7 +163,7 @@ function swallowsSentence(node: AppTerm): boolean {
 
 /** Built once; a language is tables, not data. */
 function prop(): SurfaceLanguage {
-  const found = languageById(PROP_LANGUAGE_ID);
+  const found = namedLanguage(PROP_LANGUAGE_ID);
 
   if (found === null) {
     throw new Error(`the ${PROP_LANGUAGE_ID} spec is no longer registered`);
@@ -385,6 +386,6 @@ export function truthTableLanguage(data: {
   readonly source?: string;
 }): SurfaceLanguage | null {
   return data.source === undefined
-    ? languageById(PROP_LANGUAGE_ID)
+    ? namedLanguage(PROP_LANGUAGE_ID)
     : languageFromSource(data.source);
 }

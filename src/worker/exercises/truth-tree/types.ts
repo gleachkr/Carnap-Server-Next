@@ -52,7 +52,7 @@ export type TruthTreeTask = "validity" | "consistency";
 /**
  * When a tree is done, by the directive's `finish=` (gh #46): every branch
  * closed; or every branch closed or marked open and complete; or every branch
- * closed, or one marked open and complete (UBC §5.x).
+ * closed, or one marked open and complete (UBC §5.8).
  */
 export type TruthTreeFinish = "closed" | "complete" | "one-open";
 

@@ -70,8 +70,8 @@ export type EndProblem =
   | { readonly type: "closure-uncited" }
   | { readonly type: "closure-cite-off-branch" }
   /**
-   * Marked open, but rows on it close it: a sentence and its negation, or
-   * one row alone (`a≠a`).
+   * Marked open, but a closure rule closes it on these rows: UBC's sentence
+   * and its negation, or `a≠a` alone.
    */
   | {
       readonly type: "open-contradiction";

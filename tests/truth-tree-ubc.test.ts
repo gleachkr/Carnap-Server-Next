@@ -115,7 +115,7 @@ describe("the book's worked trees (chapter 5)", () => {
     expect(report.marks.get(dAndNotR as string)?.type).toBe("resolved");
   }, 60_000);
 
-  test("§5.5: a biconditional's two rows a side, in either order", async () => {
+  test("§5.4: a biconditional's two rows a side, in either order", async () => {
     const t = new TreeBuilder(["¬(C & A)", "D ≡ C", "A ∨ B", "¬B"]);
     const {
       nodes: [notC, notA],
@@ -166,7 +166,7 @@ describe("the book's worked trees (chapter 5)", () => {
     expect(report.finished).toBe(true);
   }, 60_000);
 
-  test("§5.5: one complete open branch settles it, unfinished branches and all", async () => {
+  test("§5.8: one complete open branch settles it, unfinished branches and all", async () => {
     const t = new TreeBuilder(["¬(C & A)", "D ≡ C", "A ∨ B", "¬B"]);
     const {
       nodes: [a],

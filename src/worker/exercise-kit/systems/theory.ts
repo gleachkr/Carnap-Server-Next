@@ -15,7 +15,7 @@ import {
   diagnostic,
 } from "../../application/content/diagnostics";
 import { libraryDiagnostic, lineAt } from "../../application/content/mm0";
-import { languageFromSource, readLanguage } from "../../logic/specs";
+import { languageFromSource, readLanguage } from "../../logic/specs/read";
 import { roleIndex } from "../../logic/specs/roles";
 import type { TheoryResolver } from "../../logic/theories";
 import {

@@ -30,7 +30,7 @@
 
 import type { SurfaceLanguage } from "@aufbau/syntax";
 import { theorySourceByFileName } from "../theories";
-import { readLanguage } from "./read";
+import { shippedLanguage } from "./by-id";
 
 export { type LanguageRead, languageFromSource, readLanguage } from "./read";
 
@@ -94,30 +94,12 @@ export const LANGUAGE_SPEC_SOURCES: Readonly<Record<string, string>> =
   Object.fromEntries(LANGUAGE_IDS.map((id) => [id, sourceFor(id)]));
 
 /**
- * The language an author named, or `null` if no such spec ships.
- *
- * A spec that fails to read is a bug in this directory rather than anything a
- * reader did, so it throws instead of degrading: the specs are ours, they are
- * fixed at build time, and `tests/language-specs.test.ts` reads every one of
- * them clean.
+ * The language an author named, or `null` if no such spec ships. Worker-side:
+ * browser code looks a language up by id through `./by-id.ts`, which does not
+ * carry every theory into its bundle.
  */
 export function languageById(id: string): SurfaceLanguage | null {
   const source = LANGUAGE_SPEC_SOURCES[id];
 
-  if (source === undefined) {
-    return null;
-  }
-
-  const read = readLanguage(source);
-
-  if (read.language === null) {
-    throw new Error(
-      `language spec ${id} does not read: ${
-        read.thrown ??
-        read.errors.map((one) => `${one.id} (${one.message})`).join("; ")
-      }`,
-    );
-  }
-
-  return read.language;
+  return source === undefined ? null : shippedLanguage(id, source);
 }

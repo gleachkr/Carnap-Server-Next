@@ -13,8 +13,8 @@
  * and works on that row's branch. The student writes each step: Stack or
  * Split, then the rows' sentences, then, in the margin, the row they develop
  * and the rule they use.
- * Closing a branch cites its two rows, or its one row `a≠a`; ↑ marks one open
- * and complete.
+ * Closing a branch cites the rows a closure rule closes it on (UBC's sentence
+ * and its negation, or `a≠a` alone); ↑ marks one open and complete.
  *
  * The mouse follows the proof tree's conventions: a click on a row types in
  * it, a click in its margin types its citation, and a click elsewhere ends
@@ -52,13 +52,9 @@ import {
   splitNode,
   stackRows,
 } from "../../tableau/edit";
-import type {
-  MarginField,
-  MarginNote,
-  TableauAnnotations,
-} from "../../tableau/html";
+import type { MarginField } from "../../tableau/html";
 import type { TableauLayout } from "../../tableau/layout";
-import { layoutTableau, rowAtLine } from "../../tableau/layout";
+import { layoutTableau } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
 import {
@@ -69,7 +65,10 @@ import {
   askingProofOf,
   readAsked,
 } from "../../worker/exercises/truth-tree/ask";
-import { closesAlone } from "../../worker/exercises/truth-tree/aufbau/branch";
+import {
+  closesBranch,
+  closureArities,
+} from "../../worker/exercises/truth-tree/aufbau/branch";
 import {
   pairingKey,
   pairingOf,
@@ -79,7 +78,6 @@ import type {
   EngineFailure,
   TreeEvidence,
 } from "../../worker/exercises/truth-tree/aufbau/judge";
-import { ruleSpelling } from "../../worker/exercises/truth-tree/aufbau/theory";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
 import {
   answerRules,
@@ -122,6 +120,26 @@ import { mountProblemPopup } from "./problem-popup";
 import { ProofExerciseElement } from "./proof-element";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
+import {
+  type Closing,
+  circleMove,
+  closedOn,
+  pick,
+} from "./truth-tree-closing";
+import { treeHelpIntro, treeShortcuts } from "./truth-tree-help";
+import {
+  editableLines,
+  fieldText,
+  type MarginDrafts,
+  type MarginEdit,
+  type MarginTree,
+  marginLabel,
+  marginMove,
+  marginToRight,
+  typeCitation,
+  typeRule,
+  withDrafts,
+} from "./truth-tree-margin";
 
 const HISTORY_LIMIT = 200;
 
@@ -129,12 +147,16 @@ const HISTORY_LIMIT = 200;
  * What a tree as it stands gives: its index, its layout and its check. A
  * document is never changed in place, so these are kept until the element's
  * tree is replaced, not rebuilt at every render, keystroke and row asked
- * about.
+ * about. The layout is kept for the rules it was made with too, since a
+ * line's justification is a step's citation and its rule.
  */
 interface Derived {
   readonly tree: TableauDocument;
   readonly index: TableauIndex;
-  readonly layout: TableauLayout;
+  layout: {
+    readonly rules: ReadonlyMap<string, string>;
+    readonly layout: TableauLayout;
+  };
   /**
    * The tree as a derivation, and its rules and instances as they were when
    * it was made.
@@ -152,124 +174,13 @@ interface Derived {
   };
 }
 
-/**
- * Closing a branch: the rows marked so far as the sentence and its negation
- * it closes on, as the truth table's counterexample row is marked. Two
- * marked close it, or one that closes a branch alone (`a≠a`).
- */
-interface Closing {
-  readonly leaf: string;
-  readonly picked: readonly string[];
-}
-
-/**
- * A margin field typed that does not resolve: a citation of `3,` or of a row
- * not above, or a rule the theory has no name for. The step stays uncited, or
- * ruleless, and the margin keeps the text, squiggled, until it is put right.
- * Editor state, not answer: a reload keeps the tree and its rules only.
- */
-interface MarginDraft {
-  readonly text: string;
-  readonly problem: string;
-}
-
-/** The margin fields being typed: the row whose step it is, and the draft. */
-interface Citing {
-  readonly row: string;
-  readonly draft: string;
-  readonly field: MarginField;
-}
-
 interface Snapshot {
   readonly tree: TableauDocument;
   readonly cursor: string | null;
   /** The rule each development names. */
   readonly rules: ReadonlyMap<string, string>;
   /** The steps' unresolved citations and rules, by development. */
-  readonly drafts: Readonly<
-    Record<MarginField, ReadonlyMap<string, MarginDraft>>
-  >;
-}
-
-interface Shortcut {
-  readonly action: TruthTreeStringId;
-  readonly icon?: ToolbarIconName;
-  readonly keys: readonly string[];
-}
-
-const SHORTCUTS: readonly Shortcut[] = [
-  { action: "Move between rows", keys: ["←", "→", "↑", "↓"] },
-  { action: "Write the row's sentence", keys: ["Enter"] },
-  {
-    action:
-      "Type the row it develops; Alt-C also works while writing the row",
-    keys: ["c", "Alt-C"],
-  },
-  {
-    action: "Type the rule it uses; Alt-J also works while writing the row",
-    keys: ["j", "Alt-J"],
-  },
-  {
-    action:
-      "From the end of a line, go on to its citation, then its rule; Delete clears either",
-    keys: ["→"],
-  },
-  {
-    action: "From the citation being typed, go on to the rule",
-    keys: ["Tab"],
-  },
-  {
-    action: "Add a row at the end of the branch",
-    icon: "tree-stack",
-    keys: ["t"],
-  },
-  { action: "Split the branch in two", icon: "tree-split", keys: ["s"] },
-  { action: "Add a row to this step", icon: "tree-add-row", keys: ["r"] },
-  { action: "Close the branch", icon: "tree-close", keys: ["x"] },
-  {
-    action: "Mark a row the branch closes on, once closing",
-    keys: ["Space", "Enter"],
-  },
-  {
-    action: "Mark the branch open and complete",
-    icon: "tree-open",
-    keys: ["o"],
-  },
-  {
-    action:
-      "Delete the row or take back its split; on an end mark, reopen the branch",
-    icon: "tree-delete",
-    keys: ["Delete"],
-  },
-  { action: "Undo or redo", icon: "undo", keys: ["Ctrl-Z", "Ctrl-Y"] },
-];
-
-/** Of some rows, the one furthest right in the layout. */
-function rightmost(
-  rows: readonly string[],
-  layout: TableauLayout,
-): string | null {
-  let best: { id: string; start: number } | null = null;
-
-  for (const id of rows) {
-    const start = layout.rows.get(id)?.span.start;
-
-    if (start !== undefined && (best === null || start > best.start)) {
-      best = { id, start };
-    }
-  }
-
-  return best?.id ?? null;
-}
-
-/** Row numbers typed as text: `4, 5`, `4 5`. `null` if any is not a number. */
-function parseNumbers(text: string): number[] | null {
-  const pieces = text.split(/[\s,]+/).filter((piece) => piece.length > 0);
-  const numbers = pieces.map((piece) => Number(piece));
-
-  return numbers.every((number) => Number.isInteger(number) && number > 0)
-    ? numbers
-    : null;
+  readonly drafts: MarginDrafts;
 }
 
 class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
@@ -311,7 +222,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     readonly rules: ReadonlyMap<string, string>;
     settling: Promise<void> | null;
   } | null = null;
-  private drafts: Snapshot["drafts"] = { cites: new Map(), rule: new Map() };
+  private drafts: MarginDrafts = { cites: new Map(), rule: new Map() };
   private past: Snapshot[] = [];
   private future: Snapshot[] = [];
   private cursor: string | null = null;
@@ -321,7 +232,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * first keystroke, so that opening a row and leaving it records nothing.
    */
   private editPending = false;
-  private citing: Citing | null = null;
+  private marginEdit: MarginEdit | null = null;
   /**
    * The row whose margin the selection is on, while the cursor is that row:
    * the arrows reach a line's citation, and its rule after it, as they reach
@@ -385,33 +296,9 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     this.helpDialog = createHelpDialog({
       close: this.t("Close help"),
-      intro: [
-        this.t(
-          "Move to a row with the arrow keys or by clicking it; each action works on the row or branch there.",
-        ),
-        this.t(
-          "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.",
-        ),
-        resolved.finish === "closed"
-          ? this.t(
-              "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed.",
-            )
-          : resolved.finish === "complete"
-            ? this.t(
-                "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.",
-              )
-            : this.t(
-                "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.",
-              ),
-      ],
+      intro: treeHelpIntro(resolved.finish, (id) => this.t(id)),
       keyboard: this.t("Keyboard"),
-      shortcuts: SHORTCUTS.filter(
-        (shortcut) => shortcut.icon !== "tree-open" || this.offersOpen,
-      ).map((shortcut) => ({
-        action: this.t(shortcut.action),
-        keys: shortcut.keys,
-        ...(shortcut.icon === undefined ? {} : { icon: shortcut.icon }),
-      })),
+      shortcuts: treeShortcuts(this.offersOpen, (id) => this.t(id)),
       title: this.t("Using the tree editor"),
     });
     root.appendChild(this.helpDialog);
@@ -610,8 +497,18 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     if (this.derived?.tree !== this.tree) {
       this.derived = {
         index: new TableauIndex(this.tree),
-        layout: layoutTableau(this.tree),
+        layout: {
+          layout: layoutTableau(this.tree, this.rules),
+          rules: this.rules,
+        },
         tree: this.tree,
+      };
+    }
+
+    if (this.derived.layout.rules !== this.rules) {
+      this.derived.layout = {
+        layout: layoutTableau(this.tree, this.rules),
+        rules: this.rules,
       };
     }
 
@@ -623,7 +520,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   }
 
   private get layout(): TableauLayout {
-    return this.derive().layout;
+    return this.derive().layout.layout;
   }
 
   /** The tree as a derivation, made once per tree, rules and instances. */
@@ -847,6 +744,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const status = describeJudgement(
       judgement,
       this.tree,
+      this.rules,
       this.words,
       this.showsDetail,
     );
@@ -954,7 +852,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     this.marginOf = null;
 
     if (action === "right") {
-      const head = this.marginToRight();
+      const head = marginToRight(this.marginTree, this.cursor);
 
       if (head !== null) {
         this.cursor = head;
@@ -1004,40 +902,20 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     return (
       this.marginOf !== null &&
       this.marginOf === this.cursor &&
-      this.citing === null
+      this.marginEdit === null
     );
   }
 
-  /**
-   * The row whose citation → reaches from the cursor: at the end of its line,
-   * with nothing further right on it, a line whose margin takes a citation.
-   */
-  private marginToRight(): string | null {
+  /** The tree as the margin reads it, at the current layout. */
+  private get marginTree(): MarginTree {
     const layout = this.layout;
-    const placed =
-      this.cursor === null ? undefined : layout.rows.get(this.cursor);
 
-    if (
-      placed === undefined ||
-      !this.citableLines(layout).has(placed.line) ||
-      [...layout.rows.values(), ...layout.ends.values()].some(
-        (other) =>
-          other.line === placed.line && other.span.start >= placed.span.end,
-      )
-    ) {
-      return null;
-    }
-
-    return this.marginHead(placed.line, layout);
-  }
-
-  /** The row a line's citation belongs to: its rightmost step head. */
-  private marginHead(line: number, layout: TableauLayout): string | null {
-    const heads = (layout.lineRows.get(line) ?? []).filter(
-      (row) => layout.heads.get(row) === row && !this.isRootRow(row),
-    );
-
-    return rightmost(heads, layout);
+    return {
+      index: this.index,
+      isRootRow: (rowId) => this.isRootRow(rowId),
+      layout,
+      number: layoutNumbers(layout),
+    };
   }
 
   /**
@@ -1048,46 +926,26 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * `false` for any other action, which leaves the margin for its row.
    */
   private marginAct(action: TableauKeyAction): boolean {
-    const layout = this.layout;
-    const line =
-      this.cursor === null ? undefined : layout.rows.get(this.cursor)?.line;
+    const cursor = this.cursor;
 
-    if (line === undefined || this.cursor === null) {
+    if (cursor === null || !this.layout.rows.has(cursor)) {
       return false;
     }
 
+    const moved = marginMove(
+      this.marginTree,
+      { cursor, field: this.marginField, marginOf: this.marginOf },
+      action,
+    );
+
+    if (moved !== null) {
+      this.cursor = moved.cursor;
+      this.marginOf = moved.marginOf;
+      this.marginField = moved.field;
+      return true;
+    }
+
     switch (action) {
-      case "left": {
-        if (this.marginField === "rule") {
-          this.marginField = "cites";
-          return true;
-        }
-
-        this.cursor =
-          rightmost(layout.lineRows.get(line) ?? [], layout) ?? this.cursor;
-        this.marginOf = null;
-        return true;
-      }
-      case "right":
-        this.marginField = "rule";
-        return true;
-      case "up":
-      case "down": {
-        const lines = [...this.citableLines(layout)].sort((a, b) => a - b);
-        const next =
-          action === "up"
-            ? lines.filter((each) => each < line).pop()
-            : lines.find((each) => each > line);
-        const head =
-          next === undefined ? null : this.marginHead(next, layout);
-
-        if (head !== null) {
-          this.cursor = head;
-          this.marginOf = head;
-        }
-
-        return true;
-      }
       case "edit":
         this.startMargin(this.marginField);
         return true;
@@ -1099,7 +957,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
         return true;
       case "delete":
         this.commitMargin(
-          { draft: "", field: this.marginField, row: this.cursor },
+          { draft: "", field: this.marginField, row: cursor },
           true,
         );
         return true;
@@ -1159,7 +1017,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     this.editing = row;
     this.editPending = true;
-    this.citing = null;
+    this.marginEdit = null;
     this.rerender();
   }
 
@@ -1182,53 +1040,17 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const head = this.layout.heads.get(row) ?? row;
 
     this.editing = null;
-    this.citing = { draft: this.fieldText(head, field), field, row: head };
+    this.marginEdit = {
+      draft: this.fieldText(head, field),
+      field,
+      row: head,
+    };
     this.rerender();
   }
 
-  /** A margin field's name, for the selection on it. */
-  private marginLabel(
-    rowId: string,
-    layout: TableauLayout,
-    field: MarginField,
-  ): string {
-    const row = this.number(rowId, layout);
-
-    if (field === "rule") {
-      const rule = this.fieldText(rowId, "rule", layout);
-
-      return rule === ""
-        ? this.t("Rule of row {row}, not yet named", { row })
-        : this.t("Rule of row {row}: {rule}", { row, rule });
-    }
-
-    const cites = this.fieldText(rowId, "cites", layout);
-
-    return cites === ""
-      ? this.t("Citation of row {row}, not yet written", { row })
-      : this.t("Citation of row {row}: {cites}", { cites, row });
-  }
-
-  /**
-   * A field of a row's margin as it shows: its draft, or the step's
-   * citation as numbers, or the rule it names.
-   */
-  private fieldText(rowId: string, field: MarginField, layout = this.layout) {
-    const row = this.index.row(rowId)?.row;
-
-    if (row === undefined) {
-      return "";
-    }
-
-    const draft = this.drafts[field].get(row.dev)?.text;
-
-    if (draft !== undefined) {
-      return draft;
-    }
-
-    return field === "rule"
-      ? (this.rules.get(row.dev) ?? "")
-      : row.cites.map((cite) => this.number(cite, layout)).join(", ");
+  /** A field of a row's margin as it shows. */
+  private fieldText(rowId: string, field: MarginField): string {
+    return fieldText(this.marginTree, this.drafts, this.rules, rowId, field);
   }
 
   /** A new step: one empty row at the end of the branch. */
@@ -1372,7 +1194,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     this.closing = { leaf, picked };
     this.editing = null;
-    this.citing = null;
+    this.marginEdit = null;
     this.focusTree = true;
     this.announce(this.closingHint());
     this.rerender();
@@ -1390,77 +1212,61 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
   }
 
   /**
-   * Mark a row the branch closes on, or unmark it, from its circle. The
-   * second mark closes the branch on the two, in the order they were marked.
+   * Mark a row the branch closes on, or unmark it, from its circle. The mark
+   * that completes a closure closes the branch on the rows marked, in the
+   * order they were marked.
    */
   private pick(rowId: string): void {
     const closing = this.closing;
 
-    if (closing === null) {
+    if (
+      closing === null ||
+      !this.index.branchRows(closing.leaf).some((each) => each.id === rowId)
+    ) {
       return;
     }
 
-    const index = this.index;
-    const onBranch = index
-      .branchRows(closing.leaf)
-      .some((each) => each.id === rowId);
+    const resolved = this.resolved;
     const row = this.number(rowId);
-
-    if (!onBranch) {
-      return;
-    }
+    const picked = pick(
+      closing,
+      rowId,
+      (resolved === null
+        ? undefined
+        : closureArities(resolved.development).at(-1)) ?? 2,
+      (rows) =>
+        resolved !== null &&
+        closesBranch(
+          resolved.development,
+          resolved.reader,
+          rows.map((each) => this.index.row(each)?.row.text ?? ""),
+        ),
+    );
 
     this.cursor = rowId;
     this.focusTree = true;
 
-    if (closing.picked.includes(rowId)) {
-      this.closing = {
-        ...closing,
-        picked: closing.picked.filter((each) => each !== rowId),
-      };
-      this.announce(this.t("Row {row} unmarked.", { row }));
-      this.rerender();
-      return;
-    }
-
-    const picked = [...closing.picked, rowId];
-    // A row closes a branch alone where the theory's closure rule says so.
-    const resolved = this.resolved;
-
-    if (
-      picked.length === 1 &&
-      resolved !== null &&
-      closesAlone(
-        resolved.development,
-        resolved.reader,
-        index.row(rowId)?.row.text ?? "",
-      )
-    ) {
-      this.closing = null;
-      this.focusTree = true;
-      this.commit(
-        setEnd(this.tree, closing.leaf, { cites: picked, type: "closed" }),
-        this.t("Branch closed on row {row}", { row }),
+    if (picked.type !== "closed") {
+      this.closing = picked.closing;
+      this.announce(
+        picked.type === "marked"
+          ? this.t("Row {row} marked.", { row })
+          : this.t("Row {row} unmarked.", { row }),
       );
-      return;
-    }
-
-    if (picked.length < 2) {
-      this.closing = { ...closing, picked };
-      this.announce(this.t("Row {row} marked.", { row }));
       this.rerender();
       return;
     }
 
-    const [first, second] = picked.map((each) => this.number(each));
     this.closing = null;
-    this.focusTree = true;
     this.commit(
-      setEnd(this.tree, closing.leaf, { cites: picked, type: "closed" }),
-      this.t("Branch closed on rows {first} and {second}", {
-        first: first ?? "?",
-        second: second ?? "?",
+      setEnd(this.tree, closing.leaf, {
+        cites: picked.cites,
+        type: "closed",
       }),
+      closedOn(
+        picked.cites.map((each) => this.number(each)),
+        (id, values) => this.t(id, values),
+      ),
     );
   }
 
@@ -1598,7 +1404,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
         ? snapshot.cursor
         : this.lastRow();
     this.editing = null;
-    this.citing = null;
+    this.marginEdit = null;
     this.marginOf = null;
     this.closing = null;
   }
@@ -1722,17 +1528,17 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     }
   };
 
-  private readonly onCiteText = (text: string): void => {
-    if (this.citing !== null) {
-      this.citing = { ...this.citing, draft: text };
+  private readonly onMarginText = (text: string): void => {
+    if (this.marginEdit !== null) {
+      this.marginEdit = { ...this.marginEdit, draft: text };
       this.rerender();
     }
   };
 
-  private readonly onCiteKey = (event: KeyboardEvent): void => {
-    const citing = this.citing;
+  private readonly onMarginTextKey = (event: KeyboardEvent): void => {
+    const edit = this.marginEdit;
 
-    if (citing === null) {
+    if (edit === null) {
       return;
     }
 
@@ -1742,23 +1548,23 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     // blur keeps what was typed too.
     if (event.key === "Enter" || event.key === "Escape") {
       event.preventDefault();
-      this.commitMargin(citing, true);
+      this.commitMargin(edit, true);
       return;
     }
 
     const next =
       event.key !== "Tab"
         ? null
-        : !event.shiftKey && citing.field === "cites"
+        : !event.shiftKey && edit.field === "cites"
           ? "rule"
-          : event.shiftKey && citing.field === "rule"
+          : event.shiftKey && edit.field === "rule"
             ? "cites"
             : null;
 
     if (next !== null) {
       event.preventDefault();
-      this.commitMargin(citing, true);
-      this.cursor = citing.row;
+      this.commitMargin(edit, true);
+      this.cursor = edit.row;
       this.focusTree = true;
       this.startMargin(next);
     }
@@ -1769,188 +1575,99 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
    * focus goes back to the row as after Esc. A blur from the field just left
    * for the other one (Tab) is not this field's.
    */
-  private readonly onCiteBlur = (event: FocusEvent): void => {
-    const citing = this.citing;
+  private readonly onMarginTextBlur = (event: FocusEvent): void => {
+    const edit = this.marginEdit;
     const input =
-      citing?.field === "rule" ? "tableau-rule-input" : "tableau-cite-input";
+      edit?.field === "rule" ? "tableau-rule-input" : "tableau-cite-input";
 
     if (
-      citing !== null &&
+      edit !== null &&
       document.hasFocus() &&
       (event.target as Element | null)?.classList.contains(input) !== false
     ) {
-      this.commitMargin(citing, this.strayBlur(event));
+      this.commitMargin(edit, this.strayBlur(event));
     }
   };
 
   /** Keep what was typed in a margin field. */
-  private commitMargin(citing: Citing, refocus: boolean): void {
-    if (citing.field === "rule") {
-      this.commitRule(citing, refocus);
+  private commitMargin(edit: MarginEdit, refocus: boolean): void {
+    if (edit.field === "rule") {
+      this.commitRule(edit, refocus);
     } else {
-      this.commitCite(citing, refocus);
+      this.commitCite(edit, refocus);
     }
   }
 
   /**
-   * Keep the typed rule for the step: as the rule the theory spells it, if it
-   * names one, and otherwise as a draft the margin shows squiggled, with the
-   * step left without a rule. `refocus` as for {@link commitCite}.
+   * Keep the typed rule for the step (`typeRule`). `refocus` as for
+   * {@link commitCite}.
    */
-  private commitRule(citing: Citing, refocus: boolean): void {
-    const location = this.index.row(citing.row);
-    const text = citing.draft.trim();
+  private commitRule(edit: MarginEdit, refocus: boolean): void {
+    const location = this.index.row(edit.row);
+    const text = edit.draft.trim();
     const language = this.resolved?.language;
 
-    this.citing = null;
+    this.marginEdit = null;
     this.focusTree = refocus;
 
     if (
       location === null ||
       language === undefined ||
-      text === this.fieldText(citing.row, "rule")
+      text === this.fieldText(edit.row, "rule")
     ) {
       this.rerender();
       return;
     }
 
-    const dev = location.row.dev;
-    const spelled = text === "" ? null : ruleSpelling(language, text);
-    const rules = new Map(this.rules);
-    const drafts = new Map(this.drafts.rule);
-    const row = this.number(citing.row);
-    let announcement: string;
-
-    if (spelled !== null) {
-      rules.set(dev, spelled);
-      drafts.delete(dev);
-      announcement = this.t("Row {row} now names the rule {rule}.", {
-        row,
-        rule: spelled,
-      });
-    } else if (text === "") {
-      rules.delete(dev);
-      drafts.delete(dev);
-      announcement = this.t("Row {row} no longer names a rule.", { row });
-    } else {
-      rules.delete(dev);
-      announcement = this.t("This system has no rule called “{rule}”.", {
-        rule: text,
-      });
-      drafts.set(dev, { problem: announcement, text });
-    }
+    const typed = typeRule(
+      language,
+      this.rules,
+      this.drafts,
+      location.row.dev,
+      this.number(edit.row),
+      text,
+      (id, values) => this.t(id, values),
+    );
 
     this.remember();
-    this.rules = rules;
-    this.drafts = { ...this.drafts, rule: drafts };
-    this.announce(announcement);
+    this.rules = typed.rules;
+    this.drafts = { ...this.drafts, rule: typed.drafts };
+    this.announce(typed.announcement);
     this.edited();
   }
 
   /**
-   * Keep the typed citation for every row of the citing row's step: as the
-   * rows it names if it names rows above, and otherwise as a draft the margin
-   * shows squiggled, with the step uncited. `refocus` hands focus back to the
-   * row: not when focus has already gone elsewhere.
+   * Keep the typed citation for every row of the step (`typeCitation`).
+   * `refocus` hands focus back to the row: not when focus has already gone
+   * elsewhere.
    */
-  private commitCite(citing: Citing, refocus: boolean): void {
-    const index = this.index;
-    const layout = this.layout;
-    const location = index.row(citing.row);
-    const text = citing.draft.trim();
+  private commitCite(edit: MarginEdit, refocus: boolean): void {
+    const text = edit.draft.trim();
 
-    this.citing = null;
+    this.marginEdit = null;
     this.focusTree = refocus;
 
-    if (
-      location === null ||
-      text === this.fieldText(citing.row, "cites", layout)
-    ) {
+    const typed =
+      text === this.fieldText(edit.row, "cites")
+        ? null
+        : typeCitation(
+            this.marginTree,
+            this.drafts,
+            edit.row,
+            text,
+            (id, values) => this.t(id, values),
+          );
+
+    if (typed === null) {
       this.rerender();
       return;
     }
 
-    const read = this.readCitation(text, index, layout, citing.row);
-    const dev = location.row.dev;
-    const drafts = new Map(this.drafts.cites);
-    // Every row of the step cites the same row, wherever the step put it.
-    const step = index.document.nodes.flatMap((node) =>
-      node.rows.filter((each) => each.dev === dev).map((each) => each.id),
-    );
-    const row = this.number(citing.row, layout);
-
-    if (read.type === "cites") {
-      drafts.delete(dev);
-    } else {
-      drafts.set(dev, { problem: read.problem, text });
-    }
-
     this.remember();
-    this.tree = setRowCites(
-      this.tree,
-      step,
-      read.type === "cites" ? read.cites : [],
-    );
-    this.drafts = { ...this.drafts, cites: drafts };
-    this.announce(
-      read.type === "problem"
-        ? read.problem
-        : read.cites.length === 0
-          ? this.t("Row {row} no longer cites a row.", { row })
-          : read.cites.length === 2
-            ? this.t("Row {row} now cites rows {cited} and {other}.", {
-                cited: this.number(read.cites[0] ?? "", layout),
-                other: this.number(read.cites[1] ?? "", layout),
-                row,
-              })
-            : this.t("Row {row} now cites row {cited}.", {
-                cited: text,
-                row,
-              }),
-    );
+    this.tree = setRowCites(this.tree, typed.step, typed.cites);
+    this.drafts = { ...this.drafts, cites: typed.drafts };
+    this.announce(typed.announcement);
     this.edited();
-  }
-
-  /** Typed row numbers as the rows above `rowId` they name, or what is wrong. */
-  private readCitation(
-    text: string,
-    index: TableauIndex,
-    layout: TableauLayout,
-    rowId: string,
-  ):
-    | { readonly type: "cites"; readonly cites: string[] }
-    | { readonly type: "problem"; readonly problem: string } {
-    const numbers = parseNumbers(text);
-    const location = index.row(rowId);
-
-    if (numbers === null || location === null) {
-      return {
-        problem: this.t("Type row numbers, such as 3."),
-        type: "problem",
-      };
-    }
-
-    const cites: string[] = [];
-
-    for (const number of numbers) {
-      const found = rowAtLine(index, layout, location.node.id, number, rowId);
-
-      if (found === null) {
-        return {
-          problem: this.t(
-            "Row {cited} is not above this row on its branch.",
-            {
-              cited: String(number),
-            },
-          ),
-          type: "problem",
-        };
-      }
-
-      cites.push(found);
-    }
-
-    return { cites, type: "cites" };
   }
 
   private readonly onRowKey = (event: KeyboardEvent, rowId: string): void => {
@@ -1979,26 +1696,17 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
       return;
     }
 
-    const rows = this.index.branchRows(closing.leaf);
-    const at = rows.findIndex((each) => each.id === rowId);
-    const moves: Readonly<Record<string, number>> = {
-      ArrowDown: at + 1,
-      ArrowUp: at - 1,
-      End: rows.length - 1,
-      Home: 0,
-    };
-    const to = moves[event.key];
+    const target = circleMove(
+      this.index.branchRows(closing.leaf).map((each) => each.id),
+      rowId,
+      event.key,
+    );
 
-    if (to !== undefined) {
+    if (target !== undefined) {
       event.preventDefault();
-      const target = rows[Math.max(0, Math.min(rows.length - 1, to))];
-
-      if (target !== undefined) {
-        this.cursor = target.id;
-        this.focusTree = true;
-        this.rerender();
-      }
-
+      this.cursor = target;
+      this.focusTree = true;
+      this.rerender();
       return;
     }
 
@@ -2041,25 +1749,6 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
 
     render(this.view(resolved, report, layout), mount);
     this.focusTree = false;
-  }
-
-  /**
-   * The lines whose margin a click can cite from: every line below the root
-   * that begins a step.
-   */
-  private citableLines(layout: TableauLayout): Set<number> {
-    const lines = new Set<number>();
-
-    for (const [line, rows] of layout.lineRows) {
-      if (
-        layout.marginLines.has(line) &&
-        rows.some((row) => !this.isRootRow(row))
-      ) {
-        lines.add(line);
-      }
-    }
-
-    return lines;
   }
 
   /** What full feedback says about each row and end, as it is written. */
@@ -2119,46 +1808,6 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     return notes;
   }
 
-  /** The margins with the unresolved citations and rules in them, squiggled. */
-  private withDrafts(
-    annotations: TableauAnnotations,
-    layout: TableauLayout,
-  ): TableauAnnotations {
-    const index = this.index;
-    const margins = new Map<number, MarginNote>(annotations.margins);
-    const flags: Record<MarginField, Set<number>> = {
-      cites: new Set(annotations.flaggedMargins),
-      rule: new Set(annotations.flaggedRules),
-    };
-
-    for (const [line, rows] of layout.lineRows) {
-      const devs = rows
-        .filter((row) => layout.heads.get(row) === row)
-        .map((row) => index.row(row)?.row.dev ?? "");
-
-      for (const field of ["cites", "rule"] as const) {
-        const draft = devs
-          .map((dev) => this.drafts[field].get(dev))
-          .find((each) => each !== undefined);
-
-        if (draft !== undefined) {
-          margins.set(line, {
-            ...(margins.get(line) ?? { cites: "", rule: "" }),
-            [field]: draft.text,
-          });
-          flags[field].add(line);
-        }
-      }
-    }
-
-    return {
-      ...annotations,
-      flaggedMargins: flags.cites,
-      flaggedRules: flags.rule,
-      margins,
-    };
-  }
-
   /** The cursor's row or end mark as drawn, if it is drawn yet. */
   private cursorRow(mount: HTMLElement): HTMLElement | undefined {
     return [...mount.querySelectorAll<HTMLElement>("[data-item]")].find(
@@ -2214,7 +1863,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
     const annotations =
       report === null
         ? null
-        : this.withDrafts(
+        : withDrafts(
             treeAnnotations(
               this.tree,
               layout,
@@ -2227,7 +1876,8 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
                 rules: this.rules,
               },
             ),
-            layout,
+            this.marginTree,
+            this.drafts,
           );
     const notes = this.notes(report, layout);
     const note = this.cursorNote(notes, layout);
@@ -2285,8 +1935,8 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
         {annotations === null ? null : (
           <TableauView
             annotations={annotations}
-            citable={this.citableLines(layout)}
-            citing={this.citing}
+            editableMargins={editableLines(this.marginTree)}
+            marginEdit={this.marginEdit}
             cursor={this.cursor}
             document={this.tree}
             editing={this.editing}
@@ -2304,18 +1954,21 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
             label={this.t("Truth tree")}
             layout={layout}
             notes={notes}
-            onCiteKey={this.onCiteKey}
-            onCiteText={this.onCiteText}
-            onCiteBlur={this.onCiteBlur}
+            onMarginText={this.onMarginText}
+            onMarginTextBlur={this.onMarginTextBlur}
+            onMarginTextKey={this.onMarginTextKey}
             onCursor={this.onRowClick}
             marginStop={
               this.onMarginStop() && this.cursor !== null
                 ? {
                     field: this.marginField,
-                    label: this.marginLabel(
+                    label: marginLabel(
+                      this.marginTree,
+                      this.drafts,
+                      this.rules,
                       this.cursor,
-                      layout,
                       this.marginField,
+                      (id, values) => this.t(id, values),
                     ),
                     line: layout.rows.get(this.cursor)?.line ?? 0,
                   }

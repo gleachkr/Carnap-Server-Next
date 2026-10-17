@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { compileCarnapMarkdown } from "../src/worker/application/content/compiler";
 import { readTreeDevelopment } from "../src/worker/exercises/truth-tree/aufbau/criteria";
 import { matchTerm } from "../src/worker/exercises/truth-tree/aufbau/patterns";
+import type { EndProblem } from "../src/worker/exercises/truth-tree/report";
+import { describeEndProblem } from "../src/worker/exercises/truth-tree/verdict-text";
 import { languageById } from "../src/worker/logic/specs";
 import { theorySourceByFileName } from "../src/worker/logic/theories";
 import type { TreeExercise } from "./helpers/truth-tree";
@@ -28,6 +30,14 @@ function consistency(...members: string[]) {
     finish: "one-open",
     prompt: "Is this set consistent?",
   });
+}
+
+/** The English catalog: each message as written, its values filled in. */
+function words(
+  message: string,
+  values?: Readonly<Record<string, string>>,
+): string {
+  return message.replace(/\{(\w+)\}/gu, (_, key) => values?.[key] ?? "");
 }
 
 function certify(exercise: TreeExercise, t: TreeBuilder) {
@@ -454,6 +464,57 @@ describe("closure, as the theory says it", () => {
       rows: ["r1"],
       type: "open-contradiction",
     });
+  });
+
+  // A closure rule may cite any number of rows: an author's theory that
+  // closes on a sentence, another, and the negation of their conjunction.
+  test("a closure rule citing three rows closes on all three", async () => {
+    const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "").replace(
+      "--| @fallback tb_close_neq\n",
+      "--| @fallback tb_close_neq\naxiom tb_close_three (ga: ctx) (ph ps: wff): $ focus ga at (ph ; ps ; ¬ (ph & ps)) $;\n--| @fallback tb_close_three\n",
+    );
+    expect(ubc).toContain("tb_close_three");
+    const asked = await lessonTree(
+      `:::aufbau-mm0{name="three"}\n${ubc}\n:::\n\n::::truth-tree{#t system="three" finish="one-open"}\nIs this set consistent?\n\n- P\n- Q\n- ¬(P & Q)\n::::`,
+    );
+    const t = new TreeBuilder(asked.resolved.rootText);
+    t.open(t.rootNode);
+    const report = await judgeAsServer(asked, t.answer());
+    const end = report.ends.get(t.rootNode);
+
+    expect(end).toEqual({
+      rows: ["r1", "r2", "r3"],
+      type: "open-contradiction",
+    });
+    expect(
+      describeEndProblem(end as EndProblem, words, (id) => id.slice(1)),
+    ).toBe("Rows 1, 2, 3 close this branch, so it cannot be marked open.");
+
+    const closed = new TreeBuilder(asked.resolved.rootText);
+    closed.close(closed.rootNode, "r3", "r1", "r2");
+
+    expect(await gradeAnswer(asked.item, await certify(asked, closed))).toBe(
+      "correct",
+    );
+  });
+
+  test("an open branch's closing rows are named whatever the rule", () => {
+    const number = (id: string) => id.slice(1);
+
+    expect(
+      describeEndProblem(
+        { rows: ["r4"], type: "open-contradiction" },
+        words,
+        number,
+      ),
+    ).toBe("Row 4 closes this branch, so it cannot be marked open.");
+    expect(
+      describeEndProblem(
+        { rows: ["r1", "r4"], type: "open-contradiction" },
+        words,
+        number,
+      ),
+    ).toBe("Rows 1 and 4 close this branch, so it cannot be marked open.");
   });
 });
 

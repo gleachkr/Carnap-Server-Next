@@ -912,12 +912,14 @@ world-kind contract and the answer format.
 A truth tree (a semantic tableau) decides whether an argument is valid, or a
 set of sentences consistent, by trying to make its root all true at once.
 The student develops the tree a step at a time, citing the row each step
-develops; closes a branch that holds a sentence and its negation, citing both
-rows (or the one row `a≠a`); and marks a complete open branch with `↑`. The tree is the whole
+develops; closes a branch on the rows the theory's closure rule closes it on,
+citing them (in UBC, a sentence and its negation, or the one row `a≠a`); and
+marks a complete open branch with `↑`. The tree is the whole
 answer: what it shows follows from it, so the student is not asked to say.
 (A multiple-choice exercise beside it can ask, if the lesson wants to.) The
-rules are those of *forall x: UBC* (Ichikawa and
-Jenkins), chapters 5, 10 and 12.
+rules come from a tree theory: by default *forall x: UBC* (Ichikawa and
+Jenkins), chapters 5, 10 and 12, and among the built-ins also the Open Logic
+Project's signed, modal and intuitionistic tableaux (below).
 
 ```md
 ::::truth-tree{#tt1 points="3"}
@@ -947,7 +949,7 @@ is exactly one conclusion.
   sentence.
 - `finish` says when a tree is done: `closed` (the default) when every
   branch is closed; `one-open` when every branch is closed, or one branch is
-  marked open and complete (UBC §5.x); `complete` when every branch is
+  marked open and complete (UBC §5.8); `complete` when every branch is
   closed or marked open and complete. A branch can be marked open (`o`) only
   when `finish` is not `closed`, so a question whose answer is a complete
   open branch (a consistent set, an invalid argument) needs `one-open` or
@@ -1111,10 +1113,12 @@ is part of what is being learned.
 The toolbar's buttons act on the row at the cursor; the `(?)` in the action
 bar lists their keys. **Close** (`x`) asks for the rows the branch
 closes on: a circle appears beside the number of each row on the branch, as
-a truth table's counterexample radios do, and the student ticks two. While
-it is open the circles are the only controls: ↑ and ↓ move between them,
-Space or Enter ticks one, and the rows take no clicks. The second tick
-closes the branch, or the first, on a row `a≠a`; Esc puts it away. A branch's `×` or `↑` takes the
+a truth table's counterexample radios do, and the student ticks the rows.
+While it is open the circles are the only controls: ↑ and ↓ move between
+them, Space or Enter ticks one, and the rows take no clicks. A tick closes
+the branch once the rows ticked are ones a closure rule closes it on (in
+UBC, a sentence and its negation, or a row `a≠a` alone), or once as many are
+ticked as the widest closure rule cites; Esc puts it away. A branch's `×` or `↑` takes the
 cursor too, below the branch's last row: Enter on a `×` marks its rows again,
 and Delete reopens the branch.
 
@@ -1258,7 +1262,11 @@ spellings, and is shown in the first: `\/` is written `∨`. A rule the
 theory has no name for stays in the margin, squiggled, and the step names
 no rule. As in the book, a step is justified once, beside its first row: a
 row added to the step leaves its margin blank, and a new step has its own. Rows are numbered the book's way: lines are shared across
-branches, and a step repeated on two branches shares its lines.
+branches, and a step repeated on two branches shares its lines. Two steps
+share a line only when their justification is the same, the rows they cite
+and the rule they name, so that a line's margin is true of every step on
+it: a step on another branch that cites the same row by another rule, or by
+none yet, waits for a line of its own.
 
 Grading is all or nothing: every row and closure right, every `↑` on a
 complete open branch, and the tree done by `finish`. Under full feedback the
@@ -2151,7 +2159,8 @@ Truth-table data uses `T`, `F`, or an empty string per cell:
 - A partial table uses the same layout with one row.
 
 A truth-tree answer is the tree as a list of nodes, each a run of rows with
-its parent:
+its parent, and the rule each development names. This one answers
+`P & Q :|-: P`:
 
 ```json
 {
@@ -2170,10 +2179,30 @@ its parent:
         ],
         "end": { "type": "closed", "cites": ["r3", "r2"] }
       }
-    ]
+    ],
+    "rules": { "d1": "&" }
   }
 }
 ```
+
+- `nodes` is the tree. A row is `{ id, text, cites, dev }`: its text as
+  typed, the rows it develops, and the development it belongs to (`root`
+  for the declared root, which the root node's first rows must be). A
+  node's `end` is `{ "type": "closed", "cites": [...] }` or
+  `{ "type": "open" }`.
+- `rules` maps each development to the rule its margin names, spelled as
+  the theory's `@syntax alias`. A development missing from it names no
+  rule, and is wrong.
+- `instances` (optional) maps a row of a general step to the term it was
+  written with, as engine text (`a` for `Fa` from `∀x Fx`).
+- `directions` (optional) maps an identity on a branch marked open, keyed
+  `"<leaf node id> <row id>"`, to the statement of its rule it is
+  developed by (`tb_id_ba`, every `b` made `a`).
+
+The editor finds `instances` and `directions` by asking the engine, and the
+certificate proves them; an author writing an answer by hand can leave them
+out. See [the truth-tree reference](../src/worker/exercises/truth-tree/README.md)
+for the limits on a tree's size.
 
 See each exercise package's reference for its full answer schema. The
 assessment registry rejects wrong kinds, unsupported versions, malformed

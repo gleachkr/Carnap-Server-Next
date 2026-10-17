@@ -36,10 +36,10 @@ export interface TableauAnnotations {
   readonly margins?: ReadonlyMap<number, MarginNote>;
   /** Rows and branch ends to draw as wrong. */
   readonly flagged?: ReadonlySet<string>;
-  /** Lines whose margin citation to draw as wrong. */
-  readonly flaggedMargins?: ReadonlySet<number>;
-  /** Lines whose margin rule to draw as wrong. */
-  readonly flaggedRules?: ReadonlySet<number>;
+  /** Lines whose margin citation, or rule, to draw as wrong. */
+  readonly flaggedMargins?: Readonly<
+    Partial<Record<MarginField, ReadonlySet<number>>>
+  >;
   /** The note under a branch's end mark: the rows a closure cites. */
   readonly endNotes?: ReadonlyMap<string, string>;
   /** A row in words, for the outline. */
@@ -130,8 +130,8 @@ export function tableauGridHtml(
           ? ""
           : `<span class="tableau-margin-${name}"${flags?.has(line) === true ? " data-flagged" : ""}>${escapeText(margin[name])}</span>`;
       const fields = [
-        field("cites", annotations.flaggedMargins),
-        field("rule", annotations.flaggedRules),
+        field("cites", annotations.flaggedMargins?.cites),
+        field("rule", annotations.flaggedMargins?.rule),
       ].filter((each) => each !== "");
 
       parts.push(

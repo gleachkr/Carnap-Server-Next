@@ -18,7 +18,7 @@ import type {
   TableauNode,
   TableauRow,
 } from "../../../tableau/document";
-import { firstOrderLanguageFor } from "../../exercise-kit/formula";
+import { languageFromSource } from "../../logic/specs/read";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
 import { pairingOf } from "./aufbau/developed";
@@ -310,7 +310,12 @@ function isEntries(
 export function resolveTruthTree(
   publicData: TruthTreePublicData,
 ): ResolvedTree | null {
-  const language = firstOrderLanguageFor(publicData);
+  // A tree's data always carries its language as text, joined in from the
+  // document's systems table.
+  const language =
+    publicData.source === undefined
+      ? null
+      : languageFromSource(publicData.source);
   const theory = language === null ? null : readTreeTheory(language);
 
   if (language === null || theory === null || !isTreeTheory(theory)) {

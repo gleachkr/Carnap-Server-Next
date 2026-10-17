@@ -12,9 +12,13 @@
  * margin note, and a different step on another branch waits for fresh lines.
  * The lines a branch skips are drawn as a dotted guide.
  *
- * The justification a line carries is its rows' citations. A row with none
- * yet stands for its own development, so it shares a line only with the other
- * rows of that step (the two sides of a split, say).
+ * The justification a line carries is its rows' citations and the rule their
+ * step names, as in the books, where a line's margin says one thing: two
+ * steps on two branches citing one row by different rules (or one by a rule
+ * and one not yet) take a line each, so that each margin says what its own
+ * step is. A row with no citation yet stands for its own development, so it
+ * shares a line only with the other rows of that step (the two sides of a
+ * split, say).
  *
  * **A step is justified once**, beside its first line, as in the book: a row
  * under another of the same development continues that step, and a line of
@@ -92,13 +96,23 @@ export interface TableauLayout {
 }
 
 /** What a line's margin says, as a key two rows can share. */
-function marginKey(row: TableauRow): string {
+function marginKey(
+  row: TableauRow,
+  rules: ReadonlyMap<string, string>,
+): string {
   return row.cites.length > 0
-    ? `cites:${[...row.cites].sort().join(",")}`
+    ? JSON.stringify([[...row.cites].sort(), rules.get(row.dev) ?? ""])
     : `dev:${row.dev}`;
 }
 
-export function layoutTableau(document: TableauDocument): TableauLayout {
+/**
+ * The tableau laid out. `rules` are the rule each development names, by its
+ * `dev`, which kept beside the document are part of a line's justification.
+ */
+export function layoutTableau(
+  document: TableauDocument,
+  rules: ReadonlyMap<string, string> = new Map(),
+): TableauLayout {
   const index = new TableauIndex(document);
   const order = index.preorder();
   const spans = new Map<string, ColumnSpan>();
@@ -148,7 +162,7 @@ export function layoutTableau(document: TableauDocument): TableauLayout {
     let head: TableauRow | null = null;
 
     for (const row of node.rows) {
-      const key = marginKey(row);
+      const key = marginKey(row, rules);
 
       if (head === null || head.dev !== row.dev) {
         head = row;

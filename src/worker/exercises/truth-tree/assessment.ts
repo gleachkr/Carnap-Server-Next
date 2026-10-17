@@ -15,6 +15,7 @@ import { readCertificate } from "../../exercise-kit/proof/certificate";
 import type { ExerciseAssessment } from "../../exercise-kit/type";
 import { stringsResolver } from "../../i18n/translator";
 import {
+  answerRules,
   isTruthTreeAnswerData,
   isTruthTreePublicData,
   judgeTree,
@@ -246,6 +247,7 @@ export const TRUTH_TREE_ASSESSMENT = {
     const summary = describeJudgement(
       judgement,
       { nodes: data.nodes },
+      answerRules(data),
       words,
       detail,
     );

@@ -32,8 +32,11 @@ export function layoutNumbers(layout: TableauLayout): RowNumber {
 }
 
 /** The row numbers of a tree, from its layout. */
-function rowNumbers(tree: TableauDocument): RowNumber {
-  return layoutNumbers(layoutTableau(tree));
+function rowNumbers(
+  tree: TableauDocument,
+  rules: ReadonlyMap<string, string>,
+): RowNumber {
+  return layoutNumbers(layoutTableau(tree, rules));
 }
 
 /** A row's note, said of that row: "Row 4: …". */
@@ -112,7 +115,7 @@ export function describeRowProblem(
             "The rule named does not give this from rows {cited} and {other}.",
             { cited: citedRow, other: otherRow },
           );
-    default:
+    case "split-mixed":
       return words("The branches of a split must all come from one step.");
   }
 }
@@ -129,24 +132,30 @@ export function describeEndProblem(
 ): string {
   switch (problem.type) {
     case "closure-uncited":
-      return words("Cite the two rows the branch closes on.");
+      return words("Cite the rows the branch closes on.");
     case "closure-cite-off-branch":
       return words("A closure cites rows on its own branch.");
     case "open-contradiction": {
-      const [first, second] = problem.rows;
+      const rows = problem.rows.map(number);
+      const [first = "?", second = "?"] = rows;
 
-      return second === undefined
-        ? words(
-            "Row {row} says something is not identical to itself, so this branch closes.",
-            { row: first === undefined ? "?" : number(first) },
-          )
-        : words(
-            "Rows {first} and {second} are a sentence and its negation, so this branch closes.",
-            {
-              first: first === undefined ? "?" : number(first),
-              second: number(second),
-            },
+      switch (rows.length) {
+        case 1:
+          return words(
+            "Row {row} closes this branch, so it cannot be marked open.",
+            { row: first },
           );
+        case 2:
+          return words(
+            "Rows {first} and {second} close this branch, so it cannot be marked open.",
+            { first, second },
+          );
+        default:
+          return words(
+            "Rows {rows} close this branch, so it cannot be marked open.",
+            { rows: rows.join(", ") },
+          );
+      }
     }
     case "open-incomplete": {
       const missing = problem.missing[0];
@@ -189,7 +198,7 @@ export function describeEndProblem(
       return words(
         "This system cannot say whether an open branch is complete.",
       );
-    default:
+    case "empty-branch":
       return words("This branch has no rows.");
   }
 }
@@ -275,11 +284,13 @@ export function engineFailureText(
 /**
  * The whole verdict in one sentence. With `detail` (full feedback) it names
  * the first problem in tree order; without it, only whether the tree is
- * right.
+ * right. `rules` are the rule each development names, which place its rows
+ * and so give them their numbers.
  */
 export function describeJudgement(
   judgement: TreeJudgement,
   tree: TableauDocument,
+  rules: ReadonlyMap<string, string>,
   words: TreeWords,
   detail = true,
 ): string {
@@ -311,7 +322,7 @@ export function describeJudgement(
       problem.problem,
       tree,
       words,
-      rowNumbers(tree),
+      rowNumbers(tree, rules),
     );
   }
 

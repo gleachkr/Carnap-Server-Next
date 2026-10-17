@@ -43,7 +43,7 @@ export interface TableauViewProps {
    * The row whose margin is being typed in, which of its fields, and the
    * draft.
    */
-  readonly citing: {
+  readonly marginEdit: {
     readonly row: string;
     readonly draft: string;
     readonly field: MarginField;
@@ -60,7 +60,7 @@ export interface TableauViewProps {
    * The lines whose margin the reader may click to type a citation or a
    * rule. Such a line shows an empty slot for each field with nothing in it.
    */
-  readonly citable?: ReadonlySet<number>;
+  readonly editableMargins?: ReadonlySet<number>;
   /**
    * Rows being marked, as a branch's closing rows are: those that may be
    * marked, those that are, and each one's control's name. Each markable row
@@ -96,7 +96,7 @@ export interface TableauViewProps {
   readonly focus: boolean;
   /** The reader clicked a row, or an end mark (named by its node's id). */
   readonly onCursor: (itemId: string) => void;
-  /** The reader clicked a field of a citable line's margin. */
+  /** The reader clicked a field of an editable line's margin. */
   readonly onMargin?: (line: number, field: MarginField) => void;
   /** A key on a row, or on an end mark (named by its node's id). */
   readonly onRowKey: (event: KeyboardEvent, itemId: string) => void;
@@ -104,11 +104,11 @@ export interface TableauViewProps {
   readonly onTextKey: (event: KeyboardEvent, rowId: string) => void;
   /** Focus left the row's text input: the reader is done typing. */
   readonly onTextBlur: (rowId: string, event: FocusEvent) => void;
-  /** Typing in a margin field, whichever `citing` says. */
-  readonly onCiteText: (text: string) => void;
-  readonly onCiteKey: (event: KeyboardEvent) => void;
+  /** Typing in a margin field, whichever `marginEdit` says. */
+  readonly onMarginText: (text: string) => void;
+  readonly onMarginTextKey: (event: KeyboardEvent) => void;
   /** Focus left the margin field's input. */
-  readonly onCiteBlur: (event: FocusEvent) => void;
+  readonly onMarginTextBlur: (event: FocusEvent) => void;
 }
 
 /** A stable id for a row's note, inside the shadow root. */
@@ -169,23 +169,18 @@ export function TableauView(props: TableauViewProps) {
       </span>,
     );
 
-    const citing =
-      props.citing !== null &&
-      layout.rows.get(props.citing.row)?.line === line
-        ? props.citing
+    const marginEdit =
+      props.marginEdit !== null &&
+      layout.rows.get(props.marginEdit.row)?.line === line
+        ? props.marginEdit
         : null;
     const note = annotations.margins?.get(line);
-    const citable = props.citable?.has(line) === true;
+    const editable = props.editableMargins?.has(line) === true;
     const stop =
       props.marginStop?.line === line ? props.marginStop : undefined;
-    const flags: Readonly<
-      Record<MarginField, ReadonlySet<number> | undefined>
-    > = {
-      cites: annotations.flaggedMargins,
-      rule: annotations.flaggedRules,
-    };
+    const flags = annotations.flaggedMargins ?? {};
     const field = (name: MarginField): JSX.Element | null => {
-      if (citing?.field === name) {
+      if (marginEdit?.field === name) {
         return (
           <input
             aria-label={
@@ -195,23 +190,23 @@ export function TableauView(props: TableauViewProps) {
             }
             autocomplete="off"
             class={`tableau-${name === "cites" ? "cite" : "rule"}-input`}
-            data-empty={citing.draft === "" ? "" : undefined}
+            data-empty={marginEdit.draft === "" ? "" : undefined}
             data-focus-input=""
             inputMode={name === "cites" ? "numeric" : undefined}
             key={name}
-            onBlur={(event) => props.onCiteBlur(event)}
-            onInput={(event) => props.onCiteText(event.currentTarget.value)}
-            onKeyDown={(event) => props.onCiteKey(event)}
+            onBlur={(event) => props.onMarginTextBlur(event)}
+            onInput={(event) => props.onMarginText(event.currentTarget.value)}
+            onKeyDown={(event) => props.onMarginTextKey(event)}
             spellcheck={false}
             type="text"
-            value={citing.draft}
+            value={marginEdit.draft}
           />
         );
       }
 
       const text = note?.[name] ?? "";
 
-      if (text === "" && !citable) {
+      if (text === "" && !editable) {
         return null;
       }
 
@@ -226,7 +221,7 @@ export function TableauView(props: TableauViewProps) {
           data-selected={stop?.field === name ? "" : undefined}
           key={name}
           onClick={
-            citable
+            editable
               ? (event) => {
                   event.stopPropagation();
                   props.onMargin?.(line, name);
@@ -249,7 +244,7 @@ export function TableauView(props: TableauViewProps) {
       gridRow: String(row),
     };
 
-    if (citing !== null) {
+    if (marginEdit !== null) {
       cells.push(
         <span
           class="tableau-margin tableau-margin-editing"
@@ -272,7 +267,7 @@ export function TableauView(props: TableauViewProps) {
           }
           aria-selected="true"
           class="tableau-margin"
-          data-citable={citable ? "" : undefined}
+          data-editable={editable ? "" : undefined}
           data-cursor=""
           data-margin-stop=""
           key={`m${line}`}
@@ -292,7 +287,7 @@ export function TableauView(props: TableauViewProps) {
         <span
           aria-hidden="true"
           class="tableau-margin"
-          data-citable={citable ? "" : undefined}
+          data-editable={editable ? "" : undefined}
           key={`m${line}`}
           style={place}
         >

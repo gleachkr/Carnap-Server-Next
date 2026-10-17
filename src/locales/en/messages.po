@@ -1209,6 +1209,10 @@ msgid "Branch closed on rows {first} and {second}"
 msgstr "Branch closed on rows {first} and {second}"
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Branch closed on rows {rows}"
+msgstr "Branch closed on rows {rows}"
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Branch marked open and complete"
 msgstr "Branch marked open and complete"
 
@@ -1363,8 +1367,8 @@ msgid "Citation of row {row}: {cites}"
 msgstr "Citation of row {row}: {cites}"
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Cite the two rows the branch closes on."
-msgstr "Cite the two rows the branch closes on."
+msgid "Cite the rows the branch closes on."
+msgstr "Cite the rows the branch closes on."
 
 #: src/worker/exercises/aufbau-proof-tree/strings.ts
 msgid "Cited hypothesis"
@@ -1416,16 +1420,16 @@ msgid "Close"
 msgstr "Close"
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open."
-msgstr "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open."
+msgid "Close a branch where it contradicts itself, citing the rows it closes on, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open."
+msgstr "Close a branch where it contradicts itself, citing the rows it closes on, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open."
-msgstr "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open."
+msgid "Close a branch where it contradicts itself, citing the rows it closes on, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open."
+msgstr "Close a branch where it contradicts itself, citing the rows it closes on, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed."
-msgstr "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed."
+msgid "Close a branch where it contradicts itself, citing the rows it closes on. The tree is done when every branch is closed."
+msgstr "Close a branch where it contradicts itself, citing the rows it closes on. The tree is done when every branch is closed."
 
 #: src/worker/exercise-kit/help-strings.ts
 msgid "Close help"
@@ -4272,6 +4276,10 @@ msgid "Row {cited} is not above this row on its branch."
 msgstr "Row {cited} is not above this row on its branch."
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} closes this branch, so it cannot be marked open."
+msgstr "Row {row} closes this branch, so it cannot be marked open."
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} marked."
 msgstr "Row {row} marked."
 
@@ -4294,10 +4302,6 @@ msgstr "Row {row} now cites rows {cited} and {other}."
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} now names the rule {rule}."
 msgstr "Row {row} now names the rule {rule}."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Row {row} says something is not identical to itself, so this branch closes."
-msgstr "Row {row} says something is not identical to itself, so this branch closes."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} still needs an instance for {names} on this branch."
@@ -4348,8 +4352,12 @@ msgid "Row deleted."
 msgstr "Row deleted."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Rows {first} and {second} are a sentence and its negation, so this branch closes."
-msgstr "Rows {first} and {second} are a sentence and its negation, so this branch closes."
+msgid "Rows {first} and {second} close this branch, so it cannot be marked open."
+msgstr "Rows {first} and {second} close this branch, so it cannot be marked open."
+
+#: src/worker/exercises/truth-tree/strings.ts
+msgid "Rows {rows} close this branch, so it cannot be marked open."
+msgstr "Rows {rows} close this branch, so it cannot be marked open."
 
 #: src/worker/web/components.tsx
 msgid "Rubric"

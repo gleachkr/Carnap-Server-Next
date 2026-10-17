@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { UNSAVED_ANSWER_ATTRIBUTE } from "../../src/worker/exercise-kit/answer-events";
+import { theorySourceByFileName } from "../../src/worker/logic/theories";
 import { dom } from "../helpers/dom";
 import { engine } from "../helpers/engine";
 import {
@@ -859,6 +860,123 @@ describe("type mode", () => {
     expect(end?.getAttribute("aria-label")).toBe("Branch closed on row 4");
   });
 
+  test("two splits on one row share a line only when their rules agree", async () => {
+    const mounted = mountExercise(
+      await treeExercise('finish="one-open"', "∃xFx, ∃xGx :|-: ∃x(Fx & Gx)"),
+    );
+    const leave = () =>
+      press(
+        mounted.root.querySelector(".tableau-input") as Element,
+        "Escape",
+      );
+    const typeAt = (target: HTMLElement, text: string) => {
+      target.click();
+      fill(
+        mounted.root.querySelector<HTMLInputElement>(".tableau-input"),
+        text,
+      );
+      leave();
+    };
+    const blank = () =>
+      rows(mounted).find(
+        (each) => each.querySelector(".tableau-text")?.textContent === "",
+      ) as HTMLElement;
+    const second = (text: string) =>
+      rows(mounted).filter(
+        (each) => each.querySelector(".tableau-text")?.textContent === text,
+      )[1] as HTMLElement;
+    const line = (target: HTMLElement) =>
+      target.getAttribute("aria-label")?.match(/^Row (\d+)/)?.[1];
+
+    for (const [text, cite, rule] of [
+      ["Fa", "1", "∃"],
+      ["Gb", "2", "∃"],
+      ["¬(Fa & Ga)", "3", "¬∃"],
+      ["¬(Fb & Gb)", "3", "¬∃"],
+    ] as const) {
+      press(cursor(mounted), "t");
+      write(mounted, text, cite);
+      name(mounted, rule);
+    }
+
+    press(cursor(mounted), "s");
+    write(mounted, "¬Fb", "7");
+    name(mounted, "¬&");
+    typeAt(blank(), "¬Gb");
+    // The left split, by ¬& from row 6.
+    row(mounted, "¬Fb").click();
+    leave();
+    press(cursor(mounted), "s");
+    write(mounted, "¬Fa", "6");
+    name(mounted, "¬&");
+    typeAt(blank(), "¬Ga");
+    // The right split, cited from row 6 with no rule yet: its own line, whose
+    // margin says so, not the left split's line and rule.
+    row(mounted, "¬Gb").click();
+    leave();
+    press(cursor(mounted), "s");
+    write(mounted, "¬Fa", "6");
+    typeAt(blank(), "¬Ga");
+
+    expect(line(second("¬Fa"))).toBe("10");
+    expect(marginField(mounted, 9, "rule")?.textContent).toBe("¬&");
+    expect(marginField(mounted, 10, "cites")?.textContent).toBe("6");
+    expect(marginField(mounted, 10, "rule")?.textContent).toBe("");
+
+    // A wrong rule shows beside the rows it is wrong for.
+    second("¬Ga").click();
+    leave();
+    name(mounted, "¬∃");
+    expect(marginField(mounted, 10, "rule")?.textContent).toBe("¬∃");
+    await until(() => second("¬Fa").hasAttribute("data-flagged"), 3_000);
+
+    // The same rule as the left split's: the two share line 9, under one
+    // margin that is true of both.
+    second("¬Ga").click();
+    leave();
+    name(mounted, "¬&");
+    expect(line(second("¬Fa"))).toBe("9");
+    expect(marginField(mounted, 9, "rule")?.textContent).toBe("¬&");
+    expect(marginField(mounted, 10, "rule")).toBeNull();
+    await until(
+      () => mounted.root.querySelector("[data-flagged]") === null,
+      3_000,
+    );
+  }, 30_000);
+
+  test("a closure rule citing three rows closes at the third circle", async () => {
+    // An author's theory whose closure also cites a sentence, another, and the
+    // negation of their conjunction.
+    const ubc = (theorySourceByFileName("forallx-ubc.mm0") ?? "").replace(
+      "--| @fallback tb_close_neq\n",
+      "--| @fallback tb_close_neq\naxiom tb_close_three (ga: ctx) (ph ps: wff): $ focus ga at (ph ; ps ; ¬ (ph & ps)) $;\n--| @fallback tb_close_three\n",
+    );
+    const mounted = mountExercise(
+      await compileExercise(
+        `:::aufbau-mm0{name="three"}\n${ubc}\n:::\n\n::::truth-tree{#t system="three"}\nShow it.\n\n- P\n- Q\n- ¬(P & Q)\n::::`,
+      ),
+    );
+    const tick = (line: number) =>
+      mounted.root
+        .querySelector<HTMLInputElement>(
+          `.tableau-pick[aria-label='Close the branch on row ${line}']`,
+        )
+        ?.click();
+
+    press(cursor(mounted), "x");
+    tick(1);
+    tick(2);
+    // Two rows that close nothing under a rule citing three: still marking.
+    expect(announced(mounted)).toBe("Row 2 marked.");
+    expect(mounted.root.querySelector(".tableau-end")).toBeNull();
+    tick(3);
+    expect(announced(mounted)).toBe("Branch closed on rows 1, 2, 3");
+    const end = answerOf(mounted).nodes[0]?.end as {
+      readonly cites?: readonly string[];
+    };
+    expect(end.cites).toHaveLength(3);
+  });
+
   test("a wrong step is flagged as it is written, under full feedback", async () => {
     const mounted = mountExercise(await treeExercise("", "- A ∨ B"));
 
@@ -910,7 +1028,7 @@ describe("type mode", () => {
     // An uncited line's margin is a slot a click types the citation into,
     // and leaving it keeps what was typed.
     const margin = mounted.root.querySelector<HTMLElement>(
-      ".tableau-margin[data-citable] .tableau-margin-cites",
+      ".tableau-margin[data-editable] .tableau-margin-cites",
     );
     expect(margin?.querySelector(".tableau-margin-slot")).not.toBeNull();
     margin?.click();

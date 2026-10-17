@@ -95,6 +95,10 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "Branch closed on rows {first} and {second}",
       placeholders("first", "second"),
     ),
+    "Branch closed on rows {rows}": i18n.t(
+      "Branch closed on rows {rows}",
+      placeholders("rows"),
+    ),
     "Branch closed on row {row}": i18n.t(
       "Branch closed on row {row}",
       placeholders("row"),
@@ -210,17 +214,17 @@ export function buildTruthTreeStrings(i18n: Translator) {
       i18n.t(
         "Write each step's rows, choosing whether they stack on the branch or split it, and type the row they develop and the rule they use in the margin.",
       ),
-    "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed.":
+    "Close a branch where it contradicts itself, citing the rows it closes on. The tree is done when every branch is closed.":
       i18n.t(
-        "Close a branch on a sentence and its negation, citing both rows. The tree is done when every branch is closed.",
+        "Close a branch where it contradicts itself, citing the rows it closes on. The tree is done when every branch is closed.",
       ),
-    "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.":
+    "Close a branch where it contradicts itself, citing the rows it closes on, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.":
       i18n.t(
-        "Close a branch on a sentence and its negation, citing both rows, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.",
+        "Close a branch where it contradicts itself, citing the rows it closes on, and mark each complete open branch ↑. The tree is done when every branch is closed or marked open.",
       ),
-    "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.":
+    "Close a branch where it contradicts itself, citing the rows it closes on, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.":
       i18n.t(
-        "Close a branch on a sentence and its negation, citing both rows, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.",
+        "Close a branch where it contradicts itself, citing the rows it closes on, and mark a complete open branch ↑. The tree is done when every branch is closed, or one is marked open.",
       ),
     "Move between rows": i18n.t("Move between rows"),
     "Write the row's sentence": i18n.t("Write the row's sentence"),
@@ -279,27 +283,30 @@ export function buildTruthTreeStrings(i18n: Translator) {
     ),
 
     // ——— What is wrong with a branch's end.
-    "Cite the two rows the branch closes on.": i18n.t(
-      "Cite the two rows the branch closes on.",
+    "Cite the rows the branch closes on.": i18n.t(
+      "Cite the rows the branch closes on.",
     ),
     "A closure cites rows on its own branch.": i18n.t(
       "A closure cites rows on its own branch.",
     ),
-    "Row {row} says something is not identical to itself, so this branch closes.":
-      i18n.t(
-        "Row {row} says something is not identical to itself, so this branch closes.",
-        placeholders("row"),
-      ),
+    "Row {row} closes this branch, so it cannot be marked open.": i18n.t(
+      "Row {row} closes this branch, so it cannot be marked open.",
+      placeholders("row"),
+    ),
     "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch.":
       i18n.t(
         "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch.",
         placeholders("row"),
       ),
-    "Rows {first} and {second} are a sentence and its negation, so this branch closes.":
+    "Rows {first} and {second} close this branch, so it cannot be marked open.":
       i18n.t(
-        "Rows {first} and {second} are a sentence and its negation, so this branch closes.",
+        "Rows {first} and {second} close this branch, so it cannot be marked open.",
         placeholders("first", "second"),
       ),
+    "Rows {rows} close this branch, so it cannot be marked open.": i18n.t(
+      "Rows {rows} close this branch, so it cannot be marked open.",
+      placeholders("rows"),
+    ),
     "Row {row} still needs developing on this branch.": i18n.t(
       "Row {row} still needs developing on this branch.",
       placeholders("row"),

@@ -55,6 +55,29 @@ describe("layout", () => {
     expect(layout.guides).toEqual([]);
   });
 
+  test("steps citing one row share a line only when they name one rule", () => {
+    const t = new TreeBuilder(["A & B", "C ∨ D"]);
+    const split = t.split(t.rootNode, "r2", [["C"], ["D"]], "∨");
+    const [left, right] = split.nodes as [string, string];
+    const [leftA] = t.stack(left, "r1", ["A", "B"], "&");
+    const [rightA] = t.stack(right, "r1", ["A", "B"], "∨");
+    const line = (id: string | undefined) =>
+      layoutTableau(t.tree, t.rules).rows.get(id ?? "")?.line;
+
+    // One row cited, by two rules: a line each, so each margin is its own.
+    expect(line(leftA)).toBe(4);
+    expect(line(rightA)).toBe(6);
+    // Without the rules, the citation alone shares the line.
+    expect(layoutTableau(t.tree).rows.get(rightA as string)?.line).toBe(4);
+
+    // The same rule: one justification, one line.
+    t.rules.set(
+      new TableauIndex(t.tree).row(rightA as string)?.row.dev ?? "",
+      "&",
+    );
+    expect(line(rightA)).toBe(4);
+  });
+
   test("a step's margin is on its first line, and its other rows continue it", () => {
     const { dAndNotR, leftRows, t } = mockupTree();
     const [d, notR] = leftRows as [string, string];

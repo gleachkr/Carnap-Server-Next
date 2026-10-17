@@ -93,28 +93,71 @@ export function isSelfIdentity(
   );
 }
 
+/** Whether a closure rule closes a branch on these rows, in any order. */
+function closesOn(
+  language: SurfaceLanguage,
+  development: TreeDevelopment,
+  terms: readonly Term[],
+): boolean {
+  return development.closure.some(
+    (patterns) => !ruleMatches(language, patterns, terms, []).next().done,
+  );
+}
+
+/**
+ * How many rows each closure rule cites, fewest first: `[1, 2]` for UBC,
+ * whose `×` cites a sentence and its negation, or `a≠a` alone.
+ */
+export function closureArities(
+  development: TreeDevelopment,
+): readonly number[] {
+  return [
+    ...new Set(development.closure.map((patterns) => patterns.focus.length)),
+  ].sort((a, b) => a - b);
+}
+
 /**
  * The first rows, in branch order, that a closure rule closes the branch on:
- * one row, or two in either order.
+ * as many as the rule cites, in any order. The first is the set whose last
+ * row comes earliest, and of those the one a rule citing fewer rows closes.
  */
 export function closing(
   language: SurfaceLanguage,
   development: TreeDevelopment,
   rows: readonly ReadRow[],
 ): readonly string[] | null {
-  const closes = (terms: readonly Term[]): boolean =>
-    development.closure.some(
-      (patterns) => !ruleMatches(language, patterns, terms, []).next().done,
-    );
-
-  for (const [at, row] of rows.entries()) {
-    if (closes([row.term])) {
-      return [row.id];
+  const arities = closureArities(development);
+  // The rows before `before` taken `count` at a time, in branch order.
+  const choose = function* (
+    before: number,
+    count: number,
+  ): Generator<readonly ReadRow[]> {
+    if (count === 0) {
+      yield [];
+      return;
     }
 
-    for (const earlier of rows.slice(0, at)) {
-      if (closes([earlier.term, row.term])) {
-        return [earlier.id, row.id];
+    for (let at = count - 1; at < before; at += 1) {
+      for (const chosen of choose(at, count - 1)) {
+        yield [...chosen, rows[at] as ReadRow];
+      }
+    }
+  };
+
+  for (const [at, row] of rows.entries()) {
+    for (const arity of arities) {
+      for (const earlier of choose(at, arity - 1)) {
+        const chosen = [...earlier, row];
+
+        if (
+          closesOn(
+            language,
+            development,
+            chosen.map((each) => each.term),
+          )
+        ) {
+          return chosen.map((each) => each.id);
+        }
       }
     }
   }
@@ -122,17 +165,26 @@ export function closing(
   return null;
 }
 
-/** Whether a row closes a branch by itself, under the theory: `a≠a`. */
-export function closesAlone(
+/**
+ * Whether these rows, as typed, close a branch by a closure rule, in any
+ * order: a sentence and its negation, or `a≠a` alone, under UBC.
+ */
+export function closesBranch(
   development: TreeDevelopment,
   reader: RowSortReader,
-  text: string,
+  texts: readonly string[],
 ): boolean {
-  const read = reader.read(text);
+  const terms: Term[] = [];
 
-  return (
-    read.ok &&
-    closing(reader.language, development, [{ id: "", term: read.term }]) !==
-      null
-  );
+  for (const text of texts) {
+    const read = reader.read(text);
+
+    if (!read.ok) {
+      return false;
+    }
+
+    terms.push(read.term);
+  }
+
+  return closesOn(reader.language, development, terms);
 }

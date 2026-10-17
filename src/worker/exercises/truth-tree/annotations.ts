@@ -79,7 +79,7 @@ export function treeAnnotations(
   // A problem is drawn on the field it is about: a wrong sentence under the
   // row, a wrong citation under the margin. A blank one is only unfinished.
   const flagged = new Set<string>(options.flag ? report.ends.keys() : []);
-  const flaggedMargins = new Set<number>();
+  const flaggedCites = new Set<number>();
 
   for (const [rowId, problem] of options.flag ? report.rows : []) {
     if (isIncomplete(problem)) {
@@ -95,7 +95,7 @@ export function treeAnnotations(
     const line = layout.rows.get(layout.heads.get(rowId) ?? rowId)?.line;
 
     if (line !== undefined) {
-      flaggedMargins.add(line);
+      flaggedCites.add(line);
     }
   }
 
@@ -172,7 +172,7 @@ export function treeAnnotations(
     },
     endNotes,
     flagged,
-    flaggedMargins,
+    flaggedMargins: { cites: flaggedCites },
     margins,
     marks,
   };
