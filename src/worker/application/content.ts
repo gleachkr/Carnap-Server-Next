@@ -17,6 +17,7 @@ import type { AppId } from "../domain/ids";
 import { createAppId } from "../domain/ids";
 import type { JsonValue } from "../domain/json";
 import { timestampNow } from "../domain/time";
+import { normalizeText } from "../exercise-kit/assessment";
 import { keyedArtifact } from "../exercise-kit/systems/join";
 import { deferred } from "../i18n/deferred";
 import type { TheoryResolver } from "../logic/theories";
@@ -777,8 +778,13 @@ export class ContentService {
     requireContentAuthor(actor);
 
     const details = (command.details ?? "").trim();
+    // A browser posts a textarea's lines ended by CRLF, and a file from
+    // Windows arrives the same way; the engine refuses a carriage return in
+    // MM0. One spelling of a line break, then, for everything past this line:
+    // the compile, the hash, and the text a lesson freezes.
+    const sourceText = normalizeText(command.sourceText);
 
-    assertSourceText(command.sourceText);
+    assertSourceText(sourceText);
     assertDetails(details);
 
     const item = await this.getItem(actor, itemId);
@@ -788,8 +794,8 @@ export class ContentService {
     // error, the editor's list, the gutter markers — is one path.
     const compiled =
       item.sourceFormat === "mm0"
-        ? compileTheorySource(command.sourceText)
-        : await compileCarnapMarkdown(command.sourceText, {
+        ? compileTheorySource(sourceText)
+        : await compileCarnapMarkdown(sourceText, {
             resolveTheory: this.theoryResolver(actor),
           });
 
@@ -825,8 +831,8 @@ export class ContentService {
       "systemOrigins" in compiled ? compiled.systemOrigins : {};
     const contentHash =
       item.sourceFormat === "mm0"
-        ? await mm0TextHash(command.sourceText)
-        : await sha256Id(lessonHashInput(command.sourceText, systemOrigins));
+        ? await mm0TextHash(sourceText)
+        : await sha256Id(lessonHashInput(sourceText, systemOrigins));
 
     // The next number and the hash check come as one aggregate, not as the
     // item's revisions: a save used to read every one of them, artifacts and
@@ -869,7 +875,7 @@ export class ContentService {
       // The item's, not the caller's: nothing on the way in gets to say what
       // kind of thing this revision is, so the two cannot come apart.
       sourceFormat: item.sourceFormat,
-      sourceText: command.sourceText,
+      sourceText,
     });
   }
 

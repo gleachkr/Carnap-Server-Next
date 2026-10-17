@@ -13,6 +13,7 @@ import {
   grantTestCourseCreator,
 } from "./helpers/admin";
 import { appRequest, createTestApp } from "./helpers/app";
+import { engine } from "./helpers/engine";
 import {
   jsonRequest,
   type LoginResult,
@@ -434,6 +435,34 @@ describe("saving an MM0 revision", () => {
       expect(
         ((await response.json()) as ErrorEnvelope).error.code,
       ).toStartWith("mm0_");
+    });
+  });
+
+  test("keeps a browser's CRLF line endings out of what a lesson freezes", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "author@example.test");
+      // What a textarea's form post sends: the engine refuses the `\r`.
+      const revisionId = await hostTheory(
+        env,
+        author,
+        HOSTED_THEORY.replaceAll("\n", "\r\n"),
+      );
+      const response = await appRequest(
+        createTestApp(),
+        hostedTheoryPath(revisionId),
+        { headers: { Cookie: author.cookieHeader } },
+        env,
+      );
+      const served = await response.text();
+
+      expect(served).toBe(HOSTED_THEORY);
+
+      const result = (await engine()).compile(
+        served,
+        "lemma t (a b: wff): $ a -> b -> a $\n------\nl1: $ a -> b -> a $ by ax_k []\n",
+      );
+
+      expect(result.ok).toBe(true);
     });
   });
 
