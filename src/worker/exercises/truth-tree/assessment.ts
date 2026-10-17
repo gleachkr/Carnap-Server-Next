@@ -181,8 +181,17 @@ export const TRUTH_TREE_ASSESSMENT = {
 
     const resolved = resolveTruthTree(declaration.publicData);
 
+    // Stored data that no longer reads is as invalid as data of the wrong
+    // shape: this compiler never writes it.
     if (resolved === null) {
-      return { ...base, awardedScore: 0, status: "error" };
+      return {
+        ...base,
+        awardedScore: 0,
+        feedback: {
+          diagnostics: [{ code: "invalid_declaration_public_data" }],
+        },
+        status: "error",
+      };
     }
 
     // The goal is written here, from the stored tree and the frozen theory,
@@ -197,7 +206,12 @@ export const TRUTH_TREE_ASSESSMENT = {
       const result = await verifyMmb(`${mm0}\n${proof.goal}\n`, mmb);
 
       if (result.errored) {
-        return { ...base, awardedScore: 0, status: "error" };
+        return {
+          ...base,
+          awardedScore: 0,
+          feedback: { verified: false },
+          status: "error",
+        };
       }
 
       verified = result.ok;
@@ -210,10 +224,13 @@ export const TRUTH_TREE_ASSESSMENT = {
       proof,
     );
 
-    // All or nothing: a tree with one wrong row is not mostly right.
+    // All or nothing: a tree with one wrong row is not mostly right. The
+    // engine's word is kept as the proof types keep it, since the certificate
+    // is not: without it a review can no longer tell what only it could say.
     return {
       ...base,
       awardedScore: judgement.ok ? declaration.nominalPoints : 0,
+      feedback: { verified },
       status: judgement.ok ? "correct" : "incorrect",
     };
   },

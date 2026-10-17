@@ -72,7 +72,13 @@ async function certified(
 async function grade(
   item: ExerciseManifestItem,
   data: JsonValue,
-): Promise<{ score: number; status: string; summary: string; html: string }> {
+): Promise<{
+  feedback: unknown;
+  score: number;
+  status: string;
+  summary: string;
+  html: string;
+}> {
   const normalized = TRUTH_TREE_EXERCISE.normalizeAnswer(
     {
       data,
@@ -102,6 +108,7 @@ async function grade(
   } as never);
 
   return {
+    feedback: evaluation.feedback,
     html: review.elementHtml ?? "",
     score: evaluation.awardedScore,
     status: evaluation.status,
@@ -244,6 +251,7 @@ describe("grading", () => {
 
     expect(right.status).toBe("correct");
     expect(right.score).toBe(3);
+    expect(right.feedback).toEqual({ verified: true });
     // The review has the tree and not the certificate, so it says nothing
     // of what only the engine could tell.
     expect(right.summary).toBe("Truth tree");
@@ -263,10 +271,12 @@ describe("grading", () => {
     const mmb = await certifyTree(publicDataOf(item), other.answer());
 
     expect(mmb).toBeDefined();
-    expect((await grade(item, t.answer() as never)).score).toBe(0);
-    expect((await grade(item, { ...t.answer(), mmb } as never)).score).toBe(
-      0,
-    );
+    const without = await grade(item, t.answer() as never);
+    const another = await grade(item, { ...t.answer(), mmb } as never);
+    expect(without.score).toBe(0);
+    expect(without.feedback).toEqual({ verified: false });
+    expect(another.score).toBe(0);
+    expect(another.feedback).toEqual({ verified: false });
   });
 
   test("without the engine's word, a done tree is unconfirmed and an undone one unfinished", async () => {
@@ -648,6 +658,30 @@ describe("grading", () => {
     );
 
     expect(evaluation.status).toBe("error");
+  });
+
+  test("a declaration whose language no longer reads is an error that says so", async () => {
+    const item = await declaration(VALID);
+    const broken = {
+      ...item,
+      publicData: { ...publicDataOf(item), source: "not a theory" },
+    } as unknown as ExerciseManifestItem;
+    const t = builderFor(item);
+
+    const evaluation = await TRUTH_TREE_EXERCISE.evaluate(
+      {
+        data: t.answer() as unknown as JsonValue,
+        kind: TRUTH_TREE_ANSWER_KIND,
+        schemaVersion: TRUTH_TREE_SCHEMA_VERSION,
+      },
+      broken,
+      { now: new Date("2026-01-01T00:00:00Z") } as never,
+    );
+
+    expect(evaluation.status).toBe("error");
+    expect(evaluation.feedback).toEqual({
+      diagnostics: [{ code: "invalid_declaration_public_data" }],
+    });
   });
 
   test("a tree past the row cap is answered without being read", async () => {
