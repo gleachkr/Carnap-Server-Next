@@ -76,12 +76,12 @@ export async function lessonTree(source: string): Promise<TreeExercise> {
 }
 
 /**
- * A truth-tree exercise asking `question` (an argument line, or a list of
- * sentences), in `system` (the directive's default where absent) and with
+ * A truth-tree exercise whose root is `root`, its rows in order as the theory
+ * writes them, in `system` (the directive's default where absent) and with
  * `finish` (likewise).
  */
 export function treeExercise(
-  question: string,
+  root: readonly string[],
   options: {
     readonly system?: string;
     readonly finish?: string;
@@ -95,7 +95,7 @@ export function treeExercise(
   ].join(" ");
 
   return lessonTree(
-    `::::truth-tree{${attributes}}\n${options.prompt ?? "Show it."}\n\n${question}\n::::`,
+    `::::truth-tree{${attributes}}\n${options.prompt ?? "Show it."}\n\n${root.map((row) => `- ${row}`).join("\n")}\n::::`,
   );
 }
 

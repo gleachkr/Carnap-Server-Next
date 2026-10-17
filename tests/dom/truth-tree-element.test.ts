@@ -166,7 +166,7 @@ function marginField(
 
 describe("upgrading", () => {
   test("the toolbar is icon buttons, named for their actions", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
     const buttons = [
       ...mounted.root.querySelectorAll<HTMLButtonElement>(
         "[role='toolbar'] button",
@@ -187,7 +187,7 @@ describe("upgrading", () => {
     ]);
 
     const open = mountExercise(
-      await treeExercise('finish="one-open"', "P & Q :|-: P"),
+      await treeExercise('finish="one-open"', "- P & Q\n- ¬P"),
     );
     expect(
       [
@@ -203,7 +203,7 @@ describe("upgrading", () => {
   });
 
   test("the island draws the root as a tree, and the answer is the root", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
 
     expect(mounted.element.dataset.enhanced).toBe("true");
     expect(
@@ -234,7 +234,7 @@ describe("upgrading", () => {
       ],
       rules: { d1: "&" },
     };
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"), {
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"), {
       priorAnswer: prior,
     });
     const answer = answerOf(mounted);
@@ -376,7 +376,7 @@ describe("upgrading", () => {
   });
 
   test("the rules are the answer in one order, however they were typed", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
 
     press(cursor(mounted), "t");
     write(mounted, "P", "1");
@@ -451,7 +451,7 @@ describe("upgrading", () => {
         },
       ],
     };
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"), {
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"), {
       priorAnswer: prior,
     });
 
@@ -466,7 +466,7 @@ describe("when the engine fails", () => {
     "The proof engine couldn't read this proof — check for unexpected characters.";
 
   test("the mark says so, and so does the Check", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
 
     compile.mockImplementationOnce(() => {
       throw new Error("wasm trap");
@@ -540,7 +540,7 @@ describe("when the engine fails", () => {
 
 describe("type mode", () => {
   test("stack, write, cite, close, and check", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
 
     press(cursor(mounted), "t");
     expect(announced(mounted)).toBe("New row 3.");
@@ -564,9 +564,7 @@ describe("type mode", () => {
       .querySelector<HTMLButtonElement>(".truth-tree-check")
       ?.click();
     await until(() => statusText(mounted) !== "", 3_000);
-    expect(statusText(mounted)).toBe(
-      "Right: the tree closes, so the argument is valid.",
-    );
+    expect(statusText(mounted)).toBe("Right: every branch closes.");
     expect(markState(mounted)).toBe("ok");
     // The answer carries the engine's certificate, for the server to verify.
     expect(
@@ -577,7 +575,7 @@ describe("type mode", () => {
   });
 
   test("the arrows go on from the end of a line to its citation", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
     const active = () => mounted.root.activeElement as HTMLElement;
     const stop = () =>
       mounted.root.querySelector<HTMLElement>("[data-margin-stop]");
@@ -638,7 +636,7 @@ describe("type mode", () => {
   });
 
   test("a step is justified once, beside its first row, as in the book", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
     // The margin on a line, found by the line number beside it.
     const marginOn = (line: number): HTMLElement | undefined => {
       const number = [
@@ -687,7 +685,7 @@ describe("type mode", () => {
   });
 
   test("a branch's end mark takes the cursor, and Delete takes it back", async () => {
-    const mounted = mountExercise(await treeExercise("", "P & Q :|-: P"));
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"));
     // x, then a click on the circle of each row it closes on.
     const close = () => {
       press(cursor(mounted), "x");
@@ -739,7 +737,9 @@ describe("type mode", () => {
   });
 
   test("closing marks its rows, as a counterexample row is marked", async () => {
-    const mounted = mountExercise(await treeExercise("", "A ∨ B, ¬A :|-: B"));
+    const mounted = mountExercise(
+      await treeExercise("", "- A ∨ B\n- ¬A\n- ¬B"),
+    );
     const marked = () =>
       rows(mounted)
         .filter((each) => each.hasAttribute("data-picked"))
@@ -862,7 +862,10 @@ describe("type mode", () => {
 
   test("two splits on one row share a line only when their rules agree", async () => {
     const mounted = mountExercise(
-      await treeExercise('finish="one-open"', "∃xFx, ∃xGx :|-: ∃x(Fx & Gx)"),
+      await treeExercise(
+        'finish="one-open"',
+        "- ∃xFx\n- ∃xGx\n- ¬∃x(Fx & Gx)",
+      ),
     );
     const leave = () =>
       press(

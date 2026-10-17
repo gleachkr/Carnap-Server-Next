@@ -107,7 +107,8 @@ export function individualSorts(lang: SurfaceLanguage): readonly string[] {
   return sortsWithRole(lang, "individual");
 }
 
-function sortsWithRole(lang: SurfaceLanguage, role: string): string[] {
+/** The sorts carrying `@syntax role <role>`, in declaration order. */
+export function sortsWithRole(lang: SurfaceLanguage, role: string): string[] {
   const sorts: string[] = [];
 
   for (const info of lang.spec.sorts.values()) {

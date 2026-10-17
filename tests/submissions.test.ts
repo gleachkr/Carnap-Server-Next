@@ -3419,7 +3419,8 @@ describe("a truth tree on an assignment", () => {
 ::::truth-tree{#tt points="2"}
 Use a tree.
 
-P & Q :|-: P
+- P & Q
+- ¬P
 ::::`;
       const revisionId = await createRevision(env, instructor, lesson);
 

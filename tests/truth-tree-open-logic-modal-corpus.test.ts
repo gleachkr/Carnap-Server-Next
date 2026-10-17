@@ -4,7 +4,6 @@ import {
   assumptions,
   closesEverywhere,
   flipped,
-  question,
   write,
 } from "./helpers/olp-corpus";
 import type {
@@ -81,19 +80,16 @@ async function judge(
 ): Promise<{
   readonly report: TreeReport;
   readonly written: readonly string[];
-} | null> {
+}> {
   const root = assumptions(tableau.tree);
-  const asked = question(root);
-
-  if (asked === null) {
-    return null;
-  }
-
-  const exercise = await treeExercise(asked.body, {
-    finish: open ? "one-open" : "closed",
-    system: "open-logic-modal-k",
-  });
-  const { tree, written } = write(exercise.resolved, root, asked.order);
+  const exercise = await treeExercise(
+    root.map((row) => row.row),
+    {
+      finish: open ? "one-open" : "closed",
+      system: "open-logic-modal-k",
+    },
+  );
+  const { tree, written } = write(exercise.resolved, root);
 
   if (open) {
     const parents = new Set(tree.tree.nodes.map((node) => node.parent));
@@ -115,10 +111,6 @@ describe("the Open Logic Project's tableaux for K", () => {
   for (const tableau of OLP_MODAL_K_TABLEAUX) {
     test(tableau.from, async () => {
       const judged = await judge(tableau);
-
-      if (judged === null) {
-        throw new Error("its assumptions are no exercise");
-      }
 
       const wrong = WRONG.get(tableau.from);
 
@@ -145,8 +137,8 @@ describe("the Open Logic Project's tableaux for K", () => {
       });
       const meant = (WRONG.get(from) ?? []).filter((at) => !rules.has(at));
 
-      expect(problems(judged?.report as TreeReport)).toEqual(
-        meant.map((at) => `row ${judged?.written[at]}: step-wrong`),
+      expect(problems(judged.report)).toEqual(
+        meant.map((at) => `row ${judged.written[at]}: step-wrong`),
       );
     }, 60_000);
   }
@@ -163,8 +155,8 @@ describe("a book tableau for K left open", () => {
     test(`${tableau.from} is complete where the book leaves it open`, async () => {
       const judged = await judge(tableau, true);
 
-      expect(problems(judged?.report as TreeReport)).toEqual([]);
-      expect(judged?.report.open).toBe(true);
+      expect(problems(judged.report)).toEqual([]);
+      expect(judged.report.open).toBe(true);
     }, 60_000);
   }
 });
@@ -186,8 +178,8 @@ describe("a book tableau for K with one row signed wrong is refused", () => {
         const judged = await judge({ from: tableau.from, tree });
 
         // Refused at the step that wrote it, whatever else follows.
-        expect(problems(judged?.report as TreeReport)).toContain(
-          `row ${judged?.written[n]}: step-wrong`,
+        expect(problems(judged.report)).toContain(
+          `row ${judged.written[n]}: step-wrong`,
         );
       }
     }, 120_000);

@@ -486,11 +486,15 @@ function withoutInstance(rule: DevelopmentRule): DevelopmentRule {
   return rule.instance === null ? rule : { ...rule, instance: null };
 }
 
-/** Every `tree.` role in a theory, with the term or rule that carries it. */
+/** Every `tree.` role in a theory, with the sort, term or rule that carries it. */
 function treeRoles(language: SurfaceLanguage): [string, string][] {
   const found: [string, string][] = [];
 
-  for (const table of [language.spec.terms, language.spec.rules]) {
+  for (const table of [
+    language.spec.sorts,
+    language.spec.terms,
+    language.spec.rules,
+  ]) {
     for (const [name, info] of table) {
       for (const role of info.roles) {
         if (role.startsWith("tree.")) {
@@ -647,16 +651,12 @@ function rowsOf(
   branch: Term | null,
   marks?: Term[],
 ): Term[] | null {
-  const joinTerm = language.spec.terms.get(theory.closes)?.binders[0];
-  const branchSort =
-    joinTerm !== undefined && "sort" in joinTerm.type
-      ? joinTerm.type.sort
-      : null;
   const coercions = new Set(
     language.spec.coercions
       .filter(
         (coercion) =>
-          coercion.to === branchSort && coercion.from === theory.rowSort,
+          coercion.to === theory.branchSort &&
+          coercion.from === theory.rowSort,
       )
       .map((coercion) => coercion.name),
   );

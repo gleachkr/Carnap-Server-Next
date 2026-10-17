@@ -28,8 +28,8 @@ msgid "“{construct}” is not something this exercise type can interpret."
 msgstr "„{construct}“ kann dieser Übungstyp nicht interpretieren."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "“{formula}” has free variables, and a tree's root must be sentences."
-msgstr "„{formula}“ hat freie Variablen, aber die Wurzel eines Baums muss aus Sätzen bestehen."
+msgid "“{formula}” has free variables, and a tree's root may have none."
+msgstr "„{formula}“ hat freie Variablen, und die Wurzel eines Baums darf keine haben."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "“{formula}” has free variables, and a world exercise's sentences must have none."
@@ -539,16 +539,12 @@ msgid "A truth table may use at most {max} atoms; this one uses {found}."
 msgstr "Eine Wahrheitstafel darf höchstens {max} Atome verwenden; diese verwendet {found}."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "A truth tree needs a root: an argument line “premises :|-: conclusion”, or a list of sentences."
-msgstr "Ein Wahrheitsbaum braucht eine Wurzel: eine Argumentzeile „Prämissen :|-: Konklusion“ oder eine Liste von Sätzen."
+msgid "A truth tree needs a root: a list of its rows, each on a line of its own after “- ”."
+msgstr "Ein Wahrheitsbaum braucht eine Wurzel: eine Liste ihrer Zeilen, jede für sich nach „- “."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "A truth tree tests an argument with one conclusion."
-msgstr "Ein Wahrheitsbaum prüft ein Argument mit genau einer Konklusion."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "A truth tree's root may have at most {max} sentences."
-msgstr "Die Wurzel eines Wahrheitsbaums darf höchstens {max} Sätze haben."
+msgid "A truth tree's root may have at most {max} rows."
+msgstr "Die Wurzel eines Wahrheitsbaums darf höchstens {max} Zeilen haben."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "A truth-table exercise requires at least one formula."
@@ -1694,6 +1690,10 @@ msgstr "Konnte nicht geprüft werden"
 #: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Could not load the proof engine."
 msgstr "Die Beweis-Engine konnte nicht geladen werden."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Could not parse “{formula}” as a row, of the sort “{sort}”: {detail}"
+msgstr "„{formula}“ konnte nicht als Zeile der Sorte „{sort}“ gelesen werden: {detail}"
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "Could not parse “{line}”. Each starter line must read '<label>: $ <formula> $ by <rule> [<refs>]'."
@@ -3626,8 +3626,8 @@ msgid "Only the end of a branch can be closed or marked open."
 msgstr "Nur das Ende eines Asts kann geschlossen oder als offen markiert werden."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "Only the root's sentences may follow the first of them."
-msgstr "Nach dem ersten Satz der Wurzel dürfen nur weitere Sätze der Wurzel folgen."
+msgid "Only the root's rows may follow the first of them."
+msgstr "Nach der ersten Zeile der Wurzel dürfen nur weitere Zeilen der Wurzel folgen."
 
 #: src/worker/web/content.tsx
 msgid "Only you"
@@ -4243,20 +4243,12 @@ msgid "Revoked"
 msgstr "Widerrufen"
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Right: a complete open branch shows the argument is invalid."
-msgstr "Richtig: Ein vollständiger offener Ast zeigt, dass das Argument ungültig ist."
+msgid "Right: every branch closes."
+msgstr "Richtig: Jeder Ast schließt sich."
 
 #: src/worker/exercises/truth-tree/strings.ts
-msgid "Right: a complete open branch shows the set is consistent."
-msgstr "Richtig: Ein vollständiger offener Ast zeigt, dass die Menge konsistent ist."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Right: the tree closes, so the argument is valid."
-msgstr "Richtig: Der Baum schließt sich, also ist das Argument gültig."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "Right: the tree closes, so the set is inconsistent."
-msgstr "Richtig: Der Baum schließt sich, also ist die Menge inkonsistent."
+msgid "Right: the tree has a complete open branch."
+msgstr "Richtig: Der Baum hat einen vollständigen offenen Ast."
 
 #: src/worker/web/admin.tsx
 #: src/worker/web/courses.tsx
@@ -5308,10 +5300,6 @@ msgstr "Der Referenzabschnitt braucht {expected} Tokens (eines pro Atom); gefund
 msgid "The role “{role}” needs {arity} arguments, but “{symbol}” takes {declared}."
 msgstr "Die Rolle „{role}“ braucht {arity} Argumente, aber „{symbol}“ nimmt {declared}."
 
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "The root could not be written in the language."
-msgstr "Die Wurzel ließ sich in der Sprache nicht schreiben."
-
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "The root's rows are given, and cannot be changed."
 msgstr "Die Zeilen der Wurzel sind vorgegeben und können nicht geändert werden."
@@ -5441,20 +5429,20 @@ msgid "The submission was not found."
 msgstr "Die Abgabe wurde nicht gefunden."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences."
-msgstr "Das System „{name}“ kann keinen Satz verneinen, was die Prüfung eines Arguments erfordert: Geben Sie ihm einen tree.deny-Term oder, falls seine Zeilen Sätze sind, eine Negation."
-
-#: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” does not read as a language, so an exercise cannot be set in it. The reason is reported on the aufbau-mm0 block that declares it."
 msgstr "Das System „{name}“ lässt sich nicht als Sprache lesen, daher kann keine Übung darin gestellt werden. Der Grund wird am aufbau-mm0-Block gemeldet, der es deklariert."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in."
-msgstr "Das System „{name}“ hat keine Sorte, die sich in seine Ast-Sorte umwandeln lässt, sodass seine Zeilen in keiner Sorte geschrieben werden können."
+msgid "The system “{name}” gives “{term}” the role {role}, but it is not over the branch sort “{branch}”."
+msgstr "Das System „{name}“ gibt „{term}“ die Rolle {role}, aber es bezieht sich nicht auf die Astsorte „{branch}“."
 
 #: src/worker/application/content/diagnostic-strings.ts
-msgid "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in."
-msgstr "Das System „{name}“ hat mehrere Sorten, die sich in seine Ast-Sorte umwandeln lassen ({sorts}), eine Baumtheorie braucht aber genau eine: die Sorte, in der ihre Zeilen geschrieben werden."
+msgid "The system “{name}” gives the role {role} to several sorts ({sorts}), and a tree theory needs exactly one."
+msgstr "Das System „{name}“ gibt die Rolle {role} mehreren Sorten ({sorts}), und eine Baumtheorie braucht genau eine."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "The system “{name}” has no coercion from its row sort “{row}” to its branch sort “{branch}”, so a row cannot stand on a branch."
+msgstr "Das System „{name}“ hat keine Koerzion von seiner Zeilensorte „{row}“ in seine Astsorte „{branch}“, also kann keine Zeile auf einem Ast stehen."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The system “{name}” is not a tree theory: it declares no {roles}."
@@ -6350,10 +6338,6 @@ msgstr "Schreiben Sie einen Schritt pro Zeile: eine Marke, die Formel zwischen D
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "Write one step per line: the formula, a colon, then the rule and the lines it cites, as in Q :→E 1 2. Cite a subproof by its range of lines, as in 2-4."
 msgstr "Schreiben Sie einen Schritt pro Zeile: die Formel, einen Doppelpunkt, dann die Regel und die zitierten Zeilen, etwa Q :→E 1 2. Einen Unterbeweis zitieren Sie über seinen Zeilenbereich, etwa 2-4."
-
-#: src/worker/application/content/diagnostic-strings.ts
-msgid "Write the root as one argument line or as a list of sentences, not both."
-msgstr "Schreiben Sie die Wurzel als eine Argumentzeile oder als Liste von Sätzen, nicht beides."
 
 #: src/worker/exercises/truth-tree/strings.ts
 msgid "Write the row's sentence"

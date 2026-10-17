@@ -4,7 +4,6 @@ import {
   assumptions,
   closesEverywhere,
   flipped,
-  question,
   write,
 } from "./helpers/olp-corpus";
 import type { OlpTableau } from "./helpers/olp-first-order-tableaux";
@@ -31,18 +30,15 @@ const WRONG: ReadonlySet<string> = new Set([
 async function judge(tableau: OlpTableau): Promise<{
   readonly report: TreeReport;
   readonly written: readonly string[];
-} | null> {
+}> {
   const root = assumptions(tableau.tree);
-  const asked = question(root);
-
-  if (asked === null) {
-    return null;
-  }
-
-  const exercise = await treeExercise(asked.body, {
-    system: "open-logic-tableaux",
-  });
-  const { tree, written } = write(exercise.resolved, root, asked.order);
+  const exercise = await treeExercise(
+    root.map((row) => row.row),
+    {
+      system: "open-logic-tableaux",
+    },
+  );
+  const { tree, written } = write(exercise.resolved, root);
   return { report: await judgeAsBrowser(exercise, tree), written };
 }
 
@@ -50,10 +46,6 @@ describe("the Open Logic Project's first-order tableaux", () => {
   for (const tableau of OLP_FIRST_ORDER_TABLEAUX) {
     test(tableau.from, async () => {
       const judged = await judge(tableau);
-
-      if (judged === null) {
-        throw new Error("its assumptions are no exercise");
-      }
 
       if (WRONG.has(tableau.from)) {
         expect(problems(judged.report).join("\n")).toContain("step-wrong");
@@ -83,8 +75,8 @@ describe("a book tableau with one row signed wrong is refused", () => {
         const judged = await judge({ from: tableau.from, tree });
 
         // Refused at the step that wrote it, whatever else follows.
-        expect(problems(judged?.report as TreeReport)).toContain(
-          `row ${judged?.written[n]}: step-wrong`,
+        expect(problems(judged.report)).toContain(
+          `row ${judged.written[n]}: step-wrong`,
         );
       }
     }, 120_000);

@@ -23,11 +23,14 @@ import {
  * branch closes on `σ 𝕋 A` with `σ . ρ 𝔽 A`, not the other way round.
  */
 
-function exercise(root: string, finish = "closed") {
+function exercise(root: readonly string[], finish = "closed") {
   return treeExercise(root, { finish, system: "open-logic-intuitionistic" });
 }
 
-async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
+async function judge(
+  root: readonly string[],
+  tree: TreeBuilder,
+): Promise<TreeReport> {
   return judgeAsBrowser(await exercise(root), tree);
 }
 
@@ -87,12 +90,12 @@ describe("open-logic-intuitionistic", () => {
     );
 
     expect(
-      problems(await judge(":|-: B → (C → (D → (E → E)))", tree)),
+      problems(await judge(["1 𝔽 B → (C → (D → (E → E)))"], tree)),
     ).toEqual([]);
   }, 60_000);
 
-  test("an argument's root is at prefix 1", async () => {
-    const { resolved } = await exercise("A → B :|-: ¬A ∨ B");
+  test("root rows are read with their prefix and sign", async () => {
+    const { resolved } = await exercise(["1 𝕋 A → B", "1 𝔽 ¬A ∨ B"]);
 
     expect(resolved.root).toEqual(["((1) 𝕋 (A → B))", "((1) 𝔽 ((¬ A) ∨ B))"]);
   });
@@ -129,7 +132,7 @@ describe("open-logic-intuitionistic", () => {
     tree.close(and.nodes[0], a as string, and.rows[0][0] as string);
     tree.close(and.nodes[1], b as string, and.rows[1][0] as string);
     tree.close(imp.nodes[1], imp.rows[1][0] as string, c as string);
-    const report = await judge("(A ∧ B) → C :|-: A → (B → C)", tree);
+    const report = await judge(["1 𝕋 (A ∧ B) → C", "1 𝔽 A → (B → C)"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -151,7 +154,7 @@ describe("open-logic-intuitionistic", () => {
       "->F",
     );
     tree.close("n0", a as string, fa as string);
-    const report = await judge(":|-: A → (B → A)", tree);
+    const report = await judge(["1 𝔽 A → (B → A)"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -168,7 +171,7 @@ describe("open-logic-intuitionistic", () => {
     );
     const [fa] = tree.stack("n0", na as string, ["1.1 F: A"], "¬T");
     tree.close("n0", a as string, fa as string);
-    const report = await judge(":|-: ¬(A ∧ ¬A)", tree);
+    const report = await judge(["1 𝔽 ¬(A ∧ ¬A)"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -198,7 +201,7 @@ describe("open-logic-intuitionistic", () => {
     );
     tree.close(or.nodes[0], a as string, fa as string);
     tree.close(or.nodes[1], b as string, fb as string);
-    const report = await judge("¬A ∨ ¬B :|-: ¬(A ∧ B)", tree);
+    const report = await judge(["1 𝕋 ¬A ∨ ¬B", "1 𝔽 ¬(A ∧ B)"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -234,7 +237,7 @@ describe("open-logic-intuitionistic", () => {
     );
     tree.close(inner.nodes[0], b as string, inner.rows[0][0] as string);
     tree.close(inner.nodes[1], inner.rows[1][0] as string, c as string);
-    const report = await judge("A → (B → C) :|-: (A ∧ B) → C", tree);
+    const report = await judge(["1 𝕋 A → (B → C)", "1 𝔽 (A ∧ B) → C"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -243,7 +246,7 @@ describe("open-logic-intuitionistic", () => {
   test("⊥ ⊢ A: 𝕋 ⊥ closes a branch alone", async () => {
     const tree = new TreeBuilder(["1 T: ⊥", "1 F: A"]);
     tree.close("n0", "r1");
-    const report = await judge("⊥ :|-: A", tree);
+    const report = await judge(["1 𝕋 ⊥", "1 𝔽 A"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -258,7 +261,7 @@ describe("what intuitionistic logic does not prove", () => {
     const [fa, fna] = tree.stack("n0", "r1", ["1 F: A", "1 F: ¬A"], "∨F");
     const [ta] = tree.stack("n0", fna as string, ["1.1 T: A"], "¬F");
     tree.close("n0", fa as string, ta as string);
-    const report = await judge(":|-: A ∨ ¬A", tree);
+    const report = await judge(["1 𝔽 A ∨ ¬A"], tree);
 
     expect(problems(report)).toEqual(["end n0: closure-wrong"]);
     expect(report.closed).toBe(false);
@@ -281,7 +284,7 @@ describe("what intuitionistic logic does not prove", () => {
       [["1 F: A"], ["1 T: B"]],
       "→T",
     );
-    const report = await judge("¬(D → E) :|-: (A → B) → C", tree);
+    const report = await judge(["1 𝕋 ¬(D → E)", "1 𝔽 (A → B) → C"], tree);
 
     expect(problems(report)).toContain(
       `row ${sibling.rows[0][0]}: step-wrong`,
@@ -292,7 +295,7 @@ describe("what intuitionistic logic does not prove", () => {
   test("→𝕋 to an extension not yet on the branch is refused", async () => {
     const tree = new TreeBuilder(["1 T: A → B", "1 F: B"]);
     const imp = tree.split("n0", "r1", [["1.1 F: A"], ["1.1 T: B"]], "→T");
-    const report = await judge("A → B :|-: B", tree);
+    const report = await judge(["1 𝕋 A → B", "1 𝔽 B"], tree);
 
     expect(problems(report)).toContain(`row ${imp.rows[0][0]}: step-wrong`);
   }, 60_000);
@@ -307,14 +310,17 @@ describe("what intuitionistic logic does not prove", () => {
       ["1.1 T: C", "1.1 F: D"],
       "→F",
     );
-    const report = await judge("¬(C → D) :|-: A → B", tree);
+    const report = await judge(["1 𝕋 ¬(C → D)", "1 𝔽 A → B"], tree);
 
     expect(problems(report)).toContain(`row ${again}: step-wrong`);
   }, 60_000);
 });
 
 /** A tree certified and judged, with `build`'s open leaf left open. */
-async function certified(root: string, build: (tree: TreeBuilder) => string) {
+async function certified(
+  root: readonly string[],
+  build: (tree: TreeBuilder) => string,
+) {
   const asked = await exercise(root, "one-open");
   const tree = new TreeBuilder(asked.resolved.rootText);
   const open = build(tree);
@@ -334,7 +340,7 @@ async function certified(root: string, build: (tree: TreeBuilder) => string) {
  * 𝔽 branch.
  */
 function countermodel(both: boolean) {
-  return certified("A → B :|-: C → D", (tree) => {
+  return certified(["1 𝕋 A → B", "1 𝔽 C → D"], (tree) => {
     tree.stack(tree.rootNode, "r2", ["1.1 T: C", "1.1 F: D"], "→F");
     const there = tree.split(
       tree.rootNode,
@@ -374,7 +380,7 @@ describe("an open branch in intuitionistic logic", () => {
   test("owes →𝕋 nothing at a prefix its row's extends", async () => {
     let imp = "";
     const { open, report, resolved } = await certified(
-      ":|-: (A → B) → C",
+      ["1 𝔽 (A → B) → C"],
       (tree) => {
         imp = tree.stack(
           tree.rootNode,
@@ -402,7 +408,7 @@ describe("an open branch in intuitionistic logic", () => {
   // list.
   test("owes →𝕋 at every prefix that extends its row's, however deep", async () => {
     const { open, report } = await certified(
-      "A → B :|-: C → (D → E)",
+      ["1 𝕋 A → B", "1 𝔽 C → (D → E)"],
       (tree) => {
         const [, de] = tree.stack(
           tree.rootNode,
@@ -443,7 +449,7 @@ describe("an open branch in intuitionistic logic", () => {
     );
     expect(source).toContain("(si . rh 𝔽 ph ; si 𝕋 ph)");
     const swapped = await lessonTree(
-      `:::aufbau-mm0{name="swapped"}\n${source}\n:::\n\n::::truth-tree{#t system="swapped" finish="one-open"}\nShow it.\n\nA :|-: B → A\n::::`,
+      `:::aufbau-mm0{name="swapped"}\n${source}\n:::\n\n::::truth-tree{#t system="swapped" finish="one-open"}\nShow it.\n\n- 1 𝕋 A\n- 1 𝔽 B → A\n::::`,
     );
     const tree = new TreeBuilder(swapped.resolved.rootText);
     const [, fa] = tree.stack(
@@ -464,7 +470,7 @@ describe("an open branch in intuitionistic logic", () => {
   // The excluded middle's branch: 𝔽 A at 1 and 𝕋 A at 1.1 do not close it,
   // so it is a countermodel, A true at 1.1 and not at 1.
   test("with 𝔽 A at 1 and 𝕋 A at 1.1 is not closable", async () => {
-    const { open, report } = await certified(":|-: A ∨ ¬A", (tree) => {
+    const { open, report } = await certified(["1 𝔽 A ∨ ¬A"], (tree) => {
       const [, fna] = tree.stack(
         tree.rootNode,
         "r1",

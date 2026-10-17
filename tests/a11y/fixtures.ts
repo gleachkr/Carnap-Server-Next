@@ -195,9 +195,11 @@ Tell the worlds apart.
 ::::
 
 ::::truth-tree{#tv points="1"}
-Decide the argument with a tree.
+Decide the argument from P ∨ Q and ¬P to Q with a tree.
 
-P ∨ Q, ¬P :|-: Q
+- P ∨ Q
+- ¬P
+- ¬Q
 ::::
 
 ::::truth-tree{#tf points="1"}

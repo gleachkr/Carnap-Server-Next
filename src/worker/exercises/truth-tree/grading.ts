@@ -35,7 +35,6 @@ import type {
   TruthTreeAnswerData,
   TruthTreeFinish,
   TruthTreePublicData,
-  TruthTreeTask,
   TruthTreeVerdict,
 } from "./types";
 import { TREE_ROW_CAP, TREE_TEXT_CAP } from "./types";
@@ -66,7 +65,6 @@ export interface ResolvedTree {
   readonly root: readonly string[];
   /** Each root row as a reader is shown it. */
   readonly rootText: readonly string[];
-  readonly task: TruthTreeTask;
   readonly finish: TruthTreeFinish;
   /** The most rows a tree may have before it is not read. */
   readonly rowCap: number;
@@ -92,7 +90,6 @@ export function isTruthTreePublicData(
   return (
     typeof data.promptHtml === "string" &&
     typeof data.system === "string" &&
-    (data.task === "validity" || data.task === "consistency") &&
     (data.finish === undefined ||
       data.finish === "closed" ||
       data.finish === "complete" ||
@@ -343,7 +340,6 @@ export function resolveTruthTree(
     root: publicData.root,
     rootText,
     rowCap: TREE_ROW_CAP,
-    task: publicData.task,
     theory,
   };
 }
@@ -382,20 +378,13 @@ export function startsFromRoot(
   );
 }
 
-/** What a done tree shows, in the task's own terms. */
-function treeVerdict(
-  task: TruthTreeTask,
-  report: TreeReport,
-): TruthTreeVerdict | null {
+/** What a done tree shows. */
+function treeVerdict(report: TreeReport): TruthTreeVerdict | null {
   if (report.closed) {
-    return task === "validity" ? "valid" : "inconsistent";
+    return "closed";
   }
 
-  if (report.finished && report.open) {
-    return task === "validity" ? "invalid" : "consistent";
-  }
-
-  return null;
+  return report.finished && report.open ? "open" : null;
 }
 
 /** Why a submitted tree is not right, first thing first. */
@@ -468,7 +457,7 @@ export function judgeTree(
     root: resolved.root,
     tree: { nodes: answer.nodes },
   });
-  const shows = treeVerdict(resolved.task, report);
+  const shows = treeVerdict(report);
   const first = report.problems[0];
   // Without the engine's word, a tree it would finish is unconfirmed, not
   // unfinished.

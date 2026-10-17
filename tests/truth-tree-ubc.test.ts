@@ -26,10 +26,7 @@ async function judge(
   tree: TreeBuilder,
   finish: Finish = "closed",
 ): Promise<TreeReport> {
-  const asked = await treeExercise(
-    tree.rootTexts.map((each) => `- ${each}`).join("\n"),
-    { finish },
-  );
+  const asked = await treeExercise(tree.rootTexts, { finish });
 
   return judgeAsBrowser(asked, tree);
 }
@@ -429,7 +426,7 @@ describe("mistakes in a development", () => {
   }, 60_000);
 
   test("a root that is not the exercise's", async () => {
-    const asked = await treeExercise("- A & B");
+    const asked = await treeExercise(["A & B"]);
     const t = new TreeBuilder(["B & A"]);
 
     expect(problems(await judgeAsBrowser(asked, t))).toEqual([

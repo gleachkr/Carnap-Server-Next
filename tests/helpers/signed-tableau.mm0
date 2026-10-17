@@ -8,7 +8,9 @@ delimiter $ ( ) ; $;
 
 --| @syntax role sentence
 provable sort wff;
+--| @syntax role tree.row
 sort sf;
+--| @syntax role tree.branch
 sort ctx;
 provable sort judgement;
 
@@ -29,12 +31,10 @@ infixr or: $∨$ prec 30;
 term imp (ph ps: wff): wff;
 infixr imp: $→$ prec 20;
 
--- The signs. A row is `T φ` (φ is true) or `F φ` (φ is false); a root
--- asserts a premise with the one and denies a conclusion with the other.
+-- The signs. A row is `T φ` (φ is true) or `F φ` (φ is false).
 --| @syntax role tree.assert
 term tt (ph: wff): sf;
 prefix tt: $T$ prec 10;
---| @syntax role tree.deny
 term ff (ph: wff): sf;
 prefix ff: $F$ prec 10;
 

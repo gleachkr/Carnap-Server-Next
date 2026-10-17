@@ -26,7 +26,7 @@ import {
  */
 
 function consistency(...members: string[]) {
-  return treeExercise(members.map((each) => `- ${each}`).join("\n"), {
+  return treeExercise(members, {
     finish: "one-open",
     prompt: "Is this set consistent?",
   });
@@ -568,7 +568,7 @@ describe("another calculus's roles", () => {
     "utf8",
   );
   const lesson = (theory: string, finish: string) =>
-    `:::aufbau-mm0{name="signed"}\n${theory}\n:::\n\n::::truth-tree{#t system="signed" finish="${finish}"}\nIs this set consistent?\n\n- P ∧ Q\n- R\n::::`;
+    `:::aufbau-mm0{name="signed"}\n${theory}\n:::\n\n::::truth-tree{#t system="signed" finish="${finish}"}\nIs this set consistent?\n\n- T P ∧ Q\n- T R\n::::`;
   const codes = async (source: string) =>
     (await compileCarnapMarkdown(source)).diagnostics.map((each) => [
       each.code,
@@ -710,7 +710,7 @@ describe("another calculus's roles", () => {
         "",
       );
       const result = await compileCarnapMarkdown(
-        `:::aufbau-mm0{name="viewless"}\n${olp}\n:::\n\n::::truth-tree{#t system="viewless" finish="one-open"}\nIs this set consistent?\n\n- ∃x F(x)\n::::`,
+        `:::aufbau-mm0{name="viewless"}\n${olp}\n:::\n\n::::truth-tree{#t system="viewless" finish="one-open"}\nIs this set consistent?\n\n- 𝕋 ∃x F(x)\n::::`,
       );
 
       expect(
@@ -721,20 +721,20 @@ describe("another calculus's roles", () => {
     // A modal prefix's step has no relation, which only the rules judged
     // without the engine need yet (#469): not the author's to fix.
     test.each([
-      "forallx-ubc",
-      "open-logic-tableaux",
-      "open-logic-intuitionistic",
-      "open-logic-simple-s5",
-      "open-logic-modal-k",
-      "open-logic-modal-t",
-      "open-logic-modal-d",
-      "open-logic-modal-k4",
-      "open-logic-modal-b",
-      "open-logic-modal-s4",
-      "open-logic-modal-s5",
-    ])("the built-in %s says nothing", async (system) => {
+      ["forallx-ubc", "A"],
+      ["open-logic-tableaux", "𝕋 A"],
+      ["open-logic-intuitionistic", "1 𝕋 A"],
+      ["open-logic-simple-s5", "1 𝕋 A"],
+      ["open-logic-modal-k", "1 𝕋 A"],
+      ["open-logic-modal-t", "1 𝕋 A"],
+      ["open-logic-modal-d", "1 𝕋 A"],
+      ["open-logic-modal-k4", "1 𝕋 A"],
+      ["open-logic-modal-b", "1 𝕋 A"],
+      ["open-logic-modal-s4", "1 𝕋 A"],
+      ["open-logic-modal-s5", "1 𝕋 A"],
+    ])("the built-in %s says nothing", async (system, row) => {
       const result = await compileCarnapMarkdown(
-        `::::truth-tree{#t system="${system}" finish="one-open"}\nIs this set consistent?\n\n- A\n::::`,
+        `::::truth-tree{#t system="${system}" finish="one-open"}\nIs this set consistent?\n\n- ${row}\n::::`,
       );
 
       expect(result.diagnostics).toEqual([]);

@@ -352,17 +352,9 @@ export function buildTruthTreeStrings(i18n: Translator) {
       ),
     "The tree is right.": i18n.t("The tree is right."),
     "The tree is not right yet.": i18n.t("The tree is not right yet."),
-    "Right: the tree closes, so the argument is valid.": i18n.t(
-      "Right: the tree closes, so the argument is valid.",
-    ),
-    "Right: a complete open branch shows the argument is invalid.": i18n.t(
-      "Right: a complete open branch shows the argument is invalid.",
-    ),
-    "Right: a complete open branch shows the set is consistent.": i18n.t(
-      "Right: a complete open branch shows the set is consistent.",
-    ),
-    "Right: the tree closes, so the set is inconsistent.": i18n.t(
-      "Right: the tree closes, so the set is inconsistent.",
+    "Right: every branch closes.": i18n.t("Right: every branch closes."),
+    "Right: the tree has a complete open branch.": i18n.t(
+      "Right: the tree has a complete open branch.",
     ),
   };
 }

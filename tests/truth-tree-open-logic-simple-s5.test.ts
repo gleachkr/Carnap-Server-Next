@@ -19,11 +19,14 @@ import {
  * `2 𝕋 A`, because in S5 every world sees every world.
  */
 
-function exercise(root: string, finish = "closed") {
+function exercise(root: readonly string[], finish = "closed") {
   return treeExercise(root, { finish, system: "open-logic-simple-s5" });
 }
 
-async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
+async function judge(
+  root: readonly string[],
+  tree: TreeBuilder,
+): Promise<TreeReport> {
   return judgeAsBrowser(await exercise(root), tree);
 }
 
@@ -46,8 +49,8 @@ describe("open-logic-simple-s5", () => {
     }
   });
 
-  test("an argument's root is at prefix 1", async () => {
-    const { resolved } = await exercise("□A :|-: ◇A");
+  test("root rows are read with their prefix and sign", async () => {
+    const { resolved } = await exercise(["1 𝕋 □A", "1 𝔽 ◇A"]);
 
     expect(resolved.root).toEqual(["((1) 𝕋 (□ A))", "((1) 𝔽 (◇ A))"]);
   });
@@ -60,7 +63,7 @@ describe("open-logic-simple-s5", () => {
     const [ta] = tree.stack("n0", dia as string, ["3 T: A"], "◇T");
     const [fa] = tree.stack("n0", fdia as string, ["3 F: A"], "◇F");
     tree.close("n0", ta as string, fa as string);
-    const report = await judge(":|-: ◇A → □◇A", tree);
+    const report = await judge(["1 𝔽 ◇A → □◇A"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -71,7 +74,7 @@ describe("open-logic-simple-s5", () => {
     const [box, fa] = tree.stack("n0", "r1", ["1 T: □A", "1 F: A"], "→F");
     const [ta] = tree.stack("n0", box as string, ["1 T: A"], "□T");
     tree.close("n0", ta as string, fa as string);
-    const report = await judge(":|-: □A → A", tree);
+    const report = await judge(["1 𝔽 □A → A"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -82,7 +85,7 @@ describe("open-logic-simple-s5", () => {
     const [ta] = tree.stack("n0", "r1", ["2 T: A"], "□T");
     const [fa] = tree.stack("n0", "r2", ["2 F: A"], "◇F");
     tree.close("n0", ta as string, fa as string);
-    const report = await judge("□A :|-: ◇A", tree);
+    const report = await judge(["1 𝕋 □A", "1 𝔽 ◇A"], tree);
 
     expect(problems(report)).toEqual([`row ${ta}: step-wrong`]);
   }, 60_000);
@@ -92,7 +95,7 @@ describe("open-logic-simple-s5", () => {
     tree.stack("n0", "r1", ["2 T: B"], "◇T");
     const [at1] = tree.stack("n0", "r2", ["1 F: A"], "□F");
     const [at2] = tree.stack("n0", "r2", ["2 F: A"], "□F");
-    const report = await judge("◇B :|-: □A", tree);
+    const report = await judge(["1 𝕋 ◇B", "1 𝔽 □A"], tree);
 
     expect(problems(report)).toContain(`row ${at1}: step-wrong`);
     expect(problems(report)).toContain(`row ${at2}: step-wrong`);
@@ -104,15 +107,15 @@ describe("open-logic-simple-s5", () => {
     const [na] = tree.stack("n0", "r2", ["3 T: ¬A"], "◇T");
     const [fa] = tree.stack("n0", na as string, ["3 F: A"], "¬T");
     tree.close("n0", a as string, fa as string);
-    const report = await judge("- ◇A\n- ◇¬A", tree);
+    const report = await judge(["1 𝕋 ◇A", "1 𝕋 ◇¬A"], tree);
 
     expect(problems(report)).toContain("end n0: closure-wrong");
   }, 60_000);
 });
 
-/** A tree for `- □p` and `- ◇q`, with `□𝕋` at 1 and, if `both`, at 2. */
+/** A tree for `1 𝕋 □p` and `1 𝕋 ◇q`, with `□𝕋` at 1 and, if `both`, at 2. */
 async function countermodel(both: boolean) {
-  const asked = await exercise("- □p\n- ◇q", "one-open");
+  const asked = await exercise(["1 𝕋 □p", "1 𝕋 ◇q"], "one-open");
   const tree = new TreeBuilder(asked.resolved.rootText);
   tree.stack(tree.rootNode, "r2", ["2 T: q"], "◇T");
   tree.stack(tree.rootNode, "r1", ["1 T: p"], "□T");

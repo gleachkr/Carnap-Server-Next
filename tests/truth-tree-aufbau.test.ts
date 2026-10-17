@@ -130,10 +130,10 @@ function where(errors: readonly TreeDiagnostic[]): string[] {
 }
 
 /**
- * P ⊃ Q, Q ⊃ R :|-: P ⊃ R, closed, with the mistakes asked for: the ¬⊃
- * step citing the wrong row or naming no rule, the first ⊃ step naming the
- * wrong rule, its branches swapped, the left branch closed on two rows that
- * do not contradict.
+ * The tree on P ⊃ Q, Q ⊃ R and ¬(P ⊃ R), closed, with the mistakes asked
+ * for: the ¬⊃ step citing the wrong row or naming no rule, the first ⊃ step
+ * naming the wrong rule, its branches swapped, the left branch closed on two
+ * rows that do not contradict.
  */
 function chain(
   mistakes: {
@@ -262,7 +262,7 @@ describe("a sentential tree", () => {
 });
 
 describe("a first-order tree", () => {
-  // ∀x(Fx ⊃ Gx), ∃xFx :|-: ∃xGx, below any `before` rows.
+  // ∀x(Fx ⊃ Gx), ∃xFx, ¬∃xGx, below any `before` rows.
   const quantifiers = (before: readonly string[] = []) => {
     const tree = new TreeBuilder([...before, "∀x(Fx ⊃ Gx)", "∃xFx", "¬∃xGx"]);
     const root = (at: number) => `r${before.length + at}`;

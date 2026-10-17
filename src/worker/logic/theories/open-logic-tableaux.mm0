@@ -263,12 +263,12 @@ notation top: wff = ($⊤$:max);
 --
 -- What a row is. The sign binds looser than every connective, so `𝕋 A ∧ B`
 -- signs the conjunction, and tighter than the branch join `;`.
+--| @syntax role tree.row
 sort sfm;
 --| @syntax role tree.assert
 term tt (ph: wff): sfm;
 prefix tt: $T:$ prec 6;
 prefix tt: $𝕋$ prec 6;
---| @syntax role tree.deny
 term ff (ph: wff): sfm;
 prefix ff: $F:$ prec 6;
 prefix ff: $𝔽$ prec 6;
@@ -281,6 +281,7 @@ prefix ff: $𝔽$ prec 6;
 -- `unfocus`. The rules keep the row they develop.
 
 provable sort judgement;
+--| @syntax role tree.branch
 sort ctx;
 
 term emp: ctx;

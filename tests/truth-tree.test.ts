@@ -111,7 +111,7 @@ async function grade(
 
 const VALID = directive(
   '#tt points="3"',
-  "Is this argument valid? Use a tree.\n\nP & Q :|-: P",
+  "Is this argument valid? Use a tree.\n\n- P & Q\n- ¬P",
 );
 const CONSISTENT = directive(
   '#ts finish="one-open"',
@@ -119,45 +119,27 @@ const CONSISTENT = directive(
 );
 
 describe("the directive", () => {
-  test("an argument line asks validity, and its root negates the conclusion", async () => {
+  test("the root is the list, row for row", async () => {
     const item = await declaration(VALID);
     const data = publicDataOf(item);
     const resolved = resolveTruthTree(data);
 
     expect(item.kind).toBe("truth-tree@1");
-    expect(data.task).toBe("validity");
     expect(data.system).toBe("forallx-ubc");
     expect(resolved?.rootText).toEqual(["P & Q", "¬P"]);
     expect(data.promptHtml).toContain("Is this argument valid?");
-  });
-
-  test("a list asks consistency", async () => {
-    const data = publicDataOf(await declaration(CONSISTENT));
-
-    expect(data.task).toBe("consistency");
-    expect(resolveTruthTree(data)?.rootText).toEqual(["P ∨ Q", "¬P"]);
-  });
-
-  test("an argument with no premises tests a logical truth", async () => {
-    const data = publicDataOf(
-      await declaration(directive("#t", ":|-: P ∨ ¬P")),
-    );
-
-    expect(resolveTruthTree(data)?.rootText).toEqual(["¬(P ∨ ¬P)"]);
+    expect(
+      resolveTruthTree(publicDataOf(await declaration(CONSISTENT))),
+    ).toMatchObject({ rootText: ["P ∨ Q", "¬P"] });
   });
 
   test("what an author can get wrong", async () => {
     expect(await compileCodes(directive("#t", "Just prose."))).toContain(
       "truth_tree_no_root",
     );
-    expect(await compileCodes(directive("#t", "- P\n\nP :|-: Q"))).toContain(
-      "truth_tree_mixed_root",
-    );
-    expect(await compileCodes(directive("#t", "P :|-: Q, R"))).toContain(
-      "truth_tree_conclusions",
-    );
-    expect(await compileCodes(directive("#t", "P :|-:"))).toContain(
-      "empty_conclusions",
+    // An argument line is only prose: the root is a list.
+    expect(await compileCodes(directive("#t", "P :|-: Q"))).toContain(
+      "truth_tree_no_root",
     );
     expect(await compileCodes(directive("#t", "- P & Q ⊃ R"))).toContain(
       "invalid_formula",
@@ -180,25 +162,74 @@ describe("the directive", () => {
     );
 
     expect(refusal?.params?.roles).toBe(
-      "tree.closes, tree.focus, tree.unfocus, tree.closure",
+      "tree.row, tree.branch, tree.closes, tree.focus, tree.unfocus, tree.closure",
     );
   });
 
-  test("a theory block is a tree calculus, and writes its own root", async () => {
+  test("a theory block is a tree calculus, and its root rows are its own", async () => {
     const signed = readFileSync(
       new URL("./helpers/signed-tableau.mm0", import.meta.url),
       "utf8",
     );
+    const block = `:::aufbau-mm0{name="signed"}\n${signed}\n:::\n\n`;
     const data = publicDataOf(
       await declaration(
-        `:::aufbau-mm0{name="signed"}\n${signed}\n:::\n\n${directive(
-          '#t system="signed"',
-          "P ∧ Q :|-: P",
-        )}`,
+        `${block}${directive('#t system="signed"', "- T P ∧ Q\n- F P")}`,
       ),
     );
 
     expect(data.root).toEqual(["(T (P ∧ Q))", "(F P)"]);
+    // A bare sentence is not a signed row.
+    const unsigned = await compileCarnapMarkdown(
+      `${block}${directive('#t system="signed"', "- P ∧ Q")}`,
+    );
+
+    expect(unsigned.diagnostics.map((each) => each.code)).toEqual([
+      "invalid_formula",
+    ]);
+    expect(unsigned.diagnostics[0]?.params?.sort).toBe("sf");
+  });
+
+  test("the row and branch sorts are declared, and checked", async () => {
+    const signed = readFileSync(
+      new URL("./helpers/signed-tableau.mm0", import.meta.url),
+      "utf8",
+    );
+    const said = async (theory: string) =>
+      (
+        await compileCarnapMarkdown(
+          `:::aufbau-mm0{name="signed"}\n${theory}\n:::\n\n${directive('#t system="signed"', "- T P")}`,
+        )
+      ).diagnostics.map((each) => [each.code, each.params?.role ?? null]);
+
+    // The row role on a second sort.
+    expect(
+      await said(
+        signed.replace(
+          "provable sort wff;",
+          "--| @syntax role tree.row\nprovable sort wff;",
+        ),
+      ),
+    ).toEqual([["truth_tree_sort", "tree.row"]]);
+    // The branch role on a sort tree.closes and the join are not over.
+    expect(
+      await said(
+        signed
+          .replace("--| @syntax role tree.branch\nsort ctx;", "sort ctx;")
+          .replace(
+            "--| @syntax role tree.row\nsort sf;",
+            "--| @syntax role tree.row\n--| @syntax role tree.branch\nsort sf;",
+          ),
+      ),
+    ).toEqual([
+      ["truth_tree_sort", "tree.closes"],
+      ["truth_tree_sort", "context-join"],
+      ["truth_tree_sort", null],
+    ]);
+    // No coercion from a row to a branch.
+    expect(await said(signed.replace("coercion hyp: sf > ctx;", ""))).toEqual(
+      [["truth_tree_sort", null]],
+    );
   });
 });
 
@@ -276,7 +307,7 @@ describe("grading", () => {
 
   test("identity: a root may use it, and a substitution is graded", async () => {
     const item = await declaration(
-      directive("#ti", "Is this argument valid?\n\nFa, a = b :|-: Fb"),
+      directive("#ti", "Is this argument valid?\n\n- Fa\n- a = b\n- ¬Fb"),
     );
     const t = builderFor(item);
 
@@ -679,7 +710,7 @@ describe("grading", () => {
 
   test("terse feedback gives only the verdict in review", async () => {
     const item = await declaration(
-      directive('#tt feedback="terse"', "P & Q :|-: P"),
+      directive('#tt feedback="terse"', "- P & Q\n- ¬P"),
     );
     const t = builderFor(item);
     t.split(t.rootNode, "r1", [["P"], ["Q"]]);

@@ -3,14 +3,14 @@
  * each side a comma-separated list of formulas.
  *
  * Every type that asks about an argument reads this one spelling (the truth
- * table's validity variant, the model's and the world's counterexamples, a
- * truth tree's validity question), so an author meets one notation for "this
- * argument" wherever they write one. The turnstile is ASCII because `∴` and
+ * table's validity variant, the model's and the world's counterexamples), so
+ * an author meets one notation for "this argument" wherever they write one.
+ * A truth tree takes none: its author lists the root's rows. The turnstile is ASCII because `∴` and
  * `⊢` are hard to type. If a second spelling is ever accepted, it belongs
  * here, for every type at once.
  *
  * What a missing side or a stray turnstile means is each type's to say: a
- * truth table needs premises, a tree does not.
+ * truth table needs premises, a world's counterexample does not.
  */
 
 import { splitFormulaList } from "./formula";

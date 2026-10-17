@@ -43,25 +43,18 @@ export function truthTreeName(i18n: Translator): string {
 }
 
 /**
- * What the tree is asked to decide, inferred from the body: an argument line
- * (`premises :|-: conclusion`) asks whether the argument is valid, and a list
- * of sentences whether the set is consistent.
- */
-export type TruthTreeTask = "validity" | "consistency";
-
-/**
  * When a tree is done, by the directive's `finish=` (gh #46): every branch
  * closed; or every branch closed or marked open and complete; or every branch
  * closed, or one marked open and complete (UBC §5.8).
  */
 export type TruthTreeFinish = "closed" | "complete" | "one-open";
 
-/** What a done tree shows, in its task's terms. */
-export type TruthTreeVerdict =
-  | "valid"
-  | "invalid"
-  | "consistent"
-  | "inconsistent";
+/**
+ * What a done tree shows: that every branch closes, or that one is open and
+ * complete. What that says of the root (an argument valid, a set
+ * consistent) is the prompt's to say.
+ */
+export type TruthTreeVerdict = "closed" | "open";
 
 export interface TruthTreePublicData {
   readonly promptHtml: string;
@@ -73,10 +66,9 @@ export interface TruthTreePublicData {
   readonly mm0?: string;
   /** When the tree is done; `closed` where absent. */
   readonly finish?: TruthTreeFinish;
-  readonly task: TruthTreeTask;
   /**
-   * The root, as engine text, in order: the premises and then the negated
-   * conclusion for a validity task, the set's members for a consistency task.
+   * The root, as the author wrote it: its rows in order, as engine text at
+   * the theory's row sort.
    */
   readonly root: readonly string[];
 }

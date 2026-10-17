@@ -1,14 +1,10 @@
 /**
  * What a binary connective's parts must be for the whole to take a value —
- * the one fact about a truth function that both the world's evaluation game
- * and a truth tree's rules are built from.
+ * the fact about a truth function that the world's evaluation game is built
+ * from.
  *
  * The game offers the student a set of part values that forces their claim,
- * and the computer challenges one entry of it. A tree writes a row `A∘B` as one
- * branch per set that forces `A∘B` true, and `¬(A∘B)` as one per set that forces
- * it false. For `∧`, `∨`, `→` and `↔` at both values these are the textbook's
- * eight rules, in the textbook's branch order, and the other twelve binary
- * truth functions get their rules from the same computation.
+ * and the computer challenges one entry of it.
  *
  * DOM-free and free of i18n, like the rest of the kit's formula code.
  */

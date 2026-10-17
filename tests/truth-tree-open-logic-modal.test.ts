@@ -23,17 +23,20 @@ import {
  * `1.1 T: A`, and margins name the book's rules (`□𝕋`, typed `[]T`).
  */
 
-function exercise(root: string, finish = "closed") {
+function exercise(root: readonly string[], finish = "closed") {
   return treeExercise(root, { finish, system: "open-logic-modal-k" });
 }
 
-async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
+async function judge(
+  root: readonly string[],
+  tree: TreeBuilder,
+): Promise<TreeReport> {
   return judgeAsBrowser(await exercise(root), tree);
 }
 
 describe("open-logic-modal-k", () => {
-  test("an argument's root is at prefix 1", async () => {
-    const { resolved } = await exercise("□A :|-: ◇A");
+  test("root rows are read with their prefix and sign", async () => {
+    const { resolved } = await exercise(["1 𝕋 □A", "1 𝔽 ◇A"]);
 
     expect(resolved.root).toEqual(["((1) 𝕋 (□ A))", "((1) 𝔽 (◇ A))"]);
   });
@@ -41,7 +44,7 @@ describe("open-logic-modal-k", () => {
   // The prefix table, four steps wide and three deep below 1: each prefix
   // its own world, read with its own last step and printed back as typed.
   test("reads every prefix in the table as its own world, and prints it back", async () => {
-    const { resolved } = await exercise("- A");
+    const { resolved } = await exercise(["1 𝕋 A"]);
     const letters = "abcd";
     const paths: number[][] = [];
 
@@ -96,7 +99,7 @@ describe("open-logic-modal-k", () => {
     const [two] = tree.stack("n0", one as string, ["1.1.1 F: []A"], "[]F");
     tree.stack("n0", two as string, ["1.1.1.1 F: A"], "[]F");
 
-    expect(problems(await judge(":|-: □□□A", tree))).toEqual([]);
+    expect(problems(await judge(["1 𝔽 □□□A"], tree))).toEqual([]);
   }, 60_000);
 
   // proofs-in-K.tex, its first tableau.
@@ -125,7 +128,7 @@ describe("open-logic-modal-k", () => {
     tree.close(nodes[0], ta as string, rows[0][0] as string);
     const [tb] = tree.stack(nodes[1], b as string, ["1.1 𝕋 B"], "[]T");
     tree.close(nodes[1], tb as string, rows[1][0] as string);
-    const report = await judge(":|-: (□A ∧ □B) → □(A ∧ B)", tree);
+    const report = await judge(["1 𝔽 (□A ∧ □B) → □(A ∧ B)"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -137,7 +140,7 @@ describe("open-logic-modal-k", () => {
     const [ta] = tree.stack("n0", "r1", ["1.1 T: A"], "□T");
     const [fa] = tree.stack("n0", "r2", ["1.1 F: A"], "◇F");
     tree.close("n0", ta as string, fa as string);
-    const report = await judge("□A :|-: ◇A", tree);
+    const report = await judge(["1 𝕋 □A", "1 𝔽 ◇A"], tree);
 
     expect(problems(report)).toEqual([`row ${ta}: step-wrong`]);
   }, 60_000);
@@ -149,9 +152,9 @@ describe("open-logic-modal-k", () => {
       const tree = new TreeBuilder(["1 T: □A", "1 T: ◇B"]);
       tree.stack("n0", "r2", ["1.1 T: B"], "◇T");
       const written = tree.stack("n0", "r1", rows, "□T");
-      const wrong = problems(await judge("□A, ◇B :|-: □A", tree)).filter(
-        (problem) => problem.endsWith("step-wrong"),
-      );
+      const wrong = problems(
+        await judge(["1 𝕋 □A", "1 𝕋 ◇B", "1 𝔽 □A"], tree),
+      ).filter((problem) => problem.endsWith("step-wrong"));
 
       return { written, wrong };
     };
@@ -167,7 +170,7 @@ describe("open-logic-modal-k", () => {
     const tree = new TreeBuilder(["1 T: ◇B", "1 F: □A"]);
     tree.stack("n0", "r1", ["1.1 T: B"], "◇T");
     const [fa] = tree.stack("n0", "r2", ["1.1 F: A"], "□F");
-    const report = await judge("◇B :|-: □A", tree);
+    const report = await judge(["1 𝕋 ◇B", "1 𝔽 □A"], tree);
 
     expect(problems(report)).toContain(`row ${fa}: step-wrong`);
   }, 60_000);
@@ -178,7 +181,7 @@ describe("open-logic-modal-k", () => {
     const [na] = tree.stack("n0", "r2", ["1.2 T: ¬A"], "◇T");
     const [fa] = tree.stack("n0", na as string, ["1.2 F: A"], "¬T");
     tree.close("n0", a as string, fa as string);
-    const report = await judge("- ◇A\n- ◇¬A", tree);
+    const report = await judge(["1 𝕋 ◇A", "1 𝕋 ◇¬A"], tree);
 
     expect(problems(report)).toContain("end n0: closure-wrong");
   }, 60_000);
@@ -240,7 +243,7 @@ function countermodel(resolved: ResolvedTree, both: boolean) {
 
 describe("an open branch in K", () => {
   test("is complete with □𝕋 at every prefix it uses", async () => {
-    const asked = await exercise(":|-: □(p ∨ q) → (□p ∨ □q)", "one-open");
+    const asked = await exercise(["1 𝔽 □(p ∨ q) → (□p ∨ □q)"], "one-open");
     const { resolved } = asked;
     const { box, tree } = countermodel(resolved, true);
     const answer = await certifyAnswer(asked.publicData, tree.answer());
@@ -259,7 +262,7 @@ describe("an open branch in K", () => {
   }, 60_000);
 
   test("is incomplete while □𝕋 skips a prefix it uses", async () => {
-    const asked = await exercise(":|-: □(p ∨ q) → (□p ∨ □q)", "one-open");
+    const asked = await exercise(["1 𝔽 □(p ∨ q) → (□p ∨ □q)"], "one-open");
     const { box, open, tree } = countermodel(asked.resolved, false);
     const answer = await certifyAnswer(asked.publicData, tree.answer());
     const judged = await judgeAsBrowser(asked, tree);
@@ -273,7 +276,7 @@ describe("an open branch in K", () => {
   }, 60_000);
 
   test("owes □𝕋 nothing at a prefix its world does not see", async () => {
-    const asked = await exercise("- ◇◇p\n- □q", "one-open");
+    const asked = await exercise(["1 𝕋 ◇◇p", "1 𝕋 □q"], "one-open");
     const tree = new TreeBuilder(asked.resolved.rootText);
     const [dp] = tree.stack(tree.rootNode, "r1", ["1.1 T: ◇p"], "◇T");
     tree.stack(tree.rootNode, dp as string, ["1.1.1 T: p"], "◇T");

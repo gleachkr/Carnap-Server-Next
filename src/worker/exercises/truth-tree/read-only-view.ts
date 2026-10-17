@@ -113,7 +113,7 @@ export function renderTruthTreeElement(
   return `<carnap-truth-tree${exerciseRootAttributes(meta)}>
         <template shadowrootmode="open">
           <style>${TRUTH_TREE_SHADOW_STYLES}</style>
-          <fieldset aria-busy="true" class="exercise-group truth-tree" data-task="${publicData.task}">
+          <fieldset aria-busy="true" class="exercise-group truth-tree">
             ${legend}
             <slot name="prompt"></slot>
             <div class="truth-tree-body" data-role="body">${body}</div>

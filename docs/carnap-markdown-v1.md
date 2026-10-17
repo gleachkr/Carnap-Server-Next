@@ -923,9 +923,12 @@ Project's signed, modal and intuitionistic tableaux (below).
 
 ```md
 ::::truth-tree{#tt1 points="3"}
-Is this argument valid? Use a tree to decide.
+Is the argument from (D & ¬R) ∨ Q and ¬Q ∨ R to D ∨ R valid? Use a tree
+to decide.
 
-(D & ¬R) ∨ Q, ¬Q ∨ R :|-: D ∨ R
+- (D & ¬R) ∨ Q
+- ¬Q ∨ R
+- ¬(D ∨ R)
 ::::
 
 ::::truth-tree{#tt2 points="3"}
@@ -937,16 +940,18 @@ Use a tree to decide whether this set is consistent.
 ::::
 ```
 
-The question comes from the body. An argument line,
-`premises :|-: conclusion`, asks whether the argument is valid, and the
-root is the premises followed by the negation of the conclusion. A list of
-sentences asks whether the set is consistent, and the root is the list.
-There may be no premises (`:|-: P ∨ ¬P` tests a logical truth), and there
-is exactly one conclusion.
+The body is the prompt, then the root: a list of its rows, one per item,
+in order. The author writes every root row, so for an argument the list is
+the premises and the conclusion denied (`¬(D ∨ R)` in UBC, `𝔽 D ∨ R` in
+the Open Logic Project's signed tableaux, `1 𝔽 D ∨ R` in its prefixed
+ones), as the books' trees begin. Each item is read as the theory reads a
+row, so a signed or prefixed theory's root rows carry their signs and
+prefixes. A done tree shows that every branch closes, or that a branch is
+open and complete; what that says of the root, that an argument is valid or
+a set inconsistent, is the prompt's to say.
 
 - `system` names the tree theory, and defaults to `forallx-ubc`. It must be
-  a tree theory (below); a validity question also needs a way to deny a
-  sentence.
+  a tree theory (below).
 - `finish` says when a tree is done: `closed` (the default) when every
   branch is closed; `one-open` when every branch is closed, or one branch is
   marked open and complete (UBC §5.8); `complete` when every branch is
@@ -964,20 +969,23 @@ says what that means through `@syntax role` annotations:
 
 | Role | On | Meaning |
 | --- | --- | --- |
-| `tree.closes` | a term | "this branch closes"; its argument's sort is the branch sort |
+| `tree.row` | a sort | what a row is written at, and what a root row is read at |
+| `tree.branch` | a sort | a branch: rows joined by `context-join` |
+| `tree.closes` | a term | "this branch closes", of a branch |
 | `tree.focus` | a term | "this branch closes by a step on these rows", both arguments branches |
 | `tree.unfocus` | an axiom | from `focus (Γ ; Δ) at Δ` to `closes (Γ ; Δ)` |
 | `tree.closure` | an axiom | what a closed branch's `×` cites by |
 | `context-join` | a term | the branch join, as for a sequent's context |
-| `tree.assert`, `tree.deny` | terms | how the root says a sentence is true, and is not |
-| `tree.root` | a term | where the root says it, for rows that are somewhere (a prefixed tableau's `1`) |
+| `tree.assert` | a term | the sign that says a sentence is true, for signed rows (`𝕋 φ`) |
 | `tree.mark` | a term | a check mark a rule writes for the row it develops (`✓ ρ`) |
 | `tree.mark.instance` | a term | a check mark a rule writes beside each instance it writes (`✓ᵢ ρ ↦ ψ`) |
 
-- A **row** is read at the one sort with a coercion into the branch sort:
-  the sentence sort for UBC, a signed-sentence sort for a Smullyan tableau.
-  Where rows are sentences, `tree.assert` may be left out (a sentence
-  asserts itself), and `tree.deny` defaults to the language's negation.
+- A **row** is read at the `tree.row` sort: the sentence sort for UBC
+  (which carries both roles), a signed-sentence sort for a Smullyan tableau.
+  A coercion from it to the `tree.branch` sort makes a row a branch, and
+  the theory must declare one. Where rows are more than sentences, `tree.assert` names the sign that
+  asserts one, so that Carnap reads `𝕋 t = t` as true on any branch; where
+  rows are sentences it is left out, as a sentence asserts itself.
 - Each **rule** is an axiom concluding `focus Γ at Δ`, where `Δ` is the
   rows a step cites, with one premise `closes Γ ; …` per branch it opens.
   The student types the rule's `@syntax alias`, the book's margin label. A
@@ -2159,8 +2167,8 @@ Truth-table data uses `T`, `F`, or an empty string per cell:
 - A partial table uses the same layout with one row.
 
 A truth-tree answer is the tree as a list of nodes, each a run of rows with
-its parent, and the rule each development names. This one answers
-`P & Q :|-: P`:
+its parent, and the rule each development names. This one closes the
+root `P & Q`, `¬P`:
 
 ```json
 {

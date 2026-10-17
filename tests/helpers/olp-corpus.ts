@@ -11,13 +11,6 @@ import { TreeBuilder } from "./truth-tree";
  * the first-order and modal corpora.
  */
 
-/** A row's sign, and the rest after it: `1.1 𝕋 A` is 𝕋 and `A`. */
-const SIGNED = /^(.*?)([𝕋𝔽]) (.*)$/u;
-
-function sign(row: OlpTableauRow): string {
-  return SIGNED.exec(row.row)?.[2] ?? "";
-}
-
 /** The tree's assumptions: the rows from the top that the book justifies so. */
 export function assumptions(tree: OlpTableauRow): OlpTableauRow[] {
   const rows: OlpTableauRow[] = [];
@@ -31,36 +24,6 @@ export function assumptions(tree: OlpTableauRow): OlpTableauRow[] {
   return rows;
 }
 
-/**
- * The exercise the assumptions make, if one can: the true ones premises and
- * one false one the conclusion, or the true ones alone a set to test.
- */
-export function question(rows: readonly OlpTableauRow[]): {
-  readonly body: string;
-  readonly order: readonly OlpTableauRow[];
-} | null {
-  const assert = rows.filter((row) => sign(row) === "𝕋");
-  const deny = rows.filter((row) => sign(row) === "𝔽");
-  const formula = (row: OlpTableauRow) =>
-    SIGNED.exec(row.row)?.[3] ?? row.row;
-
-  if (deny.length === 0) {
-    return {
-      body: assert.map((row) => `- ${formula(row)}`).join("\n"),
-      order: assert,
-    };
-  }
-
-  if (deny.length === 1) {
-    return {
-      body: `${assert.map(formula).join(", ")} :|-: ${formula(deny[0] as OlpTableauRow)}`,
-      order: [...assert, deny[0] as OlpTableauRow],
-    };
-  }
-
-  return null;
-}
-
 /** How many rows a stacking rule writes, from the theory. */
 function writes(resolved: ResolvedTree, rule: string): number {
   const axiom = resolved.language.spec.ruleAliases.get(rule) ?? rule;
@@ -70,20 +33,17 @@ function writes(resolved: ResolvedTree, rule: string): number {
 }
 
 /**
- * The book's tree, written in the builder, and the id each of its written
- * rows got, in preorder.
+ * The book's tree, written in the builder from its assumptions `root`, and
+ * the id each of its written rows got, in preorder.
  */
 export function write(
   resolved: ResolvedTree,
   root: readonly OlpTableauRow[],
-  order: readonly OlpTableauRow[],
 ): { readonly tree: TreeBuilder; readonly written: readonly string[] } {
-  const tree = new TreeBuilder(order.map((row) => row.row));
+  const tree = new TreeBuilder(root.map((row) => row.row));
   const ids = new Map<OlpTableauRow, string>();
   // A line is a row's depth, from 1: the row on this branch at that depth.
-  const rootLines = new Map(
-    root.map((row, at) => [at + 1, `r${order.indexOf(row) + 1}`]),
-  );
+  const rootLines = new Map(root.map((_, at) => [at + 1, `r${at + 1}`]));
   const engineOf = (id: string): string | null => {
     const location = tree.tree.nodes
       .flatMap((node) => node.rows)

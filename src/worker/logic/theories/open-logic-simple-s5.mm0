@@ -133,7 +133,6 @@ notation top: wff = ($⊤$:max);
 -- spells `2` to `20`.
 --| @vars w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20
 sort pfx;
---| @syntax role tree.root
 term one: pfx;
 notation one: pfx = ($1$:max);
 
@@ -142,12 +141,12 @@ notation one: pfx = ($1$:max);
 -- The sign sits between the prefix and the formula, binding looser than every
 -- connective, so `1 𝕋 A ∧ B` signs the conjunction, and tighter than the
 -- branch join `;`.
+--| @syntax role tree.row
 sort pfm;
 --| @syntax role tree.assert
 term ptt (si: pfx) (ph: wff): pfm;
 infixl ptt: $T:$ prec 6;
 infixl ptt: $𝕋$ prec 6;
---| @syntax role tree.deny
 term pff (si: pfx) (ph: wff): pfm;
 infixl pff: $F:$ prec 6;
 infixl pff: $𝔽$ prec 6;
@@ -160,6 +159,7 @@ infixl pff: $𝔽$ prec 6;
 -- `unfocus`. The rules keep the row they develop.
 
 provable sort judgement;
+--| @syntax role tree.branch
 sort ctx;
 
 term emp: ctx;

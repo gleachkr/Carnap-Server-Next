@@ -22,13 +22,13 @@ import {
 
 type Logic = "k" | "t" | "d" | "b" | "k4" | "s4" | "s5";
 
-function exercise(logic: Logic, root: string, finish = "closed") {
+function exercise(logic: Logic, root: readonly string[], finish = "closed") {
   return treeExercise(root, { finish, system: `open-logic-modal-${logic}` });
 }
 
 async function judge(
   logic: Logic,
-  root: string,
+  root: readonly string[],
   tree: TreeBuilder,
 ): Promise<TreeReport> {
   return judgeAsBrowser(await exercise(logic, root), tree);
@@ -109,7 +109,7 @@ const FIVE: Proof = {
 async function proves(logic: Logic, proof: Proof): Promise<string[]> {
   const tree = new TreeBuilder([`1 F: ${proof.goal}`]);
   proof.build(tree);
-  const report = await judge(logic, `:|-: ${proof.goal}`, tree);
+  const report = await judge(logic, [`1 𝔽 ${proof.goal}`], tree);
   return report.closed ? problems(report) : ["open", ...problems(report)];
 }
 
@@ -162,7 +162,7 @@ describe("the more-rules side conditions", () => {
   test("4□ to a prefix not yet on the branch is refused", async () => {
     const tree = new TreeBuilder(["1 T: □A"]);
     const [row] = tree.stack("n0", "r1", ["1.1 T: □A"], "4□");
-    const report = await judge("k4", "- □A", tree);
+    const report = await judge("k4", ["1 𝕋 □A"], tree);
 
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
   }, 60_000);
@@ -170,15 +170,15 @@ describe("the more-rules side conditions", () => {
   test("B□ wants a row at σ.n, so not at the root's prefix", async () => {
     const tree = new TreeBuilder(["1 T: □A"]);
     const [row] = tree.stack("n0", "r1", ["1 T: A"], "B□");
-    const report = await judge("b", "- □A", tree);
+    const report = await judge("b", ["1 𝕋 □A"], tree);
 
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
   }, 60_000);
 });
 
-/** Whether the open branch of a tree for `- □p` and `- ◇q` in S5 is done. */
+/** Whether the open branch of a tree for `1 𝕋 □p` and `1 𝕋 ◇q` in S5 is done. */
 async function s5Branch(with4: boolean) {
-  const asked = await exercise("s5", "- □p\n- ◇q", "one-open");
+  const asked = await exercise("s5", ["1 𝕋 □p", "1 𝕋 ◇q"], "one-open");
   const tree = new TreeBuilder(asked.resolved.rootText);
   tree.stack(tree.rootNode, "r2", ["1.1 T: q"], "◇T");
   tree.stack(tree.rootNode, "r1", ["1.1 T: p"], "□T");
@@ -224,7 +224,11 @@ describe("a complete branch, as completeness.tex defines one", () => {
   // UBC would have the conjunction checked off; the book asks only that its
   // conjuncts be on the branch, as they are here from the root.
   test("owes a rule nothing whose conclusions are on it already", async () => {
-    const asked = await exercise("k", "- A ∧ B\n- A\n- B", "one-open");
+    const asked = await exercise(
+      "k",
+      ["1 𝕋 A ∧ B", "1 𝕋 A", "1 𝕋 B"],
+      "one-open",
+    );
     const tree = new TreeBuilder(asked.resolved.rootText);
     tree.open(tree.rootNode);
     const answer = await certifyAnswer(asked.publicData, tree.answer());
@@ -242,7 +246,7 @@ describe("a logic the table does not have", () => {
       "  $ closes ga ; si 𝔽 ◇ ph $ > $ focus ga at (si . n 𝔽 ◇ ph) $;",
     ].join("\n");
     const kt5 = await lessonTree(
-      `:::aufbau-mm0{name="kt5" src="/theories/open-logic-modal-t.mm0"}\n${rules}\n:::\n\n::::truth-tree{#t system="kt5"}\nShow it.\n\n:|-: ${FIVE.goal}\n::::`,
+      `:::aufbau-mm0{name="kt5" src="/theories/open-logic-modal-t.mm0"}\n${rules}\n:::\n\n::::truth-tree{#t system="kt5"}\nShow it.\n\n- 1 𝔽 ${FIVE.goal}\n::::`,
     );
     const tree = new TreeBuilder([`1 F: ${FIVE.goal}`]);
     FIVE.build(tree);
@@ -256,7 +260,7 @@ describe("a logic the table does not have", () => {
 describe("a row more than one rule develops", () => {
   // In T, 𝕋 □p is T□'s once and □𝕋's at every prefix: never done with.
   async function marked(withBox: boolean) {
-    const asked = await exercise("t", "- □p\n- ◇q", "one-open");
+    const asked = await exercise("t", ["1 𝕋 □p", "1 𝕋 ◇q"], "one-open");
     const tree = new TreeBuilder(asked.resolved.rootText);
     tree.stack(tree.rootNode, "r2", ["1.1 T: q"], "◇T");
     tree.stack(tree.rootNode, "r1", ["1 T: p"], "T□");

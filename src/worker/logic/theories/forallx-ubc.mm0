@@ -284,6 +284,7 @@
 delimiter $ ( ) [ ] , ; { } $;
 
 --| @syntax role sentence
+--| @syntax role tree.row
 provable sort wff;
 
 --| @vars x y z x1 y1 z1
@@ -422,6 +423,7 @@ infixl ideq: $=$ prec 50;
 -- the branches either way round.
 
 provable sort judgement;
+--| @syntax role tree.branch
 sort ctx;
 
 term emp: ctx;

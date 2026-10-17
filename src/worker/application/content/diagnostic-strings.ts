@@ -311,12 +311,17 @@ export function buildDiagnosticStrings(i18n: Translator) {
         placeholders("field"),
       ),
     // The truth-tree exercise (`exercises/truth-tree/authoring.ts`).
-    "Only the root's sentences may follow the first of them.": i18n.t(
-      "Only the root's sentences may follow the first of them.",
+    "Only the root's rows may follow the first of them.": i18n.t(
+      "Only the root's rows may follow the first of them.",
     ),
-    "“{formula}” has free variables, and a tree's root must be sentences.":
+    "Could not parse “{formula}” as a row, of the sort “{sort}”: {detail}":
       i18n.t(
-        "“{formula}” has free variables, and a tree's root must be sentences.",
+        "Could not parse “{formula}” as a row, of the sort “{sort}”: {detail}",
+        placeholders("detail", "formula", "sort"),
+      ),
+    "“{formula}” has free variables, and a tree's root may have none.":
+      i18n.t(
+        "“{formula}” has free variables, and a tree's root may have none.",
         placeholders("formula"),
       ),
     "The finish attribute must be closed, complete, or one-open.": i18n.t(
@@ -327,20 +332,20 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The system “{name}” is not a tree theory: it declares no {roles}.",
         placeholders("name", "roles"),
       ),
-    "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in.":
+    "The system “{name}” gives the role {role} to several sorts ({sorts}), and a tree theory needs exactly one.":
       i18n.t(
-        "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in.",
-        placeholders("name"),
+        "The system “{name}” gives the role {role} to several sorts ({sorts}), and a tree theory needs exactly one.",
+        placeholders("name", "role", "sorts"),
       ),
-    "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in.":
+    "The system “{name}” gives “{term}” the role {role}, but it is not over the branch sort “{branch}”.":
       i18n.t(
-        "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in.",
-        placeholders("name", "sorts"),
+        "The system “{name}” gives “{term}” the role {role}, but it is not over the branch sort “{branch}”.",
+        placeholders("branch", "name", "role", "term"),
       ),
-    "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.":
+    "The system “{name}” has no coercion from its row sort “{row}” to its branch sort “{branch}”, so a row cannot stand on a branch.":
       i18n.t(
-        "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.",
-        placeholders("name"),
+        "The system “{name}” has no coercion from its row sort “{row}” to its branch sort “{branch}”, so a row cannot stand on a branch.",
+        placeholders("branch", "name", "row"),
       ),
     "The system “{name}” says nothing about when a row is developed, so no branch on it can be shown complete: give its rules tree.development roles, or leave finish closed.":
       i18n.t(
@@ -421,22 +426,12 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "The system has no @relation on the sort “{sort}”, which Carnap needs to tell from a branch whether its rows are developed.",
         placeholders("sort"),
       ),
-    "Write the root as one argument line or as a list of sentences, not both.":
+    "A truth tree needs a root: a list of its rows, each on a line of its own after “- ”.":
       i18n.t(
-        "Write the root as one argument line or as a list of sentences, not both.",
+        "A truth tree needs a root: a list of its rows, each on a line of its own after “- ”.",
       ),
-    "A truth tree tests an argument with one conclusion.": i18n.t(
-      "A truth tree tests an argument with one conclusion.",
-    ),
-    "A truth tree needs a root: an argument line “premises :|-: conclusion”, or a list of sentences.":
-      i18n.t(
-        "A truth tree needs a root: an argument line “premises :|-: conclusion”, or a list of sentences.",
-      ),
-    "The root could not be written in the language.": i18n.t(
-      "The root could not be written in the language.",
-    ),
-    "A truth tree's root may have at most {max} sentences.": i18n.t(
-      "A truth tree's root may have at most {max} sentences.",
+    "A truth tree's root may have at most {max} rows.": i18n.t(
+      "A truth tree's root may have at most {max} rows.",
       placeholders("max"),
     ),
 

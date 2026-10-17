@@ -16,17 +16,20 @@ import {
  * and margins name the book's rules (`∧𝕋`, typed `∧T` or `&T`).
  */
 
-function exercise(root: string, finish = "closed") {
+function exercise(root: readonly string[], finish = "closed") {
   return treeExercise(root, { finish, system: "open-logic-tableaux" });
 }
 
-async function judge(root: string, tree: TreeBuilder): Promise<TreeReport> {
+async function judge(
+  root: readonly string[],
+  tree: TreeBuilder,
+): Promise<TreeReport> {
   return judgeAsBrowser(await exercise(root), tree);
 }
 
 describe("open-logic-tableaux", () => {
-  test("an argument's root asserts the premises and denies the conclusion", async () => {
-    const { resolved } = await exercise("A ∧ B :|-: A");
+  test("root rows are read with their sign", async () => {
+    const { resolved } = await exercise(["𝕋 A ∧ B", "𝔽 A"]);
 
     expect(resolved.root).toEqual([
       "(𝕋 ((A (snil)) ∧ (B (snil))))",
@@ -39,7 +42,7 @@ describe("open-logic-tableaux", () => {
     const [t, f] = tree.stack("n0", "r1", ["𝕋 A ∧ B", "𝔽 A"], "→𝔽");
     const [a] = tree.stack("n0", t as string, ["T: A", "T: B"], "&T");
     tree.close("n0", a as string, f as string);
-    const report = await judge(":|-: (A ∧ B) → A", tree);
+    const report = await judge(["𝔽 (A ∧ B) → A"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -56,7 +59,7 @@ describe("open-logic-tableaux", () => {
     );
     tree.close(nodes[0], rows[0][0] as string, fb as string);
     tree.close(nodes[1], rows[1][0] as string, fa as string);
-    const report = await judge("A ∨ B :|-: B ∨ A", tree);
+    const report = await judge(["𝕋 A ∨ B", "𝔽 B ∨ A"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -65,7 +68,7 @@ describe("open-logic-tableaux", () => {
   test("a rule for the other sign is refused", async () => {
     const tree = new TreeBuilder(["F: A ∧ B"]);
     const [row] = tree.stack("n0", "r1", ["F: A", "F: B"], "∧T");
-    const report = await judge(":|-: A ∧ B", tree);
+    const report = await judge(["𝔽 A ∧ B"], tree);
 
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
   }, 60_000);
@@ -74,7 +77,7 @@ describe("open-logic-tableaux", () => {
     const tree = new TreeBuilder(["T: A ∧ B", "T: B", "F: A"]);
     const [first, second] = tree.stack("n0", "r1", ["T: A", "T: A"], "∧T");
     tree.close("n0", first as string, "r3");
-    const report = await judge("A ∧ B, B :|-: A", tree);
+    const report = await judge(["𝕋 A ∧ B", "𝕋 B", "𝔽 A"], tree);
 
     expect(problems(report)).toContain(`row ${second}: step-wrong`);
 
@@ -82,18 +85,20 @@ describe("open-logic-tableaux", () => {
     const [a] = right.stack("n0", "r1", ["T: A", "T: B"], "∧T");
     right.close("n0", a as string, "r3");
 
-    expect(problems(await judge("A ∧ B, B :|-: A", right))).toEqual([]);
+    expect(problems(await judge(["𝕋 A ∧ B", "𝕋 B", "𝔽 A"], right))).toEqual(
+      [],
+    );
   }, 60_000);
 
   test("a branch closes on one formula with both signs, not one sign twice", async () => {
     const tree = new TreeBuilder(["T: A", "T: ¬A"]);
     const [f] = tree.stack("n0", "r2", ["F: A"], "¬T");
     tree.close("n0", "r1", f as string);
-    expect(problems(await judge("- A\n- ¬A", tree))).toEqual([]);
+    expect(problems(await judge(["𝕋 A", "𝕋 ¬A"], tree))).toEqual([]);
 
     const wrong = new TreeBuilder(["T: A", "T: ¬A"]);
     wrong.close("n0", "r1", "r1");
-    expect(problems(await judge("- A\n- ¬A", wrong))).toContain(
+    expect(problems(await judge(["𝕋 A", "𝕋 ¬A"], wrong))).toContain(
       "end n0: closure-wrong",
     );
   }, 60_000);
@@ -120,7 +125,7 @@ describe("open-logic-tableaux", () => {
     const [fc] = tree.stack(right, four as string, ["𝔽 B(c)"], "∃𝔽");
     tree.close(right, tc as string, fc as string);
     const report = await judge(
-      "- ∀x A(x)\n- ∀x A(x) → ∃y B(y)\n- ¬∃y B(y)",
+      ["𝕋 ∀x A(x)", "𝕋 ∀x A(x) → ∃y B(y)", "𝕋 ¬∃y B(y)"],
       tree,
     );
 
@@ -132,7 +137,7 @@ describe("open-logic-tableaux", () => {
     const tree = new TreeBuilder(["T: A(a)", "F: ∀x A(x)"]);
     const [row] = tree.stack("n0", "r2", ["F: A(a)"], "∀F");
     tree.close("n0", "r1", row as string);
-    const report = await judge("A(a) :|-: ∀x A(x)", tree);
+    const report = await judge(["𝕋 A(a)", "𝔽 ∀x A(x)"], tree);
 
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
     expect(report.closed).toBe(false);
@@ -158,7 +163,7 @@ describe("open-logic-tableaux", () => {
     );
     tree.close(right.nodes[0], a as string, cut.rows[1][0] as string);
     tree.close(right.nodes[1], right.rows[1][0] as string, "r3");
-    const report = await judge("A → B, ¬A → B :|-: B", tree);
+    const report = await judge(["𝕋 A → B", "𝕋 ¬A → B", "𝔽 B"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -168,7 +173,7 @@ describe("open-logic-tableaux", () => {
     const tree = new TreeBuilder(["T: A ∧ B", "F: A"]);
     const [row] = tree.stack("n0", null, ["T: A", "T: B"], "∧T");
     tree.close("n0", row as string, "r2");
-    const report = await judge("A ∧ B :|-: A", tree);
+    const report = await judge(["𝕋 A ∧ B", "𝔽 A"], tree);
 
     expect(problems(report)).toContain(`row ${row}: uncited`);
   }, 60_000);
@@ -178,7 +183,7 @@ describe("open-logic-tableaux", () => {
     const tree = new TreeBuilder(["T: s = t", "T: A(s)", "F: A(t)"]);
     const [row] = tree.stack("n0", ["r1", "r2"], ["T: A(t)"], "=T");
     tree.close("n0", row as string, "r3");
-    const report = await judge("s = t, A(s) :|-: A(t)", tree);
+    const report = await judge(["𝕋 s = t", "𝕋 A(s)", "𝔽 A(t)"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -194,7 +199,7 @@ describe("open-logic-tableaux", () => {
       "=T",
     );
     tree.close("n0", row as string, "r2");
-    const report = await judge("s₁ = s₂ :|-: s₂ = s₁", tree);
+    const report = await judge(["𝕋 s₁ = s₂", "𝔽 s₂ = s₁"], tree);
 
     expect(problems(report)).toEqual([]);
     expect(report.closed).toBe(true);
@@ -203,7 +208,7 @@ describe("open-logic-tableaux", () => {
   test("=𝕋 rewrites one way only", async () => {
     const tree = new TreeBuilder(["T: s = t", "T: A(t)", "F: A(s)"]);
     const [row] = tree.stack("n0", ["r1", "r2"], ["T: A(s)"], "=T");
-    const report = await judge("s = t, A(t) :|-: A(s)", tree);
+    const report = await judge(["𝕋 s = t", "𝕋 A(t)", "𝔽 A(s)"], tree);
 
     expect(problems(report)).toContain(`row ${row}: step-wrong`);
   }, 60_000);
@@ -215,7 +220,7 @@ describe("open-logic-tableaux", () => {
 describe("an open branch, by its contents", () => {
   async function open(...members: string[]): Promise<TreeReport> {
     const asked = await exercise(
-      members.map((each) => `- ${each}`).join("\n"),
+      members.map((each) => `𝕋 ${each}`),
       "one-open",
     );
     const tree = new TreeBuilder(asked.resolved.rootText);
@@ -244,7 +249,7 @@ describe("an open branch, by its contents", () => {
     );
     expect(source).toContain("tree.development.pairs");
     const paired = await lessonTree(
-      `:::aufbau-mm0{name="paired"}\n${source}\n:::\n\n::::truth-tree{#t system="paired" finish="one-open"}\nShow it.\n\n- a = b\n- a = a\n::::`,
+      `:::aufbau-mm0{name="paired"}\n${source}\n:::\n\n::::truth-tree{#t system="paired" finish="one-open"}\nShow it.\n\n- 𝕋 a = b\n- 𝕋 a = a\n::::`,
     );
     const tree = new TreeBuilder(paired.resolved.rootText);
     tree.open(tree.rootNode);

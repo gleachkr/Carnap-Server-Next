@@ -727,10 +727,10 @@ Change at most two blocks so that every sentence comes out as marked.
 A **truth tree** (a semantic tableau) decides a question by trying to make
 the root all true at once. The student develops it row by row, citing the row
 each step develops, closes a branch that holds a sentence and its negation,
-and marks a complete open branch \`↑\`. A list of sentences asks whether the
-set is consistent; an argument line, \`premises :|-: conclusion\`, asks
-whether the argument is valid, and the tree's root then negates the
-conclusion. The language is *forall x: UBC*'s, and so are the rules.
+and marks a complete open branch \`↑\`. The body lists the root's rows: a
+set's members to test it for consistency, or an argument's premises and the
+negation of its conclusion to test it for validity. The language is *forall
+x: UBC*'s, and so are the rules.
 
 \`\`\`md
 :::truth-tree{id="tree_ubc" title="Two disjunctions" points="3"}

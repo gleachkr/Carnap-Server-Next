@@ -13,31 +13,31 @@
 import type { AppTerm, SurfaceLanguage } from "@aufbau/syntax";
 import { printTerm } from "@aufbau/syntax";
 import { acuiOf } from "../../../logic/specs/annotations";
-import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
-import { readEngine } from "./rows";
+import {
+  roleIndex,
+  sentenceSort,
+  sortsWithRole,
+} from "../../../logic/specs/roles";
 
 /**
  * A tree calculus's plumbing:
  *
- * - `tree.closes` — the term for "this branch closes"; its one argument's sort
- *   is the branch sort, joined by the `context-join` term;
+ * - `tree.branch` and `tree.row` — the sorts of a branch and of a row on it,
+ *   with a coercion from the one to the other, so that a row is a branch;
+ * - `tree.closes` — the term for "this branch closes", of a branch; the
+ *   `context-join` term joins branches;
  * - `tree.focus` — the term for "this branch closes by a step on these rows",
  *   taking the branch and the cited rows, both of the branch sort;
  * - `tree.unfocus` — the axiom from a focused step to its branch;
  * - `tree.closure` — the rule a closed branch's × cites by;
- * - `tree.assert` and `tree.deny` — how the root says a sentence is true, and
- *   is not (a Smullyan `T φ` and `F φ`). Where a row is a sentence, a sentence
- *   asserts itself, and the language's negation denies it;
- * - `tree.root` — where the root says it, for a calculus whose rows are
- *   somewhere as well as signed (a prefixed tableau's `1`): a term with no
- *   arguments, filling an assert or deny term's argument of its sort;
+ * - `tree.assert` — the term that says a sentence is true, for a calculus
+ *   whose rows are signed (a Smullyan `T φ`), so that `𝕋 t = t` is read as
+ *   true on any branch. Where a row is a sentence, it asserts itself;
  * - `tree.mark` and `tree.mark.instance` — a check mark, which a rule writes
  *   on the branch beside its rows and the student never types: `✓ ρ` for the
  *   row ρ the step cites, and `✓ᵢ ρ ↦ ψ` beside each row ψ a step writes
  *   from ρ, for a rule a row owes once per instance. Each is a term of the
  *   branch sort, so a mark is on a branch exactly where a step put it there.
- *
- * A row is read at the one sort with a coercion into the branch sort.
  */
 export interface TreeTheory {
   readonly closes: string;
@@ -50,16 +50,10 @@ export interface TreeTheory {
    * no row focuses on, as Cut does. Null where the join declares no unit.
    */
   readonly empty: { readonly term: string; readonly engine: string } | null;
+  /** The sort a row is written at (`tree.row`). */
   readonly rowSort: string;
-  /** The term that asserts a sentence as a row; null where it is the row. */
-  readonly assert: string | null;
-  /**
-   * The term that denies a sentence as a row, or null if the theory has none,
-   * in which case it cannot test an argument.
-   */
-  readonly deny: string | null;
-  /** The term the root's rows are at, if they are at anything (`tree.root`). */
-  readonly root: string | null;
+  /** The sort of a branch (`tree.branch`). */
+  readonly branchSort: string;
   /**
    * Whether an open branch is complete by what is on it, not by what was done
    * to it: a row is developed once its rule's conclusions are on the branch,
@@ -81,6 +75,8 @@ export type TreeRole =
   | "tree.unfocus"
   | "tree.closure"
   | "tree.assert"
+  | "tree.row"
+  | "tree.branch"
   | "context-join";
 
 /**
@@ -88,13 +84,13 @@ export type TreeRole =
  * (`./criteria.ts`): a theory naming another has misspelt one.
  */
 export const TREE_ROLES: ReadonlySet<string> = new Set([
+  "tree.row",
+  "tree.branch",
   "tree.closes",
   "tree.focus",
   "tree.unfocus",
   "tree.closure",
   "tree.assert",
-  "tree.deny",
-  "tree.root",
   "tree.substitution",
   "tree.mark",
   "tree.mark.instance",
@@ -103,8 +99,25 @@ export const TREE_ROLES: ReadonlySet<string> = new Set([
 /** What a theory is missing to be a tree theory. */
 export type TreeTheoryProblem =
   | { readonly type: "missing-role"; readonly role: TreeRole }
-  /** No sort, or more than one, coerces into the branch sort. */
-  | { readonly type: "row-sort"; readonly candidates: readonly string[] };
+  /** A sort role on more than one sort. */
+  | {
+      readonly type: "several-sorts";
+      readonly role: "tree.row" | "tree.branch";
+      readonly sorts: readonly string[];
+    }
+  /** The term with `role` is not over the branch sort. */
+  | {
+      readonly type: "not-branch";
+      readonly role: "tree.closes" | "context-join";
+      readonly term: string;
+      readonly branch: string;
+    }
+  /** No coercion makes a row a branch. */
+  | {
+      readonly type: "no-coercion";
+      readonly row: string;
+      readonly branch: string;
+    };
 
 /** The theory's tree plumbing, or everything it lacks. */
 export function readTreeTheory(
@@ -116,6 +129,7 @@ export function readTreeTheory(
   const unfocus = roles.ruleFor("tree.unfocus");
   const closure = roles.ruleFor("tree.closure");
   const join = roles.spellingFor("context-join");
+  const joinTerm = roles.termFor("context-join");
   const problems: TreeTheoryProblem[] = [];
   const need = (value: string | null, role: TreeRole): void => {
     if (value === null) {
@@ -123,36 +137,79 @@ export function readTreeTheory(
     }
   };
 
+  // A sort role on several sorts is reported as that, and read as none.
+  const sortFor = (role: "tree.row" | "tree.branch"): string | null => {
+    const sorts = sortsWithRole(language, role);
+
+    if (sorts.length > 1) {
+      problems.push({ role, sorts, type: "several-sorts" });
+    } else if (sorts.length === 0) {
+      problems.push({ role, type: "missing-role" });
+    }
+
+    return sorts.length === 1 ? (sorts[0] as string) : null;
+  };
+  const rowSort = sortFor("tree.row");
+  const branchSort = sortFor("tree.branch");
+
   need(closes, "tree.closes");
   need(focus, "tree.focus");
   need(unfocus, "tree.unfocus");
   need(closure, "tree.closure");
   need(join, "context-join");
 
-  const binder =
-    closes === null ? undefined : language.spec.terms.get(closes)?.binders[0];
-  const branchSort =
-    binder !== undefined && "sort" in binder.type ? binder.type.sort : null;
-  const candidates =
-    branchSort === null
-      ? []
-      : language.spec.coercions
-          .filter((coercion) => coercion.to === branchSort)
-          .map((coercion) => coercion.from);
+  if (branchSort !== null) {
+    const binder =
+      closes === null
+        ? undefined
+        : language.spec.terms.get(closes)?.binders[0];
+    const closesOver =
+      binder !== undefined && "sort" in binder.type ? binder.type.sort : null;
 
-  if (branchSort !== null && candidates.length !== 1) {
-    problems.push({ candidates, type: "row-sort" });
+    if (closes !== null && closesOver !== branchSort) {
+      problems.push({
+        branch: branchSort,
+        role: "tree.closes",
+        term: closes,
+        type: "not-branch",
+      });
+    }
+
+    if (
+      joinTerm !== null &&
+      language.spec.terms.get(joinTerm)?.returnSort !== branchSort
+    ) {
+      problems.push({
+        branch: branchSort,
+        role: "context-join",
+        term: joinTerm,
+        type: "not-branch",
+      });
+    }
+
+    if (
+      rowSort !== null &&
+      !language.spec.coercions.some(
+        (coercion) => coercion.from === rowSort && coercion.to === branchSort,
+      )
+    ) {
+      problems.push({
+        branch: branchSort,
+        row: rowSort,
+        type: "no-coercion",
+      });
+    }
   }
 
-  const rowSort = candidates.length === 1 ? (candidates[0] as string) : null;
   const rowsAreSentences =
     rowSort !== null && rowSort === sentenceSort(language);
-  const assert = roles.termFor("tree.assert");
-  const deny =
-    roles.termFor("tree.deny") ??
-    (rowsAreSentences ? roles.termFor("negation") : null);
 
-  if (assert === null && rowSort !== null && !rowsAreSentences) {
+  // Signed rows need their assertion named, which `./branch.ts` reads.
+  if (
+    roles.termFor("tree.assert") === null &&
+    rowSort !== null &&
+    !rowsAreSentences
+  ) {
     problems.push({ role: "tree.assert", type: "missing-role" });
   }
 
@@ -161,19 +218,17 @@ export function readTreeTheory(
   }
 
   return {
-    assert,
+    branchSort: branchSort as string,
     byContents:
       roles.termFor("tree.mark") === null &&
       roles.termFor("tree.mark.instance") === null,
     closes: closes as string,
     closure: closure as string,
-    deny,
-    empty: emptyBranch(language, roles.termFor("context-join")),
+    empty: emptyBranch(language, joinTerm),
     focus: focus as string,
     join: join as string,
     mark: roles.termFor("tree.mark"),
     markInstance: roles.termFor("tree.mark.instance"),
-    root: roles.termFor("tree.root"),
     rowSort: rowSort as string,
     unfocus: unfocus as string,
   };
@@ -215,67 +270,6 @@ export function isTreeTheory(
   read: TreeTheory | readonly TreeTheoryProblem[],
 ): read is TreeTheory {
   return "closes" in read;
-}
-
-/**
- * A root row as engine text at the row sort: the sentence (engine text)
- * asserted, or denied, at the theory's root where its rows are somewhere.
- * Null if the theory cannot say it — it has no denial, or no root of a sort
- * its assert or deny term asks for — or the result does not read.
- */
-export function rootRow(
-  language: SurfaceLanguage,
-  theory: TreeTheory,
-  sentence: string,
-  polarity: "assert" | "deny",
-): string | null {
-  const term = polarity === "assert" ? theory.assert : theory.deny;
-
-  if (polarity === "deny" && term === null) {
-    return null;
-  }
-
-  const text =
-    term === null ? sentence : applied(language, theory, term, sentence);
-
-  if (text === null) {
-    return null;
-  }
-
-  const read = readEngine(language, text, theory.rowSort);
-  return read === null ? null : printTerm(language, read, "engine");
-}
-
-/**
- * An assert or deny term applied: the sentence at its sentence-sort argument,
- * the theory's root at any other. Null if it has an argument neither fills.
- */
-function applied(
-  language: SurfaceLanguage,
-  theory: TreeTheory,
-  term: string,
-  sentence: string,
-): string | null {
-  const sentences = sentenceSort(language);
-  const rootSort =
-    theory.root === null
-      ? null
-      : (language.spec.terms.get(theory.root)?.returnSort ?? null);
-  const args = (language.spec.terms.get(term)?.binders ?? []).map(
-    (binder) => {
-      const sort = "sort" in binder.type ? binder.type.sort : null;
-
-      if (sort === sentences) {
-        return `(${sentence})`;
-      }
-
-      return sort !== null && sort === rootSort ? `(${theory.root})` : null;
-    },
-  );
-
-  return args.some((arg) => arg === null)
-    ? null
-    : `${term} ${args.join(" ")}`;
 }
 
 /**

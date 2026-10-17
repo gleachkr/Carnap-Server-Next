@@ -253,20 +253,9 @@ function describeTreeProblem(
 }
 
 function rightVerdict(verdict: TruthTreeVerdict, words: TreeWords): string {
-  switch (verdict) {
-    case "valid":
-      return words("Right: the tree closes, so the argument is valid.");
-    case "invalid":
-      return words(
-        "Right: a complete open branch shows the argument is invalid.",
-      );
-    case "consistent":
-      return words(
-        "Right: a complete open branch shows the set is consistent.",
-      );
-    default:
-      return words("Right: the tree closes, so the set is inconsistent.");
-  }
+  return verdict === "closed"
+    ? words("Right: every branch closes.")
+    : words("Right: the tree has a complete open branch.");
 }
 
 /** Why the engine had no word on the tree, as the proof widgets say it. */

@@ -186,15 +186,10 @@ function generate(
   development: TreeDevelopment,
 ): OkAxioms | null {
   const { spec } = language;
-  const closes = spec.terms.get(theory.closes);
-  const branchBinder = closes?.binders[0];
-  const judgementSort = closes?.returnSort;
-  const branchSort =
-    branchBinder !== undefined && "sort" in branchBinder.type
-      ? branchBinder.type.sort
-      : null;
+  const judgementSort = spec.terms.get(theory.closes)?.returnSort;
+  const { branchSort } = theory;
 
-  if (judgementSort === undefined || branchSort === null) {
+  if (judgementSort === undefined) {
     return null;
   }
 

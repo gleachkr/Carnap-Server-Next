@@ -10,23 +10,16 @@ import {
   COMMON_EXERCISE_ATTRIBUTES,
   type CompiledExercise,
   type DirectiveBlock,
-  noConclusions,
   parseExamAttribute,
   parsePoints,
   reconcileFeedback,
   requireAttribute,
-  tooManyTurnstiles,
   validateAttributes,
   validateExerciseId,
 } from "../../exercise-kit/authoring";
-import {
-  isArgumentLine,
-  splitArgumentLine,
-} from "../../exercise-kit/formula";
 import { parseSystemAttribute } from "../../exercise-kit/systems/attribute";
 import type { ExerciseCompileContext } from "../../exercise-kit/type";
 import { formulaParseErrors } from "../../logic/specs/diagnostics";
-import { sentenceSort } from "../../logic/specs/roles";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
 import type { OkAxioms } from "./aufbau/ok";
@@ -34,15 +27,10 @@ import { okAxioms } from "./aufbau/ok";
 import {
   isTreeTheory,
   readTreeTheory,
-  rootRow,
   type TreeTheory,
   type TreeTheoryProblem,
 } from "./aufbau/theory";
-import type {
-  TruthTreeFinish,
-  TruthTreePublicData,
-  TruthTreeTask,
-} from "./types";
+import type { TruthTreeFinish, TruthTreePublicData } from "./types";
 import {
   TREE_ROW_CAP,
   TRUTH_TREE_ANSWER_KIND,
@@ -105,12 +93,11 @@ interface Located {
 interface TreeBody {
   readonly promptLines: readonly string[];
   readonly items: readonly Located[];
-  readonly arguments: readonly Located[];
 }
 
 /**
- * Prose, then the root: one `premises :|-: conclusion` line, or a list of
- * sentences. The prompt is the run of lines before the first of either.
+ * Prose, then the root: a list of its rows, one per item. The prompt is the
+ * run of lines before the first item.
  */
 function parseBody(
   block: DirectiveBlock,
@@ -118,40 +105,27 @@ function parseBody(
 ): TreeBody {
   const promptLines: string[] = [];
   const items: Located[] = [];
-  const argumentLines: Located[] = [];
-  let pastPrompt = false;
 
   for (const [index, line] of block.bodyLines.entries()) {
     const lineNumber = block.bodyStartLine + index;
-
-    if (isArgumentLine(line)) {
-      pastPrompt = true;
-      argumentLines.push({ line: lineNumber, text: line });
-      continue;
-    }
-
     const item = LIST_ITEM.exec(line);
 
     if (item !== null) {
-      pastPrompt = true;
       items.push({ line: lineNumber, text: item[1] ?? "" });
-      continue;
-    }
-
-    if (!pastPrompt) {
+    } else if (items.length === 0) {
       promptLines.push(line);
     } else if (line.trim().length > 0) {
       diagnostics.push(
         diagnostic(
           lineNumber,
           "invalid_truth_tree_body",
-          "Only the root's sentences may follow the first of them.",
+          "Only the root's rows may follow the first of them.",
         ),
       );
     }
   }
 
-  return { arguments: argumentLines, items, promptLines };
+  return { items, promptLines };
 }
 
 /** Lines of the body the nested-directive scan leaves alone. */
@@ -162,7 +136,7 @@ export function truthTreeDataBodyLines(
   let pastPrompt = false;
 
   for (const [index, line] of block.bodyLines.entries()) {
-    pastPrompt ||= LIST_ITEM.test(line) || isArgumentLine(line);
+    pastPrompt ||= LIST_ITEM.test(line);
 
     if (pastPrompt) {
       data.add(block.bodyStartLine + index);
@@ -173,34 +147,38 @@ export function truthTreeDataBodyLines(
 }
 
 /**
- * Parse one root sentence, as engine text; `null` after reporting why not.
+ * Parse one root row, as engine text at the theory's row sort; `null` after
+ * reporting why not.
  *
- * Read as the tree theory's language reads it, not as a formula an evaluator
- * can interpret: a tree's rules are the theory's, so whatever the language
- * parses can be a root (`□A`, which has no truth function).
+ * Read as the tree theory's language reads a row, not as a formula an
+ * evaluator can interpret: a tree's rules are the theory's, so whatever the
+ * language parses can be a root (`□A`, which has no truth function, or a
+ * signed `𝔽 A`). The author writes every root row, so for an argument the
+ * conclusion is written denied, as the books' trees begin.
  */
-function readSentence(
+function readRootRow(
   source: string,
   line: number,
   language: SurfaceLanguage,
+  theory: TreeTheory,
   diagnostics: CompilerDiagnostic[],
 ): string | null {
   const trimmed = source.trim();
-  const sort = sentenceSort(language);
-  const parsed = language.parse(trimmed, sort === undefined ? {} : { sort });
+  const parsed = language.parse(trimmed, { sort: theory.rowSort });
 
   if (!parsed.ok) {
     diagnostics.push(
       diagnostic(
         line,
         "invalid_formula",
-        "Could not parse formula “{formula}”: {detail}",
+        "Could not parse “{formula}” as a row, of the sort “{sort}”: {detail}",
         {
           params: {
             detail: formulaParseErrors(parsed.diagnostics)[0] ?? {
               message: "syntax error",
             },
             formula: trimmed,
+            sort: theory.rowSort,
           },
         },
       ),
@@ -213,7 +191,7 @@ function readSentence(
       diagnostic(
         line,
         "truth_tree_open_sentence",
-        "“{formula}” has free variables, and a tree's root must be sentences.",
+        "“{formula}” has free variables, and a tree's root may have none.",
         { params: { formula: trimmed } },
       ),
     );
@@ -277,25 +255,53 @@ function reportTreeTheory(
   }
 
   for (const problem of problems) {
-    if (problem.type !== "row-sort") {
-      continue;
-    }
-
-    diagnostics.push(
-      problem.candidates.length === 0
-        ? diagnostic(
+    switch (problem.type) {
+      case "several-sorts":
+        diagnostics.push(
+          diagnostic(
             line,
-            "truth_tree_row_sort",
-            "The system “{name}” has no sort that coerces into its branch sort, so its rows have no sort to be written in.",
-            { params: { name } },
-          )
-        : diagnostic(
-            line,
-            "truth_tree_row_sort",
-            "The system “{name}” has several sorts that coerce into its branch sort ({sorts}), and a tree theory needs exactly one: the sort its rows are written in.",
-            { params: { name, sorts: problem.candidates.join(", ") } },
+            "truth_tree_sort",
+            "The system “{name}” gives the role {role} to several sorts ({sorts}), and a tree theory needs exactly one.",
+            {
+              params: {
+                name,
+                role: problem.role,
+                sorts: problem.sorts.join(", "),
+              },
+            },
           ),
-    );
+        );
+        break;
+      case "not-branch":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_sort",
+            "The system “{name}” gives “{term}” the role {role}, but it is not over the branch sort “{branch}”.",
+            {
+              params: {
+                branch: problem.branch,
+                name,
+                role: problem.role,
+                term: problem.term,
+              },
+            },
+          ),
+        );
+        break;
+      case "no-coercion":
+        diagnostics.push(
+          diagnostic(
+            line,
+            "truth_tree_sort",
+            "The system “{name}” has no coercion from its row sort “{row}” to its branch sort “{branch}”, so a row cannot stand on a branch.",
+            {
+              params: { branch: problem.branch, name, row: problem.row },
+            },
+          ),
+        );
+        break;
+    }
   }
 }
 
@@ -570,125 +576,31 @@ export async function compileTruthTree(
       diagnostics,
     );
   }
-  let task: TruthTreeTask = "consistency";
-  const premises: string[] = [];
-  const conclusions: string[] = [];
 
-  if (body.arguments.length > 0 && body.items.length > 0) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "truth_tree_mixed_root",
-        "Write the root as one argument line or as a list of sentences, not both.",
-      ),
+  const root: string[] = [];
+
+  for (const item of body.items) {
+    const row = readRootRow(
+      item.text,
+      item.line,
+      language,
+      theory,
+      diagnostics,
     );
-  } else if (body.arguments.length > 0) {
-    task = "validity";
 
-    for (const extra of body.arguments.slice(1)) {
-      diagnostics.push(tooManyTurnstiles(extra.line));
+    if (row !== null) {
+      root.push(row);
     }
+  }
 
-    const first = body.arguments[0] as Located;
-    const argument = splitArgumentLine(first.text);
-
-    if (argument === null) {
-      diagnostics.push(tooManyTurnstiles(first.line));
-    } else if (argument.conclusions.length === 0) {
-      diagnostics.push(noConclusions(first.line));
-    } else if (argument.conclusions.length > 1) {
-      diagnostics.push(
-        diagnostic(
-          first.line,
-          "truth_tree_conclusions",
-          "A truth tree tests an argument with one conclusion.",
-        ),
-      );
-    } else {
-      for (const piece of argument.premises) {
-        const formula = readSentence(
-          piece,
-          first.line,
-          language,
-          diagnostics,
-        );
-
-        if (formula !== null) {
-          premises.push(formula);
-        }
-      }
-
-      for (const piece of argument.conclusions) {
-        const formula = readSentence(
-          piece,
-          first.line,
-          language,
-          diagnostics,
-        );
-
-        if (formula !== null) {
-          conclusions.push(formula);
-        }
-      }
-    }
-  } else if (body.items.length > 0) {
-    for (const item of body.items) {
-      const formula = readSentence(
-        item.text,
-        item.line,
-        language,
-        diagnostics,
-      );
-
-      if (formula !== null) {
-        premises.push(formula);
-      }
-    }
-  } else {
+  if (body.items.length === 0) {
     diagnostics.push(
       diagnostic(
         block.line,
         "truth_tree_no_root",
-        "A truth tree needs a root: an argument line “premises :|-: conclusion”, or a list of sentences.",
+        "A truth tree needs a root: a list of its rows, each on a line of its own after “- ”.",
       ),
     );
-  }
-
-  if (task === "validity" && theory.deny === null) {
-    diagnostics.push(
-      diagnostic(
-        block.line,
-        "truth_tree_no_denial",
-        "The system “{name}” cannot deny a sentence, which testing an argument needs: give it a tree.deny term, or a negation if its rows are sentences.",
-        { params: { name: system } },
-      ),
-    );
-    return null;
-  }
-
-  // The root asserts the premises and denies the conclusion (UBC §5.2: the
-  // premises and the conclusion's negation), in the theory's own rows. These
-  // are the only rows a reader sees that the author did not type.
-  const root: string[] = [];
-
-  for (const [sentence, polarity] of [
-    ...premises.map((sentence) => [sentence, "assert"] as const),
-    ...conclusions.map((sentence) => [sentence, "deny"] as const),
-  ]) {
-    const row = rootRow(language, theory, sentence, polarity);
-
-    if (row === null) {
-      diagnostics.push(
-        diagnostic(
-          block.line,
-          "truth_tree_unprintable_root",
-          "The root could not be written in the language.",
-        ),
-      );
-      return null;
-    }
-
-    root.push(row);
   }
 
   if (root.length > TREE_ROW_CAP) {
@@ -696,7 +608,7 @@ export async function compileTruthTree(
       diagnostic(
         block.line,
         "truth_tree_root_too_long",
-        "A truth tree's root may have at most {max} sentences.",
+        "A truth tree's root may have at most {max} rows.",
         { params: { max: String(TREE_ROW_CAP) } },
       ),
     );
@@ -711,7 +623,6 @@ export async function compileTruthTree(
     }),
     root,
     system,
-    task,
   };
 
   return buildCompiledExercise({

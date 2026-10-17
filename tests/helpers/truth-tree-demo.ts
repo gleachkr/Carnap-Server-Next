@@ -25,19 +25,24 @@ or \`\\/\` on a keyboard without one). The \`(?)\` below lists the keys.
 ## Is it valid?
 
 ::::truth-tree{#tt-valid points="3" title="A conditional chain"}
-Use a tree to decide whether this argument is valid. The root is the
-premises and the negation of the conclusion.
+Use a tree to decide whether the argument from P ⊃ Q and Q ⊃ R to P ⊃ R
+is valid. The root is its premises and the negation of its conclusion.
 
-P ⊃ Q, Q ⊃ R :|-: P ⊃ R
+- P ⊃ Q
+- Q ⊃ R
+- ¬(P ⊃ R)
 ::::
 
 ## A first-order tree
 
 ::::truth-tree{#tt-quantifiers points="3" title="Everything and something"}
 An existential sentence takes a name new to its branch, and a universal one
-takes any name, as many times as the branch needs.
+takes any name, as many times as the branch needs. Is the argument from
+∀x(Fx ⊃ Gx) and ∃xFx to ∃xGx valid?
 
-∀x(Fx ⊃ Gx), ∃xFx :|-: ∃xGx
+- ∀x(Fx ⊃ Gx)
+- ∃xFx
+- ¬∃xGx
 ::::
 
 ## Identity
