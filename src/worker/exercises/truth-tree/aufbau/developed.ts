@@ -5,7 +5,8 @@
  * - each row is asked `tree_ok`, once however often it is written;
  * - a general row is asked `tree_okat_<rule>` at each term of its
  *   instance's sort on the branch (at a name new to it, where a `nonempty`
- *   row's branch has none), or, where its rule names side rows, asked
+ *   row's branch has none), at one term where its instances are all one
+ *   (`∀x Fa`), or, where its rule names side rows, asked
  *   `tree_okwith_<rule>` at each witness Carnap finds on the branch;
  * - a row a rule on a pair of rows sets off (an identity) is asked
  *   `tree_okpair_<statement>` with every other row it pairs with, in one
@@ -22,7 +23,7 @@ import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import type { TableauIndex, TableauNode } from "../../../../tableau/document";
 import type { Missing } from "../report";
 import { isLiteral, isSelfIdentity } from "./branch";
-import type { RulePatterns, TreeDevelopment } from "./criteria";
+import type { InstanceSlot, RulePatterns, TreeDevelopment } from "./criteria";
 import { instanceShower, matchFocus, witnesses } from "./criteria";
 import type { OkAxioms } from "./ok";
 import { atWitnesses } from "./ok";
@@ -32,6 +33,7 @@ import {
   conclude,
   instantiate,
   matchAll,
+  occursFree,
   termKey,
 } from "./patterns";
 import type { Member, RowSortReader } from "./rows";
@@ -140,6 +142,31 @@ function newName(
   }
 
   return null;
+}
+
+/**
+ * Whether a general row's instances are all one: its rule's rows, written at
+ * the row with any term for the instance, mention none (`∀x Fa`).
+ */
+function isVacuous(
+  language: SurfaceLanguage,
+  slot: InstanceSlot,
+  bindings: Bindings,
+): boolean {
+  // A name no row can spell, so it is in a written row only as the instance.
+  const probe: Term = {
+    binder: false,
+    grouped: false,
+    kind: "variable",
+    name: " instance",
+    sort: slot.sort,
+    span: { end: 0, start: 0 },
+  };
+  const at = new Map([...bindings, [slot.binder, probe]]);
+
+  return slot.templates.every(
+    (template) => !occursFree(conclude(language, template, at), probe.name),
+  );
 }
 
 /** Every variable in a term, binding occurrences too. */
@@ -354,6 +381,18 @@ export function branchQuestions(
             { names, row: row.id },
           );
         const all = termsOf(slot.sort);
+
+        // A vacuous row (`∀x Fa`) writes the same rows at every term, so it is
+        // developed at all of them or at none: asked once, at any one.
+        if (isVacuous(language, slot, bindings)) {
+          const term = all[0] ?? newName(language, slot.sort, mentioned);
+
+          if (term !== null) {
+            at(term, []);
+          }
+
+          continue;
+        }
 
         for (const term of all) {
           at(term, [shown(term)]);

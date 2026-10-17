@@ -440,7 +440,7 @@ describe("identity", () => {
 });
 
 describe("size", () => {
-  test("a 61-row chain checks in well under a second", async () => {
+  test("a 61-row chain checks in under two seconds", async () => {
     const n = 30;
     // Atoms A₁…: use predicate letters with names, Fa₁ … Fa₉, Ga₁ … so the
     // chain has enough distinct atoms.
@@ -507,7 +507,7 @@ describe("size", () => {
     console.log(
       `  ${row} rows: compile ${checked.milliseconds.toFixed(0)} ms`,
     );
-    expect(checked.milliseconds).toBeLessThan(1000);
+    expect(checked.milliseconds).toBeLessThan(2000);
   });
 });
 

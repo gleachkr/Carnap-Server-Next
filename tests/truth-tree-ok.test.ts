@@ -404,6 +404,15 @@ describe("by marks (UBC)", () => {
     expect(missingOn(UBC, tree)).toEqual(new Map());
   });
 
+  test("a vacuous general row, not used, needs any one instance", () => {
+    const tree = new TreeBuilder(["∀xGa", "Fb", "Hc"]);
+    tree.open(tree.rootNode);
+
+    expect(missingOn(UBC, tree)).toEqual(
+      new Map([[tree.rootNode, [{ names: [], row: "r1" }]]]),
+    );
+  });
+
   test("a rule whose premise writes no mark is never developed", () => {
     const source = UBC_SOURCE.replace(
       "$ closes ga ; chk (¬ ¬ ph) ; ph $",
