@@ -4296,6 +4296,10 @@ msgid "Row {row} now names the rule {rule}."
 msgstr "Zeile {row} nennt jetzt die Regel {rule}."
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} still needs “{rule}” with row {partner} on this branch."
+msgstr "Zeile {row} braucht auf diesem Ast noch „{rule}“ mit Zeile {partner}."
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} still needs an instance for {names} on this branch."
 msgstr "Zeile {row} braucht auf diesem Ast noch eine Instanz für {names}."
 
@@ -5136,10 +5140,6 @@ msgstr "Der Datensatz zum Notenabgleich wurde nicht gefunden."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The grading attribute must be all-or-nothing or partial."
 msgstr "Das Attribut grading muss all-or-nothing oder partial sein."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch."
-msgstr "Die Identität in Zeile {row} muss noch, in die eine oder die andere Richtung, in jeden atomaren und jeden negierten atomaren Satz auf diesem Ast eingesetzt werden."
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "The justification after ':' must name a rule."

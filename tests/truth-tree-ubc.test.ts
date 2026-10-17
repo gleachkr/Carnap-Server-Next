@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
+import { isLiteral } from "../src/worker/exercises/truth-tree/aufbau/branch";
 import { ruleSpelling } from "../src/worker/exercises/truth-tree/aufbau/theory";
 import type { TreeReport } from "../src/worker/exercises/truth-tree/report";
 import { languageById } from "../src/worker/logic/specs";
+import { sentenceSort } from "../src/worker/logic/specs/roles";
 import {
   judgeAsBrowser,
   problems,
@@ -303,6 +305,42 @@ describe("the margin's rule names", () => {
   });
 });
 
+// Identity completion (`tree.development.literals`) pairs only these.
+describe("a literal", () => {
+  test("is a sentence with no sentence in it, or one negated", () => {
+    const language = languageById("forallx-ubc");
+    const sort = language === null ? undefined : sentenceSort(language);
+
+    if (language === null || sort === undefined) {
+      throw new Error("no UBC language");
+    }
+
+    const literal = (text: string): boolean => {
+      const parsed = language.parse(text, { sort });
+
+      if (!parsed.ok) {
+        throw new Error(`${text} does not read`);
+      }
+
+      return isLiteral(language, parsed.term);
+    };
+
+    expect(["Fa", "Rab", "a=b", "¬Fa", "¬a=b"].map(literal)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+    ]);
+    expect(["¬¬Fa", "Fa & Gb", "∀x Fx", "¬∃x Fx"].map(literal)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+  });
+});
+
 describe("mistakes in a development", () => {
   test("a disjunction stacked, a conjunction split", async () => {
     const t = new TreeBuilder(["A ∨ B", "C & D"]);
@@ -496,7 +534,7 @@ describe("branch ends", () => {
     t.open(t.rootNode);
 
     expect((await judge(t, "one-open")).ends.get(t.rootNode)).toEqual({
-      missing: [{ row: "r1" }],
+      missing: [{ kind: "developed", row: "r1" }],
       type: "open-incomplete",
     });
   }, 60_000);

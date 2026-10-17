@@ -284,10 +284,16 @@ export function ruleSpelling(
   typed: string,
 ): string | null {
   const axiom = language.spec.ruleAliases.get(typed.trim());
-  const aliases =
-    axiom === undefined
-      ? []
-      : (language.spec.rules.get(axiom)?.aliases ?? []);
 
-  return aliases[0] ?? null;
+  return axiom === undefined
+    ? null
+    : (language.spec.rules.get(axiom)?.aliases[0] ?? null);
+}
+
+/** An axiom as the book names it: its first alias, or its own name. */
+export function axiomSpelling(
+  language: SurfaceLanguage,
+  axiom: string,
+): string {
+  return language.spec.rules.get(axiom)?.aliases[0] ?? axiom;
 }

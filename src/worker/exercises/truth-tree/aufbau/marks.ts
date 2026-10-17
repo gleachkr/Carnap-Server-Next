@@ -15,8 +15,9 @@ import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import type { TableauIndex, TableauRow } from "../../../../tableau/document";
 import type { RowMark } from "../report";
 import type { DevelopmentRule, TreeDevelopment } from "./criteria";
-import { instanceShower, matchFocus } from "./criteria";
+import { instanceShower } from "./criteria";
 import type { EmittedStep, TreeProof } from "./emit";
+import { matchFocus } from "./patterns";
 import type { RowSortReader } from "./rows";
 
 export interface MarksInput {
@@ -61,7 +62,7 @@ function matching(
   const candidates = [...(byHead.get(head) ?? []), ...(byHead.get("") ?? [])];
 
   return candidates.flatMap((rule) => {
-    const bindings = matchFocus(language, rule, term);
+    const bindings = matchFocus(language, rule.patterns, term);
     return bindings === null ? [] : [{ bindings, rule }];
   });
 }

@@ -256,6 +256,9 @@ function reportTreeTheory(
 
   for (const problem of problems) {
     switch (problem.type) {
+      case "missing-role":
+        // Said together, above.
+        break;
       case "several-sorts":
         diagnostics.push(
           diagnostic(
@@ -301,6 +304,8 @@ function reportTreeTheory(
           ),
         );
         break;
+      default:
+        problem satisfies never;
     }
   }
 }
@@ -348,6 +353,8 @@ function reportOkAxioms(
           ),
         );
         break;
+      default:
+        problem satisfies never;
     }
   }
 }
@@ -524,6 +531,8 @@ function reportDevelopment(
           ),
         );
         break;
+      default:
+        problem satisfies never;
     }
   }
 }

@@ -233,7 +233,7 @@ describe("an open branch, by its contents", () => {
     const report = await open("∀x A(x)", "B(a)");
 
     expect(report.ends.get("n0")).toEqual({
-      missing: [{ names: ["a"], row: "r1" }],
+      missing: [{ kind: "general", names: ["a"], row: "r1" }],
       type: "open-incomplete",
     });
   }, 60_000);

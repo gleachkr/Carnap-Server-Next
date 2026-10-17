@@ -25,11 +25,13 @@
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
 import { relationsOf } from "../../../logic/specs/annotations";
 import { roleIndex } from "../../../logic/specs/roles";
-import type { Bindings, Metas } from "./patterns";
+import type { Bindings, RulePatterns } from "./patterns";
 import {
   instantiate,
-  matchAll,
   matchTerm,
+  mentions,
+  occurrence,
+  ruleMatches,
   statementReader,
   substitutionOf,
   termKey,
@@ -40,32 +42,6 @@ import { TREE_ROLES } from "./theory";
 
 /** The namespace a development role is in: `tree.development.general.te`. */
 const DEVELOPMENT = "tree.development.";
-
-/** A rule statement's terms, as patterns. */
-export interface RulePatterns {
-  /** The statement's name: the axiom. */
-  readonly name: string;
-  /** The rows the rule develops, at the row sort; one for most rules. */
-  readonly focus: readonly Term[];
-  /**
-   * Rows the rule asks the branch to hold beside the ones it develops, which
-   * the student does not cite: a witness, as `□𝕋`'s row at the prefix it goes
-   * to witnesses that the prefix is used. Usually none.
-   */
-  readonly side: readonly Term[];
-  /** The rows each premise writes onto its branch, beyond the branch. */
-  readonly written: readonly (readonly Term[])[];
-  /**
-   * The check marks each premise writes beside them (`tree.mark`,
-   * `tree.mark.instance`), which are not rows: no student types one.
-   */
-  readonly marks: readonly (readonly Term[])[];
-  /** The branch metavariable: the rest of the branch (`ga`). */
-  readonly branch: string;
-  /** The statement's binders: its metavariables. */
-  readonly metas: Metas;
-  readonly binders: AssertStatement["binders"];
-}
 
 /** A general step's instance: which binder, and the row it is written in. */
 export interface InstanceSlot {
@@ -787,118 +763,6 @@ export function templateFor(
   );
 }
 
-/** The first occurrence of a variable in a term. */
-function occurrence(term: Term, name: string): Term | null {
-  if (term.kind === "variable") {
-    return term.name === name ? term : null;
-  }
-
-  for (const argument of term.args) {
-    const found = occurrence(argument, name);
-
-    if (found !== null) {
-      return found;
-    }
-  }
-
-  return null;
-}
-
-/** Whether a term mentions a variable anywhere. */
-function mentions(term: Term, name: string): boolean {
-  return term.kind === "variable"
-    ? term.name === name
-    : term.args.some((argument) => mentions(argument, name));
-}
-
-/** Patterns to match against rows: side rows, or a premise's rows. */
-export interface PatternGroup {
-  readonly patterns: readonly Term[];
-  readonly rows: readonly Term[];
-}
-
-/**
- * Each way a statement of a rule matches: its focus the rows `focus`, in some
- * order, and each group's patterns some of the group's rows, with what that
- * bound.
- */
-export function* ruleMatches(
-  language: SurfaceLanguage,
-  patterns: RulePatterns,
-  focus: readonly Term[],
-  groups: readonly PatternGroup[],
-): Generator<Bindings> {
-  if (patterns.focus.length !== focus.length) {
-    return;
-  }
-
-  const wanted = groups.flatMap((group) =>
-    group.patterns.map((pattern) => ({ pattern, rows: group.rows })),
-  );
-  const extend = function* (
-    bindings: Bindings,
-    at: number,
-  ): Generator<Bindings> {
-    const next = wanted[at];
-
-    if (next === undefined) {
-      yield bindings;
-      return;
-    }
-
-    for (const row of next.rows) {
-      for (const found of matchAll(
-        language,
-        next.pattern,
-        row,
-        patterns.metas,
-        bindings,
-      )) {
-        yield* extend(found, at + 1);
-      }
-    }
-  };
-  const focused = function* (
-    order: readonly Term[],
-    at: number,
-    bindings: Bindings,
-  ): Generator<Bindings> {
-    const pattern = patterns.focus[at];
-
-    if (pattern === undefined) {
-      yield* extend(bindings, 0);
-      return;
-    }
-
-    for (const found of matchAll(
-      language,
-      pattern,
-      order[at] as Term,
-      patterns.metas,
-      bindings,
-    )) {
-      yield* focused(order, at + 1, found);
-    }
-  };
-
-  for (const order of permutations(focus)) {
-    yield* focused(order, 0, new Map());
-  }
-}
-
-/** Every order of some items; one order for one item or none. */
-function permutations<T>(items: readonly T[]): readonly (readonly T[])[] {
-  if (items.length <= 1) {
-    return [items];
-  }
-
-  return items.flatMap((item, at) =>
-    permutations([...items.slice(0, at), ...items.slice(at + 1)]).map(
-      (rest) => [item, ...rest],
-    ),
-  );
-}
-
 /**
  * How a rule's instances at a row are shown, by engine text: as they are, or
  * in the term the rule shows them in (`σ.n` for a step `n`), with the row's
@@ -982,19 +846,6 @@ export function witnesses(
   }
 
   return [...found.values()];
-}
-
-/** The bindings of a single-row rule's focus against a row; null if none. */
-export function matchFocus(
-  language: SurfaceLanguage,
-  rule: DevelopmentRule,
-  row: Term,
-): Bindings | null {
-  const [focus] = rule.patterns.focus;
-
-  return rule.patterns.focus.length === 1 && focus !== undefined
-    ? matchTerm(language, focus, row, rule.patterns.metas)
-    : null;
 }
 
 /** The judgement sort's `@relation`, where it names a modus ponens. */

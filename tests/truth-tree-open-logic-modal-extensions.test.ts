@@ -213,7 +213,7 @@ describe("an open branch in S5", () => {
     const { certified, report, root } = await s5Branch(false);
 
     expect(report.ends.get(root)).toEqual({
-      missing: [{ names: ["((1) . wa)"], row: "r1" }],
+      missing: [{ kind: "general", names: ["((1) . wa)"], row: "r1" }],
       type: "open-incomplete",
     });
     expect(certified).toBe(false);

@@ -293,10 +293,10 @@ export function buildTruthTreeStrings(i18n: Translator) {
       "Row {row} closes this branch, so it cannot be marked open.",
       placeholders("row"),
     ),
-    "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch.":
+    "Row {row} still needs “{rule}” with row {partner} on this branch.":
       i18n.t(
-        "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch.",
-        placeholders("row"),
+        "Row {row} still needs “{rule}” with row {partner} on this branch.",
+        placeholders("partner", "row", "rule"),
       ),
     "Rows {first} and {second} close this branch, so it cannot be marked open.":
       i18n.t(

@@ -1052,10 +1052,10 @@ on, each role covering the whole `@fallback` chain:
 | --- | --- |
 | `tree.development.once` | a step on the branch develops it by this rule |
 | `tree.development.once.<binder>` | the same, and the mark lists the instance at `<binder>` (`✓a` for `∃`) |
-| `tree.development.general.<binder>` | there is a step with the instance at `<binder>` for every term of that sort on the branch (`\a,b`) |
+| `tree.development.general.<binder>` | there is a step with the instance at `<binder>` for every term of that sort on the branch (`\a,b`): every closed term of the sort in a row, a compound `f(a)` too, and of a list sort every run of a list's members, the empty run among them |
 | `tree.development.nonempty` | with `general`: one step even when the branch has no terms |
 | `tree.development.pairs` | for a rule on two rows, set off by the first (an identity `a=b`): one statement of the rule has its conclusions on the branch for every row there the second matches, by a step or not |
-| `tree.development.literals` | with `pairs`: only atomic and negated atomic rows pair |
+| `tree.development.literals` | with `pairs`: only atomic and negated atomic rows pair, a sentence being atomic when no part of it is a sentence (`Fa`, `a = b`, `⊥`) |
 | `tree.development.none` | never needed |
 
 - A rule with no role is `once` if it develops one row, and asks nothing if
@@ -1227,6 +1227,12 @@ lacks:
 - ASCII spellings: `T[]`, `T<>`, `D[]`, `4[]`, `4r<>`, and so on.
 - A combination the table does not have (the book's exercises use KT5,
   KDB4) is K's file with the rules appended in an `aufbau-mm0` block.
+- The book defines a complete branch for K alone, and past K some
+  satisfiable roots have none that is finite. With `4□`, the rows `1 𝕋 ◇p`
+  and `1 𝕋 □◇p` put both again at `1.1`, which owes a `1.1.1`, and so on:
+  the countermodel needs a world that sees itself, and a prefix always names
+  a new one. Carnap has no loop check, so ask for a complete open branch past
+  K only of a root whose branches stop.
 
 For `open-logic-simple-s5`, the rules are the book's simplified tableaux for
 S5 (`simple-S5`), where every world sees every world:

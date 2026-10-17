@@ -85,19 +85,19 @@ export interface JudgeInput {
 }
 
 /**
- * The engine's refusals on a branch as what it is missing: a row not
- * developed, once, however many of its pairs were refused; a general row,
- * once with every term it is not developed at.
+ * The engine's refusals on a branch as what it is missing, once a row: of a
+ * row not developed, or not with a row it pairs with, the first refusal; of
+ * a general row, every term it is not developed at.
  */
 function merged(refused: readonly Missing[]): Missing[] {
   const missing: Missing[] = [];
   const general = new Map<string, string[]>();
-  const once = new Set<string>();
+  const said = new Set<string>();
 
   for (const each of refused) {
-    if (each.names === undefined) {
-      if (!once.has(each.row)) {
-        once.add(each.row);
+    if (each.kind !== "general") {
+      if (!said.has(each.row)) {
+        said.add(each.row);
         missing.push(each);
       }
 
@@ -107,7 +107,11 @@ function merged(refused: readonly Missing[]): Missing[] {
     const names = general.get(each.row);
 
     if (names === undefined) {
-      const entry = { names: [...each.names], row: each.row };
+      const entry = {
+        kind: "general" as const,
+        names: [...each.names],
+        row: each.row,
+      };
       general.set(each.row, entry.names);
       missing.push(entry);
     } else {

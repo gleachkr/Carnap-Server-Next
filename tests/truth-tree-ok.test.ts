@@ -330,7 +330,7 @@ describe("by marks (UBC)", () => {
     bare.open(bare.rootNode);
 
     expect(missingOn(UBC, bare)).toEqual(
-      new Map([[bare.rootNode, [{ row: "r1" }]]]),
+      new Map([[bare.rootNode, [{ kind: "developed", row: "r1" }]]]),
     );
   });
 
@@ -368,8 +368,8 @@ describe("by marks (UBC)", () => {
         [
           tree.rootNode,
           [
-            { names: ["b"], row: "r1" },
-            { names: ["c"], row: "r1" },
+            { kind: "general", names: ["b"], row: "r1" },
+            { kind: "general", names: ["c"], row: "r1" },
           ],
         ],
       ]),
@@ -387,7 +387,7 @@ describe("by marks (UBC)", () => {
     bare.open(bare.rootNode);
 
     expect(missingOn(UBC, bare)).toEqual(
-      new Map([[bare.rootNode, [{ names: [], row: "r1" }]]]),
+      new Map([[bare.rootNode, [{ kind: "general", names: [], row: "r1" }]]]),
     );
 
     const vacuous = new TreeBuilder(["∀xP"]);
@@ -410,7 +410,7 @@ describe("by marks (UBC)", () => {
     tree.open(tree.rootNode);
 
     expect(missingOn(UBC, tree)).toEqual(
-      new Map([[tree.rootNode, [{ names: [], row: "r1" }]]]),
+      new Map([[tree.rootNode, [{ kind: "general", names: [], row: "r1" }]]]),
     );
   });
 
@@ -431,7 +431,7 @@ describe("by marks (UBC)", () => {
     tree.open(tree.rootNode);
 
     expect(missingOn(unmarked, tree)).toEqual(
-      new Map([[tree.rootNode, [{ row: "r1" }]]]),
+      new Map([[tree.rootNode, [{ kind: "developed", row: "r1" }]]]),
     );
   });
 });
@@ -445,7 +445,7 @@ describe("by contents (Open Logic)", () => {
     bare.open(bare.rootNode);
 
     expect(missingOn(T, bare)).toEqual(
-      new Map([[bare.rootNode, [{ row: "r1" }]]]),
+      new Map([[bare.rootNode, [{ kind: "developed", row: "r1" }]]]),
     );
 
     const tree = new TreeBuilder(["1 T: □A"]);

@@ -150,7 +150,7 @@ describe("an open branch in simple S5", () => {
     const { certified, report, root } = await countermodel(false);
 
     expect(report.ends.get(root)).toEqual({
-      missing: [{ names: ["w2"], row: "r1" }],
+      missing: [{ kind: "general", names: ["w2"], row: "r1" }],
       type: "open-incomplete",
     });
     expect(certified).toBe(false);

@@ -66,10 +66,10 @@ import { acuiOf, relationsOf } from "../../../logic/specs/annotations";
 import type {
   DevelopmentRule,
   InstanceSlot,
-  RulePatterns,
   TreeDevelopment,
 } from "./criteria";
 import { rulePatterns } from "./criteria";
+import type { RulePatterns } from "./patterns";
 import type { TreeTheory } from "./theory";
 
 /** A judgement and the axiom to cite for it. */

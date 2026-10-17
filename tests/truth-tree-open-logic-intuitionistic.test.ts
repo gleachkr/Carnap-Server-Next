@@ -371,7 +371,7 @@ describe("an open branch in intuitionistic logic", () => {
     const { certified, open, report } = await countermodel(false);
 
     expect(report.ends.get(open)).toEqual({
-      missing: [{ names: ["1"], row: "r1" }],
+      missing: [{ kind: "general", names: ["1"], row: "r1" }],
       type: "open-incomplete",
     });
     expect(certified).toBe(false);
@@ -433,7 +433,7 @@ describe("an open branch in intuitionistic logic", () => {
     );
 
     expect(report.ends.get(open)).toEqual({
-      missing: [{ names: ["1", "((1) . wa)"], row: "r1" }],
+      missing: [{ kind: "general", names: ["1", "((1) . wa)"], row: "r1" }],
       type: "open-incomplete",
     });
   }, 60_000);

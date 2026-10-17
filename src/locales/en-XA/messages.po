@@ -4296,6 +4296,10 @@ msgid "Row {row} now names the rule {rule}."
 msgstr ""
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} still needs “{rule}” with row {partner} on this branch."
+msgstr ""
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} still needs an instance for {names} on this branch."
 msgstr ""
 
@@ -5135,10 +5139,6 @@ msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The grading attribute must be all-or-nothing or partial."
-msgstr ""
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch."
 msgstr ""
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts

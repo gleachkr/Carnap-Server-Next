@@ -4296,6 +4296,10 @@ msgid "Row {row} now names the rule {rule}."
 msgstr "Row {row} now names the rule {rule}."
 
 #: src/worker/exercises/truth-tree/strings.ts
+msgid "Row {row} still needs “{rule}” with row {partner} on this branch."
+msgstr "Row {row} still needs “{rule}” with row {partner} on this branch."
+
+#: src/worker/exercises/truth-tree/strings.ts
 msgid "Row {row} still needs an instance for {names} on this branch."
 msgstr "Row {row} still needs an instance for {names} on this branch."
 
@@ -5136,10 +5140,6 @@ msgstr "The grade sync record was not found."
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "The grading attribute must be all-or-nothing or partial."
 msgstr "The grading attribute must be all-or-nothing or partial."
-
-#: src/worker/exercises/truth-tree/strings.ts
-msgid "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch."
-msgstr "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch."
 
 #: src/worker/exercises/aufbau-proof-fitch/strings.ts
 msgid "The justification after ':' must name a rule."

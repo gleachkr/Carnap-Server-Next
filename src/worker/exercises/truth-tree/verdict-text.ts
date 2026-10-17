@@ -15,7 +15,7 @@ import { layoutTableau } from "../../../tableau/layout";
 import type { MessageResolver } from "../../i18n/translator";
 import type { EngineFailure } from "./aufbau/judge";
 import type { TreeJudgement } from "./grading";
-import type { EndProblem, RowProblem, TreeProblem } from "./report";
+import type { EndProblem, Missing, RowProblem, TreeProblem } from "./report";
 import type { TruthTreeVerdict } from "./types";
 
 export type TreeWords = MessageResolver;
@@ -160,33 +160,11 @@ export function describeEndProblem(
     case "open-incomplete": {
       const missing = problem.missing[0];
 
-      if (missing === undefined) {
-        return words(
-          "The tree is not finished: close every branch, or mark a complete open branch.",
-        );
-      }
-
-      const row = number(missing.row);
-
-      if (missing.substitution === true) {
-        return words(
-          "The identity on row {row} still needs substituting, one way or the other, into every atomic and negated atomic sentence on this branch.",
-          { row },
-        );
-      }
-
-      if (missing.names === undefined) {
-        return words("Row {row} still needs developing on this branch.", {
-          row,
-        });
-      }
-
-      return missing.names.length === 0
-        ? words("Row {row} still needs an instance on this branch.", { row })
-        : words(
-            "Row {row} still needs an instance for {names} on this branch.",
-            { names: missing.names.map(name).join(", "), row },
-          );
+      return missing === undefined
+        ? words(
+            "The tree is not finished: close every branch, or mark a complete open branch.",
+          )
+        : describeMissing(missing, words, number, name);
     }
     case "end-not-leaf":
       return words("Only the end of a branch can be closed or marked open.");
@@ -200,6 +178,35 @@ export function describeEndProblem(
       );
     case "empty-branch":
       return words("This branch has no rows.");
+  }
+}
+
+/** What a branch still owes a row, by the row's rule's criterion. */
+function describeMissing(
+  missing: Missing,
+  words: TreeWords,
+  number: RowNumber,
+  name: (engine: string) => string,
+): string {
+  const row = number(missing.row);
+
+  switch (missing.kind) {
+    case "developed":
+      return words("Row {row} still needs developing on this branch.", {
+        row,
+      });
+    case "general":
+      return missing.names.length === 0
+        ? words("Row {row} still needs an instance on this branch.", { row })
+        : words(
+            "Row {row} still needs an instance for {names} on this branch.",
+            { names: missing.names.map(name).join(", "), row },
+          );
+    case "pairs":
+      return words(
+        "Row {row} still needs “{rule}” with row {partner} on this branch.",
+        { partner: number(missing.partner), row, rule: missing.rule },
+      );
   }
 }
 

@@ -14,8 +14,7 @@
 import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import { roleIndex, sentenceSort } from "../../../logic/specs/roles";
 import type { TreeDevelopment } from "./criteria";
-import { ruleMatches } from "./criteria";
-import { termKey } from "./patterns";
+import { ruleMatches, termKey } from "./patterns";
 import type { RowSortReader } from "./rows";
 
 /** A row on a branch, read. */
@@ -40,21 +39,17 @@ function sentenceIn(language: SurfaceLanguage, row: Term): Term | null {
     : null;
 }
 
-/** The core roles of an atomic sentence's constructor; null is a predicate. */
-const ATOMIC_ROLES: ReadonlySet<string | null> = new Set([
-  null,
-  "identity",
-  "inequality",
-  "falsum",
-  "verum",
-]);
-
-/** Whether a row's sentence is atomic or a negated atomic one, by its roles. */
+/**
+ * Whether a row's sentence is atomic or a negated atomic one. A sentence is
+ * atomic when no part of it is a sentence (`Fa`, `a = b`, `⊥`, but not `□A`);
+ * a negation is one by its role.
+ */
 export function isLiteral(language: SurfaceLanguage, row: Term): boolean {
   const roles = roleIndex(language);
+  const sort = sentenceSort(language);
   const atomic = (term: Term | undefined): boolean =>
     term !== undefined &&
-    (term.kind === "variable" || ATOMIC_ROLES.has(roles.roleOf(term.term)));
+    (term.kind === "variable" || term.args.every((arg) => arg.sort !== sort));
   const sentence = sentenceIn(language, row);
 
   return (

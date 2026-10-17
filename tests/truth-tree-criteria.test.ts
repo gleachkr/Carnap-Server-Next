@@ -105,7 +105,7 @@ describe("a general row", () => {
 
     expect(answer.mmb).toBeUndefined();
     expect((await judgeAsBrowser(asked, t)).ends.get(t.rootNode)).toEqual({
-      missing: [{ names: ["b"], row: "r1" }],
+      missing: [{ kind: "general", names: ["b"], row: "r1" }],
       type: "open-incomplete",
     });
     expect(await gradeAnswer(asked.item, answer)).toBe("incorrect");
@@ -144,7 +144,7 @@ describe("a general row", () => {
     expect(
       (await judgeAsBrowser(asked, bare)).ends.get(bare.rootNode),
     ).toEqual({
-      missing: [{ names: [], row: "r1" }],
+      missing: [{ kind: "general", names: [], row: "r1" }],
       type: "open-incomplete",
     });
 
@@ -333,7 +333,7 @@ describe("a row used once", () => {
     t.open(left);
 
     expect((await judgeAsBrowser(asked, t)).ends.get(left)).toEqual({
-      missing: [{ row: "r2" }],
+      missing: [{ kind: "developed", row: "r2" }],
       type: "open-incomplete",
     });
     expect(await gradeAnswer(asked.item, await certify(asked, t))).toBe(
@@ -355,7 +355,7 @@ describe("an identity on an open branch", () => {
     expect(
       (await judgeAsBrowser(asked, bare)).ends.get(bare.rootNode),
     ).toEqual({
-      missing: [{ row: "r1", substitution: true }],
+      missing: [{ kind: "pairs", partner: "r3", row: "r1", rule: "=" }],
       type: "open-incomplete",
     });
     expect((await certify(asked, bare)).mmb).toBeUndefined();
@@ -767,7 +767,7 @@ describe("another calculus's roles", () => {
     expect(
       (await judgeAsBrowser(asked, bare)).ends.get(bare.rootNode),
     ).toEqual({
-      missing: [{ row: "r1" }],
+      missing: [{ kind: "developed", row: "r1" }],
       type: "open-incomplete",
     });
 

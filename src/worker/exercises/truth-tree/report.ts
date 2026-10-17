@@ -90,17 +90,27 @@ export type EndProblem =
   /** Marked open, and nothing can say whether it is complete. */
   | { readonly type: "open-unjudged" };
 
-/** A row still to be developed on a branch, and for which instances. */
-export interface Missing {
-  readonly row: string;
-  /** For a general row: the instances it still needs; empty for "any one". */
-  readonly names?: readonly string[];
+/** A row still to be developed on a branch, by its rule's criterion. */
+export type Missing =
+  /** A row not yet developed by its rule. */
+  | { readonly kind: "developed"; readonly row: string }
+  /** A general row, and the instances it still needs; empty for "any one". */
+  | {
+      readonly kind: "general";
+      readonly row: string;
+      readonly names: readonly string[];
+    }
   /**
-   * For an identity: it is not yet substituted, in either direction, into
-   * every atomic and negated atomic sentence on the branch.
+   * A row a rule on two rows sets off, not yet developed with `partner`, the
+   * first row on the branch it still owes a step with; `rule` is the rule, as
+   * the book names it.
    */
-  readonly substitution?: true;
-}
+  | {
+      readonly kind: "pairs";
+      readonly row: string;
+      readonly partner: string;
+      readonly rule: string;
+    };
 
 export type BranchState =
   | { readonly type: "closed"; readonly right: boolean }

@@ -23,22 +23,24 @@ import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import type { TableauIndex, TableauNode } from "../../../../tableau/document";
 import type { Missing } from "../report";
 import { isLiteral, isSelfIdentity } from "./branch";
-import type { InstanceSlot, RulePatterns, TreeDevelopment } from "./criteria";
-import { instanceShower, matchFocus, witnesses } from "./criteria";
+import type { InstanceSlot, TreeDevelopment } from "./criteria";
+import { instanceShower, witnesses } from "./criteria";
 import type { OkAxioms } from "./ok";
 import { atWitnesses } from "./ok";
-import type { Bindings } from "./patterns";
+import type { Bindings, RulePatterns } from "./patterns";
 import {
   closedSubterms,
   conclude,
   instantiate,
   matchAll,
+  matchFocus,
   occursFree,
   termKey,
 } from "./patterns";
 import type { Member, RowSortReader } from "./rows";
 import { branchText, engineTokens, readEngine } from "./rows";
 import type { TreeTheory } from "./theory";
+import { axiomSpelling } from "./theory";
 
 /**
  * The key of a row a rule on a pair of rows sets off, on the branch ending at
@@ -333,11 +335,11 @@ export function branchQuestions(
       ask(
         `${ok.ok.term} (${row.engine}) (${ordered(row.engine, () => false)})`,
         ok.ok.head,
-        { row: row.id },
+        { kind: "developed", row: row.id },
       );
 
       for (const { judgement, rule, slot, witnessed } of general) {
-        const bindings = matchFocus(language, rule, row.term);
+        const bindings = matchFocus(language, rule.patterns, row.term);
 
         if (bindings === null) {
           continue;
@@ -358,7 +360,11 @@ export function branchQuestions(
                 (member) => instanceOf(member.row) === witness.instance,
               )})`,
               judgement.head,
-              { names: [shown(witness.instance)], row: row.id },
+              {
+                kind: "general",
+                names: [shown(witness.instance)],
+                row: row.id,
+              },
             );
           }
 
@@ -372,7 +378,7 @@ export function branchQuestions(
               (member) => instanceOf(member.row) === term,
             )})`,
             judgement.head,
-            { names, row: row.id },
+            { kind: "general", names, row: row.id },
           );
         const all = termsOf(slot.sort);
 
@@ -412,6 +418,8 @@ export function branchQuestions(
     );
 
     for (const rule of paired) {
+      const spelled = axiomSpelling(language, rule.name);
+
       for (const row of firsts) {
         // Each statement the row sets off, with how its first focus row
         // matched: the first way, as an identity `a = b` matches one way.
@@ -504,7 +512,12 @@ export function branchQuestions(
                   (member) => devs.has(member.dev),
                 )})`,
                 judgement.head,
-                { row: row.id, substitution: true },
+                {
+                  kind: "pairs",
+                  partner: partner.id,
+                  row: row.id,
+                  rule: spelled,
+                },
                 { bindings: hints, key, statement: patterns.name },
               );
             }

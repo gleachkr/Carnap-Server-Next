@@ -61,12 +61,13 @@ import type {
 import { TableauIndex } from "../../../../tableau/document";
 import { languageRuleReader } from "../../../exercise-kit/proof/formulas";
 import type { EndProblem, Missing, RowProblem } from "../report";
-import type { RulePatterns, TreeDevelopment } from "./criteria";
-import { matchFocus, rulePatterns, templateFor } from "./criteria";
+import type { TreeDevelopment } from "./criteria";
+import { rulePatterns, templateFor } from "./criteria";
 import type { Question } from "./developed";
 import { branchQuestions } from "./developed";
 import { okAxioms } from "./ok";
-import { closedSubterms, instantiate, termKey } from "./patterns";
+import type { RulePatterns } from "./patterns";
+import { closedSubterms, instantiate, matchFocus, termKey } from "./patterns";
 import type { Member, RowSortReader } from "./rows";
 import { branchText, engineTokens, readEngine, rowSortReader } from "./rows";
 import type { TreeTheory } from "./theory";
@@ -448,7 +449,7 @@ export function emitTreeProof(
       return;
     }
 
-    const bindings = matchFocus(language, developing, focus.term);
+    const bindings = matchFocus(language, developing.patterns, focus.term);
 
     if (bindings === null) {
       return;

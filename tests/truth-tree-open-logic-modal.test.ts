@@ -268,7 +268,7 @@ describe("an open branch in K", () => {
     const judged = await judgeAsBrowser(asked, tree);
 
     expect(judged.ends.get(open)).toEqual({
-      missing: [{ names: ["((1) . wb)"], row: box }],
+      missing: [{ kind: "general", names: ["((1) . wb)"], row: box }],
       type: "open-incomplete",
     });
     expect(answer.mmb).toBeUndefined();
