@@ -20,8 +20,9 @@ import type {
 import { firstOrderLanguageFor } from "../../exercise-kit/formula";
 import type { TreeDevelopment } from "./aufbau/criteria";
 import { readTreeDevelopment } from "./aufbau/criteria";
-import type { TreeProof } from "./aufbau/emit";
-import { emitTreeProof, pairingOf } from "./aufbau/emit";
+import { pairingOf } from "./aufbau/developed";
+import type { EmitOptions, TreeProof } from "./aufbau/emit";
+import { emitTreeProof } from "./aufbau/emit";
 import type { EngineFailure, TreeEvidence } from "./aufbau/judge";
 import { judgeTreeProof } from "./aufbau/judge";
 import type { RowSortReader } from "./aufbau/rows";
@@ -269,25 +270,15 @@ export function answerRules(
 /** The instance each row was written with, by row id. */
 export function answerInstances(
   answer: TruthTreeAnswerData,
-): ReadonlyMap<string, readonly string[]> {
-  return new Map(
-    Object.entries(answer.instances ?? {}).map(([row, instance]) => [
-      row,
-      [instance],
-    ]),
-  );
+): ReadonlyMap<string, string> {
+  return new Map(Object.entries(answer.instances ?? {}));
 }
 
-/** The statement each paired row is asked by, by its `pairingKey`. */
+/** The statement each paired row is developed by, by its `pairingKey`. */
 export function answerDirections(
   answer: TruthTreeAnswerData,
-): ReadonlyMap<string, readonly string[]> {
-  return new Map(
-    Object.entries(answer.directions ?? {}).map(([key, statement]) => [
-      key,
-      [statement],
-    ]),
-  );
+): ReadonlyMap<string, string> {
+  return new Map(Object.entries(answer.directions ?? {}));
 }
 
 /**
@@ -423,19 +414,19 @@ export interface TreeJudgement {
 }
 
 /**
- * What a derivation states of the instances and directions the engine finds:
- * the answer's, or every candidate, for a compile that asks which hold.
+ * What a derivation states of the instances and directions: the ones chosen,
+ * or every candidate, for a compile that asks which hold (`./ask.ts`).
  */
-export interface TreeAsking {
-  readonly instances: ReadonlyMap<string, readonly string[]>;
-  readonly directions: ReadonlyMap<string, readonly string[]>;
-}
+export type TreeStating = Pick<
+  EmitOptions,
+  "asking" | "directions" | "instances"
+>;
 
 /** A tree written down as a derivation, for the engine to check. */
 export function treeProofOf(
   resolved: ResolvedTree,
   answer: TruthTreeAnswerData,
-  asking: TreeAsking = {
+  stating: TreeStating = {
     directions: answerDirections(answer),
     instances: answerInstances(answer),
   },
@@ -443,9 +434,8 @@ export function treeProofOf(
   return emitTreeProof(
     { nodes: answer.nodes },
     {
+      ...stating,
       development: resolved.development,
-      directions: asking.directions,
-      instances: asking.instances,
       language: resolved.language,
       reader: resolved.reader,
       rootRows: resolved.root.length,
@@ -458,26 +448,6 @@ export function treeProofOf(
 }
 
 /**
- * A tree written down to ask the engine which instance each general row was
- * written with and which direction each paired row is developed in: every
- * candidate stated, each failure saying only that it was not that one.
- */
-export function askingProofOf(
-  resolved: ResolvedTree,
-  answer: TruthTreeAnswerData,
-): TreeProof {
-  const first = treeProofOf(resolved, answer, {
-    directions: new Map(),
-    instances: new Map(),
-  });
-
-  return treeProofOf(resolved, answer, {
-    directions: first.pairings,
-    instances: first.slots,
-  });
-}
-
-/**
  * The whole verdict: every row and end right, the engine's confirmation of
  * every step and closure, and the tree done. All or nothing.
  */
@@ -487,25 +457,20 @@ export function judgeTree(
   evidence: TreeEvidence,
   proof: TreeProof = treeProofOf(resolved, answer),
 ): TreeJudgement {
-  const tree = { nodes: answer.nodes };
-  const judge = (given: TreeEvidence) =>
-    judgeTreeProof({
-      development: resolved.development,
-      evidence: given,
-      finish: resolved.finish,
-      proof,
-      reader: resolved.reader,
-      root: resolved.root,
-      tree,
-    });
-  const report = judge(evidence);
+  const report = judgeTreeProof({
+    development: resolved.development,
+    evidence,
+    finish: resolved.finish,
+    proof,
+    reader: resolved.reader,
+    root: resolved.root,
+    tree: { nodes: answer.nodes },
+  });
   const shows = treeVerdict(resolved.task, report);
   const first = report.problems[0];
   // Without the engine's word, a tree it would finish is unconfirmed, not
   // unfinished.
-  const unconfirmed =
-    evidence.kind === "none" &&
-    judge({ kind: "verified", ok: true }).finished;
+  const unconfirmed = evidence.kind === "none" && report.finishedIfConfirmed;
   const problem: TreeJudgementProblem | null =
     first !== undefined
       ? { problem: first, type: "tree" }

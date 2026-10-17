@@ -13,6 +13,7 @@ import type { SurfaceLanguage, Term } from "@aufbau/syntax";
 import { printTerm, UnprintableTermError } from "@aufbau/syntax";
 import type { ParseError } from "../../../exercise-kit/formula";
 import { formulaParseErrors } from "../../../logic/specs/diagnostics";
+import type { TreeTheory } from "./theory";
 
 /** The most distinct texts a reader remembers before it starts again. */
 const CACHE_LIMIT = 2000;
@@ -89,4 +90,30 @@ export function displayRow(
 
     throw error;
   }
+}
+
+/**
+ * A member of a branch, as engine text, with the development that wrote it
+ * and the row it is, or is the mark beside; null for the mark of the row a
+ * development cites.
+ */
+export interface Member {
+  readonly text: string;
+  readonly dev: string;
+  readonly row: string | null;
+}
+
+/** A branch of rows, as engine text: joined, or the empty branch. */
+export function branchText(
+  theory: TreeTheory,
+  rows: readonly string[],
+): string {
+  return rows.length === 0 && theory.empty !== null
+    ? theory.empty.engine
+    : rows.map((row) => `(${row})`).join(` ${theory.join} `);
+}
+
+/** Every token of engine text, for finding the names and variables in it. */
+export function engineTokens(engine: string): string[] {
+  return engine.split(/[\s(),]+/u).filter((token) => token.length > 0);
 }

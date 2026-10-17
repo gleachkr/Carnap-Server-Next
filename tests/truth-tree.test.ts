@@ -7,6 +7,7 @@ import { MAX_CERTIFICATE_BASE64_LENGTH } from "../src/worker/exercise-kit/proof/
 import { withSystemText } from "../src/worker/exercise-kit/systems/join";
 import { TRUTH_TREE_EXERCISE } from "../src/worker/exercises/truth-tree";
 import {
+  judgeTree,
   resolveTruthTree,
   treeProofOf,
 } from "../src/worker/exercises/truth-tree/grading";
@@ -248,6 +249,30 @@ describe("grading", () => {
     expect((await grade(item, { ...t.answer(), mmb } as never)).score).toBe(
       0,
     );
+  });
+
+  test("without the engine's word, a done tree is unconfirmed and an undone one unfinished", async () => {
+    const item = await declaration(VALID);
+    const resolved = resolveTruthTree(publicDataOf(item));
+    const t = builderFor(item);
+    const [p] = t.stack(t.rootNode, "r1", ["P", "Q"], "&");
+    const open = judgeTree(resolved as never, t.answer(), { kind: "none" });
+
+    t.close(t.rootNode, p as string, "r2");
+
+    const closed = judgeTree(resolved as never, t.answer(), { kind: "none" });
+    const confirmed = judgeTree(resolved as never, t.answer(), {
+      kind: "verified",
+      ok: true,
+    });
+
+    expect(open.problem).toEqual({ finish: "closed", type: "unfinished" });
+    expect(open.report.finishedIfConfirmed).toBe(false);
+    expect(closed.problem).toEqual({ type: "unconfirmed" });
+    expect(closed.report.finished).toBe(false);
+    expect(closed.report.finishedIfConfirmed).toBe(true);
+    expect(confirmed.problem).toBeNull();
+    expect(confirmed.report.finished).toBe(true);
   });
 
   test("a step naming the wrong rule does not certify", async () => {

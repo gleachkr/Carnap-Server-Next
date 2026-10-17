@@ -1,24 +1,24 @@
 import { readFileSync } from "node:fs";
 import type { LoadedCompiler } from "@aufbau/compiler";
 import { loadCompiler } from "@aufbau/compiler";
+import { readCompileResult } from "../../src/client/proof-compiler";
 import type { TableauDocument, TableauEnd } from "../../src/tableau/document";
 import { setEnd, splitNode, stackRows } from "../../src/tableau/edit";
 import {
-  heldDirections,
-  heldInstances,
-  inDirections,
-  readTreeDiagnostics,
-} from "../../src/worker/exercises/truth-tree/aufbau/emit";
+  askingProofOf,
+  readAsked,
+} from "../../src/worker/exercises/truth-tree/ask";
 import type { TreeEvidence } from "../../src/worker/exercises/truth-tree/aufbau/judge";
 import type { ResolvedTree } from "../../src/worker/exercises/truth-tree/grading";
 import {
-  askingProofOf,
   judgeTree,
   resolveTruthTree,
-  treeProofOf,
 } from "../../src/worker/exercises/truth-tree/grading";
 import type { TreeReport } from "../../src/worker/exercises/truth-tree/report";
-import type { TruthTreePublicData } from "../../src/worker/exercises/truth-tree/types";
+import type {
+  TruthTreeAnswerData,
+  TruthTreePublicData,
+} from "../../src/worker/exercises/truth-tree/types";
 
 /**
  * Builds a truth tree the way the editor does, through the tableau's own edit
@@ -189,17 +189,76 @@ export interface CertifiedAnswer {
   readonly mmb?: string;
 }
 
+/** What the browser makes of a tree once a submit has its certificate. */
+interface Browsed {
+  /** The answer with the instances and directions the engine found. */
+  readonly answer: CertifiedAnswer;
+  /** The evidence its report is made with, after the owed compile. */
+  readonly evidence: TreeEvidence;
+}
+
+/**
+ * Ask the engine about a tree and certify it, as the editor does: one compile
+ * asking every candidate, read through the editor's own reader, and the
+ * compile owed for the certificate where the derivation changed.
+ */
+function askAsBrowser(
+  compiler: LoadedCompiler,
+  resolved: ResolvedTree,
+  mm0: string,
+  answer: TruthTreeAnswerData,
+): Browsed {
+  const asking = askingProofOf(resolved, answer);
+
+  if (asking.goal === null || asking.proof === null) {
+    return {
+      answer,
+      evidence: { certified: false, errors: [], kind: "compiled" },
+    };
+  }
+
+  const compile = (goal: string, proof: string) =>
+    readCompileResult(compiler.compile(`${mm0}\n${goal}\n`, proof));
+  const asked = compile(asking.goal, asking.proof);
+  const read = readAsked(resolved, answer, asking, {
+    certified: asked.certificate !== null,
+    diagnostics: asked.problems,
+  });
+  const certificate =
+    read.owed === null
+      ? asked.certificate
+      : compile(read.owed.goal, read.owed.proof).certificate;
+  const certified =
+    read.owed === null ? read.certified : certificate !== null;
+
+  return {
+    answer: {
+      ...answer,
+      ...(read.instances.size === 0
+        ? {}
+        : { instances: Object.fromEntries(read.instances) }),
+      ...(read.directions.size === 0
+        ? {}
+        : { directions: Object.fromEntries(read.directions) }),
+      ...(certified && certificate !== null
+        ? { mmb: Buffer.from(certificate).toString("base64") }
+        : {}),
+    },
+    evidence: { certified, errors: read.errors, kind: "compiled" },
+  };
+}
+
 /**
  * A tree as the browser submits it: the instances its general steps were
- * written with, found by asking the engine, and its certificate, base64,
- * compiled against the exercise's theory (`publicData` as the systems join
- * gives it). No `mmb` where the compile does not certify every inference.
+ * written with and the directions its identities are developed in, found by
+ * asking the engine, and its certificate, base64, compiled against the
+ * exercise's theory (`publicData` as the systems join gives it). No `mmb`
+ * where the compile does not certify every inference.
  */
 export async function certifyAnswer(
   publicData: TruthTreePublicData,
   answer: { readonly nodes: unknown; readonly rules?: unknown },
 ): Promise<CertifiedAnswer> {
-  const loaded = await engine();
   const resolved = resolveTruthTree(publicData);
   const mm0 = publicData.mm0;
 
@@ -207,38 +266,7 @@ export async function certifyAnswer(
     return answer;
   }
 
-  const data = answer as never;
-  const asking = askingProofOf(resolved, data);
-
-  if (asking.goal === null || asking.proof === null) {
-    return answer;
-  }
-
-  const asked = loaded.compile(`${mm0}\n${asking.goal}\n`, asking.proof);
-  const errors = readTreeDiagnostics(
-    asked.ok ? [] : asked.diagnostics,
-    asking,
-  );
-  const held = heldInstances(asking, errors);
-  const directions = heldDirections(asking, errors);
-  const submitted = {
-    ...answer,
-    ...(held.size === 0 ? {} : { instances: Object.fromEntries(held) }),
-    ...(directions.size === 0
-      ? {}
-      : { directions: Object.fromEntries(directions) }),
-  };
-  const final = treeProofOf(resolved, submitted as never);
-
-  if (final.goal === null || final.proof === null) {
-    return submitted;
-  }
-
-  const result = loaded.compile(`${mm0}\n${final.goal}\n`, final.proof);
-
-  return result.ok && result.mmbBytes !== undefined
-    ? { ...submitted, mmb: Buffer.from(result.mmbBytes).toString("base64") }
-    : submitted;
+  return askAsBrowser(await engine(), resolved, mm0, answer as never).answer;
 }
 
 /**
@@ -253,11 +281,7 @@ export async function certifyTree(
   return (await certifyAnswer(publicData, answer)).mmb;
 }
 
-/**
- * The report on a tree, as the browser makes it: one
- * compile asking every candidate instance, the instances that held, and a
- * second compile for the certificate where the derivation changed.
- */
+/** The report on a tree, as the browser makes it once a submit certifies. */
 export function judgeAsBrowser(
   compiler: LoadedCompiler,
   resolved: ResolvedTree,
@@ -267,50 +291,8 @@ export function judgeAsBrowser(
     readonly rules: Readonly<Record<string, string>>;
   },
 ): TreeReport {
-  const asking = askingProofOf(resolved, answer);
-  let evidence: TreeEvidence = {
-    certified: false,
-    errors: [],
-    kind: "compiled",
-  };
-  let submitted: typeof answer & {
-    instances?: Record<string, string>;
-    directions?: Record<string, string>;
-  } = answer;
+  const browsed = askAsBrowser(compiler, resolved, mm0, answer);
 
-  if (asking.goal !== null && asking.proof !== null) {
-    const asked = compiler.compile(`${mm0}\n${asking.goal}\n`, asking.proof);
-    const errors = readTreeDiagnostics(
-      asked.ok ? [] : asked.diagnostics,
-      asking,
-    );
-    const held = heldInstances(asking, errors);
-    const directions = heldDirections(asking, errors);
-    submitted = {
-      ...answer,
-      ...(held.size === 0 ? {} : { instances: Object.fromEntries(held) }),
-      ...(directions.size === 0
-        ? {}
-        : { directions: Object.fromEntries(directions) }),
-    };
-    const stepErrors = inDirections(errors, directions).filter(
-      (error) => error.subject?.type !== "link",
-    );
-    let certified = stepErrors.length === 0 && asked.ok === true;
-    const final = treeProofOf(resolved, submitted);
-
-    if (
-      stepErrors.length === 0 &&
-      final.goal !== null &&
-      final.proof !== null &&
-      (final.goal !== asking.goal || final.proof !== asking.proof)
-    ) {
-      const run = compiler.compile(`${mm0}\n${final.goal}\n`, final.proof);
-      certified = run.ok === true;
-    }
-
-    evidence = { certified, errors: stepErrors, kind: "compiled" };
-  }
-
-  return judgeTree(resolved, submitted, evidence).report;
+  return judgeTree(resolved, browsed.answer as never, browsed.evidence)
+    .report;
 }

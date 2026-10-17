@@ -62,16 +62,16 @@ import { layoutTableau, rowAtLine } from "../../tableau/layout";
 import type { TableauKeyAction } from "../../tableau/navigate";
 import { keyAction, moveCursor } from "../../tableau/navigate";
 import { treeAnnotations } from "../../worker/exercises/truth-tree/annotations";
-import { closesAlone } from "../../worker/exercises/truth-tree/aufbau/branch";
-import type { TreeProof } from "../../worker/exercises/truth-tree/aufbau/emit";
 import {
-  heldDirections,
-  heldInstances,
-  inDirections,
+  askingProofOf,
+  readAsked,
+} from "../../worker/exercises/truth-tree/ask";
+import { closesAlone } from "../../worker/exercises/truth-tree/aufbau/branch";
+import {
   pairingKey,
   pairingOf,
-  readTreeDiagnostics,
-} from "../../worker/exercises/truth-tree/aufbau/emit";
+} from "../../worker/exercises/truth-tree/aufbau/developed";
+import type { TreeProof } from "../../worker/exercises/truth-tree/aufbau/emit";
 import type {
   EngineFailure,
   TreeEvidence,
@@ -80,7 +80,6 @@ import { ruleSpelling } from "../../worker/exercises/truth-tree/aufbau/theory";
 import type { ResolvedTree } from "../../worker/exercises/truth-tree/grading";
 import {
   answerRules,
-  askingProofOf,
   isTruthTreeAnswerData,
   isTruthTreePublicData,
   judgeTree,
@@ -718,40 +717,35 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
       return;
     }
 
-    const errors = readTreeDiagnostics(asked.verdict.problems, asking);
-    this.instances = heldInstances(asking, errors);
-    this.directions = heldDirections(asking, errors);
+    const read = readAsked(resolved, answer, asking, {
+      certified: asked.verdict.certificate !== null,
+      diagnostics: asked.verdict.problems,
+    });
+    this.instances = read.instances;
+    this.directions = read.directions;
+    // The derivation stating them is made already: `proof` need not again.
+    this.derive().proof = {
+      directions: this.directions,
+      instances: this.instances,
+      proof: read.proof,
+      rules,
+    };
 
-    const final = this.proof(resolved);
-    // What the tree shows is said in the directions chosen.
-    const stepErrors = inDirections(errors, this.directions).filter(
-      (error) => error.subject?.type !== "link",
-    );
-    let certified = asked.verdict.certificate !== null;
-
-    // Every step held, so the derivation stating only the instances that did
-    // certifies too; it differs from the one asked only by the links that
-    // failed. Compiling it costs as much again, and only the certificate
-    // needs it, so it is owed until a submit asks for it (`certify`).
-    if (
-      stepErrors.length === 0 &&
-      final.goal !== null &&
-      final.proof !== null &&
-      (final.goal !== asking.goal || final.proof !== asking.proof)
-    ) {
-      certified = true;
+    // Every step held, so the derivation stating only what held certifies
+    // too; it differs from the one asked only by the links and directions
+    // not chosen. Compiling it costs as much again, and only the
+    // certificate needs it, so it is owed until a submit asks for it
+    // (`certify`).
+    if (read.owed !== null) {
       this.mmb = "";
-      this.owed = {
-        goal: final.goal,
-        mm0,
-        proof: final.proof,
-        rules,
-        settling: null,
-        tree,
-      };
+      this.owed = { ...read.owed, mm0, rules, settling: null, tree };
     }
 
-    this.evidence = { certified, errors: stepErrors, kind: "compiled" };
+    this.evidence = {
+      certified: read.certified,
+      errors: read.errors,
+      kind: "compiled",
+    };
     this.syncAnswer();
     this.rerender();
   }

@@ -82,9 +82,9 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   has side rows, at the side rows σ that witness it (`□𝕋`'s row at a
   prefix the branch uses). Rows no rule develops get an axiom asking nothing, found by
   complement over the constructors, so a rule whose axiom cannot be stated
-  leaves its rows visibly undeveloped. The emitter asks them of each
-  branch marked open: one theorem per row that it is developed, and one per
-  general row and term of its instance's sort on the branch (with a new
+  leaves its rows visibly undeveloped. `developed.ts` asks them of each
+  branch marked open, and the emitter states what it asks: one theorem per
+  row that it is developed, and one per general row and term of its instance's sort on the branch (with a new
   name where a `nonempty` row's branch has none), or, for a rule with side
   rows, each witness Carnap finds on the branch, and for each identity
   (`pairs`) each row it pairs with, by `tree_okpair_<statement>`, with the
@@ -111,6 +111,10 @@ intuitionistic logic (`open-logic-intuitionistic`). The authoring contract is in
   instances in the language (`✓a₁`, `\1.1,1.2`).
 - `grading.ts` — guards, the declaration resolved back to its theory, and
   the judgement: the report, and what the tree shows once it is done.
+- `ask.ts` — asking the engine, for the editor and the tests alike: the
+  derivation stating every candidate, and what its compile says (the
+  instances and directions that held, the steps' errors, and the
+  derivation still owed a compile for the certificate).
 - `annotations.ts` — what the tree draws beside its rows, for both the
   server's static tree and the editor.
 - `authoring.ts`, `assessment.ts`, `read-only-view.ts`, `strings.ts`,

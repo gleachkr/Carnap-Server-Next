@@ -149,4 +149,9 @@ export interface TreeReport {
   readonly open: boolean;
   /** Done, by the exercise's `finish`. */
   readonly finished: boolean;
+  /**
+   * What `finished` would be were every step and closure written confirmed
+   * by the engine: a tree without its word is unconfirmed, not unfinished.
+   */
+  readonly finishedIfConfirmed: boolean;
 }

@@ -165,6 +165,7 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
       closed: false,
       ends: new Map(),
       finished: false,
+      finishedIfConfirmed: false,
       marks: new Map(),
       open: false,
       problems: [
@@ -394,24 +395,27 @@ export function judgeTreeProof(input: JudgeInput): TreeReport {
   const states = leaves.map((leaf) => branches.get(leaf.id));
   const rightly = (type: "closed" | "open") =>
     states.filter((state) => state?.type === type && state.right).length;
-  const closed =
-    confirmed &&
+  // How the tree stands, the engine's confirmation aside.
+  const allClosed =
     leaves.length > 0 &&
     proof.hypotheses === 0 &&
     rightly("closed") === leaves.length;
-  const open = confirmed && finish !== "closed" && rightly("open") > 0;
-  const finished =
-    closed ||
-    (finish === "one-open" && open) ||
+  const someOpen = finish !== "closed" && rightly("open") > 0;
+  const done =
+    allClosed ||
+    (finish === "one-open" && someOpen) ||
     (finish === "complete" &&
-      open &&
+      someOpen &&
       rightly("closed") + rightly("open") === leaves.length);
+  const closed = confirmed && allClosed;
+  const open = confirmed && someOpen;
 
   return {
     branches,
     closed,
     ends: endProblems,
-    finished,
+    finished: confirmed && done,
+    finishedIfConfirmed: done,
     // Marks count the steps the engine has not refused; whether it has
     // confirmed them is `confirmed`, above.
     marks: treeMarks({
