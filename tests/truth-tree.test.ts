@@ -721,6 +721,22 @@ describe("grading", () => {
 
     expect(graded.summary).toBe("The tree is not right yet.");
   });
+
+  test("a review draws the marks only where the verdict has detail", async () => {
+    const reviewed = async (attributes: string) => {
+      const item = await declaration(directive(attributes, "- P & Q\n- ¬P"));
+      const t = builderFor(item);
+      const [p] = t.stack(t.rootNode, "r1", ["P", "Q"], "&");
+      t.close(t.rootNode, p as string, "r2");
+
+      return (await grade(item, await certified(item, t.answer()))).html;
+    };
+
+    expect(await reviewed("#tt")).toContain('class="tableau-mark"');
+    expect(await reviewed('#tt feedback="terse"')).not.toContain(
+      'class="tableau-mark"',
+    );
+  });
 });
 
 describe("rendering", () => {

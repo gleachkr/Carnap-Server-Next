@@ -27,6 +27,12 @@ export function treeAnnotations(
   words: TreeWords,
   options: {
     readonly flag: boolean;
+    /**
+     * Whether to draw the marks. A mark is drawn from what the engine
+     * confirmed, so it says which rows are right: under terse or no feedback
+     * it would say what the feedback withholds.
+     */
+    readonly marks: boolean;
     /** How many of the root node's first rows are the exercise's root. */
     readonly rootRows: number;
     /** The rule each development names, by its `dev`. */
@@ -37,7 +43,7 @@ export function treeAnnotations(
   const number = layoutNumbers(layout);
   const marks = new Map<string, string>();
 
-  for (const [rowId, mark] of report.marks) {
+  for (const [rowId, mark] of options.marks ? report.marks : []) {
     marks.set(rowId, markText(mark, language));
   }
 

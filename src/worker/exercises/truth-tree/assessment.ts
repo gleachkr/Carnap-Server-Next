@@ -261,6 +261,9 @@ export const TRUTH_TREE_ASSESSMENT = {
           answer: data,
           exerciseId: declaration.id,
           judgement,
+          // Marks say which rows are right: drawn only where the verdict
+          // may name the first problem.
+          marks: reveal && detail,
           resolved,
           verdict: reveal ? summary : "",
         },

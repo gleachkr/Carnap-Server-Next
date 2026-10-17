@@ -55,19 +55,26 @@ const TRUTH_TREE_REVIEW_STYLES = [
 /**
  * The tree, drawn: the grid for the eye and the outline for a screen reader.
  * `rules` are the rules its steps name; `report` is the tree's own, when the
- * caller has already checked it.
+ * caller has already checked it; `marks` says whether to draw its marks.
  */
 function treeHtml(
   tree: TableauDocument,
   resolved: ResolvedTree,
   words: TreeWords,
-  rules: ReadonlyMap<string, string> = new Map(),
-  report: TreeReport = judgeTree(
-    resolved,
-    { nodes: tree.nodes, rules: Object.fromEntries(rules) },
-    { kind: "none" },
-  ).report,
+  drawn: {
+    readonly marks: boolean;
+    readonly rules?: ReadonlyMap<string, string>;
+    readonly report?: TreeReport;
+  },
 ): string {
+  const rules = drawn.rules ?? new Map<string, string>();
+  const report =
+    drawn.report ??
+    judgeTree(
+      resolved,
+      { nodes: tree.nodes, rules: Object.fromEntries(rules) },
+      { kind: "none" },
+    ).report;
   const layout = layoutTableau(tree, rules);
   const annotations = treeAnnotations(
     tree,
@@ -75,7 +82,12 @@ function treeHtml(
     report,
     resolved.language,
     words,
-    { flag: false, rootRows: resolved.root.length, rules },
+    {
+      flag: false,
+      marks: drawn.marks,
+      rootRows: resolved.root.length,
+      rules,
+    },
   );
 
   return `<div class="tableau-scroller" data-role="tree">${tableauGridHtml(
@@ -105,10 +117,11 @@ export function renderTruthTreeElement(
   const legend = exerciseLegendHtml(
     exerciseGroupLabel(truthTreeName(meta.i18n), meta),
   );
+  // The root alone, which has no marks to draw.
   const body =
     resolved === null
       ? ""
-      : treeHtml(startingTree(resolved), resolved, words);
+      : treeHtml(startingTree(resolved), resolved, words, { marks: false });
 
   return `<carnap-truth-tree${exerciseRootAttributes(meta)}>
         <template shadowrootmode="open">
@@ -129,6 +142,8 @@ export interface TruthTreeReview {
   readonly answer: TruthTreeAnswerData;
   readonly exerciseId: string;
   readonly judgement: TreeJudgement;
+  /** Whether to draw the marks, which say which rows the engine confirmed. */
+  readonly marks: boolean;
   readonly resolved: ResolvedTree;
   /** Said above the tree; empty where a sealed exercise keeps it back. */
   readonly verdict: string;
@@ -144,13 +159,11 @@ export function renderTruthTreeReview(
   words: TreeWords,
 ): string {
   const tree: TableauDocument = { nodes: review.answer.nodes };
-  const body = treeHtml(
-    tree,
-    review.resolved,
-    words,
-    answerRules(review.answer),
-    review.judgement.report,
-  );
+  const body = treeHtml(tree, review.resolved, words, {
+    marks: review.marks,
+    report: review.judgement.report,
+    rules: answerRules(review.answer),
+  });
 
   return `<carnap-truth-tree data-exercise-id="${escapeHtml(review.exerciseId)}" data-review>
         <template shadowrootmode="open">

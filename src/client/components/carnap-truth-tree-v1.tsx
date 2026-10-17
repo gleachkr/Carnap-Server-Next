@@ -1872,6 +1872,7 @@ class CarnapTruthTree extends ProofExerciseElement<TruthTreeStringId> {
               this.words,
               {
                 flag: this.showsDetail,
+                marks: this.showsDetail,
                 rootRows: resolved.root.length,
                 rules: this.rules,
               },

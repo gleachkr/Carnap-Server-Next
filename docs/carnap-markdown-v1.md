@@ -1280,9 +1280,12 @@ Grading is all or nothing: every row and closure right, every `↑` on a
 complete open branch, and the tree done by `finish`. Under full feedback the
 editor flags a wrong step as soon as the engine has checked it, and Check
 names the first problem in tree order. Under terse feedback Check says only
-whether the tree is right. The review of a submitted tree draws it and says
-what can be seen without the engine (an unfinished tree, a misplaced end);
-the grade is the engine's. Trees are capped at 200 rows.
+whether the tree is right. The editor draws the check marks (`✓`, `\a,b`)
+only under full feedback: a mark names only what the engine confirmed, so it
+would say which steps are wrong. The review of a submitted tree draws it and
+says what can be seen without the engine (an unfinished tree, a misplaced
+end), with its marks only where its verdict may name the first problem; the
+grade is the engine's. Trees are capped at 200 rows.
 
 ## Aufbau-proof directive
 

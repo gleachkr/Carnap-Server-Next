@@ -461,6 +461,57 @@ describe("upgrading", () => {
   });
 });
 
+describe("check marks", () => {
+  // `P & Q` developed and the branch closed: a right tree, whose `&` row is
+  // ticked once the engine confirms the step.
+  const prior = {
+    nodes: [
+      {
+        end: { cites: ["r3", "r2"], type: "closed" },
+        id: "old-root",
+        parent: null,
+        rows: [
+          { cites: [], dev: "root", id: "r1", text: "P & Q" },
+          { cites: [], dev: "root", id: "r2", text: "¬P" },
+          { cites: ["r1"], dev: "d1", id: "r3", text: "P" },
+          { cites: ["r1"], dev: "d1", id: "r4", text: "Q" },
+        ],
+      },
+    ],
+    rules: { d1: "&" },
+  };
+  const marks = (mounted: Mounted) =>
+    [...mounted.root.querySelectorAll(".tableau-mark")].map(
+      (each) => each.textContent,
+    );
+
+  test("are drawn under full feedback", async () => {
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"), {
+      priorAnswer: prior,
+    });
+
+    await until(() => marks(mounted).length > 0, 3_000);
+
+    expect(marks(mounted)).toEqual(["✓"]);
+  });
+
+  // A mark names only what the engine confirmed, so it would say which
+  // steps are wrong.
+  test("are not drawn under terse feedback", async () => {
+    const mounted = mountExercise(await treeExercise("", "- P & Q\n- ¬P"), {
+      options: { feedback: "terse" },
+      priorAnswer: prior,
+    });
+
+    mounted.form
+      .querySelector<HTMLButtonElement>(".truth-tree-check")
+      ?.click();
+    await until(() => markState(mounted) === "ok", 3_000);
+
+    expect(marks(mounted)).toEqual([]);
+  });
+});
+
 describe("when the engine fails", () => {
   const ENGINE_FAILURE =
     "The proof engine couldn't read this proof — check for unexpected characters.";
