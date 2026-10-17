@@ -512,22 +512,23 @@ describe("size", () => {
 });
 
 describe("a step's certificate", () => {
-  // `unfocus` is given the branch less the cited rows: left to find it, the
-  // engine's proof re-sorts the whole branch, so a step citing an early row
-  // of a long branch whose rows have mixed heads, as any tree's do, costs
-  // the branch's square (design/aufbau-issues-2026-10-17, section 1).
+  // The emitter names no binder on a step's lines; the engine keeps the
+  // branch in the order the line writes it. A row written twice, a row a
+  // view computes, and rows and marks in another order than the rule's each
+  // used to cost a rearrangement of the whole branch (design/
+  // aufbau-issues-2026-10-17, followup/ and followup-2/).
+  const names = "abcdefghijklm".split("");
+  const middle: Row[] = names.flatMap((name, i) =>
+    ["F", "G", "H"].map((p, j): Row => [`m${3 * i + j}`, `${p}${name}`, []]),
+  );
+
   test("grows with the step, not with the branch's order", async () => {
-    const names = "abcdefghijklm".split("");
-    const middle: Row[] = names.flatMap((name, i) =>
-      ["F", "G", "H"].map(
-        (p, j): Row => [`m${3 * i + j}`, `${p}${name}`, []],
-      ),
-    );
     const checked = await check({
       closed: ["p", "np"],
       rows: [
         ["c", "P & Q", []],
         ...middle,
+        ...middle.slice(0, 4).map(([id, text]): Row => [`${id}'`, text, []]),
         ["np", "¬P", []],
         ["p", "P", ["c"], "&"],
         ["q", "Q", ["c"], "&"],
@@ -537,7 +538,22 @@ describe("a step's certificate", () => {
     expect(where(checked.errors)).toEqual([]);
     expect(checked.verified).toBe(true);
     expect(checked.mmbBytes).toBeLessThan(60_000);
-    expect(checked.proof).toContain("by unfocus (ga := $");
+  });
+
+  test("a ∀ step grows with the step, not with the branch", async () => {
+    const checked = await check({
+      closed: ["fn", "nfn"],
+      rows: [
+        ["all", "∀x Jx", []],
+        ...middle,
+        ["nfn", "¬Jn", []],
+        ["fn", "Jn", ["all"], "∀"],
+      ],
+    });
+
+    expect(where(checked.errors)).toEqual([]);
+    expect(checked.verified).toBe(true);
+    expect(checked.mmbBytes).toBeLessThan(50_000);
   });
 });
 

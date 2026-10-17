@@ -5,10 +5,10 @@
     "": {
       "name": "aufbau-server",
       "dependencies": {
-        "@aufbau/compiler": "0.0.17-canary.20261016T150024Z.84.g4d29318fb438",
-        "@aufbau/lsp": "0.0.17-canary.20261016T150024Z.84.g4d29318fb438",
+        "@aufbau/compiler": "0.0.17-canary.20261017T124704Z.87.gf55d496d1e27",
+        "@aufbau/lsp": "0.0.17-canary.20261017T124704Z.87.gf55d496d1e27",
         "@aufbau/syntax": "0.0.5-canary.20261011T132040Z.18.g3815f96068d8",
-        "@aufbau/verifier": "0.0.17-canary.20261016T150024Z.84.g4d29318fb438",
+        "@aufbau/verifier": "0.0.17-canary.20261017T124704Z.87.gf55d496d1e27",
         "@codemirror/commands": "^6.10.4",
         "@codemirror/language": "^6.12.4",
         "@codemirror/lint": "^6.9.7",
@@ -67,13 +67,13 @@
 
     "@asamuzakjp/nwsapi": ["@asamuzakjp/nwsapi@2.3.9", "", {}, "sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q=="],
 
-    "@aufbau/compiler": ["@aufbau/compiler@0.0.17-canary.20261016T150024Z.84.g4d29318fb438", "", {}, "sha512-sntgE7OjJIaERlAU2TIFyvNzTBB7Sfdv2ESy6T/NesWCQqbR6/fx6wRdLphYGj8HxU31FNBvQGM51cvrDa+uyQ=="],
+    "@aufbau/compiler": ["@aufbau/compiler@0.0.17-canary.20261017T124704Z.87.gf55d496d1e27", "", {}, "sha512-kweDiC5Ci58R1gMjt0+SM2UqZySF3PBEbpyKjOVAMEn8cMRQpeD74qQjYfU6dSERJ4W17pTdjs6t+loUAMBsKA=="],
 
-    "@aufbau/lsp": ["@aufbau/lsp@0.0.17-canary.20261016T150024Z.84.g4d29318fb438", "", {}, "sha512-P28bZTxFb6hZedk0SItlztVXv0inrXpFi8cLF0VZ74qzhizzjnGxuvkEiwgcWOoCzq7eXETAxH005nqDtTAsCw=="],
+    "@aufbau/lsp": ["@aufbau/lsp@0.0.17-canary.20261017T124704Z.87.gf55d496d1e27", "", {}, "sha512-Wg7dmRmGOJFOo2Tkx9DKI7ajVITOt65rBT+bPACFYnqcDGYBEywlkpEtrdwFMXy0TrQ4P8XFweNz3w9PcosBMQ=="],
 
     "@aufbau/syntax": ["@aufbau/syntax@0.0.5-canary.20261011T132040Z.18.g3815f96068d8", "", {}, "sha512-ZK8yjly38diNuJm+q1/dwGA+Yy5h4kdIrNoBJt0NUgZJRsuQk5Aeu8rSvpWD4XUa9j1HlifY7lbmQTpN7qhBkg=="],
 
-    "@aufbau/verifier": ["@aufbau/verifier@0.0.17-canary.20261016T150024Z.84.g4d29318fb438", "", {}, "sha512-ePsLrLpolgcQry8wQYFkIieuaqDmR6VQ/Bfnb21LI/vXnbDrpN4YNVk01E/zMd9A2/G3fMgtdifFCuKwcCbQOg=="],
+    "@aufbau/verifier": ["@aufbau/verifier@0.0.17-canary.20261017T124704Z.87.gf55d496d1e27", "", {}, "sha512-8avPCbOxDpoJYHbZXsnq8pZbnomca7gRcjKaLfLnUSJuCAJvE4tQuyWgwK17gaw2Bswhzzke1PSa/4ix8mFufQ=="],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 

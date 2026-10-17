@@ -418,25 +418,6 @@ export function emitTreeProof(
     const cite = `u_${counter}`;
     const premises = children.map((child) => closes(child));
     const conclusion = closes(state);
-    // The branch less the cited rows, given to `unfocus` rather than left to
-    // the engine to find: found, its proof re-sorts the whole branch, and
-    // grows with the branch rather than with the step (design/
-    // aufbau-issues-2026-10-17). A cited row not on the branch is left in,
-    // and `unfocus` refuses the step as it would anyway.
-    const rest = [...state];
-
-    for (const row of cites) {
-      const at = rest.indexOf(row);
-
-      if (at >= 0) {
-        rest.splice(at, 1);
-      }
-    }
-
-    const bound =
-      theory.unfocusRest === null
-        ? ""
-        : ` (${theory.unfocusRest} := $ ${branch(rest)} $)`;
 
     record(
       `theorem ${name}${binders([...premises, conclusion])}: ${premises
@@ -446,7 +427,7 @@ export function emitTreeProof(
         name,
         "----",
         `${main}: $ ${theory.focus} (${branch(state)}) (${branch(cites)}) $ by ${rule} [${premises.map((_, at) => `#${at + 1}`).join(", ")}]`,
-        `${cite}: $ ${conclusion} $ by ${theory.unfocus}${bound} [${main}]`,
+        `${cite}: $ ${conclusion} $ by ${theory.unfocus} [${main}]`,
       ].join("\n"),
     );
     lines.set(main, subject("main"));

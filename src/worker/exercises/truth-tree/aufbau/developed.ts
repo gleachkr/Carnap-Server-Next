@@ -244,10 +244,11 @@ export function branchQuestions(
     };
     const mentioned = new Set(engineTokens(branch(texts(members))));
     // The branch is a multiset, so its members may be stated in any order:
-    // the ones a row's own steps wrote go last, where the engine looks first,
-    // and the rest of the branch need not be sorted to find them
-    // (design/aufbau-issues-2026-10-17). A row developed some other way is
-    // found all the same, at the cost of the sort.
+    // the ones a row's own steps wrote go last, where the axiom names them,
+    // and the proof need not move them across the rest of the branch, which
+    // costs the branch for every question (a 69-row tree's certificate is
+    // 226 KB so, 392 KB in the branch's own order). A row developed some
+    // other way is found all the same, at that cost.
     const citing = new Map<string, Set<string>>();
 
     for (const [dev, step] of input.steps) {
