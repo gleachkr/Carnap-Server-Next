@@ -143,6 +143,30 @@ describe("open-logic-tableaux", () => {
     expect(report.closed).toBe(false);
   }, 60_000);
 
+  test("an instance may go through identity, written either way", async () => {
+    // `≠` is a def over `¬ =`, and the engine's normalizer reads `¬ c = a` as
+    // one too: without `neq_congr` and `sb_f_neq` neither step went through.
+    for (const [premise, instance] of [
+      ["𝕋 ∃x ¬x = a", "𝕋 ¬c = a"],
+      ["𝕋 ∃x x ≠ a", "𝕋 c ≠ a"],
+    ] as const) {
+      const tree = new TreeBuilder([premise]);
+      tree.stack("n0", "r1", [instance], "∃𝕋");
+
+      expect(problems(await judge([premise], tree)), premise).toEqual([]);
+    }
+  }, 60_000);
+
+  test("a ≠ is the negated identity it abbreviates, so either spelling closes", async () => {
+    const root = ["𝕋 a ≠ b", "𝔽 ¬a = b"];
+    const tree = new TreeBuilder(root);
+    tree.close("n0", "r1", "r2");
+    const report = await judge(root, tree);
+
+    expect(problems(report)).toEqual([]);
+    expect(report.closed).toBe(true);
+  }, 60_000);
+
   test("Cut cites no row, and splits a branch on any formula", async () => {
     const tree = new TreeBuilder(["T: A → B", "T: ¬A → B", "F: B"]);
     const cut = tree.split("n0", null, [["T: A"], ["F: A"]], "Cut");

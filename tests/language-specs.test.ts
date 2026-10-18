@@ -487,9 +487,9 @@ describe("language specs", () => {
       expect(display(id, "∀x(Fx ⊃ Gx)")).toBe("∀x(Fx ⊃ Gx)");
     });
 
-    test("≠ reads, and prints, as the book writes ¬a = b", () => {
-      expect(display(id, "a ≠ b")).toBe("a≠b");
-      expect(display(id, "¬a = b")).toBe("a≠b");
+    test("≠ is a def over ¬a = b, and each prints as it was written", () => {
+      expect(display(id, "a ≠ b")).toBe("a ≠ b");
+      expect(display(id, "¬a = b")).toBe("¬a = b");
     });
 
     test("names take subscripts, typed either way", () => {

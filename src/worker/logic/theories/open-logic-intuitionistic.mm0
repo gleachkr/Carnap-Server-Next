@@ -141,7 +141,10 @@
 --| @syntax brackets ( )
 --| @syntax lint parenthesize-binary-only
 --| @syntax display drop-outer-parens
-delimiter $ ( ) ; $;
+-- The context join is a right delimiter only: a chunk breaks before it, not
+-- after, which is MM0's reading and also the display printer's layout,
+-- `1 𝕋 A; 1 𝔽 B`.
+delimiter $ ( ) $ $ ( ) ; $;
 
 --| @syntax role sentence
 provable sort wff;

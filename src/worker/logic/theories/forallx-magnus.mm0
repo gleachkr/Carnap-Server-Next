@@ -118,7 +118,7 @@
 -- only ever be one character.
 --| @syntax delimiter $ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z $
 --| @syntax delimiter $ a b c d e f g h i j k l m n o p q r s t u v w x y z $
---| @syntax delimiter $ ( ) [ ] , $
+--| @syntax delimiter $ ( ) [ ] $
 --| @syntax delimiter $ - ~ ¬ /\ ^ & ∧ \/ | ∨ $
 --| @syntax delimiter $ -> => ⊃ > → <-> <=> <> ≡ ↔ $
 --| @syntax delimiter $ @ 3 ∀ ∃ = $
@@ -131,7 +131,11 @@
 -- not one of them, so `\/` and `/\` survive as the tokens `or` and `and`
 -- declare; the price is that the substitution notations below are spelled with
 -- spaces, `{x / te}`, since nothing splits `{x/te}` for us.
-delimiter $ ( ) [ ] , ; { } $;
+-- The comma and the context join are right delimiters only: a chunk breaks
+-- before one, not after, which is MM0's reading and also the display
+-- printer's layout, `R(a, b)` and `A; B ⊢ C`. Every name is a delimiter, so
+-- `R(a,b)` still reads.
+delimiter $ ( ) [ ] { } $ $ ( ) [ ] { } , ; $;
 
 -- `sentence` is uninterpreted metadata to @aufbau/syntax — it records which sort
 -- *this application* reads student input at. See Calgary's note on `provable`.
