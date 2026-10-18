@@ -80,7 +80,7 @@ describe("ruleShapeReader", () => {
 
   test("a rule with no premises is its conclusion alone", () => {
     expect(shapeOf(FORALLX_THEORY_SOURCE, "fitch", "eq_intro_nd")).toBe(
-      "=I: te=te",
+      "=I: te = te",
     );
   });
 

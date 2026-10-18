@@ -4,7 +4,8 @@
  * The development criteria ask which rows a rule applies to, and a closed
  * branch's × which rows close it: both are questions about a rule's focus
  * pattern (`∀ x ph`, `ph ; ¬ ph`) against a row's term. Matching is
- * syntactic, over `@aufbau/syntax` parses: a rule's binders are its
+ * syntactic, over `@aufbau/syntax` parses with their defs unfolded, as the
+ * engine sees through them (`a ≠ a` is `¬ a = a`): a rule's binders are its
  * metavariables, and anything else must be the same constructor with matching
  * arguments. A pattern that needs the theory's computation to match matches
  * only what it says literally, which is the conservative failure: such a rule
@@ -33,7 +34,7 @@
  */
 
 import type { AssertStatement, SurfaceLanguage, Term } from "@aufbau/syntax";
-import { printTerm } from "@aufbau/syntax";
+import { printTerm, unfoldDefinitions } from "@aufbau/syntax";
 import { binderScope } from "../../../exercise-kit/proof/formulas";
 import { acuiOf } from "../../../logic/specs/annotations";
 import { roleIndex } from "../../../logic/specs/roles";
@@ -142,12 +143,30 @@ function listOf(list: List, sort: string, terms: readonly Term[]): Term {
     : rest.reduce((left, right) => app(list.term, [left, right]), first);
 }
 
-/** A term with each list in it flattened and nested to the left. */
+/** Each term read, with its defs unfolded; a term belongs to one language. */
+const unfoldings = new WeakMap<Term, Term>();
+
+/** A term with its defs unfolded, once per term. */
+function unfolded(language: SurfaceLanguage, term: Term): Term {
+  let found = unfoldings.get(term);
+
+  if (found === undefined) {
+    found = unfoldDefinitions(language, term);
+    unfoldings.set(term, found);
+  }
+
+  return found;
+}
+
+/**
+ * A term with its defs unfolded and each list in it flattened and nested to
+ * the left.
+ */
 function normal(language: SurfaceLanguage, term: Term): Term {
   const lists = listsOf(language);
 
   if (lists.size === 0) {
-    return term;
+    return unfolded(language, term);
   }
 
   const walk = (node: Term): Term => {
@@ -164,7 +183,7 @@ function normal(language: SurfaceLanguage, term: Term): Term {
     return { ...node, args: node.args.map(walk) };
   };
 
-  return walk(term);
+  return walk(unfolded(language, term));
 }
 
 /**
@@ -573,6 +592,9 @@ export function matchTerm(
  * gives more than one: `σ . ρ` against `1 . wa` is `σ` the unit and `ρ` the
  * whole, `σ` `1` and `ρ` `wa`, and `σ` the whole, so a pattern after it that
  * needs `σ` to be `1` can have it. Each run is tried shortest first.
+ *
+ * Both sides are matched with their defs unfolded, as the engine matches
+ * them: `a ≠ a` is the `¬ te = te` a closure rule asks for.
  */
 export function* matchAll(
   language: SurfaceLanguage,
@@ -580,6 +602,23 @@ export function* matchAll(
   term: Term,
   metas: Metas,
   bindings: Bindings = new Map(),
+): Generator<Bindings> {
+  yield* matchUnfolded(
+    language,
+    unfolded(language, pattern),
+    unfolded(language, term),
+    metas,
+    bindings,
+  );
+}
+
+/** {@link matchAll} over terms whose defs are already unfolded. */
+function* matchUnfolded(
+  language: SurfaceLanguage,
+  pattern: Term,
+  term: Term,
+  metas: Metas,
+  bindings: Bindings,
 ): Generator<Bindings> {
   if (pattern.kind === "variable" && metas.has(pattern.name)) {
     if (
@@ -686,7 +725,7 @@ function* matchEach(
     return;
   }
 
-  for (const found of matchAll(
+  for (const found of matchUnfolded(
     language,
     pattern,
     terms[0] as Term,
@@ -739,7 +778,13 @@ function* matchList(
         return;
       }
 
-      for (const found of matchAll(language, pattern, next, metas, sofar)) {
+      for (const found of matchUnfolded(
+        language,
+        pattern,
+        next,
+        metas,
+        sofar,
+      )) {
         yield* from(at + 1, taken + 1, found);
       }
 

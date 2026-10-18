@@ -290,7 +290,7 @@ describe("language specs", () => {
     test("reads tight textbook notation and prints logical symbols", () => {
       expect(display(id, "AxEy~R(x,y)")).toBe("∀x∃y¬R(x,y)");
       expect(display(id, "Ax(F(x) -> G(f(x)))")).toBe("∀x(F(x) → G(f(x)))");
-      expect(display(id, "a != b")).toBe("a≠b");
+      expect(display(id, "a != b")).toBe("a ≠ b");
       expect(display(id, "!?")).toBe("⊥");
     });
 

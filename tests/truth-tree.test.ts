@@ -321,7 +321,7 @@ describe("grading", () => {
     );
     const t = builderFor(item);
 
-    expect(t.rootTexts).toEqual(["Fa", "a=b", "¬Fb"]);
+    expect(t.rootTexts).toEqual(["Fa", "a = b", "¬Fb"]);
 
     const [fb] = t.stack(t.rootNode, ["r1", "r2"], ["Fb"], "=");
     t.close(t.rootNode, "r3", fb as string);
