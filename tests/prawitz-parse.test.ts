@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  ENGINE_RULE,
-  type ProofRuleReader,
-} from "../src/worker/exercise-kit/proof/formulas";
 import { parsePrawitzStarter } from "../src/worker/exercises/aufbau-proof-prawitz/parse";
-import { prawitzToAuf } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
+import { prawitzStarter } from "../src/worker/exercises/aufbau-proof-prawitz/translate";
 import type { PrawitzProofNode } from "../src/worker/exercises/aufbau-proof-prawitz/types";
 
 /** Strip the ephemeral node ids so trees compare structurally. */
@@ -155,57 +151,7 @@ describe("parsePrawitzStarter", () => {
   });
 });
 
-/**
- * Render a Prawitz tree back into starter lines — the inverse of
- * {@link parsePrawitzStarter} up to node ids and generated line labels. The
- * proof lines are the translator's own `.auf` output (full sequents, inferred
- * contexts), each annotated with its node's label comment, so a serialized
- * complete tree is itself engine-compilable text. Nothing in the product
- * writes a starter from a tree, so the inverse lives with the test that
- * needs it.
- */
-function serializePrawitzStarter(
-  root: PrawitzProofNode,
-  assumptionRule: string,
-  sequentSymbol: string,
-  contextSymbol = ",",
-  readRule: ProofRuleReader = ENGINE_RULE,
-): string {
-  const assumption = readRule(assumptionRule);
-  const byId = new Map<string, PrawitzProofNode>();
-  const index = (node: PrawitzProofNode): void => {
-    byId.set(node.id, node);
-    for (const premise of node.premises) {
-      index(premise);
-    }
-  };
-  index(root);
-
-  const translated = prawitzToAuf(
-    root,
-    "starter",
-    assumptionRule,
-    sequentSymbol,
-    contextSymbol,
-    undefined,
-    readRule,
-  );
-  return translated.lineSpans
-    .map((span) => {
-      const line = translated.proofText.slice(span.from, span.to);
-      const node = byId.get(span.nodeId);
-      const marks =
-        node === undefined
-          ? ""
-          : readRule(node.rule) === assumption
-            ? (node.label?.trim() ?? "")
-            : (node.discharge ?? []).join(", ");
-      return marks.length === 0 ? line : `${line} -- label:${marks}`;
-    })
-    .join("\n");
-}
-
-describe("serializePrawitzStarter", () => {
+describe("prawitzStarter", () => {
   // The kcomb shape: discharge, an unused-but-conjoined assumption, and an
   // unlabeled standing premise — everything the notation can carry.
   const tree: PrawitzProofNode = {
@@ -234,7 +180,7 @@ describe("serializePrawitzStarter", () => {
   };
 
   test("emits the translator's compilable .auf, label comments at both ends of a discharge", () => {
-    expect(serializePrawitzStarter(tree, "ax", "⊢")).toBe(
+    expect(prawitzStarter(tree, "ax", "⊢")).toBe(
       [
         "l1: $ b ⊢ b $ by ax [] -- label:1",
         "l2: $ a ⊢ a $ by ax []",
@@ -246,7 +192,7 @@ describe("serializePrawitzStarter", () => {
   });
 
   test("serialize ∘ parse is the identity on the tree's shape", () => {
-    const result = parsed(serializePrawitzStarter(tree, "ax", "⊢"));
+    const result = parsed(prawitzStarter(tree, "ax", "⊢"));
     expect(shape(result.tree)).toEqual(shape(tree));
   });
 });

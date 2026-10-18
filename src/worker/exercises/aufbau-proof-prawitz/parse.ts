@@ -27,8 +27,8 @@
  *
  * The notation is the translator's own output plus the label comments, so a
  * complete tree's `.auf` annotated that way parses back to the same shape;
- * `tests/prawitz-parse.test.ts` pins the round-trip with a serializer of its
- * own.
+ * {@link ./translate prawitzStarter} writes it, and
+ * `tests/prawitz-parse.test.ts` pins the round-trip.
  */
 
 import type { ProofRuleReader } from "../../exercise-kit/proof/formulas";

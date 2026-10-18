@@ -358,3 +358,51 @@ export function prawitzToAuf(
     statement,
   };
 }
+
+/**
+ * The tree as an author writes a starter: the body under the directive's
+ * `----`, formulas and rules as typed. The inverse of `parsePrawitzStarter`, up
+ * to node ids, which it mints from the labels. Each line is the translator's
+ * own sequent line — contexts inferred, so a complete tree's starter is
+ * compilable `.auf` — with the node's discharge marks as its `-- label:`
+ * comment: an assumption's one label, or the marks a rule discharges. What the
+ * author preview's "Copy as source" hands back, so a tree built in the editor
+ * can be pasted in as the exercise's starting point.
+ */
+export function prawitzStarter(
+  root: PrawitzProofNode,
+  assumptionRule: string,
+  sequentSymbol: string,
+  contextSymbol = ",",
+): string {
+  const byId = new Map<string, PrawitzProofNode>();
+  const index = (node: PrawitzProofNode): void => {
+    byId.set(node.id, node);
+    for (const premise of node.premises) {
+      index(premise);
+    }
+  };
+  index(root);
+
+  const translated = prawitzToAuf(
+    root,
+    "starter",
+    assumptionRule,
+    sequentSymbol,
+    contextSymbol,
+  );
+
+  return translated.lineSpans
+    .map((span) => {
+      const line = translated.proofText.slice(span.from, span.to);
+      const node = byId.get(span.nodeId);
+      const marks =
+        node === undefined
+          ? ""
+          : node.rule === assumptionRule
+            ? (node.label?.trim() ?? "")
+            : dischargeLabels(node).join(", ");
+      return marks.length === 0 ? line : `${line} -- label:${marks}`;
+    })
+    .join("\n");
+}

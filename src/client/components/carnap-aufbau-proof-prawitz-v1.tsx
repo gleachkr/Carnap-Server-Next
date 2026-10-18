@@ -68,7 +68,10 @@ import {
 import { ruleShapeReader } from "../../worker/exercise-kit/proof/rule-shape";
 import type { AufbauProofPrawitzStringId } from "../../worker/exercises/aufbau-proof-prawitz/strings";
 import type { PrawitzDiagnostic } from "../../worker/exercises/aufbau-proof-prawitz/translate";
-import { prawitzToAuf } from "../../worker/exercises/aufbau-proof-prawitz/translate";
+import {
+  prawitzStarter,
+  prawitzToAuf,
+} from "../../worker/exercises/aufbau-proof-prawitz/translate";
 import {
   type AufbauProofPrawitzPublicData,
   DEFAULT_ASSUMPTION_RULE,
@@ -81,6 +84,7 @@ import { register } from "./base";
 import shadowStyles from "./carnap-aufbau-proof-prawitz-v1.css" with {
   type: "text",
 };
+import { mountCopySource } from "./copy-source";
 import {
   createHelpDialog,
   HELP_DIALOG_STYLES,
@@ -1085,6 +1089,8 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
   private pinned: PinnedProblem | null = null;
   /** Built once in {@link enhance}; see {@link showHelp} for where it lives. */
   private helpDialog: HTMLDialogElement | null = null;
+  /** The author preview's "Copy as source"; `null` everywhere else. */
+  private copySource: HTMLButtonElement | null = null;
   private proofText = "";
   private lineSpans: readonly { from: number; nodeId: string; to: number }[] =
     [];
@@ -1201,6 +1207,24 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
       this,
       this.t("Usage and keyboard shortcuts"),
       this.showHelp,
+    );
+    // In the author preview, the tree as it stands can be taken back to the
+    // lesson as its starter. A starter is one tree, so the button is held
+    // while the forest is in pieces (see `onModelChanged`).
+    this.copySource = mountCopySource(
+      this,
+      { copied: this.t("Copied."), label: this.t("Copy as source") },
+      () => {
+        const [single, ...rest] = this.doc.trees;
+        return single === undefined || rest.length > 0
+          ? null
+          : prawitzStarter(
+              serialize(single, this.assumptionRule),
+              this.assumptionRule,
+              this.sequentSymbol,
+              this.contextSymbol,
+            );
+      },
     );
 
     this.gateSubmit((event) => this.gate(event));
@@ -1651,6 +1675,13 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
     // forest is split, the answer's proofText stays empty and the mark idle.
     const single =
       this.doc.trees.length === 1 ? this.doc.trees[0] : undefined;
+    // `aria-disabled`, as a held Submit is: it stays focusable and says it is
+    // unavailable, and a press copies nothing.
+    if (single === undefined) {
+      this.copySource?.setAttribute("aria-disabled", "true");
+    } else {
+      this.copySource?.removeAttribute("aria-disabled");
+    }
     if (single === undefined) {
       this.proofText = "";
       this.lineSpans = [];

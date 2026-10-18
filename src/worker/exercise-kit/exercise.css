@@ -72,10 +72,12 @@
 /* The same recessed, faint look the page gives any dead control (see
    `button:disabled` in web/content.css), in the exercise's own tokens. A
    Submit held for the check mark (`aria-disabled`, see the client base
-   class) wears it too: it is unavailable, though it stays focusable. */
+   class) wears it too, as does a widget's own control held the same way: it
+   is unavailable, though it stays focusable. */
 .exercise-submit:disabled,
 .exercise-submit[aria-disabled="true"],
-.exercise-actions button:disabled {
+.exercise-actions button:disabled,
+.exercise-actions button[aria-disabled="true"] {
   background: var(--exercise-inset-bg);
   border-color: var(--exercise-border);
   color: var(--exercise-text-faint);

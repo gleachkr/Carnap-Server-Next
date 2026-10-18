@@ -1984,6 +1984,12 @@ to discharge; separate several with commas. Other trailing or whole-line
 comments remain ordinary comments. A starter must parse but need not be a
 finished proof. A discharge mark with no matching assumption is rejected.
 
+In the author preview, **Copy as source** in the action bar puts the tree
+being built on the clipboard as starter lines, contexts filled in and
+discharge labels as `-- label:` comments, to paste under the `----`.
+Formulas and rule names are copied as typed. A starter is one tree, so the
+button is unavailable while the workspace holds more than one.
+
 Each node's context contains only its undischarged dependencies, not
 assumptions from sibling branches. The compiler and verifier enforce the
 selected theory's rules, including eigenvariable conditions.

@@ -1,3 +1,4 @@
+import { buildCopySourceStrings } from "../../exercise-kit/copy-source-strings";
 import { buildExerciseHelpStrings } from "../../exercise-kit/help-strings";
 import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
 import { placeholders, type Translator } from "../../i18n/translator";
@@ -5,9 +6,9 @@ import { buildFormulaParserStrings } from "../../logic/specs/strings";
 
 /**
  * Interface text for the Prawitz-proof widget: the shared proof-engine set, the
- * shared help-dialog frame, plus the forest workspace's own toolbar, field
- * names, the translator's structural diagnostics, and the usage instructions
- * behind its `(?)`.
+ * shared help-dialog frame and the author preview's "Copy as source", plus the
+ * forest workspace's own toolbar, field names, the translator's structural
+ * diagnostics, and the usage instructions behind its `(?)`.
  *
  * The toolbar's tooltips name their shortcuts (`Undo (Ctrl-Z)`) as one message
  * rather than a label plus an appended key, because a translator may well want
@@ -27,6 +28,7 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
     ...buildFormulaParserStrings(i18n),
     ...buildProofEngineStrings(i18n),
     ...buildExerciseHelpStrings(i18n),
+    ...buildCopySourceStrings(i18n),
     "Add assumption above": i18n.t("Add assumption above"),
     "Add assumption above (h)": i18n.t("Add assumption above (h)"),
     "Add premise above": i18n.t("Add premise above"),
