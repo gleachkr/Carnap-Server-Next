@@ -65,6 +65,65 @@ const GAP = 6;
 const EDGE = 8;
 
 /**
+ * The furniture every exercise panel shares: a `<dialog>` with the header strip
+ * (heading, which names it, and the × that closes it) and an empty body to fill.
+ * Click-outside closes it, and closing hands focus back to whatever opened it
+ * (see {@link openHelpDialog}). `titleId` must be unique within the shadow root
+ * the dialog goes in, which is as far as an id reaches there.
+ */
+export function createDialogFrame(
+  className: string,
+  titleId: string,
+  title: string,
+  close: string,
+): { readonly body: HTMLDivElement; readonly dialog: HTMLDialogElement } {
+  const dialog = document.createElement("dialog");
+  dialog.className = `${className} dialog-panel`;
+  dialog.setAttribute("aria-labelledby", titleId);
+
+  const header = document.createElement("div");
+  header.className = "dialog-header";
+
+  const heading = document.createElement("h2");
+  heading.className = "dialog-title";
+  heading.id = titleId;
+  heading.textContent = title;
+  header.appendChild(heading);
+
+  const dismiss = document.createElement("button");
+  dismiss.className = "dialog-close";
+  dismiss.type = "button";
+  dismiss.setAttribute("aria-label", close);
+  dismiss.title = close;
+  dismiss.textContent = "×";
+  dismiss.addEventListener("click", () => dialog.close());
+  header.appendChild(dismiss);
+
+  const body = document.createElement("div");
+  body.className = "dialog-body help-dialog-body";
+
+  dialog.append(header, body);
+
+  // Click-outside-to-dismiss is not native to <dialog>. The backdrop is painted
+  // by the dialog itself, so a click on it targets the dialog element; a click
+  // on the panel targets something inside it.
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      dialog.close();
+    }
+  });
+
+  // Browsers restore focus to the previously focused element on close, but only
+  // when it is still focusable and still in the same tree — the widget rerenders
+  // its toolbar, so be explicit rather than lose focus to the document.
+  dialog.addEventListener("close", () => {
+    triggers.get(dialog)?.focus();
+  });
+
+  return { body, dialog };
+}
+
+/**
  * Build the dialog. Call once per widget and keep the element — reopening is
  * {@link openHelpDialog}, which does not rebuild anything.
  *
@@ -74,36 +133,12 @@ const EDGE = 8;
 export function createHelpDialog(
   content: HelpDialogContent,
 ): HTMLDialogElement {
-  const dialog = document.createElement("dialog");
-  dialog.className = "help-dialog dialog-panel";
-
-  const titleId = "help-dialog-title";
-  // Ids inside a shadow root are scoped to it, so this cannot collide with the
-  // page or with another exercise's dialog.
-  dialog.setAttribute("aria-labelledby", titleId);
-
-  const header = document.createElement("div");
-  header.className = "dialog-header";
-
-  const heading = document.createElement("h2");
-  heading.className = "dialog-title";
-  heading.id = titleId;
-  heading.textContent = content.title;
-  header.appendChild(heading);
-
-  const dismiss = document.createElement("button");
-  dismiss.className = "dialog-close";
-  dismiss.type = "button";
-  dismiss.setAttribute("aria-label", content.close);
-  dismiss.title = content.close;
-  dismiss.textContent = "×";
-  dismiss.addEventListener("click", () => dialog.close());
-  header.appendChild(dismiss);
-
-  dialog.appendChild(header);
-
-  const body = document.createElement("div");
-  body.className = "dialog-body help-dialog-body";
+  const { body, dialog } = createDialogFrame(
+    "help-dialog",
+    "help-dialog-title",
+    content.title,
+    content.close,
+  );
 
   for (const paragraph of content.intro) {
     const element = document.createElement("p");
@@ -148,24 +183,6 @@ export function createHelpDialog(
 
     body.appendChild(list);
   }
-
-  dialog.appendChild(body);
-
-  // Click-outside-to-dismiss is not native to <dialog>. The backdrop is painted
-  // by the dialog itself, so a click on it targets the dialog element; a click
-  // on the panel targets something inside it.
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) {
-      dialog.close();
-    }
-  });
-
-  // Browsers restore focus to the previously focused element on close, but only
-  // when it is still focusable and still in the same tree — the widget rerenders
-  // its toolbar, so be explicit rather than lose focus to the document.
-  dialog.addEventListener("close", () => {
-    triggers.get(dialog)?.focus();
-  });
 
   return dialog;
 }

@@ -29,6 +29,11 @@ export function buildAufbauProofPrawitzStrings(i18n: Translator) {
     ...buildProofEngineStrings(i18n),
     ...buildExerciseHelpStrings(i18n),
     ...buildCopySourceStrings(i18n),
+    /** Said by the Ctrl-? dialog in place of the source while the workspace
+     *  holds more than one tree, or none. */
+    "The workspace must hold a single tree to be shown as source.": i18n.t(
+      "The workspace must hold a single tree to be shown as source.",
+    ),
     "Add assumption above": i18n.t("Add assumption above"),
     "Add assumption above (h)": i18n.t("Add assumption above (h)"),
     "Add premise above": i18n.t("Add premise above"),

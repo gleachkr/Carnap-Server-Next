@@ -1409,6 +1409,7 @@ msgstr ""
 msgid "Clone course"
 msgstr ""
 
+#: src/worker/exercise-kit/copy-source-strings.ts
 #: src/worker/exercise-kit/proof/editor-strings.ts
 #: src/worker/exercises/truth-tree/strings.ts
 #: src/worker/web/components.tsx
@@ -1615,6 +1616,7 @@ msgstr ""
 msgid "Copied."
 msgstr ""
 
+#: src/worker/exercise-kit/copy-source-strings.ts
 #: src/worker/web/components.tsx
 msgid "Copy"
 msgstr ""
@@ -4569,6 +4571,10 @@ msgstr ""
 msgid "Show in student assignment lists"
 msgstr ""
 
+#: src/worker/exercise-kit/copy-source-strings.ts
+msgid "Show your work as source"
+msgstr ""
+
 #: src/worker/infrastructure/email/resend.ts
 msgid "Sign in"
 msgstr ""
@@ -5524,6 +5530,10 @@ msgstr ""
 
 #: src/worker/infrastructure/turnstile.ts
 msgid "The verification service could not be reached. Please try again shortly."
+msgstr ""
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "The workspace must hold a single tree to be shown as source."
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts
@@ -6557,6 +6567,10 @@ msgstr ""
 
 #: src/worker/exercises/translation/strings.ts
 msgid "Your translation"
+msgstr ""
+
+#: src/worker/exercise-kit/copy-source-strings.ts
+msgid "Your work as source"
 msgstr ""
 
 #: src/worker/web/profile-prompt.tsx

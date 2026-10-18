@@ -1409,6 +1409,7 @@ msgstr "Clone {title}"
 msgid "Clone course"
 msgstr "Clone course"
 
+#: src/worker/exercise-kit/copy-source-strings.ts
 #: src/worker/exercise-kit/proof/editor-strings.ts
 #: src/worker/exercises/truth-tree/strings.ts
 #: src/worker/web/components.tsx
@@ -1615,6 +1616,7 @@ msgstr "Copied"
 msgid "Copied."
 msgstr "Copied."
 
+#: src/worker/exercise-kit/copy-source-strings.ts
 #: src/worker/web/components.tsx
 msgid "Copy"
 msgstr "Copy"
@@ -4569,6 +4571,10 @@ msgstr "Short-answer question"
 msgid "Show in student assignment lists"
 msgstr "Show in student assignment lists"
 
+#: src/worker/exercise-kit/copy-source-strings.ts
+msgid "Show your work as source"
+msgstr "Show your work as source"
+
 #: src/worker/infrastructure/email/resend.ts
 msgid "Sign in"
 msgstr "Sign in"
@@ -5525,6 +5531,10 @@ msgstr "The verification check did not pass or has expired. Please try again."
 #: src/worker/infrastructure/turnstile.ts
 msgid "The verification service could not be reached. Please try again shortly."
 msgstr "The verification service could not be reached. Please try again shortly."
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "The workspace must hold a single tree to be shown as source."
+msgstr "The workspace must hold a single tree to be shown as source."
 
 #: src/worker/exercises/world/strings.ts
 msgid "The world"
@@ -6558,6 +6568,10 @@ msgstr "Your session has expired. Start the content selection again from your LM
 #: src/worker/exercises/translation/strings.ts
 msgid "Your translation"
 msgstr "Your translation"
+
+#: src/worker/exercise-kit/copy-source-strings.ts
+msgid "Your work as source"
+msgstr "Your work as source"
 
 #: src/worker/web/profile-prompt.tsx
 msgid "Your work shows up under your email address until you add your name."

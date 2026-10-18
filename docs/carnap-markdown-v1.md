@@ -289,6 +289,19 @@ is an exercise.
 Keep an exercise's ID stable when revising it so its recorded work can still
 be associated with that exercise.
 
+### Work as source
+
+In the world, proof tree and Prawitz widgets, whose work is not text the
+student can select, **Ctrl-?** opens a dialog showing the work as it stands,
+written as directive source: the world's object lines or the tree's starter
+lines, which the author preview's **Copy as source** copies. The dialog opens
+on its Copy button, so Enter copies the text. The key works on every form, a
+student's included, and is Ctrl on a Mac too, not Cmd. A student can send
+their work on in that form, and anyone can paste it back into a lesson as an
+exercise's starting point. A Prawitz workspace that is not a single tree has
+no source, and the dialog says so. Linear and Fitch proofs are text already,
+and are copied straight from the editor.
+
 ## Recording and feedback
 
 Three settings control different parts of assessment:

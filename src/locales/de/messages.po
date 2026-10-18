@@ -1409,6 +1409,7 @@ msgstr "{title} duplizieren"
 msgid "Clone course"
 msgstr "Kurs duplizieren"
 
+#: src/worker/exercise-kit/copy-source-strings.ts
 #: src/worker/exercise-kit/proof/editor-strings.ts
 #: src/worker/exercises/truth-tree/strings.ts
 #: src/worker/web/components.tsx
@@ -1615,6 +1616,7 @@ msgstr "Kopiert"
 msgid "Copied."
 msgstr "Kopiert."
 
+#: src/worker/exercise-kit/copy-source-strings.ts
 #: src/worker/web/components.tsx
 msgid "Copy"
 msgstr "Kopieren"
@@ -4569,6 +4571,10 @@ msgstr "Kurzantwort-Übung"
 msgid "Show in student assignment lists"
 msgstr "In den Aufgabenlisten der Studierenden anzeigen"
 
+#: src/worker/exercise-kit/copy-source-strings.ts
+msgid "Show your work as source"
+msgstr "Ihre Arbeit als Quelltext anzeigen"
+
 #: src/worker/infrastructure/email/resend.ts
 msgid "Sign in"
 msgstr "Anmelden"
@@ -5525,6 +5531,10 @@ msgstr "Die Überprüfung ist fehlgeschlagen oder abgelaufen. Bitte versuchen Si
 #: src/worker/infrastructure/turnstile.ts
 msgid "The verification service could not be reached. Please try again shortly."
 msgstr "Der Überprüfungsdienst war nicht erreichbar. Bitte versuchen Sie es in Kürze erneut."
+
+#: src/worker/exercises/aufbau-proof-prawitz/strings.ts
+msgid "The workspace must hold a single tree to be shown as source."
+msgstr "Die Arbeitsfläche muss genau einen Baum enthalten, damit er als Quelltext angezeigt werden kann."
 
 #: src/worker/exercises/world/strings.ts
 msgid "The world"
@@ -6558,6 +6568,10 @@ msgstr "Ihre Sitzung ist abgelaufen. Starten Sie die Inhaltsauswahl erneut aus I
 #: src/worker/exercises/translation/strings.ts
 msgid "Your translation"
 msgstr "Ihre Übersetzung"
+
+#: src/worker/exercise-kit/copy-source-strings.ts
+msgid "Your work as source"
+msgstr "Ihre Arbeit als Quelltext"
 
 #: src/worker/web/profile-prompt.tsx
 msgid "Your work shows up under your email address until you add your name."

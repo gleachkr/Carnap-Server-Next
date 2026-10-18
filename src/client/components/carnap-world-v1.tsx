@@ -76,6 +76,7 @@ import {
   mountHelpTrigger,
   openHelpDialog,
 } from "./help-dialog";
+import { mountShowSource, SHOW_SOURCE_KEYS } from "./show-source";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import {
@@ -1211,6 +1212,9 @@ class CarnapWorld extends CarnapExerciseElement<WorldStringId> {
     this.rerender();
 
     const game = data.variant === "game";
+    // Ctrl-? shows a world the student edits; the game's board is the
+    // author's, not the student's work.
+    const showsSource = this.world !== null && !game;
 
     this.helpDialog = createHelpDialog({
       close: this.t("Close help"),
@@ -1221,7 +1225,17 @@ class CarnapWorld extends CarnapExerciseElement<WorldStringId> {
           : PAIR_INTRO
       ).map((id) => this.t(id)),
       keyboard: this.t("Keyboard"),
-      shortcuts: (game ? GAME_SHORTCUTS : SHORTCUTS).map((shortcut) => ({
+      shortcuts: [
+        ...(game ? GAME_SHORTCUTS : SHORTCUTS),
+        ...(showsSource
+          ? [
+              {
+                action: "Show your work as source" as const,
+                keys: SHOW_SOURCE_KEYS,
+              },
+            ]
+          : []),
+      ].map((shortcut) => ({
         action: this.t(shortcut.action),
         keys: shortcut.keys,
         ...(shortcut.icon === undefined ? {} : { icon: shortcut.icon }),
@@ -1250,6 +1264,15 @@ class CarnapWorld extends CarnapExerciseElement<WorldStringId> {
       mountCopySource(
         this,
         { copied: this.t("Copied."), label: this.t("Copy as source") },
+        () => this.worldSource(),
+      );
+    }
+
+    if (showsSource) {
+      mountShowSource(
+        this,
+        root,
+        (id) => this.t(id),
         () => this.worldSource(),
       );
     }
@@ -1821,8 +1844,11 @@ class CarnapWorld extends CarnapExerciseElement<WorldStringId> {
         }
         break;
       case "?":
-        if (this.helpDialog !== null) {
+        // A bare `?` only: Ctrl-? is the source dialog's.
+        if (this.helpDialog !== null && !ctrl) {
           openHelpDialog(this.helpDialog, event.target as HTMLElement);
+        } else {
+          handled = false;
         }
         break;
       case "z":

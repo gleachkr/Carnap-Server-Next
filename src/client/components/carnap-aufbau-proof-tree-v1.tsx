@@ -101,6 +101,7 @@ import {
   plainProblem,
   problemsText,
 } from "./proof-problem";
+import { mountShowSource, SHOW_SOURCE_KEYS } from "./show-source";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import "../vendor/proofml.mjs";
@@ -473,6 +474,7 @@ const SHORTCUTS: readonly {
     problems: true,
   },
   { action: "Open this help", keys: ["?"] },
+  { action: "Show your work as source", keys: SHOW_SOURCE_KEYS },
 ];
 
 const INTRO_IDS: readonly AufbauProofTreeStringId[] = [
@@ -1093,6 +1095,13 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
       { copied: this.t("Copied."), label: this.t("Copy as source") },
       () => proofTreeStarter(serialize(this.doc.model)),
     );
+    // And on any form, Ctrl-? shows it.
+    mountShowSource(
+      this,
+      root,
+      (id) => this.t(id),
+      () => proofTreeStarter(serialize(this.doc.model)),
+    );
 
     this.gateSubmit((event) => this.gate(event));
     this.dataset.enhanced = "true";
@@ -1393,9 +1402,13 @@ class AufbauProofTree extends ProofExerciseElement<AufbauProofTreeStringId> {
         break;
       case "?": {
         // Anchor to the focused line, which is where the reader is looking.
-        // Focus returns here when the dialog closes.
+        // Focus returns here when the dialog closes. A bare `?` only: Ctrl-?
+        // is the source dialog's.
         const anchor = this.nodeRefs.get(nodeId);
-        if (anchor !== undefined) {
+        if (
+          anchor !== undefined &&
+          !(event.ctrlKey || event.metaKey || event.altKey)
+        ) {
           event.preventDefault();
           this.showHelp(anchor);
         }

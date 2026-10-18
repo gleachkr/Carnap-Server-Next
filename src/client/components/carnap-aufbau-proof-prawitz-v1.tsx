@@ -108,6 +108,7 @@ import {
   plainProblem,
   problemsText,
 } from "./proof-problem";
+import { mountShowSource, SHOW_SOURCE_KEYS } from "./show-source";
 import { ToolbarIcon } from "./toolbar-icon";
 import { TOOLBAR_STYLES, type ToolbarIconName } from "./toolbar-icons";
 import "../vendor/proofml.mjs";
@@ -585,6 +586,7 @@ const SHORTCUTS: readonly {
     problems: true,
   },
   { action: "Open this help", keys: ["?"] },
+  { action: "Show your work as source", keys: SHOW_SOURCE_KEYS },
 ];
 
 const INTRO_IDS: readonly AufbauProofPrawitzStringId[] = [
@@ -1214,17 +1216,15 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
     this.copySource = mountCopySource(
       this,
       { copied: this.t("Copied."), label: this.t("Copy as source") },
-      () => {
-        const [single, ...rest] = this.doc.trees;
-        return single === undefined || rest.length > 0
-          ? null
-          : prawitzStarter(
-              serialize(single, this.assumptionRule),
-              this.assumptionRule,
-              this.sequentSymbol,
-              this.contextSymbol,
-            );
-      },
+      () => this.starter(),
+    );
+    // And on any form, Ctrl-? shows it.
+    mountShowSource(
+      this,
+      root,
+      (id) => this.t(id),
+      () => this.starter(),
+      this.t("The workspace must hold a single tree to be shown as source."),
     );
 
     this.gateSubmit((event) => this.gate(event));
@@ -1238,6 +1238,19 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
     if (this.mount !== null) {
       render(null, this.mount);
     }
+  }
+
+  /** The workspace as starter lines, or null while it is not one tree. */
+  private starter(): string | null {
+    const [single, ...rest] = this.doc.trees;
+    return single === undefined || rest.length > 0
+      ? null
+      : prawitzStarter(
+          serialize(single, this.assumptionRule),
+          this.assumptionRule,
+          this.sequentSymbol,
+          this.contextSymbol,
+        );
   }
 
   /**
@@ -1607,9 +1620,13 @@ class AufbauProofPrawitz extends ProofExerciseElement<AufbauProofPrawitzStringId
       }
       case "?": {
         // Anchor to the focused line, which is where the reader is looking.
-        // Focus returns here when the dialog closes.
+        // Focus returns here when the dialog closes. A bare `?` only: Ctrl-?
+        // is the source dialog's.
         const anchor = this.nodeRefs.get(nodeId);
-        if (anchor !== undefined) {
+        if (
+          anchor !== undefined &&
+          !(event.ctrlKey || event.metaKey || event.altKey)
+        ) {
           event.preventDefault();
           this.showHelp(anchor);
         }
