@@ -3238,6 +3238,73 @@ describe("grade visibility", () => {
     });
   });
 
+  test("the edit form reads a past release back as immediate, and a future one as scheduled", async () => {
+    await withStorage(async (_storage, env) => {
+      const instructor = await login(env, "form-readback@example.test");
+      const courseId = await createCourse(env, instructor);
+      const revision = await createRevision(
+        env,
+        instructor,
+        source("q_form_readback", "Choose yes."),
+      );
+      const editForm = async (assignmentId: string) => {
+        const html = await (
+          await appRequest(
+            createTestApp(),
+            `/courses/${courseId}/instructor/assignments/${assignmentId}/edit`,
+            {
+              headers: {
+                Accept: "text/html",
+                Cookie: instructor.cookieHeader,
+              },
+            },
+            env,
+          )
+        ).text();
+
+        return {
+          at: html.match(/<input[^>]*name="gradesVisibleAt"[^>]*>/)?.[0],
+          select: html.match(
+            /<select[^>]*name="gradesVisibility"[\s\S]*?<\/select>/,
+          )?.[0],
+        };
+      };
+      const immediate = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+        { gradesVisibility: "immediate", title: "Homework" },
+      );
+      const scheduled = await createDraft(
+        env,
+        instructor,
+        courseId,
+        revision.revision.id,
+        {
+          gradesVisibility: "scheduled",
+          gradesVisibleAt: "2031-05-05T00:00:00.000Z",
+          title: "Exam",
+        },
+      );
+
+      const open = await editForm(immediate.assignment.id);
+      const later = await editForm(scheduled.assignment.id);
+
+      // Stored as the moment it was created, but shown as the choice that
+      // wrote it, with no stale time waiting behind "At the time below".
+      expect(open.select).toMatch(
+        /<option selected(="")? value="immediate">/,
+      );
+      expect(open.at).toBeDefined();
+      expect(open.at).not.toMatch(/value="[^"]+"/);
+      expect(later.select).toMatch(
+        /<option selected(="")? value="scheduled">/,
+      );
+      expect(later.at).toMatch(/value="[^"]+"/);
+    });
+  });
+
   test("the form asks when submitted work shows, and keeps asking once published", async () => {
     await withStorage(async (_storage, env) => {
       const instructor = await login(env, "form-work@example.test");

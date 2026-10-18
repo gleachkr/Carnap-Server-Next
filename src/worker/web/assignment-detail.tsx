@@ -341,7 +341,20 @@ export function editAssignmentAction(
 
 export function assignmentValues(
   assignment: Assignment,
+  now: Timestamp,
 ): AssignmentFormValues {
+  // A stored assignment knows only its timestamp, so the choice is read back
+  // out of it. No timestamp is the release control's job. A release already
+  // past reads as "immediate", which is what this form writes it as: the choice
+  // is only offered on a draft, where nothing can have been submitted yet, so
+  // the two cannot differ. Only a future release is a schedule.
+  const gradesVisibility =
+    assignment.gradesVisibleAt === null
+      ? "manual"
+      : gradesReleased(assignment, now)
+        ? "immediate"
+        : "scheduled";
+
   return {
     assessmentMode: assignment.assessmentMode,
     availableFrom: assignment.availableFrom ?? "",
@@ -350,13 +363,13 @@ export function assignmentValues(
     description: assignment.description,
     displayOrder: assignment.displayOrder.toString(),
     dueAt: assignment.dueAt ?? "",
-    gradesVisibleAt: assignment.gradesVisibleAt ?? "",
-    // A stored assignment knows only its timestamp, so the choice is read back
-    // out of it: no timestamp is the release control's job, and any timestamp —
-    // including one this form wrote as "immediate" — round-trips as the time it
-    // holds, which is what it will do next time it is saved.
-    gradesVisibility:
-      assignment.gradesVisibleAt === null ? "manual" : "scheduled",
+    // The time field is filled only for a schedule, so switching an immediate
+    // assignment to "At the time below" starts from a blank, not a past time.
+    gradesVisibleAt:
+      gradesVisibility === "scheduled"
+        ? (assignment.gradesVisibleAt ?? "")
+        : "",
+    gradesVisibility,
     listed: assignment.listed ? "1" : "0",
     maxAttempts: assignment.maxAttempts.toString(),
     timeLimitMinutes: assignment.timeLimitMinutes?.toString() ?? "",
@@ -2855,6 +2868,8 @@ export function renderEditAssignmentPage(
     readonly assignmentId: string;
     readonly courseId: string;
     readonly courseTitle: string;
+    /** The request's clock, which tells a past grade release from a future one. */
+    readonly now: Timestamp;
     readonly revisions: readonly AssignmentRevisionOption[];
   },
 ): Response {
@@ -2896,7 +2911,7 @@ export function renderEditAssignmentPage(
       title={
         published ? i18n.t("Published settings") : i18n.t("Draft settings")
       }
-      values={assignmentValues(model.assignment)}
+      values={assignmentValues(model.assignment, model.now)}
       {...(published ? { mode: "published" as const } : {})}
     />,
   );

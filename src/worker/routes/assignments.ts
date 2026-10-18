@@ -620,6 +620,7 @@ async function editAssignmentPage(
     assignmentId,
     courseId,
     courseTitle: await courseTitleFor(context, courseId),
+    now: timestampNow(new Date()),
     revisions:
       detail.assignment.state === "draft"
         ? await authorRevisionOptions(context, detail.contentItem.id)
