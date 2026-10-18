@@ -3385,6 +3385,11 @@ msgstr "No students are enrolled in this course yet."
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/ui-strings.ts
+msgid "No submission in this attempt · –/{maxScore}."
+msgstr "No submission in this attempt · –/{maxScore}."
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
 msgid "No submission in this attempt."
 msgstr "No submission in this attempt."
 
@@ -4773,6 +4778,11 @@ msgstr "Submitted"
 #: src/worker/web/assignment-detail.tsx
 msgid "Submitted {when}"
 msgstr "Submitted {when}"
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Submitted at {when} · –/{maxScore}."
+msgstr "Submitted at {when} · –/{maxScore}."
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/ui-strings.ts

@@ -132,10 +132,12 @@ export interface ExerciseUiStrings {
   readonly locale: string;
   readonly noAnswerFields: string;
   readonly noSubmission: string;
+  readonly noSubmissionPoints: string;
   readonly notRecorded: string;
   readonly submitFailed: string;
-  /** Both status sentences, whole, so a translator owns the word order. */
+  /** Each status sentence whole, so a translator owns the word order. */
   readonly submittedAt: string;
+  readonly submittedAtPoints: string;
   readonly submittedAtScored: string;
   readonly submitting: string;
 }
@@ -148,6 +150,10 @@ export function exerciseUiStrings(i18n: Translator): ExerciseUiStrings {
     locale: i18n.locale,
     noAnswerFields: i18n.t("This exercise form has no known answer fields."),
     noSubmission: i18n.t("No submission in this attempt."),
+    noSubmissionPoints: i18n.t(
+      "No submission in this attempt · –/{maxScore}.",
+      placeholders("maxScore"),
+    ),
     notRecorded: i18n.t(
       "Not correct yet, so nothing was recorded. Try again.",
     ),
@@ -156,6 +162,10 @@ export function exerciseUiStrings(i18n: Translator): ExerciseUiStrings {
     // only learns them from the submission response. `placeholders` is what keeps
     // them intact through the format step.
     submittedAt: i18n.t("Submitted at {when}.", placeholders("when")),
+    submittedAtPoints: i18n.t(
+      "Submitted at {when} · –/{maxScore}.",
+      placeholders("maxScore", "when"),
+    ),
     submittedAtScored: i18n.t(
       "Submitted at {when} · {score}/{maxScore}.",
       placeholders("maxScore", "score", "when"),

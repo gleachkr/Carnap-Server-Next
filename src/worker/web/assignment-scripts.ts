@@ -127,18 +127,38 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
       : submittedFormat.format(date);
   }
 
-  function statusText(state) {
+  // \`points\` is the exercise's declared value, from the form's data-points:
+  // the line ends in it before there is a score to show (see
+  // \`exerciseStatusText\` for the server's half, which this mirrors).
+  function statusText(state, points) {
     if (state === undefined) {
-      return S.noSubmission || "No submission in this attempt.";
+      return points === 0
+        ? S.noSubmission || "No submission in this attempt."
+        : fill(
+            S.noSubmissionPoints ||
+              "No submission in this attempt · –/{maxScore}.",
+            { maxScore: points },
+          );
     }
 
     const evaluation = state.evaluation;
     const when = submittedText(state.submission.submittedAt);
 
     // No evaluation, or one whose numbers this student may not see yet: the
-    // line says the work is in and stops there. A score is a grade, and grades
-    // wait for the release date however much the exercise is willing to say.
-    if (!evaluation || evaluation.score === null || evaluation.maxScore === 0) {
+    // line says the work is in, and what it is worth. A score is a grade, and
+    // grades wait for the release date however much the exercise is willing
+    // to say.
+    if (!evaluation || evaluation.score === null) {
+      return points === 0
+        ? fill(S.submittedAt || "Submitted at {when}.", { when })
+        : fill(S.submittedAtPoints || "Submitted at {when} · –/{maxScore}.", {
+            maxScore: points,
+            when,
+          });
+    }
+
+    // A zero-point exercise has no score worth a line: \`0/0\` says nothing.
+    if (evaluation.maxScore === 0) {
       return fill(S.submittedAt || "Submitted at {when}.", { when });
     }
 
@@ -294,11 +314,12 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
 
   for (const form of document.querySelectorAll("form.exercise-submission")) {
     const exerciseId = form.dataset.exerciseId || "";
+    const points = Number(form.dataset.points) || 0;
     const status = form.querySelector("[data-exercise-status]");
     const button = form.querySelector("button[type=submit]");
 
     if (status !== null) {
-      status.textContent = statusText(exercises[exerciseId]);
+      status.textContent = statusText(exercises[exerciseId], points);
     }
 
     setMark(form, recordedVerdict(exercises[exerciseId]));
@@ -382,7 +403,7 @@ ${readStringsPrelude(EXERCISE_UI_STRINGS_ATTRIBUTE)}
           exercises[exerciseId] = stateFromResponse(body);
 
           if (status !== null) {
-            status.textContent = statusText(exercises[exerciseId]);
+            status.textContent = statusText(exercises[exerciseId], points);
           }
 
           setMark(form, recordedVerdict(exercises[exerciseId]));

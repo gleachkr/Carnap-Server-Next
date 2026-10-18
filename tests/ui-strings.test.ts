@@ -33,6 +33,16 @@ const CLIENT_FILLED: readonly (readonly [
     ["when"],
   ],
   [
+    "exercise.noSubmissionPoints",
+    exerciseUiStrings(i18nFor("de")).noSubmissionPoints,
+    ["maxScore"],
+  ],
+  [
+    "exercise.submittedAtPoints",
+    exerciseUiStrings(i18nFor("de")).submittedAtPoints,
+    ["when", "maxScore"],
+  ],
+  [
     "exercise.submittedAtScored",
     exerciseUiStrings(i18nFor("de")).submittedAtScored,
     ["when", "score", "maxScore"],
@@ -64,6 +74,12 @@ describe("client-filled UI strings", () => {
     const i18n = i18nFor(DEFAULT_LOCALE);
 
     expect(exerciseUiStrings(i18n).submittedAt).toBe("Submitted at {when}.");
+    expect(exerciseUiStrings(i18n).noSubmissionPoints).toBe(
+      "No submission in this attempt · –/{maxScore}.",
+    );
+    expect(exerciseUiStrings(i18n).submittedAtPoints).toBe(
+      "Submitted at {when} · –/{maxScore}.",
+    );
     expect(exerciseUiStrings(i18n).submittedAtScored).toBe(
       "Submitted at {when} · {score}/{maxScore}.",
     );

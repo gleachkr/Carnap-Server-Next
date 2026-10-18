@@ -1339,6 +1339,12 @@ async function loadStudentAssignmentView(
               ];
             }),
           ),
+          pointsByExercise: new Map(
+            detail.artifact.manifest.map((item) => [
+              item.id,
+              item.nominalPoints,
+            ]),
+          ),
           runtimeState,
         };
 

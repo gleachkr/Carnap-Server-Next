@@ -263,6 +263,11 @@ export interface InlineSubmissionContext {
    * exercise's entry is empty.
    */
   readonly optionsByExercise: ReadonlyMap<string, ExerciseHydrationOptions>;
+  /**
+   * Each exercise's declared points, for the status line, keyed by exercise id
+   * for the same reason: they live on the manifest entry, not the node.
+   */
+  readonly pointsByExercise: ReadonlyMap<string, number>;
   readonly runtimeState: ExerciseRuntimeState;
 }
 
@@ -362,19 +367,29 @@ export function assignmentValues(
 }
 
 /**
- * The exercise status line. Two whole messages rather than a stem plus an
- * appended score: a translator needs to control the word order and the
- * separator, which a concatenation decides for them. The client half of this
- * (`EXERCISE_RUNTIME_SCRIPT` in `./assignment-scripts`) uses the same two ids,
- * so the line reads identically
- * whether the server rendered it or the runtime replaced it after a submit.
+ * The exercise status line. Whole messages rather than a stem plus an appended
+ * score: a translator needs to control the word order and the separator, which
+ * a concatenation decides for them. The client half of this
+ * (`EXERCISE_RUNTIME_SCRIPT` in `./assignment-scripts`) uses the same ids, so
+ * the line reads identically whether the server rendered it or the runtime
+ * replaced it after a submit.
+ *
+ * The line ends in what the exercise is worth, scored or not: `–/2` before
+ * there is a score to show, `1/2` once there is. `points` is the author's
+ * declared value, for the first case; a score keeps the points it was graded
+ * out of, which a correction may since have changed.
  */
 function exerciseStatusText(
   i18n: Translator,
   state: ExerciseRuntimeSubmissionState | undefined,
+  points: number,
 ): string {
   if (state === undefined) {
-    return i18n.t("No submission in this attempt.");
+    return points === 0
+      ? i18n.t("No submission in this attempt.")
+      : i18n.t("No submission in this attempt · –/{maxScore}.", {
+          maxScore: points,
+        });
   }
 
   const evaluation = state.evaluation;
@@ -385,12 +400,17 @@ function exerciseStatusText(
   // Either no evaluation, or one whose numbers are still behind the release
   // date. The script's `statusText` draws the same line; both have to, since
   // this renders the first paint and that one every paint after.
+  if (evaluation === null || evaluation.score === null) {
+    return points === 0
+      ? i18n.t("Submitted at {when}.", { when })
+      : i18n.t("Submitted at {when} · –/{maxScore}.", {
+          maxScore: points,
+          when,
+        });
+  }
+
   // A zero-point exercise has no score worth a line: `0/0` says nothing.
-  if (
-    evaluation === null ||
-    evaluation.score === null ||
-    evaluation.maxScore === 0
-  ) {
+  if (evaluation.maxScore === 0) {
     return i18n.t("Submitted at {when}.", { when });
   }
 
@@ -695,6 +715,13 @@ function exerciseFormAction(submission: InlineSubmissionContext): string {
   );
 }
 
+function exercisePoints(
+  submission: InlineSubmissionContext,
+  node: Extract<ContentNode, { readonly kind: "exercise" }>,
+): number {
+  return submission.pointsByExercise.get(node.exerciseId) ?? 0;
+}
+
 function exerciseHydration(
   node: Extract<ContentNode, { readonly kind: "exercise" }>,
   submission: InlineSubmissionContext,
@@ -733,6 +760,7 @@ function exerciseActions(
     status: exerciseStatusText(
       i18n,
       submission.runtimeState[node.exerciseId],
+      exercisePoints(submission, node),
     ),
   });
 }
@@ -765,6 +793,7 @@ const ExerciseFormShell: FC<{
       data-content-revision-id={submission.contentRevisionId}
       data-exercise-id={node.exerciseId}
       data-exercise-kind={node.exerciseKind}
+      data-points={exercisePoints(submission, node)}
       method="post"
     >
       <CsrfInput context={submission.context} />

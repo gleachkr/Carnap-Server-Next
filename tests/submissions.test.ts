@@ -329,7 +329,8 @@ describe("multiple-choice submissions", () => {
       expect(documentHtml).toContain("data-carnap-exercise-runtime-state");
       expect(documentHtml).toContain("data-exercise-hydration");
       expect(documentHtml).toContain("data-exercise-status");
-      expect(documentHtml).toContain("No submission in this attempt.");
+      expect(documentHtml).toContain("No submission in this attempt · –/2.");
+      expect(documentHtml).toContain('data-points="2"');
       // The exercise element ships its chrome in a Declarative Shadow Root that
       // is inert (aria-busy) until the bundle upgrades it in place.
       expect(documentHtml).toContain('shadowrootmode="open"');

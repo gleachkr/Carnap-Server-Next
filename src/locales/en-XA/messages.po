@@ -3385,6 +3385,11 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 #: src/worker/web/ui-strings.ts
+msgid "No submission in this attempt · –/{maxScore}."
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
 msgid "No submission in this attempt."
 msgstr ""
 
@@ -4772,6 +4777,11 @@ msgstr ""
 
 #: src/worker/web/assignment-detail.tsx
 msgid "Submitted {when}"
+msgstr ""
+
+#: src/worker/web/assignment-detail.tsx
+#: src/worker/web/ui-strings.ts
+msgid "Submitted at {when} · –/{maxScore}."
 msgstr ""
 
 #: src/worker/web/assignment-detail.tsx

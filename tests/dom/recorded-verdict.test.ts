@@ -18,17 +18,25 @@ import { LOCAL_TIMESTAMP_FIELDS } from "../../src/worker/web/timestamp-formats";
  * not, so it reads the verdict the server sends instead, and a mark that went
  * permanently idle would otherwise be invisible until someone looked at a page.
  */
-function pageWith(evaluation: unknown, strings: object = {}): string {
+function pageWith(
+  evaluation: unknown,
+  strings: object = {},
+  points?: number,
+): string {
+  // `undefined` is no submission at all, as the server sends it: no entry.
   const state = {
-    exercises: {
-      q1: {
-        evaluation,
-        submission: {
-          exerciseId: "q1",
-          submittedAt: "2026-08-07T12:00:00.000Z",
-        },
-      },
-    },
+    exercises:
+      evaluation === undefined
+        ? {}
+        : {
+            q1: {
+              evaluation,
+              submission: {
+                exerciseId: "q1",
+                submittedAt: "2026-08-07T12:00:00.000Z",
+              },
+            },
+          },
   };
   const dom = new JSDOM(
     `<!doctype html><html lang="en"><head><title>Content</title></head><body>
@@ -39,7 +47,9 @@ function pageWith(evaluation: unknown, strings: object = {}): string {
          strings,
        )}</script>
        <form action="/attempts/a1/submissions" class="exercise-submission"
-             data-exercise-id="q1" method="post">
+             data-exercise-id="q1"${
+               points === undefined ? "" : ` data-points="${points}"`
+} method="post">
          <input name="csrfToken" type="hidden" value="csrf">
          <input name="exerciseId" type="hidden" value="q1">
          <input name="answerData" type="hidden">
@@ -118,6 +128,37 @@ describe("the mark for work already recorded", () => {
     // on an instructor — is not a claim that the work is wrong.
     expect(pageWith(null)).toBe(
       `${CORRECTNESS_MARK_GLYPHS.idle}|Submitted at ${AT}.`,
+    );
+  });
+});
+
+describe("the points on the status line", () => {
+  test("say what the exercise is worth before there is a score to show", () => {
+    expect(pageWith(undefined, {}, 2)).toBe(
+      `${CORRECTNESS_MARK_GLYPHS.idle}|No submission in this attempt · –/2.`,
+    );
+    expect(pageWith(null, {}, 2)).toBe(
+      `${CORRECTNESS_MARK_GLYPHS.idle}|Submitted at ${AT} · –/2.`,
+    );
+    expect(pageWith(recorded({ verdict: "correct" }), {}, 2)).toBe(
+      `${CORRECTNESS_MARK_GLYPHS.ok}|Submitted at ${AT} · –/2.`,
+    );
+  });
+
+  test("give way to the score, out of the points it was graded out of", () => {
+    // Declared 3 now, graded out of 2 then: the score says what it was.
+    expect(
+      pageWith(
+        recorded({ maxScore: 2, score: 1, verdict: "partial" }),
+        {},
+        3,
+      ),
+    ).toBe(`${CORRECTNESS_MARK_GLYPHS.idle}|Submitted at ${AT} · 1/2.`);
+  });
+
+  test("are left off a zero-point exercise", () => {
+    expect(pageWith(undefined, {}, 0)).toBe(
+      `${CORRECTNESS_MARK_GLYPHS.idle}|No submission in this attempt.`,
     );
   });
 });
