@@ -1,4 +1,3 @@
-import { buildCopySourceStrings } from "../../exercise-kit/copy-source-strings";
 import { buildExerciseHelpStrings } from "../../exercise-kit/help-strings";
 import { buildProofEngineStrings } from "../../exercise-kit/proof/engine-strings";
 import { placeholders, type Translator } from "../../i18n/translator";
@@ -26,7 +25,6 @@ export function buildTruthTreeStrings(i18n: Translator) {
     // ——— The parser's sentences: a student types every row.
     ...buildFormulaParserStrings(i18n),
     ...buildExerciseHelpStrings(i18n),
-    ...buildCopySourceStrings(i18n),
     // The engine's, since the tree is compiled as a proof is (gh #46).
     ...buildProofEngineStrings(i18n),
 
