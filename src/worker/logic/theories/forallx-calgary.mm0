@@ -135,7 +135,10 @@
 -- not one of them, so `\/` and `/\` survive as the tokens `or` and `and`
 -- declare; the price is that the substitution notations below are spelled with
 -- spaces, `{x / te}`, since nothing splits `{x/te}` for us.
-delimiter $ ( ) [ ] , ; { } $;
+-- The context join is a right delimiter only: a chunk breaks before it, not
+-- after, which is MM0's reading and also the display printer's layout,
+-- `A; B ⊢ C`. The comma stays two-sided, so arguments print tight, `R(a,b)`.
+delimiter $ ( ) [ ] , { } $ $ ( ) [ ] , { } ; $;
 
 -- `sentence` is uninterpreted metadata to @aufbau/syntax — it records which sort
 -- *this application* reads student input at, so the reader can name it instead
@@ -429,6 +432,9 @@ axiom iff_congr (ph ps ch th: wff):
 axiom ideq_congr (te ue ve we: tm):
   $ te ≐ ue $ > $ ve ≐ we $ > $ (te = ve) ⟺ (ue = we) $;
 --| @congr
+axiom neq_congr (te ue ve we: tm):
+  $ te ≐ ue $ > $ ve ≐ we $ > $ (te ≠ ve) ⟺ (ue ≠ we) $;
+--| @congr
 axiom all_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∀ x ph ⟺ ∀ x ps $;
 --| @congr
 axiom ex_congr {x: var} (ph ps: wff x): $ ph ⟺ ps $ > $ ∃ x ph ⟺ ∃ x ps $;
@@ -541,6 +547,12 @@ axiom sb_f_top {x: var} (te: tm x): $ {x / te} ⊤ ⟺ ⊤ $;
 --| @rewrite
 axiom sb_f_ideq {x: var} (te: tm x) (ue ve: tm x):
   $ {x / te} (ue = ve) ⟺ ((tsub x / te ue) = (tsub x / te ve)) $;
+-- `≠` is a def, which matching sees through but normalization does not: it
+-- keys on the head constructor, and a def is one, so `≠` needs its own
+-- substitution and congruence rules (`neq_congr`). Both hold by unfolding.
+--| @rewrite
+axiom sb_f_neq {x: var} (te: tm x) (ue ve: tm x):
+  $ {x / te} (ue ≠ ve) ⟺ ((tsub x / te ue) ≠ (tsub x / te ve)) $;
 --| @rewrite
 axiom sb_f_all {x y: var} (te: tm x) (ph: wff x y):
   $ {x / te} (∀ y ph) ⟺ ∀ y ({x / te} ph) $;
