@@ -1167,10 +1167,6 @@ msgstr "Available-from must be before available-until."
 msgid "Available-until extension minutes"
 msgstr "Available-until extension minutes"
 
-#: src/worker/web/content.tsx
-msgid "Back to the content item"
-msgstr "Back to the content item"
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Before you start"
 msgstr "Before you start"
@@ -4230,10 +4226,6 @@ msgstr "Revision details must be 500 characters or fewer."
 #: src/worker/routes/content.ts
 msgid "Revision details updated."
 msgstr "Revision details updated."
-
-#: src/worker/web/content.tsx
-msgid "Revision not created"
-msgstr "Revision not created"
 
 #: src/worker/web/content.tsx
 msgid "Revision source"

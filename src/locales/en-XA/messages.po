@@ -1167,10 +1167,6 @@ msgstr ""
 msgid "Available-until extension minutes"
 msgstr ""
 
-#: src/worker/web/content.tsx
-msgid "Back to the content item"
-msgstr ""
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Before you start"
 msgstr ""
@@ -4229,10 +4225,6 @@ msgstr ""
 
 #: src/worker/routes/content.ts
 msgid "Revision details updated."
-msgstr ""
-
-#: src/worker/web/content.tsx
-msgid "Revision not created"
 msgstr ""
 
 #: src/worker/web/content.tsx

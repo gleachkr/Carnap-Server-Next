@@ -1167,10 +1167,6 @@ msgstr "„Verfügbar ab“ muss vor „Verfügbar bis“ liegen."
 msgid "Available-until extension minutes"
 msgstr "Verlängerung der Verfügbarkeit in Minuten"
 
-#: src/worker/web/content.tsx
-msgid "Back to the content item"
-msgstr "Zurück zum Inhaltsobjekt"
-
 #: src/worker/web/assignment-detail.tsx
 msgid "Before you start"
 msgstr "Bevor Sie beginnen"
@@ -4230,10 +4226,6 @@ msgstr "Details der Revision dürfen höchstens 500 Zeichen lang sein."
 #: src/worker/routes/content.ts
 msgid "Revision details updated."
 msgstr "Details der Revision aktualisiert."
-
-#: src/worker/web/content.tsx
-msgid "Revision not created"
-msgstr "Revision nicht angelegt"
 
 #: src/worker/web/content.tsx
 msgid "Revision source"

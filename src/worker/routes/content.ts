@@ -37,7 +37,6 @@ import {
   renderContentItem,
   renderContentLibrary,
   renderRevision,
-  renderRevisionCreateError,
   renderRevisionDocument,
   renderRevisionEditor,
   sampleSource,
@@ -339,34 +338,6 @@ async function itemPage(context: Context<AppBindings>): Promise<Response> {
   }
 }
 
-async function createRevisionFromForm(
-  context: Context<AppBindings>,
-): Promise<Response> {
-  const actor = requireAuthenticated(context);
-  const itemId = requiredParam(context, "itemId");
-  const form = await context.req.raw.formData();
-  const sourceText = await revisionSourceTextFromForm(form);
-
-  try {
-    await contentService(context).createRevision(actor, itemId, {
-      details: fieldValue(form.get("details")),
-      sourceText,
-    });
-
-    return redirect(`/content/${itemId}?revisionCreated=1`);
-  } catch (error) {
-    if (error instanceof AppHttpError) {
-      return renderRevisionCreateError(context, {
-        itemId,
-        message: error.localize(context.get("i18n")),
-        status: error.status,
-      });
-    }
-
-    throw error;
-  }
-}
-
 /**
  * Archive or unarchive, from the item's row in the library. The reader goes
  * back to the library, where the row has moved between the table and the
@@ -590,7 +561,12 @@ async function revisionEditorPage(
   }
 }
 
-async function revisionEditorSubmit(
+/**
+ * A save from the editor or from the upload bar. A source that does not compile
+ * reopens the editor on it, listing every diagnostic by line: an uploaded file
+ * was written elsewhere, so this is the author's first sight of its errors.
+ */
+async function createRevisionFromForm(
   context: Context<AppBindings>,
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
@@ -618,7 +594,7 @@ async function revisionEditorSubmit(
   }
 
   const form = await context.req.raw.formData();
-  const sourceText = fieldValue(form.get("sourceText"));
+  const sourceText = await revisionSourceTextFromForm(form);
   const details = fieldValue(form.get("details"));
 
   // Previewing is client-side now; the only thing this form does is save.
@@ -1056,7 +1032,7 @@ contentRoutes.post("/:itemId/title", async (context) => {
 
 contentRoutes.get("/:itemId/revisions/new", revisionEditorPage);
 
-contentRoutes.post("/:itemId/revisions/new", revisionEditorSubmit);
+contentRoutes.post("/:itemId/revisions/new", createRevisionFromForm);
 
 contentRoutes.post("/:itemId/revisions", async (context) => {
   if (isFormSubmission(context)) {

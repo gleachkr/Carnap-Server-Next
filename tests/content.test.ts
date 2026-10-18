@@ -1610,6 +1610,55 @@ describe("content routes", () => {
     });
   });
 
+  test("an upload that does not compile opens the editor on it (gh #15)", async () => {
+    await withStorage(async (_storage, env) => {
+      const author = await login(env, "broken-upload@example.test");
+      const item = await createContent(env, author);
+      const form = new FormData();
+      const broken = [
+        "# Broken",
+        "",
+        "::::multiple-choice{#q}",
+        "Pick.",
+        "",
+        "- [x] a | A",
+        "::::",
+        "",
+        ":::truth-table{#t}",
+        "- P &&& Q",
+        ":::",
+      ].join("\n");
+
+      form.set("csrfToken", author.csrfToken);
+      form.set("details", "From my editor");
+      form.set(
+        "sourceFile",
+        new File([broken], "lesson.md", { type: "text/markdown" }),
+      );
+
+      const response = await appRequest(
+        createTestApp(),
+        `/content/${item.item.id}/revisions`,
+        {
+          body: form,
+          headers: { Accept: "text/html", Cookie: author.cookieHeader },
+          method: "POST",
+        },
+        env,
+      );
+      const html = await response.text();
+
+      expect(response.status).toBe(400);
+      // The file is in the editor, ready to fix, with the note it came with —
+      expect(html).toContain('name="sourceText"');
+      expect(html).toContain("- P &amp;&amp;&amp; Q");
+      expect(html).toContain('value="From my editor"');
+      // and every complaint is listed by line, not just the first.
+      expect(html).toContain("<code>not_enough_options</code> line 3:");
+      expect(html).toContain("<code>invalid_formula</code> line 10:");
+    });
+  });
+
   test("a revision carries the note the author saved with it", async () => {
     await withStorage(async (_storage, env) => {
       const author = await login(env, "noting-author@example.test");

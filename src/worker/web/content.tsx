@@ -1097,34 +1097,6 @@ export function renderContentItem(
   );
 }
 
-export function renderRevisionCreateError(
-  context: Context<AppBindings>,
-  options: {
-    readonly itemId: string;
-    readonly message: string;
-    readonly status: PageStatus;
-  },
-): Response {
-  const i18n = context.get("i18n");
-
-  return renderShell(
-    context,
-    {
-      breadcrumb: [contentCrumb(i18n)],
-      status: options.status,
-      title: i18n.t("Revision not created"),
-    },
-    <>
-      <ErrorSummary>{options.message}</ErrorSummary>
-      <p>
-        <a class="button" href={`/content/${options.itemId}`}>
-          {i18n.t("Back to the content item")}
-        </a>
-      </p>
-    </>,
-  );
-}
-
 export function renderRevisionEditor(
   context: Context<AppBindings>,
   model: {
