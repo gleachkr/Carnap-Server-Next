@@ -351,48 +351,54 @@ function bodyRow(
 }
 
 /**
- * The single given (if any) a partial table should pre-fill into its row, plus
- * whether it is frozen. Only a lone visible given is pre-filled: with several
- * givens they are alternatives (ambiguous to show), and `hiddenGivens` keeps them
- * off the grid entirely. In both those cases the row starts blank.
+ * What a partial table's row starts with. A lone visible given pre-fills the
+ * cells it pins: with several givens they are alternatives (ambiguous to
+ * show), and `hiddenGivens` keeps them off the grid entirely. The constraint
+ * formulas before a colon are the exception: every given pins them alike, and
+ * they show, locked, whatever else is hidden — they are what the row assumes.
  */
-function partialDisplay(
-  publicData: TruthTablePublicData,
-): { given: TruthTableGivenRow; locked: boolean } | null {
-  const givens = publicData.givens;
+interface PartialDisplay {
+  /** The given pre-filled into the row, if any. */
+  readonly shown: TruthTableGivenRow | null;
+  /** Whether {@link shown}'s pins are locked (`strictGivens`). */
+  readonly locked: boolean;
+  /** How many leading formulas are constraints. */
+  readonly constraintCount: number;
+  /** The given whose constraint pins are shown (all agree), if any. */
+  readonly constraints: TruthTableGivenRow | null;
+}
 
-  if (
-    publicData.variant !== "partial" ||
-    publicData.options.hiddenGivens ||
-    !Array.isArray(givens) ||
-    givens.length !== 1
-  ) {
-    return null;
-  }
+function partialDisplay(publicData: TruthTablePublicData): PartialDisplay {
+  const givens = Array.isArray(publicData.givens) ? publicData.givens : [];
+  const lone =
+    !publicData.options.hiddenGivens && givens.length === 1
+      ? (givens[0] ?? null)
+      : null;
 
-  const given = givens[0];
-
-  return given === undefined
-    ? null
-    : { given, locked: publicData.options.strictGivens === true };
+  return {
+    constraintCount: publicData.constraintCount ?? 0,
+    constraints: givens[0] ?? null,
+    locked: publicData.options.strictGivens === true,
+    shown: lone,
+  };
 }
 
 /**
  * The single body row of a `partial` table: the student picks the valuation and
  * fills every cell (the `fill` scope does not apply — with no fixed key there is
- * nothing to pre-fill the omitted cells with). A lone visible given pre-fills the
- * cells it pins, frozen when `strictGivens` is set.
+ * nothing to pre-fill the omitted cells with), starting from what
+ * {@link partialDisplay} gives.
  */
 function partialBodyRow(
   table: ResolvedTable,
   marks: CellMarks,
-  display: { given: TruthTableGivenRow; locked: boolean } | null,
+  display: PartialDisplay,
   strings: TruthTableStrings,
 ): string {
   const referenceCells = table.atoms
     .map((atom, atomIndex) => {
-      const pinned = display?.given.reference[atomIndex] ?? "";
-      const locked = display?.locked === true && pinned !== "";
+      const pinned = display.shown?.reference[atomIndex] ?? "";
+      const locked = display.locked && pinned !== "";
       return bodyCell(
         `data-tt-role="reference" data-tt-row="0" data-tt-atom="${atomIndex}"`,
         !locked,
@@ -406,6 +412,8 @@ function partialBodyRow(
 
   const formulaCells = table.formulas
     .map((formula, formulaIndex) => {
+      const constraint = formulaIndex < display.constraintCount;
+      const given = constraint ? display.constraints : display.shown;
       let cellIndex = -1;
 
       return formula.segments
@@ -419,9 +427,8 @@ function partialBodyRow(
           cellIndex += 1;
           const main = segment.isMain ? " tt-main" : "";
           // A partial given may pin any cell of the formula, not just its main.
-          const pinned =
-            display?.given.cells[formulaIndex]?.[cellIndex] ?? "";
-          const locked = display?.locked === true && pinned !== "";
+          const pinned = given?.cells[formulaIndex]?.[cellIndex] ?? "";
+          const locked = pinned !== "" && (constraint || display.locked);
 
           return bodyCell(
             `data-tt-role="cell" data-tt-formula="${formulaIndex}" data-tt-row="0" data-tt-cell="${cellIndex}"`,

@@ -13,6 +13,7 @@ import {
   counterexampleHolds,
   fillableCellCount,
   gradeTruthTable,
+  isTruthTablePublicData,
   referenceFillable,
   resolveTable,
   truthTableScoreFraction,
@@ -1401,6 +1402,150 @@ describe("truth-table partial", () => {
     );
     expect(html).toContain("That row is correct.");
     expect((html.match(/<tr/g) ?? []).length).toBe(2);
+  });
+});
+
+describe("truth-table partial constraints (gh #47)", () => {
+  // Carnap's `Q : Q->P`: the formulas before the colon are constraints, whose
+  // givens show even under hiddenGivens. Atoms sort to [P, Q]; `Q` lays out
+  // as [Q] and `Q -> P` as [Q, ->, P].
+  const ASSUME_Q = directive(
+    '#p-assume-q variant="partial" options="hiddenGivens"',
+    "Make Q -> P true, assuming Q is true.\n\n- Q : Q -> P\n\n. . | T | . T .",
+  );
+
+  test("compiles the formulas before the colon as constraints", async () => {
+    const data = publicDataOf(
+      (await compileArtifact(ASSUME_Q)).manifest[0] as ExerciseManifestItem,
+    );
+    expect(data.formulas.length).toBe(2);
+    expect(data.constraintCount).toBe(1);
+    expect(data.givens).toEqual([
+      { cells: [["T"], ["", "T", ""]], reference: ["", ""] },
+    ]);
+  });
+
+  test("shows a constraint's given, locked, and hides the rest", async () => {
+    const html = renderCompiledContent(
+      await compileArtifact(ASSUME_Q),
+      i18nFor("en"),
+    );
+    expect(html).toContain(
+      '<span class="tt-given" data-tt-role="cell" data-tt-formula="0" data-tt-row="0" data-tt-cell="0" data-tt-value="T">T</span>',
+    );
+    // The hidden pin on `->` is not given away.
+    expect(html).not.toContain(
+      'data-tt-formula="1" data-tt-row="0" data-tt-cell="1" data-tt-value="T"',
+    );
+  });
+
+  test("a table without a colon has no constraints", async () => {
+    const data = publicDataOf(
+      (
+        await compileArtifact(
+          directive('#p-plain variant="partial"', "- Q, Q -> P"),
+        )
+      ).manifest[0] as ExerciseManifestItem,
+    );
+    expect(data.constraintCount).toBeUndefined();
+  });
+
+  test("the row must still satisfy the hidden givens", async () => {
+    const data = publicDataOf(
+      (await compileArtifact(ASSUME_Q)).manifest[0] as ExerciseManifestItem,
+    );
+    const accepted = gradeTruthTable(data, {
+      cells: [[["T"]], [["T", "T", "T"]]],
+      reference: [["T", "T"]],
+    });
+    expect(accepted?.allCorrect).toBe(true);
+    // Q→P is false here, against the hidden pin.
+    const rejected = gradeTruthTable(data, {
+      cells: [[["T"]], [["T", "F", "F"]]],
+      reference: [["F", "T"]],
+    });
+    expect(rejected?.partial?.filledCorrectly).toBe(true);
+    expect(rejected?.partial?.consistentWithGiven).toBe(false);
+  });
+
+  test("refuses a colon it cannot read", async () => {
+    // Outside a partial table the colon is the language's, and carnap-prop
+    // has none.
+    expect(await compileCodes(directive("#c1", "- Q : Q -> P"))).toContain(
+      "invalid_formula",
+    );
+    expect(
+      await compileCodes(
+        directive('#c2 variant="partial"', "- P : Q : Q -> P"),
+      ),
+    ).toContain("multiple_constraint_colons");
+    expect(
+      await compileCodes(
+        directive('#c3 variant="partial"', "- P : Q\n- R : Q -> P"),
+      ),
+    ).toContain("multiple_constraint_colons");
+    expect(
+      await compileCodes(directive('#c4 variant="partial"', "- Q :")),
+    ).toContain("no_formulas_after_constraints");
+  });
+
+  test("the formulas after the colon may continue on later bullets", async () => {
+    const data = publicDataOf(
+      (
+        await compileArtifact(
+          directive('#c5 variant="partial"', "- Q :\n- Q -> P\n- P"),
+        )
+      ).manifest[0] as ExerciseManifestItem,
+    );
+    expect(data.formulas.length).toBe(3);
+    expect(data.constraintCount).toBe(1);
+  });
+
+  test("every given row pins the constraints alike", async () => {
+    expect(
+      await compileCodes(
+        directive(
+          '#c6 variant="partial"',
+          "- Q : Q -> P\n\n. . | T | . T .\n. . | F | . T .",
+        ),
+      ),
+    ).toContain("constraint_givens_differ");
+    // Alternatives that differ only after the colon are fine.
+    await compileArtifact(
+      directive(
+        '#c7 variant="partial"',
+        "- Q : Q -> P\n\n. . | T | . T .\n. . | T | T . .",
+      ),
+    );
+  });
+
+  test("the stored count is checked", () => {
+    const base = {
+      formulas: ["Q", "(Q -> P)"],
+      options: DEFAULT_OPTIONS,
+      promptHtml: "",
+    };
+    expect(
+      isTruthTablePublicData({
+        ...base,
+        constraintCount: 1,
+        variant: "partial",
+      }),
+    ).toBe(true);
+    expect(
+      isTruthTablePublicData({
+        ...base,
+        constraintCount: 1,
+        variant: "simple",
+      }),
+    ).toBe(false);
+    expect(
+      isTruthTablePublicData({
+        ...base,
+        constraintCount: 2,
+        variant: "partial",
+      }),
+    ).toBe(false);
   });
 });
 

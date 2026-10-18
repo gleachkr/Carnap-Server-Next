@@ -454,6 +454,14 @@ msgstr ""
 msgid "A new attempt cannot be started for this assignment."
 msgstr ""
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A partial table may set formulas apart with only one colon."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A partial table needs at least one formula after the colon."
+msgstr ""
+
 #: src/worker/web/layout.tsx
 msgid "A platform for teaching and practicing formal logic."
 msgstr ""
@@ -2288,6 +2296,10 @@ msgstr ""
 
 #: src/worker/exercises/model/strings.ts
 msgid "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Every given row must pin the formulas before the colon alike, because their values are shown."
 msgstr ""
 
 #: src/worker/exercise-kit/proof/engine-strings.ts

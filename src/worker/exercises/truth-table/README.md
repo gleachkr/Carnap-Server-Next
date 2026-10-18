@@ -172,6 +172,31 @@ For `partial`, each grid row is an accepted alternative. The submitted row
 must match at least one alternative's pinned cells. `hiddenGivens` hides
 these constraints from the grid. One visible alternative can prefill the row.
 
+A partial table can show some givens and hide others, as Carnap's
+`Q : Q->P` did. A colon in the formula list sets the formulas before it
+apart as constraints:
+
+```md
+::::truth-table{#assume-q variant="partial" options="hiddenGivens"}
+Make Q → P true, assuming Q is true.
+
+- Q : Q -> P
+
+. . | T | . T .
+::::
+```
+
+A constraint's given cells are always shown, and locked, even under
+`hiddenGivens`; there the row starts with `Q` true and the pin on `->`
+stays hidden. Every grid row must pin the constraints alike
+(`constraint_givens_differ`), since one row shows them. A second colon
+(`multiple_constraint_colons`) or no formula after it
+(`no_formulas_after_constraints`) is an error. The formulas after the colon
+may continue on later bullets. Only a partial table reads the colon; in the
+other variants it belongs to the formula, as it would in a language that
+spells something with it. `publicData.constraintCount` records how many
+leading formulas are constraints.
+
 `strictGivens` locks seeded cells and excludes them from grading. Without
 it, seeded cells are editable and graded normally. In partial tables it locks
 a single visible alternative.
@@ -188,7 +213,8 @@ Implemented flags:
 - `nodash`: displays empty cells without a dash.
 - `nocheck`: equivalent to `check="off"`.
 - `nocounterexample`: hides the counterexample shortcut.
-- `hiddenGivens`: hides partial-table constraints.
+- `hiddenGivens`: hides partial-table constraints, except those on the
+  formulas before a colon.
 - `strictGivens`: locks seeded cells.
 - `double-turnstile` / `negated-double-turnstile`: displays `⊨` / `⊭`
   instead of `⊢`, without changing grading.

@@ -364,6 +364,10 @@ function turnstileGlyphFromFlags(flags: {
  * prompt; `- formula` list items (comma-separated allowed) are the table's
  * formulas; a trailing given grid seeds the table (`simple`) or supplies the
  * accepted row(s) (`partial`) — the one place the two variants differ.
+ *
+ * A partial table may also split its formulas once with a colon, as Carnap's
+ * `Q : Q->P` did (gh #47): the formulas before it are constraints, whose
+ * givens are always shown, locked, even under `hiddenGivens`.
  */
 function parseListBody(
   block: DirectiveBlock,
@@ -371,6 +375,7 @@ function parseListBody(
   variant: "partial" | "simple",
   diagnostics: CompilerDiagnostic[],
 ): {
+  constraintCount: number;
   formulas: string[];
   givens: TruthTableGivenRow[];
   promptLines: string[];
@@ -378,6 +383,10 @@ function parseListBody(
   const promptLines: string[] = [];
   const formulas: string[] = [];
   const gridRows: { text: string; line: number }[] = [];
+  // Where the colon fell — after how many formulas, on which line — once a
+  // partial table has set its constraints apart with one.
+  let colon: { readonly after: number; readonly line: number } | null = null;
+  let formulaAfterColon = false;
 
   for (const [index, line] of block.bodyLines.entries()) {
     const lineNumber = block.bodyStartLine + index;
@@ -407,21 +416,66 @@ function parseListBody(
       continue;
     }
 
-    // A single bullet may list several comma-separated formulas, so multiple
-    // formulas can share one line just as they do on a validity sequent's sides.
-    formulas.push(
-      ...parseFormulaList(
-        splitFormulaList(match[1] ?? ""),
-        system,
-        lineNumber,
-        diagnostics,
+    // Only a partial table reads a colon; elsewhere it is the language's.
+    const sides =
+      variant === "partial"
+        ? splitFormulaList(match[1] ?? "", ":")
+        : [match[1] ?? ""];
+
+    if (sides.length > 2 || (sides.length === 2 && colon !== null)) {
+      diagnostics.push(
+        diagnostic(
+          lineNumber,
+          "multiple_constraint_colons",
+          "A partial table may set formulas apart with only one colon.",
+        ),
+      );
+      continue;
+    }
+
+    for (const [sideIndex, side] of sides.entries()) {
+      if (sideIndex === 1) {
+        colon = { after: formulas.length, line: lineNumber };
+      }
+
+      // A single bullet may list several comma-separated formulas, so multiple
+      // formulas can share one line just as they do on a validity sequent's
+      // sides.
+      const pieces = splitFormulaList(side);
+
+      if (colon !== null && pieces.some((piece) => piece.trim().length > 0)) {
+        formulaAfterColon = true;
+      }
+
+      formulas.push(
+        ...parseFormulaList(pieces, system, lineNumber, diagnostics),
+      );
+    }
+  }
+
+  if (colon !== null && !formulaAfterColon) {
+    diagnostics.push(
+      diagnostic(
+        colon.line,
+        "no_formulas_after_constraints",
+        "A partial table needs at least one formula after the colon.",
       ),
     );
   }
 
+  const constraintCount = colon?.after ?? 0;
+
   return {
+    constraintCount,
     formulas,
-    givens: parseGivenGrid(gridRows, formulas, system, variant, diagnostics),
+    givens: parseGivenGrid(
+      gridRows,
+      formulas,
+      system,
+      variant,
+      constraintCount,
+      diagnostics,
+    ),
     promptLines,
   };
 }
@@ -583,6 +637,7 @@ function parseValidityBody(
       formulas,
       system,
       "validity",
+      0,
       diagnostics,
     ),
     premiseCount: premises.length,
@@ -671,13 +726,16 @@ function givenAgreesWithKey(
  * atoms and each formula's cell count. For `simple`/`validity` a row's reference
  * tokens select which 2ⁿ rows it seeds (`.` is a wildcard) and its pins are
  * checked against the computed key; for `partial` each row is one accepted
- * alternative (reference `.` = the student's free choice).
+ * alternative (reference `.` = the student's free choice). The leading
+ * `constraintCount` formulas' pins are shown on the one row whatever the
+ * alternative, so every row must pin them alike.
  */
 function parseGivenGrid(
   rows: readonly { text: string; line: number }[],
   formulas: readonly string[],
   system: string,
   variant: TruthTableVariant,
+  constraintCount: number,
   diagnostics: CompilerDiagnostic[],
 ): TruthTableGivenRow[] {
   if (rows.length === 0) {
@@ -808,6 +866,29 @@ function parseGivenGrid(
       continue;
     }
 
+    const first = givens[0];
+
+    if (
+      first !== undefined &&
+      !given.cells
+        .slice(0, constraintCount)
+        .every((pins, formulaIndex) =>
+          pins.every(
+            (pin, cellIndex) =>
+              pin === first.cells[formulaIndex]?.[cellIndex],
+          ),
+        )
+    ) {
+      diagnostics.push(
+        diagnostic(
+          line,
+          "constraint_givens_differ",
+          "Every given row must pin the formulas before the colon alike, because their values are shown.",
+        ),
+      );
+      continue;
+    }
+
     givens.push(given);
   }
 
@@ -908,7 +989,10 @@ export async function compileTruthTable(
   // carry a trailing given grid.
   const isValidity = variant === "validity";
   const body = isValidity
-    ? parseValidityBody(block, system.source, diagnostics)
+    ? {
+        constraintCount: 0,
+        ...parseValidityBody(block, system.source, diagnostics),
+      }
     : {
         premiseCount: 0,
         ...parseListBody(block, system.source, variant, diagnostics),
@@ -986,6 +1070,10 @@ export async function compileTruthTable(
     }),
     // Only a validity table carries a premise/conclusion split.
     ...(isValidity ? { premiseCount: body.premiseCount } : {}),
+    // Only a partial table carries a constraint split, when it has one.
+    ...(body.constraintCount > 0
+      ? { constraintCount: body.constraintCount }
+      : {}),
     // Any variant may carry a seeded given grid (only when the author wrote one).
     ...(body.givens.length > 0 ? { givens: body.givens } : {}),
     system: system.system,

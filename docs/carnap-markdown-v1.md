@@ -528,15 +528,24 @@ are graded.
 For `partial`, each given row is an accepted alternative. `hiddenGivens`
 hides those alternatives; `strictGivens` locks a single visible alternative.
 
+To show some givens and hide others, separate the formulas with a colon.
+The formulas before it are constraints: their given cells are always shown,
+and locked, even under `hiddenGivens`. Here the student sees `Q` true and
+must make `Q -> P` true without being shown that it should be:
+
 ```md
 ::::truth-table{id="assume-q" variant="partial" options="hiddenGivens"}
 Make Q → P true, assuming Q is true.
 
-- Q -> P
+- Q : Q -> P
 
-. T | . T .
+. . | T | . T .
 ::::
 ```
+
+Only a partial table takes a colon, and only one. At least one formula must
+follow it, on the same bullet or later ones. Every given row must pin the
+constraints alike, because they are shown.
 
 ### Attributes and options
 
@@ -2293,7 +2302,8 @@ Common groups include:
   `empty_conclusions`, `given_row_arity`, `given_cell_arity`,
   `invalid_grid_token`, `given_conflicts_with_key`, `invalid_mark`,
   `unknown_truth_table_option`, `unsupported_truth_table_variant`,
-  `invalid_truth_table_body`.
+  `invalid_truth_table_body`, `multiple_constraint_colons`,
+  `no_formulas_after_constraints`, `constraint_givens_differ`.
 - **Systems and proofs:** `missing_name`, `empty_theory`, `duplicate_theory`,
   `unknown_theory_src`, `remote_theory_src`, `unknown_system`,
   `missing_theorem_header`, `missing_proof_underline`, `unknown_proof_option`,

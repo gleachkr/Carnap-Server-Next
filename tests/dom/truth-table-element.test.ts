@@ -233,6 +233,36 @@ describe("Check", () => {
   });
 });
 
+describe("a partial table with constraints (gh #47)", () => {
+  test("shows the constraint, locked, and sends it with the row", async () => {
+    const mounted = mountExercise(
+      await compileExercise(
+        '::::truth-table{#tt variant="partial" options="hiddenGivens"}\n- Q : Q -> P\n\n. . | T | . T .\n::::',
+      ),
+    );
+
+    // `Q` is given and cannot be changed; the reference columns and all of
+    // `Q -> P`, whose pin is hidden, are the student's.
+    const given = mounted.root.querySelector<HTMLElement>(
+      '.tt-given[data-tt-formula="0"]',
+    );
+    expect(given?.dataset.ttValue).toBe("T");
+    expect(cells(mounted).length).toBe(5);
+    expect(cells(mounted).every((cell) => cell.dataset.ttValue === "")).toBe(
+      true,
+    );
+
+    // P and Q true, and Q -> P filled in to match.
+    for (const cell of cells(mounted)) {
+      cell.click();
+    }
+    click(mounted, "Check");
+
+    expect(markState(mounted)).toBe("ok");
+    expect(answerOf(mounted).cells).toEqual([[["T"]], [["T", "T", "T"]]]);
+  });
+});
+
 describe("a counterexample", () => {
   test("is a designated row of the grid as the student filled it", async () => {
     const mounted = mountExercise(await connectiveTable());

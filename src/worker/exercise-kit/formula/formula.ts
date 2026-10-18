@@ -429,9 +429,10 @@ function readFormula(node: SurfaceTerm, lang: SurfaceLanguage): Formula {
  * would read `R(a,b), F(c)` as three fragments. Only `()` and `[]` nest: `<`
  * and `>` are operator characters in these languages (`<->`, `>`), not
  * brackets. Both the model's formula lists and a translation's alternate
- * solutions are written this way.
+ * solutions are written this way. A partial truth table splits its list at a
+ * colon the same way, so `separator` may be another character.
  */
-export function splitFormulaList(source: string): string[] {
+export function splitFormulaList(source: string, separator = ","): string[] {
   const pieces: string[] = [];
   let depth = 0;
   let start = 0;
@@ -443,7 +444,7 @@ export function splitFormulaList(source: string): string[] {
       depth += 1;
     } else if (char === ")" || char === "]") {
       depth -= 1;
-    } else if (char === "," && depth <= 0) {
+    } else if (char === separator && depth <= 0) {
       pieces.push(source.slice(start, index));
       start = index + 1;
     }

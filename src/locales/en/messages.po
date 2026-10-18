@@ -454,6 +454,14 @@ msgstr "A multiple-choice exercise requires at least two options."
 msgid "A new attempt cannot be started for this assignment."
 msgstr "A new attempt cannot be started for this assignment."
 
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A partial table may set formulas apart with only one colon."
+msgstr "A partial table may set formulas apart with only one colon."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "A partial table needs at least one formula after the colon."
+msgstr "A partial table needs at least one formula after the colon."
+
 #: src/worker/web/layout.tsx
 msgid "A platform for teaching and practicing formal logic."
 msgstr "A platform for teaching and practicing formal logic."
@@ -2289,6 +2297,10 @@ msgstr "Every course you are enrolled in has been archived."
 #: src/worker/exercises/model/strings.ts
 msgid "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
 msgstr "Every formula has the same truth value in this model, so it is not a counterexample to equivalence."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "Every given row must pin the formulas before the colon alike, because their values are shown."
+msgstr "Every given row must pin the formulas before the colon alike, because their values are shown."
 
 #: src/worker/exercise-kit/proof/engine-strings.ts
 msgid "Every other line checks; a proof with lines admitted with sorry! cannot be submitted."

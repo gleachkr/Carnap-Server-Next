@@ -171,6 +171,14 @@ export interface TruthTablePublicData {
    */
   readonly premiseCount?: number;
   /**
+   * Present only for a `partial` table whose formulas are set apart with a
+   * colon (Carnap's `Q : Q->P`): how many leading entries of {@link formulas}
+   * are constraints. Their given cells are always shown, locked — even under
+   * `hiddenGivens`, which then hides only the rest — so they state what the
+   * row must assume. At least 1 and less than `formulas.length`.
+   */
+  readonly constraintCount?: number;
+  /**
    * The author-seeded given rows, when any. For `simple`/`validity` they
    * prepopulate the matched rows' cells (scaffolding); for `partial` they are the
    * alternative row-constraints a solution must match one of. Absent (or empty)

@@ -794,6 +794,16 @@ export function isTruthTablePublicData(
         candidate.premiseCount >= 1 &&
         candidate.premiseCount < candidate.formulas.length
       : candidate.premiseCount === undefined;
+  // `constraintCount` accompanies a partial table that sets formulas apart
+  // with a colon, and leaves at least one formula after it.
+  const constraintCountOk =
+    candidate.constraintCount === undefined ||
+    (candidate.variant === "partial" &&
+      Array.isArray(candidate.formulas) &&
+      typeof candidate.constraintCount === "number" &&
+      Number.isInteger(candidate.constraintCount) &&
+      candidate.constraintCount >= 1 &&
+      candidate.constraintCount < candidate.formulas.length);
   // Givens may accompany any variant, and are optional.
   const givensOk =
     candidate.givens === undefined ? true : isGivenRows(candidate.givens);
@@ -805,6 +815,7 @@ export function isTruthTablePublicData(
     typeof candidate.promptHtml === "string" &&
     formulasOk &&
     premiseCountOk &&
+    constraintCountOk &&
     givensOk &&
     isOptions(candidate.options)
   );

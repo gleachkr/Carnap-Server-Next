@@ -148,6 +148,12 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "A given row needs {expected} '|'-separated segments (reference plus one per formula); found {found}.",
         placeholders("expected", "found"),
       ),
+    "A partial table may set formulas apart with only one colon.": i18n.t(
+      "A partial table may set formulas apart with only one colon.",
+    ),
+    "A partial table needs at least one formula after the colon.": i18n.t(
+      "A partial table needs at least one formula after the colon.",
+    ),
     "A truth table may use at most {max} atoms; found {found}.": i18n.t(
       "A truth table may use at most {max} atoms; found {found}.",
       placeholders("found", "max"),
@@ -187,6 +193,10 @@ export function buildDiagnosticStrings(i18n: Translator) {
       "Could not parse the goal's formula “{formula}”: {detail}",
       placeholders("detail", "formula"),
     ),
+    "Every given row must pin the formulas before the colon alike, because their values are shown.":
+      i18n.t(
+        "Every given row must pin the formulas before the colon alike, because their values are shown.",
+      ),
     "Expected a formula but found “{token}”.": i18n.t(
       "Expected a formula but found “{token}”.",
       placeholders("token"),
