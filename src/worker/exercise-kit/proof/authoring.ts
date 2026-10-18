@@ -289,6 +289,13 @@ export function goalBinderWarnings(
  * is why it goes through {@link diagnostic}'s params rather than being
  * flattened here: the revision editor resolves the inner message in the
  * viewer's language too.
+ *
+ * A warning, not an error (gh #44): a starter may be handed over broken on
+ * purpose, for the student to repair — a `?` where a step is missing, a
+ * formula miswritten to be fixed. The editor opens on the line as typed and
+ * squiggles it exactly as it would the student's own typing, so nothing
+ * downstream needs the starter to read. A typo the author did not mean is
+ * still flagged here, and theirs to fix or keep.
  */
 export function unreadableStarterFormula(
   line: number,
@@ -299,7 +306,7 @@ export function unreadableStarterFormula(
     line,
     "invalid_formula",
     "Could not parse formula “{formula}”: {detail}",
-    { params: { detail: error, formula } },
+    { params: { detail: error, formula }, severity: "warning" },
   );
 }
 

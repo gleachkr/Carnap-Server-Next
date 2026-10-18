@@ -153,9 +153,10 @@ export async function compileAufbauProofFitch(
   }
 
   // The starter is the text the editor opens with, so a line the theory's
-  // language refuses is a proof the student is handed already broken. Read it
-  // through the translator rather than line by line here, so the author's
-  // diagnostic and the student's squiggle come from one walk of the source.
+  // language refuses is a proof the student is handed already broken — which
+  // may be the exercise (gh #44), so the author is warned, not stopped. Read
+  // it through the translator rather than line by line here, so the author's
+  // warning and the student's squiggle come from one walk of the source.
   if (starter !== null && starter.starterBody.length > 0) {
     const translated = fitchToAuf(
       starter.starterBody,
@@ -176,10 +177,6 @@ export async function compileAufbauProofFitch(
           problem.error,
         ),
       );
-    }
-
-    if (translated.formulaProblems.length > 0) {
-      return null;
     }
   }
 

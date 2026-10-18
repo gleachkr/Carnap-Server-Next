@@ -142,11 +142,16 @@ original `source` also remain engine text. The theorem's binders are in
 scope, so a schema's formula metavariables take precedence over names in the
 language lexicon.
 
-Starters are parsed during authoring. Goal math strings are converted using
-the turnstile result sort, with a sentence-sort fallback, but without the
-stricter student lints. Invalid goal syntax produces `invalid_goal_formula`.
-`goalEngineDecl` supplies engine input; the authored declaration remains
-available for display. See `../../exercise-kit/proof/formulas.ts`.
+Starters are parsed during authoring. A starter formula the language refuses
+is an `invalid_formula` warning, not an error, so a starter can be handed over
+broken for the student to repair (gh #44); the editor squiggles it as it would
+the student's own typing.
+
+Goal math strings are converted using the turnstile result sort, with a
+sentence-sort fallback, but without the stricter student lints. Invalid goal
+syntax produces `invalid_goal_formula`. `goalEngineDecl` supplies engine
+input; the authored declaration remains available for display. See
+`../../exercise-kit/proof/formulas.ts`.
 
 ## Scope rendering
 

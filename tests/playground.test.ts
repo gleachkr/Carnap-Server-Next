@@ -189,11 +189,14 @@ describe("playground authoring", () => {
   });
 
   test("a starter is read in the theory's language, with no goal in scope", async () => {
-    expect(
-      await diagnosticCodes(
-        `:::aufbau-proof-fitch{system="fx" id="f" playground}\n----\nP ∧  :AS\n:::`,
-      ),
-    ).toContain("invalid_formula");
+    // A warning, since a starter may be broken on purpose (gh #44): the
+    // reading is what is under test here, not whether it stops the save.
+    const compiled = await compileCarnapMarkdown(
+      `${MAGNUS_BLOCK}\n\n:::aufbau-proof-fitch{system="fx" id="f" playground}\n----\nP ∧  :AS\n:::`,
+    );
+    expect(compiled.diagnostics.map((d) => [d.code, d.severity])).toEqual([
+      ["invalid_formula", "warning"],
+    ]);
   });
 });
 

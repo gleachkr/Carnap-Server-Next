@@ -104,11 +104,16 @@ true for old artifacts without the original annotated `source`. Goal
 binders are in scope while parsing, so formula metavariables in a theorem
 schema are not confused with individual names from the lexicon.
 
-Starters are parsed during authoring. Goals are converted to engine text as
-`goalEngineDecl`, using the turnstile result sort with a sentence fallback.
-Goal parsing omits stricter student lints but still rejects invalid syntax
-with `invalid_goal_formula`. Original source is kept for display. The shared
-implementation is `../../exercise-kit/proof/formulas.ts`.
+Starters are parsed during authoring. A starter formula the language refuses
+is an `invalid_formula` warning, not an error, so a starter can be handed over
+broken for the student to repair (gh #44); the editor squiggles it as it would
+the student's own typing.
+
+Goals are converted to engine text as `goalEngineDecl`, using the turnstile
+result sort with a sentence fallback. Goal parsing omits stricter student
+lints but still rejects invalid syntax with `invalid_goal_formula`. Original
+source is kept for display. The shared implementation is
+`../../exercise-kit/proof/formulas.ts`.
 
 Discharge matching compares normalized formulas. Thus `~P` and `¬P` under
 the same label can identify the same assumption rather than producing

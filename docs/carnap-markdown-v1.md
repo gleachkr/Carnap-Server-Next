@@ -1797,8 +1797,16 @@ does not prevent saving. If it shadows notation, that spelling can become
 unavailable within the exercise; for example, binding `A` can remove its
 quantifier reading. Binding a variable at its existing sort does not warn.
 
-Starters are parsed during authoring, so invalid starter formulas are caught
-before students open the exercise.
+Fitch, tree, and Prawitz starters are read during authoring. A starter
+formula the language cannot read produces an `invalid_formula` warning but
+does not prevent saving, so a starter can be handed over broken for the
+student to repair: a `?` where a step is missing, or a formula written wrong
+on purpose. The editor opens on the line as written and marks it as it would
+the student's own typing. A starter whose structure the editor cannot lay out
+(a tree that reuses a line, a Prawitz discharge mark with no assumption) is
+still an error. Beyond that, a starter need not be a correct proof: wrong
+rules and bad citations are the student's to find, and saving the lesson does
+not check them.
 
 Goals in shaped proof exercises are also converted from surface syntax.
 Each math string in the `theorem` declaration is read at the turnstile result
@@ -1994,8 +2002,10 @@ recomputes them from the assumption and discharge labels.
 
 `-- label:1` labels an assumption leaf. On an inference line it lists labels
 to discharge; separate several with commas. Other trailing or whole-line
-comments remain ordinary comments. A starter must parse but need not be a
-finished proof. A discharge mark with no matching assumption is rejected.
+comments remain ordinary comments. A starter's lines must have this shape,
+but it need not be a finished or correct proof, and a formula in it that does
+not read is only a warning (see [Formulas in a proof](#formulas-in-a-proof)).
+A discharge mark with no matching assumption is rejected.
 
 In the author preview, **Copy as source** in the action bar puts the tree
 being built on the clipboard as starter lines, contexts filled in and

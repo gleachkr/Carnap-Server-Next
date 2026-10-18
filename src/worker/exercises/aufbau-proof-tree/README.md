@@ -104,12 +104,16 @@ The goal theorem's binders are in scope. In a schema such as
 `theorem mp (a b: wff): $ (a → b) ; a ⊢ b $`, the letters `a` and `b` are
 formula metavariables, not the language's ordinary individual names.
 
-Starters are parsed during authoring. The goal's math strings are also
-converted to engine syntax, but without student-formula lints such as
-redundant-bracket checks. The compiled `goalEngineDecl` is used in `mm0`;
-original source is retained for display. Invalid goal syntax produces
-`invalid_goal_formula`. These conversions are implemented in
-`../../exercise-kit/proof/formulas.ts`.
+Starters are parsed during authoring. A starter formula the language refuses
+is an `invalid_formula` warning, not an error, so a starter can be handed over
+broken for the student to repair (gh #44); the editor squiggles it as it would
+the student's own typing.
+
+The goal's math strings are also converted to engine syntax, but without
+student-formula lints such as redundant-bracket checks. The compiled
+`goalEngineDecl` is used in `mm0`; original source is retained for display.
+Invalid goal syntax produces `invalid_goal_formula`. These conversions are
+implemented in `../../exercise-kit/proof/formulas.ts`.
 
 ## Implementation and tests
 

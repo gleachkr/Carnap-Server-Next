@@ -233,8 +233,9 @@ export async function compileAufbauProofPrawitz(
     );
 
     // A node the theory's language refuses is a canvas the student is handed
-    // already broken, so the author hears about it here rather than nobody
-    // hearing about it until the widget refuses to compile.
+    // already broken — which may be the exercise (gh #44), so the author is
+    // warned, not stopped. A starter the editor could not lay out as a tree
+    // is another matter, and still refused below.
     for (const problem of translated.formulaProblems) {
       diagnostics.push(
         unreadableStarterFormula(
@@ -258,9 +259,6 @@ export async function compileAufbauProofPrawitz(
       return null;
     }
 
-    if (translated.formulaProblems.length > 0) {
-      return null;
-    }
     starterTree = parsed.tree;
   }
 

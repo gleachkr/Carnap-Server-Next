@@ -85,9 +85,10 @@ describe("a goal binder that shadows the theory's language", () => {
   });
 
   test("a warning does not suppress an error in the same exercise", async () => {
+    // The goal, not the starter: a starter that will not read only warns too.
     const compiled = await compileGoal(
-      "theorem mp (a b: wff): $ a ⊢ a $;",
-      "a → →    :ax",
+      "theorem mp (a b: wff): $ a ⊢ a → → $;",
+      "a    :ax",
     );
 
     expect(compiled.ok).toBe(false);

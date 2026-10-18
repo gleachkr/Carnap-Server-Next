@@ -144,9 +144,10 @@ export async function compileAufbauProofTree(
     const parsed = parseProofTree(starter.starterBody);
     if (parsed.ok) {
       // A node the theory's language refuses is a tree the student is handed
-      // already broken. `flattenProofTree` is what the widget will run over
-      // this same tree, so reading through it is what makes the author's
-      // diagnostic and the student's squiggle the same judgement.
+      // already broken — which may be the exercise (gh #44), so the author is
+      // warned, not stopped. `flattenProofTree` is what the widget will run
+      // over this same tree, so reading through it is what makes the author's
+      // warning and the student's squiggle the same judgement.
       const { formulaProblems } = flattenProofTree(
         parsed.tree,
         scope.goalName,
@@ -166,10 +167,6 @@ export async function compileAufbauProofTree(
             problem.error,
           ),
         );
-      }
-
-      if (formulaProblems.length > 0) {
-        return null;
       }
 
       starterTree = parsed.tree;
