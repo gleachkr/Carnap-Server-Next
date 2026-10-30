@@ -53,6 +53,9 @@ The `[x]` notation inside a multiple-choice directive has its own meaning.
 
 Raw HTML is prohibited in prose and exercise prompts. For example,
 `<strong>x</strong>` produces `unsafe_raw_html`; write `**x**` instead.
+Text in inline code or a code fence is code, not HTML, so
+`` `List<string>` `` is fine. An address in angle brackets,
+`<https://example.edu>`, is a link.
 
 ## Tables
 

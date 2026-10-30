@@ -1258,6 +1258,45 @@ p::before { content: "<b>"; }
     );
   });
 
+  test("a tag in inline code or a fenced listing is code, not raw HTML", async () => {
+    const compiled =
+      await compileCarnapMarkdown(`Served at \`/theories/<id>.mm0\`, typed \`List<string>\`.
+
+\`\`\`html
+<b>x</b>
+\`\`\``);
+
+    expect(compiled.diagnostics).toEqual([]);
+
+    if (!compiled.ok) {
+      throw new Error("Expected successful compilation.");
+    }
+
+    const html = compiled.artifact.document.nodes
+      .map((node) => (node.kind === "markdown" ? node.html : ""))
+      .join("");
+
+    expect(html).toContain("<code>/theories/&#x3C;id>.mm0</code>");
+    expect(html).toContain("&#x3C;b>x&#x3C;/b>");
+  });
+
+  test("raw HTML is reported once per line it is on, prompts included", async () => {
+    const compiled = await compileCarnapMarkdown(`Plain line.
+
+Some <em>stressed</em> and <strong>bold</strong> text.
+
+::::free-response{#essay}
+Explain <kbd>this</kbd>.
+::::`);
+
+    expect(compiled.ok).toBe(false);
+    expect(
+      compiled.diagnostics
+        .filter((item) => item.code === "unsafe_raw_html")
+        .map((item) => item.line),
+    ).toEqual([3, 6]);
+  });
+
   test("style directives reject unknown attributes and nesting", async () => {
     const unknownAttribute = await compileCarnapMarkdown(`:::style{scope=all}
 h1 { color: maroon; }

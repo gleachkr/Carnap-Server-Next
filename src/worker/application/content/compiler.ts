@@ -71,29 +71,55 @@ const PROFILE: ContentSourceProfile = "carnap-markdown-v1";
 const MANIFEST_VERSION = 1;
 const COMPONENT_REGISTRY_VERSION = "component-registry-v1";
 
-function hasUnsafeHtml(value: string): boolean {
-  return /<[A-Za-z!/?][^>]*>/.test(value);
+/**
+ * One diagnostic per source line holding raw HTML, read from the parse rather
+ * than the text: an `html` node is what the parser made of a tag, so `<b>` in
+ * inline code or a fenced listing, which it reads as code, is not one.
+ * Rendering drops raw HTML whatever this says; the diagnostic is so the author
+ * learns it went, rather than finding it missing. Bodies that are source text
+ * rather than markdown are not looked into.
+ */
+function rawHtmlDiagnostics(
+  tree: Root,
+  rawBodyDirectives: ReadonlySet<string>,
+): CompilerDiagnostic[] {
+  const lines = new Set<number>();
+  const visit = (node: MarkdownNode): void => {
+    if (node.type === "html") {
+      if (node.position !== undefined) {
+        lines.add(node.position.start.line);
+      }
+      return;
+    }
+
+    if (
+      isRawBodyDirective(node, rawBodyDirectives) ||
+      !("children" in node)
+    ) {
+      return;
+    }
+
+    for (const child of node.children as MarkdownNode[]) {
+      visit(child);
+    }
+  };
+
+  for (const child of tree.children) {
+    visit(child);
+  }
+
+  return [...lines]
+    .sort((left, right) => left - right)
+    .map((line) =>
+      diagnostic(
+        line,
+        "unsafe_raw_html",
+        "Raw HTML is not allowed in carnap-markdown-v1.",
+      ),
+    );
 }
 
 const NO_EXCLUDED_LINES: ReadonlySet<number> = new Set();
-
-function unsupportedRawHtmlDiagnostics(
-  lines: readonly string[],
-  startLine: number,
-  excludedLines: ReadonlySet<number> = NO_EXCLUDED_LINES,
-): CompilerDiagnostic[] {
-  return lines.flatMap((line, index) =>
-    !excludedLines.has(startLine + index) && hasUnsafeHtml(line)
-      ? [
-          diagnostic(
-            startLine + index,
-            "unsafe_raw_html",
-            "Raw HTML is not allowed in carnap-markdown-v1.",
-          ),
-        ]
-      : [],
-  );
-}
 
 function legacyDirectiveSyntaxDiagnostics(
   lines: readonly string[],
@@ -156,6 +182,23 @@ function rawBodyDirectiveNames(
 }
 
 /**
+ * Whether a node is a directive whose body is source text, not markdown:
+ * `:::style` (CSS like `content: "<b>"`), `:::aufbau-mm0` (MM0 notation like
+ * `$<->$`), or an exercise whose type declares `rawBody`.
+ */
+function isRawBodyDirective(
+  node: MarkdownNode,
+  rawBodyDirectives: ReadonlySet<string>,
+): node is ContainerDirective {
+  return (
+    isContainerDirective(node) &&
+    (node.name === STYLE_DIRECTIVE_NAME ||
+      node.name === AUFBAU_MM0_DIRECTIVE_NAME ||
+      rawBodyDirectives.has(node.name))
+  );
+}
+
+/**
  * A stylesheet link target: an absolute https URL or a site-relative path
  * (for stylesheets this site serves). A single leading slash only —
  * protocol-relative `//host` targets are rejected, as is any other scheme.
@@ -173,11 +216,8 @@ function isValidStylesheetHref(value: string): boolean {
 }
 
 /**
- * Line numbers occupied by the bodies of top-level directives whose bodies are
- * raw source, not markdown: `:::style` (CSS like `content: "<b>"`) and
- * `:::aufbau-mm0` (MM0 notation like `$<->$`), and every exercise directive
- * whose type declares `rawBody`. The raw-HTML and legacy-syntax line scans
- * must not read them.
+ * Line numbers occupied by the bodies of top-level raw-body directives (see
+ * {@link isRawBodyDirective}), which the legacy-syntax line scan must not read.
  */
 function rawDirectiveBodyLines(
   tree: Root,
@@ -186,13 +226,10 @@ function rawDirectiveBodyLines(
   const excluded = new Set<number>();
 
   for (const child of tree.children as MarkdownNode[]) {
-    const raw =
-      isContainerDirective(child) &&
-      (child.name === STYLE_DIRECTIVE_NAME ||
-        child.name === AUFBAU_MM0_DIRECTIVE_NAME ||
-        rawBodyDirectives.has(child.name));
-
-    if (!raw || child.position === undefined) {
+    if (
+      !isRawBodyDirective(child, rawBodyDirectives) ||
+      child.position === undefined
+    ) {
       continue;
     }
 
@@ -222,9 +259,9 @@ function isDirectiveNode(node: { readonly type?: string }): boolean {
  * every line of a `rawBody` type's, and whichever a type's `dataBodyLines`
  * names.
  *
- * Deliberately not the same set as {@link rawDirectiveBodyLines}, which serves
- * the raw-HTML and legacy-syntax *line* scans: a model is here and not there,
- * because its prompt is prose and raw HTML written in it is still a mistake.
+ * Deliberately not the same set as the raw-HTML and legacy-syntax scans skip
+ * ({@link isRawBodyDirective}): a model is here and not there, because its
+ * prompt is prose and raw HTML written in it is still a mistake.
  * Which is also why this is per line rather than per directive — a model's body
  * is only partly data, and a nested directive in its prompt is worth reporting.
  */
@@ -532,12 +569,10 @@ export async function compileCarnapMarkdown(
   const normalizedSource = sourceText.replaceAll("\r\n", "\n");
   const lines = normalizedSource.split("\n");
   const tree = markdownParser.parse(normalizedSource) as Root;
-  const excludedLines = rawDirectiveBodyLines(
-    tree,
-    rawBodyDirectiveNames(registry),
-  );
+  const rawBodyDirectives = rawBodyDirectiveNames(registry);
+  const excludedLines = rawDirectiveBodyLines(tree, rawBodyDirectives);
   const diagnostics: CompilerDiagnostic[] = [
-    ...unsupportedRawHtmlDiagnostics(lines, 1, excludedLines),
+    ...rawHtmlDiagnostics(tree, rawBodyDirectives),
     ...legacyDirectiveSyntaxDiagnostics(lines, 1, excludedLines),
   ];
   const nodes: ContentNode[] = [];
