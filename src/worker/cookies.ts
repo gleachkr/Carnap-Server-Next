@@ -53,7 +53,10 @@ export const CSRF_COOKIE_NAME = "carnap_csrf";
 export function authCookiePrefix(
   context: Context<AppBindings>,
 ): "host" | undefined {
-  return cookieSecure(context) ? "host" : undefined;
+  // Quietly: every request reads its session cookie by this name, a bare
+  // health check included, so a missing `X-Forwarded-Proto` is reported where
+  // the cookies are written instead (`authCookieOptions`).
+  return requestIsSecure(context, { quietly: true }) ? "host" : undefined;
 }
 
 /** The `secure` and `prefix` options every write of those cookies carries. */

@@ -337,7 +337,7 @@ export function securityHeadersMiddleware() {
     // by the time the policy is assembled.
     context.res.headers.set(CSP_HEADER_NAME, cspForResponse(context));
 
-    if (requestIsSecure(context)) {
+    if (requestIsSecure(context, { quietly: true })) {
       context.res.headers.set(HSTS_HEADER.name, HSTS_HEADER.value);
     }
   });

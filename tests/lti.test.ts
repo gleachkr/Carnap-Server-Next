@@ -1084,6 +1084,7 @@ describe("LTI 1.3 core launches", () => {
         { ...env, CARNAP_TRUST_PROXY: "1" },
         {
           headers: {
+            "X-Forwarded-For": "203.0.113.20",
             "X-Forwarded-Host": "logic.example.edu",
             "X-Forwarded-Proto": "https",
           },

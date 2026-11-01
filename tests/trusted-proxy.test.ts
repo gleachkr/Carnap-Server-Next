@@ -1,6 +1,14 @@
-import { describe, expect, test } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  spyOn,
+  test,
+} from "bun:test";
 
 import type { Env } from "../src/worker/env";
+import { resetMissingForwardingReports } from "../src/worker/http";
 import { appRequest, createTestApp } from "./helpers/app";
 import { withStorage } from "./helpers/http";
 
@@ -12,6 +20,7 @@ import { withStorage } from "./helpers/http";
  */
 
 const PROXIED = {
+  "X-Forwarded-For": "203.0.113.20",
   "X-Forwarded-Host": "logic.example.edu",
   "X-Forwarded-Proto": "https",
 };
@@ -175,6 +184,119 @@ describe("behind a trusted proxy", () => {
       expect(confirm.status).toBe(303);
       expect(sessionCookie(confirm)).toStartWith("carnap_session=");
       expect(sessionCookie(confirm)).not.toContain("Secure");
+    });
+  });
+});
+
+/**
+ * `CARNAP_TRUST_PROXY` with a proxy that sends nothing fails silently — no
+ * client address, unprefixed cookies, links to the wrong origin — so the
+ * application says so in the log: where the value is used, not on arrival,
+ * and at most once an hour per header.
+ */
+describe("a trusted proxy that leaves out a header", () => {
+  type Line = Record<string, unknown>;
+
+  let warnings: Line[] = [];
+  let spy: { mockRestore(): void } | undefined;
+
+  beforeEach(() => {
+    resetMissingForwardingReports();
+    warnings = [];
+    spy = spyOn(console, "warn").mockImplementation((line: unknown) => {
+      warnings.push(JSON.parse(String(line)) as Line);
+    });
+  });
+
+  afterEach(() => {
+    spy?.mockRestore();
+  });
+
+  function missing(header: string): Line[] {
+    return warnings.filter(
+      (line) =>
+        line.event === "proxy_header_missing" && line.header === header,
+    );
+  }
+
+  test("a bare request that uses neither value reports nothing", async () => {
+    const app = createTestApp();
+    const env = trusted({ CARNAP_ENV: "local" });
+
+    for (const path of ["/health", "/login", "/"]) {
+      await appRequest(app, `http://carnap.test${path}`, {}, env);
+    }
+
+    expect(warnings).toEqual([]);
+  });
+
+  test("a login without X-Forwarded-For reports the address, once an hour", async () => {
+    await withStorage(async (_storage, env) => {
+      const { "X-Forwarded-For": _address, ...noAddress } = PROXIED;
+      const now = Date.now();
+      const clock = spyOn(Date, "now").mockReturnValue(now);
+
+      try {
+        await startLogin(trusted(env), {
+          ...noAddress,
+          "X-Real-IP": "1.2.3.4",
+        });
+        await startLogin(trusted(env), noAddress);
+
+        expect(missing("X-Forwarded-For")).toEqual([
+          expect.objectContaining({
+            level: "warn",
+            occurrences: 1,
+            path: "/login",
+            unreadHeaders: ["X-Real-IP"],
+            use: "client_address",
+          }),
+        ]);
+
+        clock.mockReturnValue(now + 60 * 60 * 1000);
+        await startLogin(trusted(env), noAddress);
+
+        expect(missing("X-Forwarded-For")).toHaveLength(2);
+        expect(missing("X-Forwarded-For")[1]).toMatchObject({
+          occurrences: 2,
+        });
+        expect(missing("X-Forwarded-For")[1]).not.toHaveProperty(
+          "unreadHeaders",
+        );
+      } finally {
+        clock.mockRestore();
+      }
+    });
+  });
+
+  test("a login link without X-Forwarded-Proto reports the scheme", async () => {
+    await withStorage(async (_storage, env) => {
+      const { "X-Forwarded-Proto": _scheme, ...noScheme } = PROXIED;
+      const link = await startLogin(trusted(env), noScheme);
+
+      expect(link).toStartWith("http://logic.example.edu/login/confirm?");
+      expect(missing("X-Forwarded-Proto")).toEqual([
+        expect.objectContaining({ path: "/login", use: "public_url" }),
+      ]);
+      expect(missing("X-Forwarded-For")).toEqual([]);
+    });
+  });
+
+  test("a missing X-Forwarded-Host is not reported, since Host may be preserved", async () => {
+    await withStorage(async (_storage, env) => {
+      const { "X-Forwarded-Host": _host, ...noHost } = PROXIED;
+
+      await startLogin(trusted(env), noHost);
+
+      expect(warnings).toEqual([]);
+    });
+  });
+
+  test("without the opt-in nothing is reported", async () => {
+    await withStorage(async (_storage, env) => {
+      await startLogin(env, {});
+
+      expect(warnings).toEqual([]);
     });
   });
 });

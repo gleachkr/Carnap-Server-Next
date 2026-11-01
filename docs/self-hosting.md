@@ -332,6 +332,17 @@ limiter's per-address bucket, the human check and the log all use this
 address. If the setting is on but `X-Forwarded-For` is missing, the login
 limiter has only its email-address limit.
 
+With the setting on, a request that needs the client address or the scheme
+but arrives without `X-Forwarded-For` or `X-Forwarded-Proto` writes a
+`proxy_header_missing` warning to the log. It says which header was missing,
+what needed it, and whether the request carried `Forwarded` or `X-Real-IP`
+instead, which the application does not read. Each header is reported at
+most once an hour, with a count of the times it was missed since its last
+report.
+Requests that use neither value, such as a load balancer's health check,
+are not reported. A missing `X-Forwarded-Host` is never reported, since a
+proxy that preserves `Host` does not need to send it.
+
 If your proxy is itself behind another proxy or CDN, the last entry names
 that outer hop, not the browser. Have the proxy nearest the application
 replace `X-Forwarded-For` with the client address it resolved.
@@ -484,8 +495,9 @@ the address of the connection. See
 
 Operational events include `request_failed` (an unexpected server error, with
 its stack and the signed-in user's `userId`), the `lti_grade_passback_*`
-events, `lti_tool_key_invalid`, `email_change_notice_failed`, and, for the
-standalone server, `server_started`, `migrations_applied` and
+events, `lti_tool_key_invalid`, `email_change_notice_failed`,
+`proxy_header_missing` (see [Behind a reverse proxy](#behind-a-reverse-proxy)),
+and, for the standalone server, `server_started`, `migrations_applied` and
 `server_stopping`.
 
 ### Collecting the logs
