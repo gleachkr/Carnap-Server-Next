@@ -28,6 +28,9 @@ const CSRF_EXEMPT_PATHS = new Set([
   // take a same-origin check (`SAME_ORIGIN_PATHS`) instead.
   "/profile/email/confirm",
   "/profile/email/undo",
+  // A login link's button, likewise: the token is the proof, the clicker
+  // usually has no session yet, and it signs them in.
+  "/login/confirm",
   // The picker's single-use selection token — short-lived and bound to the
   // launching instructor's user — is the proof. Tying it to a session's
   // CSRF token instead would 403 whenever the session rotates between the
@@ -42,6 +45,7 @@ const CSRF_EXEMPT_PATHS = new Set([
  * The emailed link opens the page with a GET; only its button posts.
  */
 const SAME_ORIGIN_PATHS = new Set([
+  "/login/confirm",
   "/profile/email/confirm",
   "/profile/email/undo",
 ]);

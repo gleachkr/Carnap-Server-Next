@@ -1089,6 +1089,25 @@ class SqliteAuthStore implements AuthStore {
     );
   }
 
+  async getNativeLoginChallenge(
+    tokenHash: string,
+    now: string,
+  ): Promise<NativeLoginChallenge | null> {
+    return nullableSingle(
+      await this.db
+        .select()
+        .from(nativeLoginChallenges)
+        .where(
+          and(
+            eq(nativeLoginChallenges.tokenHash, tokenHash),
+            isNull(nativeLoginChallenges.consumedAt),
+            gt(nativeLoginChallenges.expiresAt, now),
+          ),
+        )
+        .limit(1),
+    );
+  }
+
   async consumeNativeLoginChallenge(
     tokenHash: string,
     consumedAt: string,

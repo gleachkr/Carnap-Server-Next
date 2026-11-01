@@ -512,7 +512,6 @@ msgstr "Ein Anmeldelink wurde erstellt."
 
 #: src/worker/application/auth.ts
 #: src/worker/routes/auth.ts
-#: src/worker/routes/web.ts
 msgid "A login token is required."
 msgstr "Ein Anmeldetoken ist erforderlich."
 
@@ -3163,6 +3162,10 @@ msgstr "Wenn noch kein Site-Administrator existiert, können Sie dieses Konto mi
 msgid "If this was you, sign in with this address to reach the account that has it. If not, you can ignore this email."
 msgstr "Falls Sie das waren, melden Sie sich mit dieser Adresse an, um zu dem Konto zu gelangen, das sie verwendet. Andernfalls können Sie diese E-Mail ignorieren."
 
+#: src/worker/web/auth.tsx
+msgid "If you did not ask for a login link, close this page and nothing will happen."
+msgstr "Falls Sie keinen Anmeldelink angefordert haben, schließen Sie diese Seite; es geschieht nichts."
+
 #: src/worker/infrastructure/email/resend.ts
 msgid "If you did not ask for this, ignore this email and nothing will change."
 msgstr "Falls Sie das nicht angefordert haben, ignorieren Sie diese E-Mail; es ändert sich nichts."
@@ -3474,6 +3477,10 @@ msgstr "Nur über das LMS"
 #: src/worker/web/auth.tsx
 msgid "Log in"
 msgstr "Anmelden"
+
+#: src/worker/web/auth.tsx
+msgid "Log in to Carnap as {email}?"
+msgstr "Bei Carnap als {email} anmelden?"
 
 #: src/worker/web/profile.tsx
 msgid "Log out"

@@ -1004,6 +1004,36 @@ export function describeStorageContract(
       });
     });
 
+    test("a login challenge can be read without consuming it", async () => {
+      await withStorage(async ({ stores }) => {
+        await stores.auth.createNativeLoginChallenge({
+          id: "challenge-read",
+          email: "ada@example.test",
+          tokenHash: "challenge-read-hash",
+          createdAt: NOW,
+          expiresAt: LATER,
+        });
+
+        // Reading twice: the page a mail scanner opens must leave the link
+        // for the reader.
+        for (let read = 0; read < 2; read += 1) {
+          await expect(
+            stores.auth.getNativeLoginChallenge("challenge-read-hash", NOW),
+          ).resolves.toMatchObject({ email: "ada@example.test" });
+        }
+
+        await expect(
+          stores.auth.getNativeLoginChallenge("challenge-read-hash", LATER),
+        ).resolves.toBeNull();
+        await expect(
+          stores.auth.consumeNativeLoginChallenge("challenge-read-hash", NOW),
+        ).resolves.not.toBeNull();
+        await expect(
+          stores.auth.getNativeLoginChallenge("challenge-read-hash", NOW),
+        ).resolves.toBeNull();
+      });
+    });
+
     test("expired login challenges are swept when the next one is created", async () => {
       await withStorage(async ({ stores }) => {
         const challenge = (

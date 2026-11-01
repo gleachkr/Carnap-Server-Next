@@ -145,6 +145,41 @@ export function renderLoginError(
   );
 }
 
+/**
+ * The page a login link opens. It only says whom the link signs in as: mail
+ * scanners open links, so opening one must not spend it, and the button's POST
+ * does. No CSRF field, because the route takes the link's token as its proof
+ * instead (see `CSRF_EXEMPT_PATHS`).
+ */
+export function renderLoginConfirm(
+  context: Context<AppBindings>,
+  model: {
+    readonly email: string;
+    readonly next: string;
+    readonly token: string;
+  },
+): Response {
+  const i18n = context.get("i18n");
+
+  return renderShell(
+    context,
+    { title: i18n.t("Log in") },
+    <Sheet title={i18n.t("Account access")}>
+      <p>{i18n.t("Log in to Carnap as {email}?", { email: model.email })}</p>
+      <p class="small">
+        {i18n.t(
+          "If you did not ask for a login link, close this page and nothing will happen.",
+        )}
+      </p>
+      <form action="/login/confirm" method="post">
+        <input name="token" type="hidden" value={model.token} />
+        <input name="next" type="hidden" value={model.next} />
+        <button type="submit">{i18n.t("Log in")}</button>
+      </form>
+    </Sheet>,
+  );
+}
+
 export function renderLoginSent(
   context: Context<AppBindings>,
   localLoginLink: string | null,

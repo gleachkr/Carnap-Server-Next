@@ -352,6 +352,11 @@ export interface AuthStore {
   createNativeLoginChallenge(
     input: CreateNativeLoginChallengeInput,
   ): Promise<NativeLoginChallenge>;
+  /** The live, unconsumed challenge with this hash, without consuming it. */
+  getNativeLoginChallenge(
+    tokenHash: string,
+    now: Timestamp,
+  ): Promise<NativeLoginChallenge | null>;
   consumeNativeLoginChallenge(
     tokenHash: string,
     consumedAt: Timestamp,

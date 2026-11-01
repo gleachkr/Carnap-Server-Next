@@ -7,7 +7,7 @@ import type {
 } from "../application/auth";
 import { LOGIN_TTL_SECONDS } from "../application/auth";
 import { CalendarService } from "../application/calendar";
-import { AppHttpError, badRequest } from "../application/errors";
+import { AppHttpError } from "../application/errors";
 import {
   clearLocaleCookie,
   readSessionCookie,
@@ -30,6 +30,7 @@ import { turnstileForContext } from "../infrastructure/turnstile";
 import { storesForContext } from "../stores";
 import { buildCommit, renderAboutPage } from "../web/about";
 import {
+  renderLoginConfirm,
   renderLoginError,
   renderLoginPage,
   renderLoginSent,
@@ -212,29 +213,32 @@ webRoutes.post("/login", async (context) => {
 });
 
 /**
- * Follow a login link from an email.
- *
- * A link that no longer works is the ordinary case here, not an exceptional
- * one: the token is single-use and short-lived, so it expires by design, and a
- * reader who opens yesterday's email meets this every time. So the failure is
- * answered with the login form and a sentence explaining what to do, rather than
- * with the generic error page — the next step is always "send me another one",
- * and this is the page that does it. `next` rides along so a second link lands
- * where the first was meant to.
+ * Follow a login link from an email. The GET only says whom the link signs in:
+ * mail scanners such as Outlook's open links before the reader does, and a GET
+ * that spent the token would sign the scanner in and greet the reader with a
+ * used link. The page's button posts it, below.
  */
 webRoutes.get("/login/confirm", async (context) => {
   const url = new URL(context.req.url);
-  const token = url.searchParams.get("token");
   const next = safeNext(url.searchParams.get("next"));
+  const token = url.searchParams.get("token") ?? "";
 
   try {
-    if (token === null) {
-      throw badRequest(
-        "invalid_login_token",
-        deferred.i18n.t("A login token is required."),
-      );
-    }
+    const email =
+      await authServiceForContext(context).describeNativeLogin(token);
 
+    return renderLoginConfirm(context, { email, next: next ?? "", token });
+  } catch (error) {
+    return loginLinkFailureOrThrow(context, error, next);
+  }
+});
+
+webRoutes.post("/login/confirm", async (context) => {
+  const form = await context.req.raw.formData();
+  const token = fieldValue(form.get("token"));
+  const next = safeNext(fieldValue(form.get("next")));
+
+  try {
     const confirmed = await authServiceForContext(context).confirmNativeLogin(
       token,
       {
@@ -252,28 +256,45 @@ webRoutes.get("/login/confirm", async (context) => {
 
     return context.redirect(next ?? "/courses", 303);
   } catch (error) {
-    if (!(error instanceof AppHttpError)) {
-      throw error;
-    }
-
-    const i18n = context.get("i18n");
-
-    return renderLoginError(context, {
-      email: "",
-      // Only the token's own failure gets the reassuring wording. Anything else
-      // raised along the way — a rejected account, say — has its own reason, and
-      // telling that reader to request a new link would send them in a circle.
-      message:
-        error.code === "invalid_login_token"
-          ? i18n.t(
-              "That login link has expired or has already been used. Enter your email address below and we will send you a new one.",
-            )
-          : error.localize(i18n),
-      next: next ?? "",
-      status: error.status,
-    });
+    return loginLinkFailureOrThrow(context, error, next);
   }
 });
+
+/**
+ * A login link that no longer works. That is the ordinary case here, not an
+ * exceptional one: the token is single-use and short-lived, so it expires by
+ * design, and a reader who opens yesterday's email meets this every time. So
+ * the failure is answered with the login form and a sentence explaining what
+ * to do, rather than with the generic error page — the next step is always
+ * "send me another one", and this is the page that does it. `next` rides along
+ * so a second link lands where the first was meant to.
+ */
+function loginLinkFailureOrThrow(
+  context: Context<AppBindings>,
+  error: unknown,
+  next: string | null,
+): Response {
+  if (!(error instanceof AppHttpError)) {
+    throw error;
+  }
+
+  const i18n = context.get("i18n");
+
+  return renderLoginError(context, {
+    email: "",
+    // Only the token's own failure gets the reassuring wording. Anything else
+    // raised along the way — a rejected account, say — has its own reason, and
+    // telling that reader to request a new link would send them in a circle.
+    message:
+      error.code === "invalid_login_token"
+        ? i18n.t(
+            "That login link has expired or has already been used. Enter your email address below and we will send you a new one.",
+          )
+        : error.localize(i18n),
+    next: next ?? "",
+    status: error.status,
+  });
+}
 
 webRoutes.get("/profile", async (context) => {
   const loginRedirect = webActorOrLogin(context);

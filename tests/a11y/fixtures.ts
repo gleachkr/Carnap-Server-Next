@@ -536,11 +536,22 @@ async function emailChangeFixtures(
   const { login: challenge } = (await start.json()) as {
     readonly login: { readonly loginToken: string };
   };
-  const confirmed = await appRequest(
-    createTestApp(),
-    `/login/confirm?token=${challenge.loginToken}`,
-    {},
+  // The link's own page first: it only asks, and the button signs in.
+  fixtures.push({
+    html: await page(
+      env,
+      `/login/confirm?token=${challenge.loginToken}`,
+      undefined,
+      headers,
+    ),
+    name: "login-confirm",
+  });
+  const confirmed = await formPost(
     env,
+    "/login/confirm",
+    { token: challenge.loginToken },
+    undefined,
+    headers,
   );
   const undoPath = confirmed.headers.get("Location");
 

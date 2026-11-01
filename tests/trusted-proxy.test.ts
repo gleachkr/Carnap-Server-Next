@@ -52,6 +52,40 @@ async function startLogin(env: Env, headers: HeadersInit): Promise<string> {
   return loginLink(await response.text());
 }
 
+/**
+ * Open a login link as the browser does, through the proxy: the page it opens
+ * only asks, and its button's same-origin POST signs in.
+ */
+async function followLoginLink(link: string, env: Env): Promise<Response> {
+  const url = new URL(link);
+  const page = await appRequest(
+    createTestApp(),
+    url.href,
+    { headers: { Accept: "text/html", ...PROXIED } },
+    env,
+  );
+
+  expect(page.status).toBe(200);
+
+  return appRequest(
+    createTestApp(),
+    new URL("/login/confirm", url).href,
+    {
+      body: new URLSearchParams({
+        token: url.searchParams.get("token") ?? "",
+      }),
+      headers: {
+        Accept: "text/html",
+        "Content-Type": "application/x-www-form-urlencoded",
+        Origin: url.origin,
+        ...PROXIED,
+      },
+      method: "POST",
+    },
+    env,
+  );
+}
+
 /** The session's `Set-Cookie`, under either name (`__Host-` on https). */
 function sessionCookie(response: Response): string {
   const cookie = response.headers
@@ -122,12 +156,7 @@ describe("behind a trusted proxy", () => {
 
       expect(link).toStartWith("https://logic.example.edu/login/confirm?");
 
-      const confirm = await appRequest(
-        createTestApp(),
-        link,
-        { headers: { Accept: "text/html", ...PROXIED } },
-        trusted(env),
-      );
+      const confirm = await followLoginLink(link, trusted(env));
 
       expect(confirm.status).toBe(303);
       expect(sessionCookie(confirm)).toStartWith("__Host-carnap_session=");
@@ -141,12 +170,7 @@ describe("behind a trusted proxy", () => {
 
       expect(link).toStartWith("http://carnap.test/login/confirm?");
 
-      const confirm = await appRequest(
-        createTestApp(),
-        link,
-        { headers: { Accept: "text/html", ...PROXIED } },
-        env,
-      );
+      const confirm = await followLoginLink(link, env);
 
       expect(confirm.status).toBe(303);
       expect(sessionCookie(confirm)).toStartWith("carnap_session=");

@@ -512,7 +512,6 @@ msgstr ""
 
 #: src/worker/application/auth.ts
 #: src/worker/routes/auth.ts
-#: src/worker/routes/web.ts
 msgid "A login token is required."
 msgstr ""
 
@@ -3163,6 +3162,10 @@ msgstr ""
 msgid "If this was you, sign in with this address to reach the account that has it. If not, you can ignore this email."
 msgstr ""
 
+#: src/worker/web/auth.tsx
+msgid "If you did not ask for a login link, close this page and nothing will happen."
+msgstr ""
+
 #: src/worker/infrastructure/email/resend.ts
 msgid "If you did not ask for this, ignore this email and nothing will change."
 msgstr ""
@@ -3473,6 +3476,10 @@ msgstr ""
 
 #: src/worker/web/auth.tsx
 msgid "Log in"
+msgstr ""
+
+#: src/worker/web/auth.tsx
+msgid "Log in to Carnap as {email}?"
 msgstr ""
 
 #: src/worker/web/profile.tsx

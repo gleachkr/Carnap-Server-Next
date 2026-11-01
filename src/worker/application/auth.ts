@@ -338,6 +338,27 @@ export class AuthService {
     };
   }
 
+  /**
+   * The address a login link was sent to, without spending the link. The page
+   * the link opens says who it signs in as, and only its button's POST
+   * (`confirmNativeLogin`) spends it: mail scanners open links before the
+   * reader does, and a GET that signed in would sign the scanner in and leave
+   * the reader a used link.
+   */
+  async describeNativeLogin(token: string): Promise<string> {
+    const nowDate = this.options.now?.() ?? new Date();
+    const challenge = await this.options.stores.auth.getNativeLoginChallenge(
+      await loginLinkHash(token),
+      timestampNow(nowDate),
+    );
+
+    if (challenge === null) {
+      throw invalidLoginLink();
+    }
+
+    return challenge.email;
+  }
+
   async confirmNativeLogin(
     token: string,
     options: ConfirmNativeLoginOptions = {},
@@ -379,25 +400,14 @@ export class AuthService {
     token: string,
     now: Timestamp,
   ): Promise<string> {
-    if (token.trim().length === 0) {
-      throw badRequest(
-        "invalid_login_token",
-        deferred.i18n.t("A login token is required."),
-      );
-    }
-
     const challenge =
       await this.options.stores.auth.consumeNativeLoginChallenge(
-        await hashAuthToken(token),
+        await loginLinkHash(token),
         now,
       );
 
     if (challenge === null) {
-      throw new AppHttpError(
-        401,
-        "invalid_login_token",
-        deferred.i18n.t("The login token is invalid or expired."),
-      );
+      throw invalidLoginLink();
     }
 
     return challenge.email;
@@ -828,4 +838,24 @@ export class AuthService {
 
     return verified ?? user;
   }
+}
+
+/** The stored hash of a login link's token, refusing a blank one. */
+async function loginLinkHash(token: string): Promise<string> {
+  if (token.trim().length === 0) {
+    throw badRequest(
+      "invalid_login_token",
+      deferred.i18n.t("A login token is required."),
+    );
+  }
+
+  return hashAuthToken(token);
+}
+
+function invalidLoginLink(): AppHttpError {
+  return new AppHttpError(
+    401,
+    "invalid_login_token",
+    deferred.i18n.t("The login token is invalid or expired."),
+  );
 }

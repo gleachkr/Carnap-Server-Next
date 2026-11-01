@@ -499,10 +499,9 @@ describe("changing your own address", () => {
         const { login: challenge } = (await start.json()) as {
           readonly login: { readonly loginToken: string };
         };
-        const confirmed = await get(
-          env,
-          `/login/confirm?token=${challenge.loginToken}`,
-        );
+        const confirmed = await form(env, "/login/confirm", {
+          token: challenge.loginToken,
+        });
 
         expect(confirmed.status).toBe(303);
 

@@ -64,6 +64,21 @@ function formRequest(
   };
 }
 
+/** A fresh login link's token, as a local instance discloses it. */
+async function startedLoginToken(env: Env, email: string): Promise<string> {
+  const started = await appRequest(
+    createTestApp(),
+    "/auth/login/start",
+    jsonRequest({ email }),
+    env,
+  );
+  const body = (await started.json()) as {
+    readonly login: { readonly loginToken: string };
+  };
+
+  return body.login.loginToken;
+}
+
 function csrfTokenFromCookies(cookies: string): string {
   const token = cookies
     .split(";")
@@ -100,6 +115,33 @@ function extractLoginPath(html: string): string {
   return `${url.pathname}${url.search}`;
 }
 
+/**
+ * Open a login link's page, which only asks, then press its button, which
+ * signs in: the POST carries the token and destination the page holds.
+ */
+async function followLoginLink(env: Env, path: string): Promise<Response> {
+  const page = await appRequest(
+    createTestApp(),
+    path,
+    { headers: htmlHeaders() },
+    env,
+  );
+
+  expect(page.status).toBe(200);
+
+  const params = new URL(path, "http://x").searchParams;
+
+  return appRequest(
+    createTestApp(),
+    "/login/confirm",
+    formRequest({
+      next: params.get("next") ?? "",
+      token: params.get("token") ?? "",
+    }),
+    env,
+  );
+}
+
 async function webLogin(env: Env, email: string): Promise<LoginResult> {
   const start = await appRequest(
     createTestApp(),
@@ -108,12 +150,7 @@ async function webLogin(env: Env, email: string): Promise<LoginResult> {
     env,
   );
   const confirmPath = extractLoginPath(await start.text());
-  const confirm = await appRequest(
-    createTestApp(),
-    confirmPath,
-    { headers: htmlHeaders() },
-    env,
-  );
+  const confirm = await followLoginLink(env, confirmPath);
   const cookies = cookieHeader(confirm);
   const me = await appRequest(
     createTestApp(),
@@ -1047,6 +1084,84 @@ describe("native web workflow", () => {
     });
   });
 
+  test("a login link's page only asks, and its button signs in", async () => {
+    await withStorage(async (_storage, env) => {
+      const loginToken = await startedLoginToken(env, "scanned@example.test");
+      const path = `/login/confirm?token=${loginToken}&next=%2Fprofile`;
+
+      // A mail scanner opens the link before the reader does. Opening it
+      // twice proves the first open spent nothing.
+      for (let open = 0; open < 2; open += 1) {
+        const page = await appRequest(
+          createTestApp(),
+          path,
+          { headers: htmlHeaders() },
+          env,
+        );
+        const html = await page.text();
+
+        expect(page.status).toBe(200);
+        expect(page.headers.get("Set-Cookie")).toBeNull();
+        expect(html).toContain("scanned@example.test");
+        expect(html).toContain('action="/login/confirm"');
+        expect(html).toContain('name="next" type="hidden" value="/profile"');
+      }
+
+      const confirmed = await appRequest(
+        createTestApp(),
+        "/login/confirm",
+        formRequest({ next: "/profile", token: loginToken }),
+        env,
+      );
+
+      expect(confirmed.status).toBe(303);
+      expect(confirmed.headers.get("Location")).toBe("/profile");
+      expect(confirmed.headers.get("Set-Cookie")).toContain(
+        "carnap_session=",
+      );
+
+      // Now the link is spent, and its page says so.
+      const spent = await appRequest(
+        createTestApp(),
+        path,
+        { headers: htmlHeaders() },
+        env,
+      );
+
+      expect(spent.status).toBe(401);
+      expect(await spent.text()).toContain("That login link has expired");
+    });
+  });
+
+  test("a login link's button refuses a post from another site", async () => {
+    await withStorage(async (_storage, env) => {
+      const loginToken = await startedLoginToken(env, "forged@example.test");
+      const request = formRequest({ token: loginToken });
+      const crossSite = await appRequest(
+        createTestApp(),
+        "/login/confirm",
+        {
+          ...request,
+          headers: { ...request.headers, "Sec-Fetch-Site": "cross-site" },
+        },
+        env,
+      );
+
+      expect(crossSite.status).toBe(403);
+      expect(crossSite.headers.get("Set-Cookie")).toBeNull();
+
+      // The refusal spent nothing: the reader's own click still works.
+      const confirmed = await appRequest(
+        createTestApp(),
+        "/login/confirm",
+        formRequest({ token: loginToken }),
+        env,
+      );
+
+      expect(confirmed.status).toBe(303);
+    });
+  });
+
   test("a browser gets an error page where a client gets the envelope", async () => {
     await withStorage(async (_storage, env) => {
       const page = await appRequest(
@@ -1285,11 +1400,9 @@ describe("native web workflow", () => {
         }),
         env,
       );
-      const confirm = await appRequest(
-        createTestApp(),
-        extractLoginPath(await start.text()),
-        { headers: htmlHeaders() },
+      const confirm = await followLoginLink(
         env,
+        extractLoginPath(await start.text()),
       );
 
       expect(confirm.status).toBe(303);

@@ -512,7 +512,6 @@ msgstr "A login link has been created."
 
 #: src/worker/application/auth.ts
 #: src/worker/routes/auth.ts
-#: src/worker/routes/web.ts
 msgid "A login token is required."
 msgstr "A login token is required."
 
@@ -3163,6 +3162,10 @@ msgstr "If no site administrator exists, you can bootstrap this account with the
 msgid "If this was you, sign in with this address to reach the account that has it. If not, you can ignore this email."
 msgstr "If this was you, sign in with this address to reach the account that has it. If not, you can ignore this email."
 
+#: src/worker/web/auth.tsx
+msgid "If you did not ask for a login link, close this page and nothing will happen."
+msgstr "If you did not ask for a login link, close this page and nothing will happen."
+
 #: src/worker/infrastructure/email/resend.ts
 msgid "If you did not ask for this, ignore this email and nothing will change."
 msgstr "If you did not ask for this, ignore this email and nothing will change."
@@ -3474,6 +3477,10 @@ msgstr "LMS only"
 #: src/worker/web/auth.tsx
 msgid "Log in"
 msgstr "Log in"
+
+#: src/worker/web/auth.tsx
+msgid "Log in to Carnap as {email}?"
+msgstr "Log in to Carnap as {email}?"
 
 #: src/worker/web/profile.tsx
 msgid "Log out"

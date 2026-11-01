@@ -104,10 +104,34 @@ async function followLoginLink(
   expect(sent.status).toBe(200);
   expect(href).toBeDefined();
 
+  // The link's page only asks; its button's POST is what signs in, or
+  // refuses to.
+  const link = (href ?? "").replaceAll("&amp;", "&");
+  const page = await appRequest(
+    createTestApp(),
+    link,
+    { headers: { Accept: "text/html" } },
+    env,
+  );
+
+  expect(page.status).toBe(200);
+
+  const params = new URL(link, "http://x").searchParams;
+
   return appRequest(
     createTestApp(),
-    (href ?? "").replaceAll("&amp;", "&"),
-    { headers: { Accept: "text/html" } },
+    "/login/confirm",
+    {
+      body: new URLSearchParams({
+        next: params.get("next") ?? "",
+        token: params.get("token") ?? "",
+      }).toString(),
+      headers: {
+        Accept: "text/html",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      method: "POST",
+    },
     env,
   );
 }
