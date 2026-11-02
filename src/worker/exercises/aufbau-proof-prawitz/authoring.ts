@@ -25,6 +25,7 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireFreeGoalName,
   requireGoalFormula,
   requireProofNotations,
   starterFormulaReader,
@@ -160,7 +161,8 @@ export async function compileAufbauProofPrawitz(
     theory === undefined ||
     notations === null ||
     (header === null && playgroundBody === null) ||
-    !goalStated
+    !goalStated ||
+    !requireFreeGoalName(block, theory, header, diagnostics)
   ) {
     return null;
   }

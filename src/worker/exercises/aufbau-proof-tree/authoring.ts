@@ -22,6 +22,7 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireFreeGoalName,
   requireGoalFormula,
   starterFormulaReader,
   starterLine,
@@ -105,7 +106,8 @@ export async function compileAufbauProofTree(
     id === null ||
     theory === undefined ||
     (header === null && playgroundBody === null) ||
-    !goalStated
+    !goalStated ||
+    !requireFreeGoalName(block, theory, header, diagnostics)
   ) {
     return null;
   }

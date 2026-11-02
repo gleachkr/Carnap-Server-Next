@@ -804,6 +804,18 @@ export function buildDiagnosticStrings(i18n: Translator) {
         "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part.",
         placeholders("role", "system"),
       ),
+    // The goal is declared beside the theory, and axioms and theorems share
+    // one namespace there (#522).
+    "System “{system}” already has a rule named “{name}”, so no proof of a goal with that name can compile. Give the theorem another name.":
+      i18n.t(
+        "System “{system}” already has a rule named “{name}”, so no proof of a goal with that name can compile. Give the theorem another name.",
+        placeholders("name", "system"),
+      ),
+    "System “{system}” has a rule named “{name}”, the name a playground gives its goal, so no playground proof can compile in it. Rename that rule in the theory.":
+      i18n.t(
+        "System “{system}” has a rule named “{name}”, the name a playground gives its goal, so no playground proof can compile in it. Rename that rule in the theory.",
+        placeholders("name", "system"),
+      ),
     // Warnings, not errors: shadowing is usually deliberate — a rule schema
     // has to name its metavariables something — and only the author knows.
     // Each says what the name meant before, since that is the part the

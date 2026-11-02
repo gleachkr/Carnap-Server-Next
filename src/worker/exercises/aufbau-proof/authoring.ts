@@ -18,7 +18,9 @@ import {
   parsePlaygroundBody,
   parseProofOptions,
   parseTheoremHeader,
+  requireFreeGoalName,
   requireStarterBody,
+  type TheoremHeader,
 } from "../../exercise-kit/proof/authoring";
 import { PLAYGROUND_GOAL_NAME } from "../../exercise-kit/proof/playground";
 import { requireSystem } from "../../exercise-kit/systems/theory";
@@ -34,6 +36,8 @@ import {
 
 interface ProofBody {
   readonly goalName: string;
+  /** The goal header; null for a playground. */
+  readonly header: TheoremHeader | null;
   /** The MM0 theorem declaration, normalized to end with a single `;`;
    *  empty for a playground, which declares its goal from the proof. */
   readonly theoremDecl: string;
@@ -61,6 +65,7 @@ function parseProofBody(
       ? null
       : {
           goalName: PLAYGROUND_GOAL_NAME,
+          header: null,
           playground: true,
           promptLines: body.promptLines,
           starterBody: body.starter?.starterBody ?? "",
@@ -82,6 +87,7 @@ function parseProofBody(
 
   return {
     goalName: header.goalName,
+    header,
     playground: false,
     promptLines: header.promptLines,
     starterBody: starter.starterBody,
@@ -132,7 +138,12 @@ export async function compileAufbauProof(
     validateExerciseId(block, id, diagnostics);
   }
 
-  if (id === null || theory === undefined || body === null) {
+  if (
+    id === null ||
+    theory === undefined ||
+    body === null ||
+    !requireFreeGoalName(block, theory, body.header, diagnostics)
+  ) {
     return null;
   }
 

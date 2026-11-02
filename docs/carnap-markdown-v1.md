@@ -1509,6 +1509,14 @@ goal is fixed; students edit only the proof body. (With the `playground`
 attribute there is no goal line at all; see [Playground
 exercises](#playground-exercises).)
 
+The theorem's name must not be the name of a rule (an `axiom` or `theorem`)
+in the system: the goal is declared beside the system's rules, and the engine
+refuses a second rule of the same name, so no proof of it could compile. The
+compiler reports `goal_name_taken`. Over `forallx-calgary-plus`, for example,
+`theorem mt` clashes with the derived rule MT; call it `tollens` instead. A
+name shared with a term, definition or sort is fine. This applies to all four
+proof directives.
+
 This complete example declares a small theory first:
 
 ```md
@@ -2050,6 +2058,9 @@ names. Variables in the statement (the `@vars` tokens of the system —
 `x`, `a` and their pools in the forallx systems) are bound automatically;
 nothing else can be, so a playground statement is always a concrete sentence
 or sequent in the system's own vocabulary, never a schema over metavariables.
+
+Every playground's goal is named `playground`, so a system with a rule of that
+name cannot host one (`playground_name_taken`); rename the rule in the theory.
 
 A playground is scored like any other exercise: the proof is correct when its
 certificate verifies, and worth `points` (`points="0"` for an ungraded one). A tree playground has no goal

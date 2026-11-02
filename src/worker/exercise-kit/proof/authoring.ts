@@ -9,6 +9,8 @@
  * one of them would otherwise repeat.
  */
 
+import { parseStatements } from "@aufbau/syntax";
+
 import {
   type CompilerDiagnostic,
   diagnostic,
@@ -216,6 +218,74 @@ export function readGoalDeclaration(
   }
 
   return null;
+}
+
+/**
+ * Whether the goal's theorem name is free in the theory, or `false` after
+ * saying it is not (#522).
+ *
+ * The goal is declared beside the theory, and MM0 gives axioms and theorems
+ * one namespace: `theorem mt: …` over a theory with an `mt` rule makes the
+ * engine refuse the declaration ("duplicate axiom or theorem name"), so no
+ * proof of it can ever compile — and nothing else says so before a student
+ * finds out. Terms, defs and sorts live in other namespaces and do not clash.
+ *
+ * `header` null is a playground, whose goal always takes
+ * {@link PLAYGROUND_GOAL_NAME}: a theory with a rule of that name leaves no
+ * playground in it provable, which is the theory's to fix.
+ */
+export function requireFreeGoalName(
+  block: DirectiveBlock,
+  theory: AufbauTheory,
+  header: TheoremHeader | null,
+  diagnostics: CompilerDiagnostic[],
+): boolean {
+  const goalName = header?.goalName ?? PLAYGROUND_GOAL_NAME;
+
+  if (!assertionNames(theory).has(goalName)) {
+    return true;
+  }
+
+  diagnostics.push(
+    header === null
+      ? diagnostic(
+          block.line,
+          "playground_name_taken",
+          "System “{system}” has a rule named “{name}”, the name a playground gives its goal, so no playground proof can compile in it. Rename that rule in the theory.",
+          { params: { name: goalName, system: theory.name } },
+        )
+      : diagnostic(
+          block.bodyStartLine + header.headerIndex,
+          "goal_name_taken",
+          "System “{system}” already has a rule named “{name}”, so no proof of a goal with that name can compile. Give the theorem another name.",
+          { params: { name: goalName, system: theory.name } },
+        ),
+  );
+
+  return false;
+}
+
+/** A theory's axiom and theorem names, read once per theory object. */
+const assertionNamesByTheory = new WeakMap<
+  AufbauTheory,
+  ReadonlySet<string>
+>();
+
+function assertionNames(theory: AufbauTheory): ReadonlySet<string> {
+  let names = assertionNamesByTheory.get(theory);
+
+  if (names === undefined) {
+    names = new Set(
+      parseStatements(theory.source).statements.flatMap((statement) =>
+        statement.kind === "axiom" || statement.kind === "theorem"
+          ? [statement.name]
+          : [],
+      ),
+    );
+    assertionNamesByTheory.set(theory, names);
+  }
+
+  return names;
 }
 
 /**

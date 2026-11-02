@@ -5602,12 +5602,20 @@ msgid "Syntax tree"
 msgstr "Syntaxbaum"
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "System “{system}” already has a rule named “{name}”, so no proof of a goal with that name can compile. Give the theorem another name."
+msgstr "Das System „{system}“ hat bereits eine Regel namens „{name}“, daher kann kein Beweis eines Ziels mit diesem Namen kompiliert werden. Geben Sie dem Theorem einen anderen Namen."
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part."
 msgstr "Das System „{system}“ deklariert kein „@syntax role {role}“, das ein Fitch- oder Prawitz-Beweis braucht, um seine Zeilen zu schreiben. Setzen Sie die Annotation an die Deklaration, die diese Rolle spielt."
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "System “{system}” declares no “@syntax role sentence”, which a syntax tree needs to tell its sentences from their parts. Put the annotation on the sort of formulas, or draw the tree through its terms with depth=\"terms\", which needs none."
 msgstr "Das System „{system}“ deklariert kein „@syntax role sentence“, das ein Syntaxbaum braucht, um seine Sätze von deren Teilen zu unterscheiden. Setzen Sie die Annotation an die Sorte der Formeln, oder zeichnen Sie den Baum mit depth=\"terms\" bis in die Terme, wofür keine nötig ist."
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "System “{system}” has a rule named “{name}”, the name a playground gives its goal, so no playground proof can compile in it. Rename that rule in the theory."
+msgstr "Das System „{system}“ hat eine Regel namens „{name}“. Diesen Namen gibt eine Spielwiesen-Übung ihrem Ziel, daher kann in diesem System kein Spielwiesen-Beweis kompiliert werden. Benennen Sie die Regel in der Theorie um."
 
 #: src/worker/exercises/world/strings.ts
 msgid "Table"

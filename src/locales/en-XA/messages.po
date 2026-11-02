@@ -5602,11 +5602,19 @@ msgid "Syntax tree"
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
+msgid "System “{system}” already has a rule named “{name}”, so no proof of a goal with that name can compile. Give the theorem another name."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
 msgid "System “{system}” declares no “@syntax role {role}”, which a Fitch or Prawitz proof needs to write its lines. Put the annotation on the declaration that plays that part."
 msgstr ""
 
 #: src/worker/application/content/diagnostic-strings.ts
 msgid "System “{system}” declares no “@syntax role sentence”, which a syntax tree needs to tell its sentences from their parts. Put the annotation on the sort of formulas, or draw the tree through its terms with depth=\"terms\", which needs none."
+msgstr ""
+
+#: src/worker/application/content/diagnostic-strings.ts
+msgid "System “{system}” has a rule named “{name}”, the name a playground gives its goal, so no playground proof can compile in it. Rename that rule in the theory."
 msgstr ""
 
 #: src/worker/exercises/world/strings.ts

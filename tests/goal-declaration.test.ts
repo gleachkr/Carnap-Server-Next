@@ -7,9 +7,11 @@ import {
   proofFormulaReader,
   proofTheoryText,
 } from "../src/worker/exercise-kit/proof/formulas";
+import { builtInSystem } from "../src/worker/exercise-kit/systems/theory";
 import { ruleCitationShapes } from "../src/worker/exercises/aufbau-proof-fitch/citations";
 import { fitchToAuf } from "../src/worker/exercises/aufbau-proof-fitch/translate";
 import { isAufbauProofFitchPublicData } from "../src/worker/exercises/aufbau-proof-fitch/types";
+import { FITCH_THEORY_BLOCK } from "./helpers/fitch-theory";
 
 /**
  * A goal declaration read through the system's language, checked against the
@@ -203,5 +205,89 @@ theorem u {x: var} : $ ∀x B(x) ⊢ ∀y B(y) ∧ B(c) $
       ["unbound_goal_variable", 4, { binder: "{y: var}", name: "y" }],
       ["unbound_goal_variable", 4, { binder: "{c: name}", name: "c" }],
     ]);
+  });
+});
+
+/**
+ * A goal is declared beside the theory, and the engine keeps axioms and
+ * theorems in one namespace: a goal named after a rule can never compile
+ * (#522). Found as `theorem mt` over forallx-calgary-plus, whose MT is the
+ * axiom `mt`.
+ */
+describe("a goal named after one of the theory's rules", () => {
+  const DIRECTIVES = {
+    "aufbau-proof": "theorem mt : $ P ⊢ P $\n----\n",
+    "aufbau-proof-fitch": "theorem mt : $ P ⊢ P $\n----\n",
+    "aufbau-proof-prawitz": "theorem mt : $ P ⊢ P $\n",
+    "aufbau-proof-tree": "theorem mt : $ P ⊢ P $\n",
+  } as const;
+
+  async function diagnosticsOf(source: string) {
+    const compiled = await compileCarnapMarkdown(source);
+
+    return compiled.diagnostics.map(({ code, line, severity }) => ({
+      code,
+      line,
+      severity,
+    }));
+  }
+
+  for (const [kind, body] of Object.entries(DIRECTIVES)) {
+    test(`is refused on the goal's own line, in ${kind}`, async () => {
+      const diagnostics = await diagnosticsOf(
+        `:::${kind}{system="forallx-calgary-plus" id="g" points="1"}\nProve it.\n\n${body}:::\n`,
+      );
+
+      expect(diagnostics).toEqual([
+        { code: "goal_name_taken", line: 4, severity: "error" },
+      ]);
+    });
+  }
+
+  test("is what the engine refuses", () => {
+    const theory = builtInSystem("forallx-calgary-plus");
+
+    if (theory === null) {
+      throw new Error("forallx-calgary-plus is not built in");
+    }
+
+    const result = compiler.compile(
+      `${proofTheoryText(theory).mm0}\ntheorem mt (ph: wff): $ ph ⊢ ph $;`,
+      "mt\n----\n",
+    );
+
+    expect(
+      errorsIn(result).map(
+        (one) =>
+          String((one as { message?: unknown }).message).split("\n")[0],
+      ),
+    ).toContain("duplicate axiom or theorem name");
+  });
+
+  test("a goal named after a term is not a clash", async () => {
+    // Terms, defs and sorts live in other namespaces: `snil` is a term.
+    const data =
+      await frozen(`:::aufbau-proof-fitch{system="forallx-calgary-plus" id="t" points="1"}
+Prove it.
+
+theorem snil : $ P ⊢ P $
+----
+:::
+`);
+
+    expect(data.goalName).toBe("snil");
+  });
+
+  test("a playground over a theory with a rule named playground is refused", async () => {
+    const diagnostics = await diagnosticsOf(
+      `${FITCH_THEORY_BLOCK.replace(
+        /\n:::$/,
+        "\naxiom playground (a: wff): $ a ⊢ a $;\n:::",
+      )}\n\n:::aufbau-proof-fitch{system="prop" id="p" points="0" playground}\nAnything.\n:::\n`,
+    );
+
+    expect(diagnostics).toContainEqual(
+      expect.objectContaining({ code: "playground_name_taken" }),
+    );
   });
 });

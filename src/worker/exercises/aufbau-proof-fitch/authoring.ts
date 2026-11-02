@@ -20,6 +20,7 @@ import {
   parseProofOptions,
   parseTheoremHeader,
   readGoalDeclaration,
+  requireFreeGoalName,
   requireProofNotations,
   requireStarterBody,
   starterFormulaReader,
@@ -118,7 +119,8 @@ export async function compileAufbauProofFitch(
     id === null ||
     theory === undefined ||
     notations === null ||
-    (header === null && playgroundBody === null)
+    (header === null && playgroundBody === null) ||
+    !requireFreeGoalName(block, theory, header, diagnostics)
   ) {
     return null;
   }
