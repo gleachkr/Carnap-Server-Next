@@ -21,6 +21,7 @@ import {
 import {
   type FormErrorChrome,
   formErrorOrThrow,
+  readForm,
   readJsonObject,
   requiredParam,
   webActorOrLogin,
@@ -145,7 +146,7 @@ adminLtiRoutes.post("/platforms", async (context) => {
 
   try {
     if (isFormSubmission(context)) {
-      const form = await context.req.raw.formData();
+      const form = await readForm(context);
       await ltiAdminService(context).registerPlatform(actor, {
         authorizationEndpoint: fieldValue(form.get("authorizationEndpoint")),
         clientId: fieldValue(form.get("clientId")),
@@ -260,7 +261,7 @@ adminLtiRoutes.post("/platforms/:platformId/deployments", async (context) => {
 
   try {
     if (isFormSubmission(context)) {
-      const form = await context.req.raw.formData();
+      const form = await readForm(context);
 
       await ltiAdminService(context).addDeployment(
         actor,

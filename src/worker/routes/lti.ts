@@ -42,6 +42,7 @@ import {
 import { authServiceForContext } from "./auth";
 import { emailChangeNotifierForContext } from "./email-change";
 import { setSessionCookies } from "./session-cookies";
+import { readForm } from "./support";
 
 export function ltiServiceForContext(
   context: Context<AppBindings>,
@@ -198,7 +199,7 @@ ltiRoutes.get("/login", (context) =>
 );
 
 ltiRoutes.post("/login", async (context) => {
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const params = new URLSearchParams();
 
   for (const [key, value] of form.entries()) {
@@ -245,7 +246,7 @@ ltiRoutes.post("/launch", async (context) => {
   allowFrameAncestor(context, frameAncestorOrigin);
 
   try {
-    const form = await context.req.raw.formData();
+    const form = await readForm(context);
     const state = fieldValue(form.get("state"));
     const idToken = fieldValue(form.get("id_token"));
     const oidcError = fieldValue(form.get("error"));
@@ -371,7 +372,7 @@ ltiRoutes.post("/deep-link/respond", async (context) => {
       );
     }
 
-    const form = await context.req.raw.formData();
+    const form = await readForm(context);
     const token = fieldValue(form.get("token"));
     const assignmentId = fieldValue(form.get("assignmentId"));
 
@@ -534,7 +535,7 @@ ltiRoutes.get("/link/confirm", async (context) => {
 
 ltiRoutes.post("/link/confirm", async (context) => {
   try {
-    const form = await context.req.raw.formData();
+    const form = await readForm(context);
     const token = fieldValue(form.get("token"));
 
     if (token.length === 0) {
@@ -551,7 +552,7 @@ ltiRoutes.post("/link/confirm", async (context) => {
 
 ltiRoutes.post("/resource-links/:linkId/assignment", async (context) => {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const courseId = fieldValue(form.get("courseId"));
   const assignmentId = fieldValue(form.get("assignmentId"));
 
@@ -584,7 +585,7 @@ ltiRoutes.post("/resource-links/:linkId/assignment", async (context) => {
 
 ltiRoutes.post("/grade-jobs/:jobId/retry", async (context) => {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const courseId = fieldValue(form.get("courseId"));
 
   try {

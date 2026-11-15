@@ -44,6 +44,7 @@ import { ltiServiceForContext } from "./lti";
 import {
   type FormErrorChrome,
   formErrorOrThrow,
+  readForm,
   readJsonObject,
   readUserId,
   requiredParam,
@@ -260,7 +261,7 @@ async function createCourseFromForm(
   context: Context<AppBindings>,
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const title = fieldValue(form.get("title"));
   const timezone = fieldValue(form.get("timezone"));
 
@@ -289,7 +290,7 @@ async function updateCourseFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const title = fieldValue(form.get("title"));
   const timezone = fieldValue(form.get("timezone"));
 
@@ -451,7 +452,7 @@ async function createEnrollmentLinkFromForm(
   context: Context<AppBindings>,
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const expiresAt = fieldValue(form.get("expiresAt"));
   const courseId = requiredParam(context, "courseId");
 
@@ -744,7 +745,7 @@ courseRoutes.post("/:courseId/description", async (context) => {
 
   try {
     const source = form
-      ? fieldValue((await context.req.raw.formData()).get("source"))
+      ? fieldValue((await readForm(context)).get("source"))
       : (await readJsonObject(context)).source;
     const text = typeof source === "string" ? source : "";
     const service = courseService(context);
@@ -871,7 +872,7 @@ async function addStaffFromForm(
   const courseId = requiredParam(context, "courseId");
 
   try {
-    const form = await context.req.raw.formData();
+    const form = await readForm(context);
 
     await courseService(context).addStaffByEmail(actor, courseId, {
       email: fieldValue(form.get("email")),
@@ -919,9 +920,7 @@ async function upsertAccommodationFromForm(
   const courseId = requiredParam(context, "courseId");
 
   try {
-    const command = accommodationCommandFromForm(
-      await context.req.raw.formData(),
-    );
+    const command = accommodationCommandFromForm(await readForm(context));
     await courseService(context).upsertAccommodation(
       actor,
       courseId,
@@ -995,9 +994,7 @@ async function cloneCourseFromForm(
   const courseId = requiredParam(context, "courseId");
 
   try {
-    const command = cloneCourseCommandFromForm(
-      await context.req.raw.formData(),
-    );
+    const command = cloneCourseCommandFromForm(await readForm(context));
     const cloned = await courseService(context).cloneCourse(
       actor,
       courseId,
@@ -1076,7 +1073,7 @@ courseRoutes.post("/:courseId/memberships/:membershipId", async (context) => {
   const service = courseService(context);
 
   try {
-    const form = await context.req.raw.formData();
+    const form = await readForm(context);
 
     await service.updateMembershipRole(actor, courseId, membershipId, {
       role: fieldValue(form.get("role")) as CourseMembership["role"],

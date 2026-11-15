@@ -95,6 +95,7 @@ import type { Crumb } from "../web/layout";
 import {
   courseTitleFor,
   type FormErrorChrome,
+  readForm,
   readJsonObject,
   readUserId,
   requiredParam,
@@ -559,7 +560,7 @@ async function createAssignmentFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const quickCreate = isQuickAssignmentForm(form);
   const values = assignmentFormValues(form);
 
@@ -668,7 +669,7 @@ async function updateAssignmentFromForm(
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
   const assignmentId = requiredParam(context, "assignmentId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const values = assignmentFormValues(form);
 
   try {
@@ -737,7 +738,7 @@ async function updatePublishedSettingsFromForm(
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
   const assignmentId = requiredParam(context, "assignmentId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
 
   try {
     const detail = await assignmentService(context).updatePublishedSettings(
@@ -1024,7 +1025,7 @@ async function createManualEvaluation(
   const assignmentId = requiredParam(context, "assignmentId");
   const formSubmission = isFormSubmission(context);
   const command = formSubmission
-    ? manualEvaluationCommandFromForm(await context.req.raw.formData())
+    ? manualEvaluationCommandFromForm(await readForm(context))
     : manualEvaluationCommandFromJson(
         (await readJsonObject(context)) as ManualEvaluationBody,
       );
@@ -1087,7 +1088,7 @@ async function upsertLatePolicy(
   const assignmentId = requiredParam(context, "assignmentId");
   const formSubmission = isFormSubmission(context);
   const command = formSubmission
-    ? latePolicyCommandFromForm(await context.req.raw.formData())
+    ? latePolicyCommandFromForm(await readForm(context))
     : latePolicyCommandFromJson(
         (await readJsonObject(context)) as LatePolicyBody,
       );
@@ -1122,7 +1123,7 @@ async function upsertAssignmentOverride(
   const courseId = requiredParam(context, "courseId");
   const assignmentId = requiredParam(context, "assignmentId");
   const formSubmission = isFormSubmission(context);
-  const form = formSubmission ? await context.req.raw.formData() : null;
+  const form = formSubmission ? await readForm(context) : null;
   const command =
     form === null
       ? overrideCommandFromJson(
@@ -1167,8 +1168,7 @@ async function setGradeVisibility(
   const assignmentId = requiredParam(context, "assignmentId");
   const formSubmission = isFormSubmission(context);
   const release = formSubmission
-    ? fieldValue((await context.req.raw.formData()).get("intent")) ===
-      "release"
+    ? fieldValue((await readForm(context)).get("intent")) === "release"
     : ((await readJsonObject(context)) as { readonly release?: unknown })
         .release === true;
   const detail = await assignmentService(context).setGradeVisibility(
@@ -1198,7 +1198,7 @@ async function repointPublishedAssignment(
   const assignmentId = requiredParam(context, "assignmentId");
   const formSubmission = isFormSubmission(context);
   const command = formSubmission
-    ? repointCommandFromForm(await context.req.raw.formData())
+    ? repointCommandFromForm(await readForm(context))
     : repointCommandFromJson(
         (await readJsonObject(context)) as RepointAssignmentBody,
       );
@@ -1228,7 +1228,7 @@ async function excuseAssignmentExercise(
   const assignmentId = requiredParam(context, "assignmentId");
   const formSubmission = isFormSubmission(context);
   const command = formSubmission
-    ? excuseCommandFromForm(await context.req.raw.formData())
+    ? excuseCommandFromForm(await readForm(context))
     : excuseCommandFromJson(
         (await readJsonObject(context)) as ExcuseExerciseBody,
       );
@@ -1982,7 +1982,7 @@ async function unpublishAssignmentFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const courseId = requiredParam(context, "courseId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const unpublished = await assignmentService(context).unpublish(
     actor,
     courseId,

@@ -5928,6 +5928,10 @@ msgstr ""
 msgid "The first email sign-in from a new address creates an account."
 msgstr ""
 
+#: src/worker/routes/support.ts
+msgid "The form could not be read. Reload the page and try again."
+msgstr ""
+
 #: src/worker/exercises/world/strings.ts
 msgid "The game"
 msgstr ""

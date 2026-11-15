@@ -56,7 +56,7 @@ import {
   emailChangeServiceForContext,
 } from "./email-change";
 import { clearSessionCookies, setSessionCookies } from "./session-cookies";
-import { webActorOrLogin } from "./support";
+import { readForm, webActorOrLogin } from "./support";
 
 interface LoginDeliveryResult {
   readonly confirmationUrl: string;
@@ -174,7 +174,7 @@ webRoutes.get("/login", (context) => {
 });
 
 webRoutes.post("/login", async (context) => {
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const email = fieldValue(form.get("email"));
   const next = safeNext(fieldValue(form.get("next"))) ?? null;
   // Written into the form by Turnstile's own script; empty when the widget
@@ -234,7 +234,7 @@ webRoutes.get("/login/confirm", async (context) => {
 });
 
 webRoutes.post("/login/confirm", async (context) => {
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const token = fieldValue(form.get("token"));
   const next = safeNext(fieldValue(form.get("next")));
 
@@ -400,7 +400,7 @@ webRoutes.post("/profile/calendar/off", async (context) => {
  */
 webRoutes.post("/profile", async (context) => {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const name = fieldValue(form.get("name"));
   const locale = fieldValue(form.get("locale"));
   const shortcutsField = form.getAll("singleKeyShortcuts");
@@ -453,7 +453,7 @@ webRoutes.post("/profile", async (context) => {
 webRoutes.post("/profile/prompt/dismiss", async (context) => {
   requireAuthenticated(context);
 
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const next = safeNext(fieldValue(form.get("next")));
 
   setProfilePromptDismissedCookie(context);
@@ -465,7 +465,7 @@ webRoutes.post("/profile/prompt/dismiss", async (context) => {
 
 webRoutes.post("/profile/identities/remove", async (context) => {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const identityId = fieldValue(form.get("identityId"));
 
   try {
@@ -483,7 +483,7 @@ webRoutes.post("/profile/identities/remove", async (context) => {
  */
 webRoutes.post("/profile/email/lms", async (context) => {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const identityId = fieldValue(form.get("identityId"));
 
   try {
@@ -505,7 +505,7 @@ webRoutes.post("/profile/email/lms", async (context) => {
  */
 webRoutes.post("/profile/email", async (context) => {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const email = fieldValue(form.get("email"));
 
   try {
@@ -557,7 +557,7 @@ webRoutes.get("/profile/email/confirm", async (context) => {
 });
 
 webRoutes.post("/profile/email/confirm", async (context) => {
-  const token = fieldValue((await context.req.raw.formData()).get("token"));
+  const token = fieldValue((await readForm(context)).get("token"));
 
   try {
     const confirmed =
@@ -586,7 +586,7 @@ webRoutes.get("/profile/email/undo", async (context) => {
 });
 
 webRoutes.post("/profile/email/undo", async (context) => {
-  const token = fieldValue((await context.req.raw.formData()).get("token"));
+  const token = fieldValue((await readForm(context)).get("token"));
 
   try {
     const restored = await emailChangeServiceForContext(context).undo(token);

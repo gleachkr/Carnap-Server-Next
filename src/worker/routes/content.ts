@@ -53,7 +53,12 @@ import {
   wantsHtml,
 } from "../web/html";
 import { revisionDateText } from "../web/revisions";
-import { readJsonObject, requiredParam, webActorOrLogin } from "./support";
+import {
+  readForm,
+  readJsonObject,
+  requiredParam,
+  webActorOrLogin,
+} from "./support";
 
 /**
  * A day, then revalidate. Longer than the built-in theories' hour because a
@@ -276,7 +281,7 @@ async function createContentFromForm(
   context: Context<AppBindings>,
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const title = fieldValue(form.get("title"));
 
   try {
@@ -368,7 +373,7 @@ async function setItemTitleFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const itemId = requiredParam(context, "itemId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
 
   try {
     await contentService(context).setItemTitle(
@@ -398,7 +403,7 @@ async function setSharingFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const revisionId = requiredParam(context, "revisionId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
 
   try {
     const revision = await contentService(context).setRevisionSharing(
@@ -424,7 +429,7 @@ async function setDetailsFromForm(
 ): Promise<Response> {
   const actor = requireAuthenticated(context);
   const revisionId = requiredParam(context, "revisionId");
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
 
   try {
     const revision = await contentService(context).setRevisionDetails(
@@ -595,7 +600,7 @@ async function createRevisionFromForm(
     throw error;
   }
 
-  const form = await context.req.raw.formData();
+  const form = await readForm(context);
   const sourceText = await revisionSourceTextFromForm(form);
   const details = fieldValue(form.get("details"));
 

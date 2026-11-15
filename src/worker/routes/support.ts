@@ -5,6 +5,7 @@ import { courseStaffTierFor } from "../application/authorization";
 import { AppHttpError, badRequest } from "../application/errors";
 import type { CourseStaffTier } from "../domain/courses";
 import type { AppBindings } from "../http";
+import { deferred } from "../i18n/deferred";
 import type { Translator } from "../i18n/translator";
 import { storesForContext } from "../stores";
 import { renderFormError } from "../web/errors";
@@ -40,6 +41,27 @@ export async function readJsonObject(
 }
 
 /**
+ * The request body as form data; a body that is not one is a 400. `formData()`
+ * throws a `TypeError` for a `Content-Type` that names no form, or a multipart
+ * body that does not match its boundary, and left alone that is a 500 with a
+ * stack trace for what is only a malformed request.
+ */
+export async function readForm(
+  context: Context<AppBindings>,
+): Promise<FormData> {
+  try {
+    return await context.req.raw.formData();
+  } catch {
+    throw badRequest(
+      "invalid_form",
+      deferred.i18n.t(
+        "The form could not be read. Reload the page and try again.",
+      ),
+    );
+  }
+}
+
+/**
  * The `userId` a request names, from a browser form or a JSON body: the
  * member a per-student record (an accommodation, an override) is about. A
  * form posts it as a hidden field, which arrives as "" when missing; an empty
@@ -49,7 +71,7 @@ export async function readUserId(
   context: Context<AppBindings>,
 ): Promise<string> {
   const userId = isFormSubmission(context)
-    ? fieldValue((await context.req.raw.formData()).get("userId"))
+    ? fieldValue((await readForm(context)).get("userId"))
     : (await readJsonObject(context)).userId;
 
   if (typeof userId !== "string" || userId.length === 0) {

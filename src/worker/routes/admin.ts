@@ -38,6 +38,7 @@ import { emailChangeNotifierForContext } from "./email-change";
 import {
   type FormErrorChrome,
   formErrorOrThrow,
+  readForm,
   readJsonObject,
   requiredParam,
   webActorOrLogin,
@@ -326,7 +327,7 @@ adminRoutes.post("/bootstrap", async (context) => {
     const command = isFormSubmission(context)
       ? {
           bootstrapToken: fieldValue(
-            (await context.req.raw.formData()).get("bootstrapToken"),
+            (await readForm(context)).get("bootstrapToken"),
           ),
         }
       : ((await readJsonObject(context)) as BootstrapBody);
@@ -412,7 +413,7 @@ adminRoutes.post("/users/:userId/capabilities", async (context) => {
 
   try {
     const command = isFormSubmission(context)
-      ? capabilityCommandFromForm(await context.req.raw.formData())
+      ? capabilityCommandFromForm(await readForm(context))
       : capabilityCommand((await readJsonObject(context)) as CapabilityBody);
     const grant = await adminService(context).grantCapability(
       actor,
@@ -442,7 +443,7 @@ adminRoutes.post("/users/:userId/capabilities/revoke", async (context) => {
 
   try {
     const command = isFormSubmission(context)
-      ? capabilityCommandFromForm(await context.req.raw.formData())
+      ? capabilityCommandFromForm(await readForm(context))
       : capabilityCommand((await readJsonObject(context)) as CapabilityBody);
     const grant = await adminService(context).revokeCapability(
       actor,
@@ -472,7 +473,7 @@ adminRoutes.post("/settings/registration", async (context) => {
 
   try {
     const mode = isFormSubmission(context)
-      ? fieldValue((await context.req.raw.formData()).get("mode"))
+      ? fieldValue((await readForm(context)).get("mode"))
       : (await readJsonObject(context)).mode;
     const settings = await adminService(context).setNativeRegistration(
       actor,
@@ -519,7 +520,7 @@ adminRoutes.post("/about", async (context) => {
 
   try {
     const source = form
-      ? fieldValue((await context.req.raw.formData()).get("source"))
+      ? fieldValue((await readForm(context)).get("source"))
       : (await readJsonObject(context)).source;
     const text = typeof source === "string" ? source : "";
     const result = await adminService(context).setAboutPage(actor, text);
@@ -609,7 +610,7 @@ adminRoutes.post("/users/:userId/email", async (context) => {
 
   try {
     const email = isFormSubmission(context)
-      ? fieldValue((await context.req.raw.formData()).get("email"))
+      ? fieldValue((await readForm(context)).get("email"))
       : ((await readJsonObject(context)) as EmailBody).email;
     const user = await adminService(context).changeUserEmail(
       actor,
@@ -639,7 +640,7 @@ adminRoutes.post("/memberships", async (context) => {
 
   try {
     const command = isFormSubmission(context)
-      ? membershipCommandFromForm(await context.req.raw.formData())
+      ? membershipCommandFromForm(await readForm(context))
       : membershipCommand((await readJsonObject(context)) as MembershipBody);
     const membership = await adminService(context).changeMembership(
       actor,

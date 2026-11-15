@@ -5928,6 +5928,10 @@ msgstr "Das Attribut finish muss closed, complete oder one-open sein."
 msgid "The first email sign-in from a new address creates an account."
 msgstr "Die erste Anmeldung per E-Mail von einer neuen Adresse legt ein Konto an."
 
+#: src/worker/routes/support.ts
+msgid "The form could not be read. Reload the page and try again."
+msgstr "Das Formular konnte nicht gelesen werden. Laden Sie die Seite neu und versuchen Sie es erneut."
+
 #: src/worker/exercises/world/strings.ts
 msgid "The game"
 msgstr "Das Spiel"

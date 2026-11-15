@@ -114,8 +114,14 @@ async function submittedCsrfToken(
     return undefined;
   }
 
-  const form = await context.req.raw.clone().formData();
-  const token = form.get(CSRF_FORM_FIELD_NAME);
+  // A multipart body that does not match its boundary throws. It carries no
+  // token anyone could read, so the check refuses it as it refuses a form
+  // without one, rather than answering a 500.
+  const form = await context.req.raw
+    .clone()
+    .formData()
+    .catch(() => null);
+  const token = form?.get(CSRF_FORM_FIELD_NAME);
 
   return typeof token === "string" ? token : undefined;
 }
