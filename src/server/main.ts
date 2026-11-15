@@ -17,6 +17,7 @@ import { notFoundHandler } from "../worker/middleware/errors";
 import { NOSNIFF_HEADER } from "../worker/middleware/security-headers";
 import { runGradePassback } from "../worker/passback";
 import { FONT_CACHE_CONTROL, FONT_ROUTE_PREFIX } from "../worker/web/fonts";
+import { unroutableRequest } from "./request-target";
 
 /**
  * Carnap as an ordinary long-running server, for anyone hosting their own.
@@ -254,7 +255,9 @@ const sweep = setInterval(() => {
 }, PASSBACK_INTERVAL_MS);
 
 const server = Bun.serve({
-  fetch: (request) => app.fetch(request, env, executionCtx),
+  fetch: (request) =>
+    unroutableRequest(request, socketPeerAddress(request)) ??
+    app.fetch(request, env, executionCtx),
   port,
 });
 

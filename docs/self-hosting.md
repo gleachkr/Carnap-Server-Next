@@ -349,6 +349,10 @@ replace `X-Forwarded-For` with the client address it resolved.
 
 Only the trusted proxy should be able to reach the application port. Do not
 let public clients bypass it or supply trusted forwarding headers directly.
+A proxy always sends `Host`, so `request_target_rejected` lines in the log
+(see [Logging](#logging)) mean that something reached the port without
+going through it. The line's `ip` is the connection's own address, which
+names the sender.
 
 ### Example: Using Caddy as a reverse proxy
 
@@ -491,6 +495,7 @@ the address of the connection. See
 | `audit` | info | Any audited action: platform capability grants and revocations, the first administrator, account suspension and email changes, admin course-membership changes, the registration setting, LTI platform and deployment changes, courses an LMS creates, and staff changes instructors make (`course.staff_added`, `course.membership_role_changed`, `course.membership_status_changed`). The same event appears in the admin audit log. | `action`, `actorUserId`, `targetUserId`, `targetCourseId`, `metadata`, `auditEventId`, `requestId` |
 | `csrf_rejected` | warn | A signed-in, state-changing request fails the CSRF check. | `userId`, `method`, `path`, `ip`, `requestId` |
 | `bootstrap_refused` | warn | `/admin/bootstrap` refuses: no token configured, a wrong token, or an administrator already exists. | `reason`, `userId`, `ip`, `requestId` |
+| `request_target_rejected` | warn | The standalone server answers 400 to a request it cannot route: one without a usable `Host` (an HTTP/1.0 probe, an empty `Host:`) or a `CONNECT`. Browsers and proxies never send these, so the sender is usually a scanner talking to the port directly. | `method`, `target` (the request line's path or authority, up to 512 characters), `ip` (always the connection's address), `userAgent` |
 | `lti_launch_failed` | warn | An LTI login, launch, deep-linking or link step is refused. Once the platform's token has been verified, the line names the LMS user (`subject`), and a suspended account also its `userId`. | `code`, `issuer` and related identifiers, `subject`, `ip`, `requestId` |
 
 Operational events include `request_failed` (an unexpected server error, with

@@ -102,7 +102,10 @@ function logServerError(
     code,
     message: errorMessage(error),
     method: context.req.method,
-    path: new URL(context.req.url).pathname,
+    // Never `new URL`, which throws on a URL that is not absolute: an error
+    // handler that throws while logging loses the error it was called for.
+    path:
+      URL.parse(context.req.url)?.pathname ?? context.req.url.split("?")[0],
     requestId: requestId(context),
     // Unset when the request failed before the actor was resolved.
     userId: context.get("actor")?.user.id,
